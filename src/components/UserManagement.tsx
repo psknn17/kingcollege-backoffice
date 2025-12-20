@@ -1,0 +1,1042 @@
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Badge } from "./ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
+import { Label } from "./ui/label"
+import { Checkbox } from "./ui/checkbox"
+import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown } from "lucide-react"
+import { format } from "date-fns"
+import { toast } from "sonner"
+
+type UserRole = "admin" | "approver" | "accounting" | "viewer"
+type UserStatus = "active" | "inactive" | "suspended"
+
+interface Permission {
+  id: string
+  name: string
+  description: string
+  module: string
+}
+
+interface User {
+  id: string
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+  role: UserRole
+  status: UserStatus
+  permissions: string[]
+  createdAt: Date
+  lastLogin: Date | null
+}
+
+const allPermissions: Permission[] = [
+  // Tuition Management
+  { id: "tuition_view", name: "View Tuition", description: "View tuition dashboard and data", module: "Tuition" },
+  { id: "tuition_edit", name: "Edit Tuition", description: "Edit tuition settings and terms", module: "Tuition" },
+  { id: "tuition_delete", name: "Delete Tuition", description: "Delete tuition records", module: "Tuition" },
+
+  // After School
+  { id: "afterschool_view", name: "View After School", description: "View after school activities", module: "After School" },
+  { id: "afterschool_edit", name: "Edit After School", description: "Edit after school settings", module: "After School" },
+  { id: "afterschool_approve", name: "Approve Registrations", description: "Approve after school registrations", module: "After School" },
+
+  // Events
+  { id: "event_view", name: "View Events", description: "View event management", module: "Events" },
+  { id: "event_edit", name: "Edit Events", description: "Edit event settings", module: "Events" },
+  { id: "event_import", name: "Import Events", description: "Import event data", module: "Events" },
+
+  // Summer Activities
+  { id: "summer_view", name: "View Summer Activities", description: "View summer activities", module: "Summer" },
+  { id: "summer_edit", name: "Edit Summer Activities", description: "Edit summer activities", module: "Summer" },
+
+  // Discounts
+  { id: "discount_view", name: "View Discounts", description: "View discount management", module: "Discounts" },
+  { id: "discount_edit", name: "Edit Discounts", description: "Edit discounts and promotions", module: "Discounts" },
+  { id: "discount_approve", name: "Approve Discounts", description: "Approve discount requests", module: "Discounts" },
+
+  // Invoices
+  { id: "invoice_view", name: "View Invoices", description: "View invoice management", module: "Invoices" },
+  { id: "invoice_create", name: "Create Invoices", description: "Create new invoices", module: "Invoices" },
+  { id: "invoice_edit", name: "Edit Invoices", description: "Edit existing invoices", module: "Invoices" },
+  { id: "invoice_delete", name: "Delete Invoices", description: "Delete invoices", module: "Invoices" },
+  { id: "invoice_approve", name: "Approve Invoices", description: "Approve invoices for sending", module: "Invoices" },
+
+  // User Management
+  { id: "user_view", name: "View Users", description: "View user management", module: "Users" },
+  { id: "user_create", name: "Create Users", description: "Create new users", module: "Users" },
+  { id: "user_edit", name: "Edit Users", description: "Edit user details", module: "Users" },
+  { id: "user_delete", name: "Delete Users", description: "Delete users", module: "Users" },
+  { id: "user_permissions", name: "Manage Permissions", description: "Manage user permissions", module: "Users" },
+]
+
+const roleDefaultPermissions: Record<UserRole, string[]> = {
+  admin: allPermissions.map(p => p.id),
+  approver: [
+    "tuition_view", "tuition_edit",
+    "afterschool_view", "afterschool_approve",
+    "event_view",
+    "summer_view",
+    "discount_view", "discount_approve",
+    "invoice_view", "invoice_approve",
+  ],
+  accounting: [
+    "tuition_view", "tuition_edit",
+    "afterschool_view",
+    "event_view",
+    "summer_view",
+    "discount_view", "discount_edit",
+    "invoice_view", "invoice_create", "invoice_edit",
+  ],
+  viewer: [
+    "tuition_view",
+    "afterschool_view",
+    "event_view",
+    "summer_view",
+    "discount_view",
+    "invoice_view",
+  ],
+}
+
+const mockUsers: User[] = [
+  {
+    id: "1",
+    username: "admin",
+    email: "admin@school.com",
+    firstName: "System",
+    lastName: "Administrator",
+    role: "admin",
+    status: "active",
+    permissions: roleDefaultPermissions.admin,
+    createdAt: new Date("2024-01-01"),
+    lastLogin: new Date("2025-12-10"),
+  },
+  {
+    id: "2",
+    username: "john.smith",
+    email: "john.smith@school.com",
+    firstName: "John",
+    lastName: "Smith",
+    role: "approver",
+    status: "active",
+    permissions: roleDefaultPermissions.approver,
+    createdAt: new Date("2024-03-15"),
+    lastLogin: new Date("2025-12-09"),
+  },
+  {
+    id: "3",
+    username: "sarah.acc",
+    email: "sarah@school.com",
+    firstName: "Sarah",
+    lastName: "Johnson",
+    role: "accounting",
+    status: "active",
+    permissions: roleDefaultPermissions.accounting,
+    createdAt: new Date("2024-06-01"),
+    lastLogin: new Date("2025-12-08"),
+  },
+  {
+    id: "4",
+    username: "mike.viewer",
+    email: "mike@school.com",
+    firstName: "Mike",
+    lastName: "Wilson",
+    role: "viewer",
+    status: "inactive",
+    permissions: roleDefaultPermissions.viewer,
+    createdAt: new Date("2024-09-01"),
+    lastLogin: null,
+  },
+]
+
+export function UserManagement() {
+  const [users, setUsers] = useState<User[]>(mockUsers)
+  const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [roleFilter, setRoleFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [sortColumn, setSortColumn] = useState<string>("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
+
+  const getSortedUsers = (usersToSort: User[]) => {
+    if (!sortColumn) return usersToSort
+    return [...usersToSort].sort((a, b) => {
+      let aVal: any, bVal: any
+      switch (sortColumn) {
+        case "name":
+          aVal = `${a.firstName} ${a.lastName}`
+          bVal = `${b.firstName} ${b.lastName}`
+          break
+        case "username":
+          aVal = a.username
+          bVal = b.username
+          break
+        case "role":
+          aVal = a.role
+          bVal = b.role
+          break
+        case "status":
+          aVal = a.status
+          bVal = b.status
+          break
+        case "permissions":
+          aVal = a.permissions.length
+          bVal = b.permissions.length
+          break
+        case "createdAt":
+          aVal = a.createdAt.getTime()
+          bVal = b.createdAt.getTime()
+          break
+        case "lastLogin":
+          aVal = a.lastLogin ? a.lastLogin.getTime() : 0
+          bVal = b.lastLogin ? b.lastLogin.getTime() : 0
+          break
+        default:
+          return 0
+      }
+      if (typeof aVal === "string") {
+        const comparison = aVal.localeCompare(bVal)
+        return sortDirection === "asc" ? comparison : -comparison
+      }
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal
+    })
+  }
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Form states
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    firstName: "",
+    lastName: "",
+    password: "",
+    role: "viewer" as UserRole,
+    status: "active" as UserStatus,
+  })
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+
+  const applyFilters = () => {
+    let filtered = users
+
+    if (searchTerm) {
+      filtered = filtered.filter(user =>
+        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (roleFilter !== "all") {
+      filtered = filtered.filter(user => user.role === roleFilter)
+    }
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(user => user.status === statusFilter)
+    }
+
+    setFilteredUsers(filtered)
+  }
+
+  const clearFilters = () => {
+    setSearchTerm("")
+    setRoleFilter("all")
+    setStatusFilter("all")
+    setFilteredUsers(users)
+  }
+
+  const resetForm = () => {
+    setFormData({
+      username: "",
+      email: "",
+      firstName: "",
+      lastName: "",
+      password: "",
+      role: "viewer",
+      status: "active",
+    })
+    setSelectedPermissions([])
+    setShowPassword(false)
+  }
+
+  const handleCreateUser = () => {
+    if (!formData.username || !formData.email || !formData.firstName || !formData.lastName || !formData.password) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    const newUser: User = {
+      id: String(Date.now()),
+      username: formData.username,
+      email: formData.email,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      role: formData.role,
+      status: formData.status,
+      permissions: selectedPermissions.length > 0 ? selectedPermissions : roleDefaultPermissions[formData.role],
+      createdAt: new Date(),
+      lastLogin: null,
+    }
+
+    setUsers([...users, newUser])
+    setFilteredUsers([...users, newUser])
+    setIsCreateDialogOpen(false)
+    resetForm()
+    toast.success(`User ${newUser.username} created successfully`)
+  }
+
+  const handleEditUser = () => {
+    if (!selectedUser) return
+
+    const updatedUsers = users.map(user => {
+      if (user.id === selectedUser.id) {
+        return {
+          ...user,
+          username: formData.username,
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          role: formData.role,
+          status: formData.status,
+        }
+      }
+      return user
+    })
+
+    setUsers(updatedUsers)
+    setFilteredUsers(updatedUsers)
+    setIsEditDialogOpen(false)
+    resetForm()
+    toast.success(`User ${formData.username} updated successfully`)
+  }
+
+  const handleDeleteUser = () => {
+    if (!selectedUser) return
+
+    const updatedUsers = users.filter(user => user.id !== selectedUser.id)
+    setUsers(updatedUsers)
+    setFilteredUsers(updatedUsers)
+    setIsDeleteDialogOpen(false)
+    toast.success(`User ${selectedUser.username} deleted successfully`)
+    setSelectedUser(null)
+  }
+
+  const handleSavePermissions = () => {
+    if (!selectedUser) return
+
+    const updatedUsers = users.map(user => {
+      if (user.id === selectedUser.id) {
+        return {
+          ...user,
+          permissions: selectedPermissions,
+        }
+      }
+      return user
+    })
+
+    setUsers(updatedUsers)
+    setFilteredUsers(updatedUsers)
+    setIsPermissionDialogOpen(false)
+    toast.success(`Permissions updated for ${selectedUser.username}`)
+    setSelectedUser(null)
+  }
+
+  const openEditDialog = (user: User) => {
+    setSelectedUser(user)
+    setFormData({
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      password: "",
+      role: user.role,
+      status: user.status,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const openPermissionDialog = (user: User) => {
+    setSelectedUser(user)
+    setSelectedPermissions([...user.permissions])
+    setIsPermissionDialogOpen(true)
+  }
+
+  const openDeleteDialog = (user: User) => {
+    setSelectedUser(user)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const toggleUserStatus = (userId: string) => {
+    const updatedUsers = users.map(user => {
+      if (user.id === userId) {
+        const newStatus = user.status === "active" ? "inactive" : "active"
+        toast.success(`User ${user.username} is now ${newStatus}`)
+        return { ...user, status: newStatus as UserStatus }
+      }
+      return user
+    })
+    setUsers(updatedUsers)
+    setFilteredUsers(updatedUsers)
+  }
+
+  const handleRoleChange = (role: UserRole) => {
+    setFormData({ ...formData, role })
+    setSelectedPermissions(roleDefaultPermissions[role])
+  }
+
+  const togglePermission = (permissionId: string) => {
+    if (selectedPermissions.includes(permissionId)) {
+      setSelectedPermissions(selectedPermissions.filter(p => p !== permissionId))
+    } else {
+      setSelectedPermissions([...selectedPermissions, permissionId])
+    }
+  }
+
+  const getRoleBadge = (role: UserRole) => {
+    switch (role) {
+      case "admin":
+        return <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
+      case "approver":
+        return <Badge className="bg-blue-100 text-blue-800">Approver</Badge>
+      case "accounting":
+        return <Badge className="bg-green-100 text-green-800">Accounting</Badge>
+      case "viewer":
+        return <Badge className="bg-gray-100 text-gray-800">Viewer</Badge>
+      default:
+        return <Badge variant="secondary">{role}</Badge>
+    }
+  }
+
+  const getStatusBadge = (status: UserStatus) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+      case "inactive":
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+      case "suspended":
+        return <Badge className="bg-red-100 text-red-800">Suspended</Badge>
+      default:
+        return <Badge variant="secondary">{status}</Badge>
+    }
+  }
+
+  const groupedPermissions = allPermissions.reduce((acc, perm) => {
+    if (!acc[perm.module]) {
+      acc[perm.module] = []
+    }
+    acc[perm.module].push(perm)
+    return acc
+  }, {} as Record<string, Permission[]>)
+
+  const summaryStats = {
+    total: users.length,
+    active: users.filter(u => u.status === "active").length,
+    admin: users.filter(u => u.role === "admin").length,
+    approver: users.filter(u => u.role === "approver").length,
+    accounting: users.filter(u => u.role === "accounting").length,
+    viewer: users.filter(u => u.role === "viewer").length,
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold">User Management</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage system users, roles, and permissions
+          </p>
+        </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2" onClick={() => {
+              resetForm()
+              setSelectedPermissions(roleDefaultPermissions.viewer)
+            }}>
+              <Plus className="w-4 h-4" />
+              Add User
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+              <DialogDescription>
+                Add a new user to the system with role and permissions
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    placeholder="Enter first name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="Enter last name"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username *</Label>
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="Enter username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Enter email"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Enter password"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role *</Label>
+                  <Select value={formData.role} onValueChange={(value: UserRole) => handleRoleChange(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="approver">Approver</SelectItem>
+                      <SelectItem value="accounting">Accounting</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value: UserStatus) => setFormData({ ...formData, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Permissions</Label>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Default permissions for {formData.role} role are pre-selected. You can customize below.
+                </p>
+                <div className="border rounded-lg p-4 max-h-64 overflow-y-auto space-y-4">
+                  {Object.entries(groupedPermissions).map(([module, permissions]) => (
+                    <div key={module} className="space-y-2">
+                      <h4 className="font-medium text-sm">{module}</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {permissions.map(permission => (
+                          <div key={permission.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={permission.id}
+                              checked={selectedPermissions.includes(permission.id)}
+                              onCheckedChange={() => togglePermission(permission.id)}
+                            />
+                            <label
+                              htmlFor={permission.id}
+                              className="text-sm cursor-pointer"
+                              title={permission.description}
+                            >
+                              {permission.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateUser}>Create User</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summaryStats.total}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{summaryStats.active}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{summaryStats.admin}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Approvers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summaryStats.approver}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Accounting</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{summaryStats.accounting}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Viewer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-600">{summaryStats.viewer}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Filter className="w-4 h-4" />
+              Search & Filter
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button onClick={applyFilters} className="h-9">Apply</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Search</label>
+              <div className="relative">
+                <Input
+                  placeholder="Username, email, name"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className=""
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Role</label>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="approver">Approver</SelectItem>
+                  <SelectItem value="accounting">Accounting</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results Summary */}
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">
+          Showing {filteredUsers.length} of {users.length} users
+        </p>
+      </div>
+
+      {/* Users Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                  <div className="flex items-center gap-1">
+                    User
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("username")}>
+                  <div className="flex items-center gap-1">
+                    Username
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("role")}>
+                  <div className="flex items-center gap-1">
+                    Role
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center gap-1">
+                    Status
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("permissions")}>
+                  <div className="flex items-center gap-1">
+                    Permissions
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
+                  <div className="flex items-center gap-1">
+                    Created
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("lastLogin")}>
+                  <div className="flex items-center gap-1">
+                    Last Login
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {getSortedUsers(filteredUsers).map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{user.firstName} {user.lastName}</div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>{getStatusBadge(user.status)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{user.permissions.length} permissions</Badge>
+                  </TableCell>
+                  <TableCell>{format(user.createdAt, "MMM dd, yyyy")}</TableCell>
+                  <TableCell>
+                    {user.lastLogin ? format(user.lastLogin, "MMM dd, yyyy") : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 justify-center">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openPermissionDialog(user)}
+                        title="Manage Permissions"
+                      >
+                        <Shield className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditDialog(user)}
+                        title="Edit User"
+                      >
+                        <Edit className="w-4 h-4 text-gray-600" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => toggleUserStatus(user.id)}
+                        title={user.status === "active" ? "Deactivate User" : "Activate User"}
+                      >
+                        {user.status === "active" ? (
+                          <UserX className="w-4 h-4 text-orange-600" />
+                        ) : (
+                          <UserCheck className="w-4 h-4 text-green-600" />
+                        )}
+                      </Button>
+                      {user.role !== "admin" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDeleteDialog(user)}
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-firstName">First Name</Label>
+                <Input
+                  id="edit-firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lastName">Last Name</Label>
+                <Input
+                  id="edit-lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-username">Username</Label>
+              <Input
+                id="edit-username"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="approver">Approver</SelectItem>
+                    <SelectItem value="accounting">Accounting</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select value={formData.status} onValueChange={(value: UserStatus) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditUser}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permissions Dialog */}
+      <Dialog open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Permissions - {selectedUser?.username}</DialogTitle>
+            <DialogDescription>
+              Customize permissions for this user
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedPermissions(allPermissions.map(p => p.id))}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedPermissions([])}
+              >
+                Clear All
+              </Button>
+              {selectedUser && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedPermissions(roleDefaultPermissions[selectedUser.role])}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Reset to Role Default
+                </Button>
+              )}
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-6">
+              {Object.entries(groupedPermissions).map(([module, permissions]) => (
+                <div key={module} className="space-y-2">
+                  <h4 className="font-medium text-sm border-b pb-1">{module}</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {permissions.map(permission => (
+                      <div key={permission.id} className="flex items-start space-x-2">
+                        <Checkbox
+                          id={`perm-${permission.id}`}
+                          checked={selectedPermissions.includes(permission.id)}
+                          onCheckedChange={() => togglePermission(permission.id)}
+                        />
+                        <div>
+                          <label
+                            htmlFor={`perm-${permission.id}`}
+                            className="text-sm cursor-pointer font-medium"
+                          >
+                            {permission.name}
+                          </label>
+                          <p className="text-xs text-muted-foreground">{permission.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPermissionDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSavePermissions}>Save Permissions</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedUser?.firstName} {selectedUser?.lastName}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
