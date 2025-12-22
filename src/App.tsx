@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -6,12 +6,15 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger
 } from "./components/ui/sidebar"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./components/ui/collapsible"
+import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar"
 import { Toaster } from "./components/ui/sonner"
 import { AcademicYearProvider } from "./contexts/AcademicYearContext"
 import { StudentProvider } from "./contexts/StudentContext"
@@ -50,7 +53,9 @@ import {
   Settings2,
   UsersRound,
   Shield,
-  UserCog
+  UserCog,
+  ChevronDown,
+  LogOut
 } from "lucide-react"
 import { TuitionDashboard } from "./components/TuitionDashboard"
 import { TuitionTermSettings } from "./components/TuitionTermSettings"
@@ -146,8 +151,44 @@ const menuItems = {
 export default function App() {
   const [activeSection, setActiveSection] = useState("tuition-dashboard")
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
-
   const [subPageParams, setSubPageParams] = useState<any>(null)
+
+  // Collapsible menu state
+  const [openGroup, setOpenGroup] = useState<string | null>("tuition")
+  const autoCollapseTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearAutoCollapseTimer = () => {
+    if (autoCollapseTimerRef.current) {
+      clearTimeout(autoCollapseTimerRef.current)
+      autoCollapseTimerRef.current = null
+    }
+  }
+
+  const startAutoCollapseTimer = () => {
+    clearAutoCollapseTimer()
+    autoCollapseTimerRef.current = setTimeout(() => {
+      setOpenGroup(null)
+    }, 3000)
+  }
+
+  const toggleGroup = (group: string) => {
+    clearAutoCollapseTimer()
+    if (openGroup === group) {
+      setOpenGroup(null)
+    } else {
+      setOpenGroup(group)
+      startAutoCollapseTimer()
+    }
+  }
+
+  const handleMenuItemClick = (itemId: string) => {
+    clearAutoCollapseTimer()
+    setActiveSection(itemId)
+  }
+
+  useEffect(() => {
+    return () => clearAutoCollapseTimer()
+  }, [])
   
   // Global View Modal state (keeping for backward compatibility)
   const [isGlobalViewModalOpen, setIsGlobalViewModalOpen] = useState(false)
@@ -336,159 +377,261 @@ export default function App() {
           </SidebarHeader>
           
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Tuition Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.tuition.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Tuition Management */}
+            <Collapsible open={openGroup === "tuition"} onOpenChange={() => toggleGroup("tuition")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    Tuition Management
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "tuition" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.tuition.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>After School</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.afterSchool.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton 
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* After School */}
+            <Collapsible open={openGroup === "afterSchool"} onOpenChange={() => toggleGroup("afterSchool")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    After School
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "afterSchool" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.afterSchool.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Event Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.eventManagement.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton 
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Event Management */}
+            <Collapsible open={openGroup === "eventManagement"} onOpenChange={() => toggleGroup("eventManagement")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    Event Management
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "eventManagement" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.eventManagement.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Summer Activities</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.summerActivities.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton 
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Summer Activities */}
+            <Collapsible open={openGroup === "summerActivities"} onOpenChange={() => toggleGroup("summerActivities")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    Summer Activities
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "summerActivities" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.summerActivities.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Discount Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.discountManagement.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton 
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Discount Management */}
+            <Collapsible open={openGroup === "discountManagement"} onOpenChange={() => toggleGroup("discountManagement")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    Discount Management
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "discountManagement" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.discountManagement.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Invoice Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.invoiceManagement.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Invoice Management */}
+            <Collapsible open={openGroup === "invoiceManagement"} onOpenChange={() => toggleGroup("invoiceManagement")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    Invoice Management
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "invoiceManagement" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.invoiceManagement.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Student Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.studentManagement.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Student Management */}
+            <Collapsible open={openGroup === "studentManagement"} onOpenChange={() => toggleGroup("studentManagement")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    Student Management
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "studentManagement" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.studentManagement.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>User Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.userManagement.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* User Management */}
+            <Collapsible open={openGroup === "userManagement"} onOpenChange={() => toggleGroup("userManagement")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    User Management
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "userManagement" ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.userManagement.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
 
           </SidebarContent>
+
+          {/* User Profile Footer */}
+          <SidebarFooter className="p-3">
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-accent/50 hover:bg-accent transition-colors cursor-pointer">
+              <div className="relative">
+                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                  <AvatarImage src="/avatar-placeholder.png" alt="SuperAdmin" />
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
+                    SA
+                  </AvatarFallback>
+                </Avatar>
+                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">SuperAdmin</p>
+                <p className="text-xs text-muted-foreground truncate">Administrator</p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </SidebarFooter>
         </Sidebar>
 
         <main className="flex-1 flex flex-col">

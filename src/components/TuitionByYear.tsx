@@ -59,14 +59,33 @@ const oldToNewGradeMapping: Record<string, string> = {
   "g12": "year12",
 }
 
+// Mock tuition fees (THB) - increasing by grade level
+const mockTuitionFees: Record<string, { term1: number; term2: number; term3: number }> = {
+  nursery: { term1: 105000, term2: 100000, term3: 95000 },
+  reception: { term1: 115000, term2: 110000, term3: 105000 },
+  year1: { term1: 125000, term2: 120000, term3: 115000 },
+  year2: { term1: 135000, term2: 130000, term3: 125000 },
+  year3: { term1: 145000, term2: 140000, term3: 135000 },
+  year4: { term1: 155000, term2: 150000, term3: 145000 },
+  year5: { term1: 165000, term2: 160000, term3: 155000 },
+  year6: { term1: 180000, term2: 175000, term3: 170000 },
+  year7: { term1: 200000, term2: 195000, term3: 190000 },
+  year8: { term1: 215000, term2: 210000, term3: 205000 },
+  year9: { term1: 230000, term2: 225000, term3: 220000 },
+  year10: { term1: 260000, term2: 255000, term3: 250000 },
+  year11: { term1: 290000, term2: 285000, term3: 280000 },
+  year12: { term1: 320000, term2: 315000, term3: 310000 },
+  year13: { term1: 350000, term2: 345000, term3: 340000 },
+}
+
 const createDefaultGrades = (): GradeLevelTuition[] => {
   return gradeLevels.map(grade => ({
     id: grade.id,
     gradeLevel: grade.label,
     gradeLevelOrder: grade.order,
-    term1Amount: 0,
-    term2Amount: 0,
-    term3Amount: 0
+    term1Amount: mockTuitionFees[grade.id]?.term1 || 0,
+    term2Amount: mockTuitionFees[grade.id]?.term2 || 0,
+    term3Amount: mockTuitionFees[grade.id]?.term3 || 0
   }))
 }
 

@@ -18,6 +18,7 @@ import { format } from "date-fns"
 import { toast } from "sonner@2.0.3"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import SchoolLogo from "@/assets/Logo.png"
 
 interface Invoice {
   id: string
@@ -1115,14 +1116,20 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
           {selectedInvoice && (
             <div className="bg-white">
               {/* School Header */}
-              <div className="text-center py-4 px-6 border-b text-xs text-gray-600">
-                <p>{SCHOOL_INFO.address}</p>
-                <p>{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+              <div className="text-center pt-6 pb-4 border-b">
+                <img
+                  src={SchoolLogo}
+                  alt="King's College International School Bangkok"
+                  style={{ height: '80px', margin: '0 auto 12px auto', display: 'block' }}
+                />
+                <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
+                <p className="text-xs text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
+                <p className="text-xs text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
               </div>
 
               {/* Invoice Title */}
-              <div className="text-center py-6">
-                <h1 className="text-3xl font-bold tracking-wide">INVOICE</h1>
+              <div className="text-center py-4">
+                <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
                 <div className="mt-2">{getStatusBadge(selectedInvoice.status)}</div>
               </div>
 
@@ -2016,12 +2023,24 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
       {/* Edit Draft Invoice Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0">
           {selectedInvoice && (
             <div className="bg-white">
+              {/* School Header */}
+              <div className="text-center pt-6 pb-4 border-b">
+                <img
+                  src={SchoolLogo}
+                  alt="King's College International School Bangkok"
+                  style={{ height: '80px', margin: '0 auto 12px auto', display: 'block' }}
+                />
+                <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
+                <p className="text-xs text-gray-500 mt-1">727 Ratchadapisek Road, Bang Phongphang, Yannawa, Bangkok 10120, Thailand</p>
+                <p className="text-xs text-gray-500">+66 (0) 2481 9955, finance@kingsbangkok.ac.th, www.kingsbangkok.ac.th</p>
+              </div>
+
               {/* Invoice Title */}
-              <div className="text-center py-4 border-b">
-                <h1 className="text-2xl font-bold tracking-wide">INVOICE</h1>
+              <div className="text-center py-4">
+                <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
                 <Badge variant="outline" className="mt-2">
                   <Eye className="w-3 h-3 mr-1" />
                   View Only
@@ -2029,45 +2048,45 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               </div>
 
               {/* Student & Invoice Info */}
-              <div className="px-4 py-4">
+              <div className="px-8 py-6">
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-2 text-xs">
+                  <div className="grid grid-cols-2 text-sm">
                     {/* Left - Student Info */}
-                    <div className="p-3 space-y-1 border-r">
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Student ID</span>
-                        <span className="font-medium">{selectedInvoice.studentId}</span>
+                    <div className="p-4 space-y-2 border-r">
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Student ID :</span>
+                        <span className="font-semibold">{selectedInvoice.studentId}</span>
                       </div>
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Student name</span>
-                        <span className="font-medium">{selectedInvoice.studentName}</span>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Student name :</span>
+                        <span className="font-semibold">{selectedInvoice.studentName}</span>
                       </div>
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Year group</span>
-                        <span className="font-medium">{selectedInvoice.studentGrade}</span>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Year group :</span>
+                        <span className="font-semibold">{selectedInvoice.studentGrade}</span>
                       </div>
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Contact name</span>
-                        <span className="font-medium">{selectedInvoice.parentName}</span>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Contact name :</span>
+                        <span className="font-semibold">{selectedInvoice.parentName}</span>
                       </div>
                     </div>
                     {/* Right - Invoice Info */}
-                    <div className="p-3 space-y-1">
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Invoice no.</span>
-                        <span className="font-medium">{selectedInvoice.invoiceNumber.replace('INV-', '')}</span>
+                    <div className="p-4 space-y-2">
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Invoice no. :</span>
+                        <span className="font-semibold">{selectedInvoice.invoiceNumber.replace('INV-', '')}</span>
                       </div>
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Invoice date</span>
-                        <span className="font-medium">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Invoice date :</span>
+                        <span className="font-semibold">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
                       </div>
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">Due date</span>
-                        <span className="font-medium">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">Due date :</span>
+                        <span className="font-semibold">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
                       </div>
-                      <div className="grid grid-cols-[90px_1fr] gap-1">
-                        <span className="text-gray-600">School year</span>
-                        <span className="font-medium">{getAcademicYear(selectedInvoice.issueDate)}</span>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-28 shrink-0">School year :</span>
+                        <span className="font-semibold">{getAcademicYear(selectedInvoice.issueDate)}</span>
                       </div>
                     </div>
                   </div>
@@ -2111,11 +2130,11 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                   if (discounts.length === 0) return null
 
                   return (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-xs font-medium text-green-800 mb-2">Discounts Applied:</p>
-                      <div className="flex flex-wrap gap-1.5">
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-800 mb-2">Discounts Applied:</p>
+                      <div className="flex flex-wrap gap-2">
                         {discounts.map((discount, idx) => (
-                          <Badge key={idx} className={`text-xs ${discount.color}`}>
+                          <Badge key={idx} className={`${discount.color}`}>
                             {discount.name} {discount.value}
                           </Badge>
                         ))}
@@ -2126,27 +2145,27 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               </div>
 
               {/* Invoice Items Table */}
-              <div className="px-4 pb-4">
+              <div className="px-8 pb-6">
                 <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 border-b">
-                        <th className="py-2 px-2 text-left font-semibold w-8">No.</th>
-                        <th className="py-2 px-2 text-left font-semibold">Description</th>
-                        <th className="py-2 px-2 text-right font-semibold w-24">Amount</th>
+                        <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
+                        <th className="py-3 px-4 text-left font-semibold">Description</th>
+                        <th className="py-3 px-4 text-right font-semibold w-28">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedInvoice.items.map((item, index) => (
-                        <tr key={item.id} className="border-b">
-                          <td className="py-2 px-2 align-top">{index + 1}</td>
-                          <td className="py-2 px-2 align-top" style={{ wordBreak: 'break-word' }}>
+                        <tr key={item.id} className="border-b last:border-b-0">
+                          <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
+                          <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
                             {item.description}
                             {item.discountPercent > 0 && (
-                              <span className="text-gray-500 ml-1">(-{item.discountPercent}%)</span>
+                              <span className="text-gray-400 text-xs ml-2">(-{item.discountPercent}%)</span>
                             )}
                           </td>
-                          <td className="py-2 px-2 text-right font-medium whitespace-nowrap align-top">
+                          <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
                             {formatCurrency(item.discountedAmount)}
                           </td>
                         </tr>
@@ -2154,9 +2173,9 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                     </tbody>
                   </table>
                   {/* Amount in Words + Total */}
-                  <div className="border-t p-3">
-                    <div className="text-xs text-gray-600 mb-1">{numberToWords(selectedInvoice.finalAmount)}</div>
-                    <div className="flex justify-between items-center font-bold text-sm">
+                  <div className="border-t bg-gray-50 p-4">
+                    <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
+                    <div className="flex justify-between items-center font-bold text-base">
                       <span>TOTAL</span>
                       <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
                     </div>
@@ -2166,20 +2185,22 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
               {/* Notes (View Only) */}
               {selectedInvoice.notes && (
-                <div className="px-4 pb-4">
-                  <label className="text-xs font-medium block mb-1">Notes</label>
-                  <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">{selectedInvoice.notes}</p>
+                <div className="px-8 pb-4">
+                  <label className="text-sm font-medium block mb-2">Notes</label>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border">{selectedInvoice.notes}</p>
                 </div>
               )}
 
               {/* Payment Methods Preview */}
-              <div className="px-4 pb-4 text-xs text-gray-500">
-                <p className="font-medium text-gray-700 mb-1">Payment methods:</p>
-                <p>Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</p>
+              <div className="px-8 pb-6">
+                <p className="text-sm">
+                  <span className="font-medium text-gray-700">Payment methods: </span>
+                  <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
+                </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+              <div className="flex items-center justify-between px-8 py-4 border-t bg-gray-50">
                 <Button
                   variant="ghost"
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -2188,7 +2209,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
                 </Button>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Button variant="outline" onClick={closeEditModal}>
                     Close
                   </Button>
