@@ -16,6 +16,7 @@ import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsh
 import { format } from "date-fns"
 import { toast } from "sonner@2.0.3"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import SchoolLogo from "@/assets/Logo.png"
 
 interface PreCreatedItem {
   id: string
@@ -1828,12 +1829,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     <div className="bg-white border rounded-lg shadow-sm text-sm">
                       {/* School Header */}
                       <div className="text-center py-6 border-b">
-                        <div className="flex justify-center mb-2">
-                          <div className="w-12 h-12 border-2 border-gray-300 rounded-full flex items-center justify-center">
-                            <GraduationCap className="w-6 h-6 text-gray-600" />
-                          </div>
-                        </div>
-                        <h1 className="text-sm font-semibold tracking-wide">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h1>
+                        <img
+                          src={SchoolLogo}
+                          alt="King's College International School Bangkok"
+                          style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
+                        />
+                        <h1 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h1>
                         <p className="text-xs text-gray-500 mt-1">
                           {SCHOOL_INFO.address}
                         </p>
