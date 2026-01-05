@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -153,42 +153,28 @@ export default function App() {
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
   const [subPageParams, setSubPageParams] = useState<any>(null)
 
-  // Collapsible menu state
-  const [openGroup, setOpenGroup] = useState<string | null>("tuition")
-  const autoCollapseTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-  const clearAutoCollapseTimer = () => {
-    if (autoCollapseTimerRef.current) {
-      clearTimeout(autoCollapseTimerRef.current)
-      autoCollapseTimerRef.current = null
-    }
-  }
-
-  const startAutoCollapseTimer = () => {
-    clearAutoCollapseTimer()
-    autoCollapseTimerRef.current = setTimeout(() => {
-      setOpenGroup(null)
-    }, 3000)
-  }
+  // Collapsible menu state - allow multiple groups to be open
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    tuition: true,
+    afterSchool: false,
+    eventManagement: false,
+    summerActivities: false,
+    discountManagement: false,
+    invoiceManagement: false,
+    studentManagement: false,
+    userManagement: false
+  })
 
   const toggleGroup = (group: string) => {
-    clearAutoCollapseTimer()
-    if (openGroup === group) {
-      setOpenGroup(null)
-    } else {
-      setOpenGroup(group)
-      startAutoCollapseTimer()
-    }
+    setOpenGroups(prev => ({
+      ...prev,
+      [group]: !prev[group]
+    }))
   }
 
   const handleMenuItemClick = (itemId: string) => {
-    clearAutoCollapseTimer()
     setActiveSection(itemId)
   }
-
-  useEffect(() => {
-    return () => clearAutoCollapseTimer()
-  }, [])
   
   // Global View Modal state (keeping for backward compatibility)
   const [isGlobalViewModalOpen, setIsGlobalViewModalOpen] = useState(false)
@@ -322,9 +308,10 @@ export default function App() {
       case "invoice-management":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} />
       case "invoice-creation":
-        return <InvoiceCreation 
+        return <InvoiceCreation
           defaultCategory={subPageParams?.defaultCategory}
           invoiceType={subPageParams?.invoiceType}
+          onNavigateBack={navigateBack}
         />
       case "item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} />
@@ -338,7 +325,7 @@ export default function App() {
         return <ViewDetailsPage
           type={viewDetailsType}
           data={viewDetailsData}
-          onEdit={handleViewDetailsEdit}
+          onEdit={viewDetailsData?.viewOnly ? undefined : handleViewDetailsEdit}
           onDownload={handleViewDetailsDownload}
           onPrint={handleViewDetailsPrint}
           onBack={navigateBack}
@@ -378,12 +365,12 @@ export default function App() {
           
           <SidebarContent>
             {/* Tuition Management */}
-            <Collapsible open={openGroup === "tuition"} onOpenChange={() => toggleGroup("tuition")}>
+            <Collapsible open={openGroups["tuition"]} onOpenChange={() => toggleGroup("tuition")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     Tuition Management
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "tuition" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["tuition"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -407,12 +394,12 @@ export default function App() {
             </Collapsible>
 
             {/* After School */}
-            <Collapsible open={openGroup === "afterSchool"} onOpenChange={() => toggleGroup("afterSchool")}>
+            <Collapsible open={openGroups["afterSchool"]} onOpenChange={() => toggleGroup("afterSchool")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     After School
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "afterSchool" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["afterSchool"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -436,12 +423,12 @@ export default function App() {
             </Collapsible>
 
             {/* Event Management */}
-            <Collapsible open={openGroup === "eventManagement"} onOpenChange={() => toggleGroup("eventManagement")}>
+            <Collapsible open={openGroups["eventManagement"]} onOpenChange={() => toggleGroup("eventManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     Event Management
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "eventManagement" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["eventManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -465,12 +452,12 @@ export default function App() {
             </Collapsible>
 
             {/* Summer Activities */}
-            <Collapsible open={openGroup === "summerActivities"} onOpenChange={() => toggleGroup("summerActivities")}>
+            <Collapsible open={openGroups["summerActivities"]} onOpenChange={() => toggleGroup("summerActivities")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     Summer Activities
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "summerActivities" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["summerActivities"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -494,12 +481,12 @@ export default function App() {
             </Collapsible>
 
             {/* Discount Management */}
-            <Collapsible open={openGroup === "discountManagement"} onOpenChange={() => toggleGroup("discountManagement")}>
+            <Collapsible open={openGroups["discountManagement"]} onOpenChange={() => toggleGroup("discountManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     Discount Management
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "discountManagement" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["discountManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -523,12 +510,12 @@ export default function App() {
             </Collapsible>
 
             {/* Invoice Management */}
-            <Collapsible open={openGroup === "invoiceManagement"} onOpenChange={() => toggleGroup("invoiceManagement")}>
+            <Collapsible open={openGroups["invoiceManagement"]} onOpenChange={() => toggleGroup("invoiceManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     Invoice Management
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "invoiceManagement" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["invoiceManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -552,12 +539,12 @@ export default function App() {
             </Collapsible>
 
             {/* Student Management */}
-            <Collapsible open={openGroup === "studentManagement"} onOpenChange={() => toggleGroup("studentManagement")}>
+            <Collapsible open={openGroups["studentManagement"]} onOpenChange={() => toggleGroup("studentManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     Student Management
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "studentManagement" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["studentManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -581,12 +568,12 @@ export default function App() {
             </Collapsible>
 
             {/* User Management */}
-            <Collapsible open={openGroup === "userManagement"} onOpenChange={() => toggleGroup("userManagement")}>
+            <Collapsible open={openGroups["userManagement"]} onOpenChange={() => toggleGroup("userManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
                     User Management
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroup === "userManagement" ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["userManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -611,28 +598,7 @@ export default function App() {
 
           </SidebarContent>
 
-          {/* User Profile Footer */}
-          <SidebarFooter className="p-3">
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-accent/50 hover:bg-accent transition-colors cursor-pointer">
-              <div className="relative">
-                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                  <AvatarImage src="/avatar-placeholder.png" alt="SuperAdmin" />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
-                    SA
-                  </AvatarFallback>
-                </Avatar>
-                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">SuperAdmin</p>
-                <p className="text-xs text-muted-foreground truncate">Administrator</p>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
+                  </Sidebar>
 
         <main className="flex-1 flex flex-col">
           <header className="border-b p-4 flex items-center gap-4">

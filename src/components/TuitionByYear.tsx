@@ -20,21 +20,21 @@ interface GradeLevelTuition {
 }
 
 const gradeLevels = [
-  { id: "nursery", label: "Nursery", order: 1 },
-  { id: "reception", label: "Reception", order: 2 },
-  { id: "year1", label: "Year 1", order: 3 },
-  { id: "year2", label: "Year 2", order: 4 },
-  { id: "year3", label: "Year 3", order: 5 },
-  { id: "year4", label: "Year 4", order: 6 },
-  { id: "year5", label: "Year 5", order: 7 },
-  { id: "year6", label: "Year 6", order: 8 },
-  { id: "year7", label: "Year 7", order: 9 },
-  { id: "year8", label: "Year 8", order: 10 },
-  { id: "year9", label: "Year 9", order: 11 },
-  { id: "year10", label: "Year 10", order: 12 },
-  { id: "year11", label: "Year 11", order: 13 },
-  { id: "year12", label: "Year 12", order: 14 },
-  { id: "year13", label: "Year 13", order: 15 },
+  { id: "pre-nursery", label: "Pre-Nursery", order: 1 },
+  { id: "nursery", label: "Nursery", order: 2 },
+  { id: "reception", label: "Reception", order: 3 },
+  { id: "year1", label: "Year 1", order: 4 },
+  { id: "year2", label: "Year 2", order: 5 },
+  { id: "year3", label: "Year 3", order: 6 },
+  { id: "year4", label: "Year 4", order: 7 },
+  { id: "year5", label: "Year 5", order: 8 },
+  { id: "year6", label: "Year 6", order: 9 },
+  { id: "year7", label: "Year 7", order: 10 },
+  { id: "year8", label: "Year 8", order: 11 },
+  { id: "year9", label: "Year 9", order: 12 },
+  { id: "year10", label: "Year 10", order: 13 },
+  { id: "year11", label: "Year 11", order: 14 },
+  { id: "year12", label: "Year 12", order: 15 },
 ]
 
 const TUITION_STORAGE_KEY = "tuitionByYearData"
@@ -61,6 +61,7 @@ const oldToNewGradeMapping: Record<string, string> = {
 
 // Mock tuition fees (THB) - increasing by grade level
 const mockTuitionFees: Record<string, { term1: number; term2: number; term3: number }> = {
+  "pre-nursery": { term1: 95000, term2: 90000, term3: 85000 },
   nursery: { term1: 105000, term2: 100000, term3: 95000 },
   reception: { term1: 115000, term2: 110000, term3: 105000 },
   year1: { term1: 125000, term2: 120000, term3: 115000 },
@@ -75,7 +76,6 @@ const mockTuitionFees: Record<string, { term1: number; term2: number; term3: num
   year10: { term1: 260000, term2: 255000, term3: 250000 },
   year11: { term1: 290000, term2: 285000, term3: 280000 },
   year12: { term1: 320000, term2: 315000, term3: 310000 },
-  year13: { term1: 350000, term2: 345000, term3: 340000 },
 }
 
 const createDefaultGrades = (): GradeLevelTuition[] => {
@@ -319,7 +319,7 @@ export function TuitionByYear() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[60px]">No.</TableHead>
-                <TableHead className="w-[140px]">Grade Level</TableHead>
+                <TableHead className="w-[140px]">Year Group</TableHead>
                 <TableHead className="text-center">Term 1 (THB)</TableHead>
                 <TableHead className="text-center">Term 2 (THB)</TableHead>
                 <TableHead className="text-center">Term 3 (THB)</TableHead>
@@ -392,7 +392,7 @@ export function TuitionByYear() {
 
       {/* Save Confirmation Dialog */}
       <Dialog open={isSaveConfirmDialogOpen} onOpenChange={setIsSaveConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Confirm Save Changes</DialogTitle>
           </DialogHeader>

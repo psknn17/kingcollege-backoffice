@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown } from "lucide-react"
+import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner@2.0.3"
 
@@ -122,6 +122,10 @@ export function ExternalParentManagement() {
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -178,6 +182,24 @@ export function ExternalParentManagement() {
       return sortDirection === "asc" ? aVal - bVal : bVal - aVal
     })
   }
+
+  // Pagination logic
+  const sortedParents = useMemo(() => getSortedParents(filteredParents), [filteredParents, sortColumn, sortDirection])
+  const totalPages = Math.ceil(sortedParents.length / pageSize)
+  const paginatedParents = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return sortedParents.slice(startIndex, startIndex + pageSize)
+  }, [sortedParents, currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, paymentStatusFilter, sortColumn, sortDirection])
 
   const applyFilters = () => {
     let filtered = parents
@@ -487,7 +509,7 @@ export function ExternalParentManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedParents(filteredParents).map((parent) => (
+              {paginatedParents.map((parent) => (
                 <TableRow key={parent.id}>
                   <TableCell>
                     <div>
@@ -543,7 +565,7 @@ export function ExternalParentManagement() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
+                        <DialogContent className="max-w-2xl p-6">
                           <DialogHeader>
                             <DialogTitle>Application Details - {parent.studentName}</DialogTitle>
                             <DialogDescription>
@@ -573,7 +595,7 @@ export function ExternalParentManagement() {
                                 <p className="text-sm">{parent.studentAge} years old</p>
                               </div>
                               <div>
-                                <Label>Grade</Label>
+                                <Label>Year Group</Label>
                                 <p className="text-sm">{parent.studentGrade}</p>
                               </div>
                             </div>
@@ -687,6 +709,77 @@ export function ExternalParentManagement() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {sortedParents.length > 0 && (
+            <div className="flex items-center justify-between border-t p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Show</span>
+                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>entries</span>
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedParents.length)} of {sortedParents.length} applications
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

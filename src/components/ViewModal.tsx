@@ -104,7 +104,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
               <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Grade</label>
+              <label className="text-sm text-muted-foreground">Year Group</label>
               <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
             </div>
             <div>
@@ -213,7 +213,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
               <p className="font-medium">{data.id}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Grade Level</label>
+              <label className="text-sm text-muted-foreground">Year Group</label>
               <p className="font-medium">{data.grade}</p>
             </div>
             <div>
@@ -320,7 +320,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
 
         <Card>
           <CardHeader>
-            <CardTitle>Applicable Grades</CardTitle>
+            <CardTitle>Applicable Year Groups</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -329,8 +329,8 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
               ))}
             </div>
             <div className="mt-4">
-              <label className="text-sm text-muted-foreground">Total Grades</label>
-              <p className="font-medium">{data.applicableGrades?.length || 0} grades</p>
+              <label className="text-sm text-muted-foreground">Total Year Groups</label>
+              <p className="font-medium">{data.applicableGrades?.length || 0} year groups</p>
             </div>
           </CardContent>
         </Card>
@@ -351,91 +351,61 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
   )
 
   const renderTemplateView = () => (
-    <div className="space-y-6">
-      {/* Header Card */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-xl font-bold text-gray-900">{data.name}</h3>
-                {getStatusBadge(data.isActive ? "active" : "inactive")}
-              </div>
-              <p className="text-muted-foreground">{data.description || "No description"}</p>
-            </div>
-            <div className="text-left md:text-right">
-              <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
-              <p className="text-3xl font-bold text-blue-600">{formatCurrency(data.totalAmount || 0)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Template Details */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Template Name</p>
-            </div>
-            <p className="font-semibold">{data.name}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <GraduationCap className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Applicable Grades</p>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {data.applicableGrades?.map((grade: string, index: number) => (
-                <Badge key={index} variant="secondary" className="text-xs">{grade}</Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Items Count</p>
-            </div>
-            <p className="font-semibold">{data.itemsList?.length || 0} {(data.itemsList?.length || 0) === 1 ? 'item' : 'items'}</p>
-          </CardContent>
-        </Card>
+    <div className="px-4">
+      {/* Document Header */}
+      <div className="text-center py-6 border-b border-gray-200 mb-6">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Invoice Template</h2>
       </div>
 
-      {/* Template Items */}
+      {/* Template Info */}
+      <div className="px-4 space-y-4 mb-8">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Template Name</p>
+            <p className="text-lg font-semibold text-gray-900">{data.name}</p>
+          </div>
+          {getStatusBadge(data.isActive ? "active" : "inactive")}
+        </div>
+
+        {data.description && (
+          <p className="text-sm text-gray-600">{data.description}</p>
+        )}
+
+        <div className="space-y-1">
+          <p className="text-xs text-gray-400 uppercase tracking-wide">Applicable Grades</p>
+          <p className="text-gray-900">{data.applicableGrades?.join(", ") || "All grades"}</p>
+        </div>
+      </div>
+
+      {/* Items Section */}
       {data.itemsList && data.itemsList.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Items in Template</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {data.itemsList.map((item: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="text-xs">{item.category}</Badge>
-                    <p className="font-semibold text-sm min-w-[80px] text-right">{formatCurrency(item.amount)}</p>
-                  </div>
+        <div className="px-4">
+          <div className="border-t border-gray-200 pt-6 mb-4">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Items</h3>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            {data.itemsList.map((item: any, index: number) => (
+              <div key={index} className="flex items-baseline justify-between py-2">
+                <div className="flex items-baseline gap-3 flex-1 min-w-0">
+                  <span className="text-gray-400 text-sm w-6 flex-shrink-0">{index + 1}.</span>
+                  <span className="text-gray-900">{item.name}</span>
+                  <span className="flex-1 border-b border-dotted border-gray-200 mx-3 mb-1"></span>
                 </div>
-              ))}
+                <span className="font-medium text-gray-900 whitespace-nowrap pl-4">{formatCurrency(item.amount)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div className="border-t-2 border-gray-300 pt-6 pb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Total</span>
+              <span className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalAmount || 0)}</span>
             </div>
-            <Separator className="my-4" />
-            <div className="flex justify-between items-center px-3">
-              <span className="font-semibold text-gray-600">Total Amount</span>
-              <span className="text-xl font-bold text-blue-600">{formatCurrency(data.totalAmount || 0)}</span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="border-t-4 border-double border-gray-300 mt-3"></div>
+        </div>
       )}
     </div>
   )
@@ -500,7 +470,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
               <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Grade</label>
+              <label className="text-sm text-muted-foreground">Year Group</label>
               <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
             </div>
             <div>
@@ -576,7 +546,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-8">
         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>

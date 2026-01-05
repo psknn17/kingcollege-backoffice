@@ -188,7 +188,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
   // Get available terms based on selected academic year
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
-    : [...new Map(academicYears.flatMap(y => y.terms).map(t => [t.name, t])).values()]
+    : [...new Map(academicYears.flatMap(y => y.terms).map(t => [t.id, t])).values()]
 
   const applyFilters = () => {
     let filtered = payments
@@ -268,7 +268,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       'Applied Filters:',
       `- Status: ${statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}`,
       `- Term: ${termFilter === 'all' ? 'All Terms' : terms.find(t => t.id === termFilter)?.name || termFilter}`,
-      `- Grade Level: ${gradeFilter === 'all' ? 'All Grades' : gradeFilter}`,
+      `- Year Group: ${gradeFilter === 'all' ? 'All Year Groups' : gradeFilter}`,
       `- Parent Type: ${parentTypeFilter === 'all' ? 'All Parent Types' : parentTypeFilter.charAt(0).toUpperCase() + parentTypeFilter.slice(1)}`,
       `- Date Range: ${dateFrom ? format(dateFrom, 'yyyy-MM-dd') : 'No start date'} to ${dateTo ? format(dateTo, 'yyyy-MM-dd') : 'No end date'}`,
       `- Search Term: ${searchTerm || 'No search applied'}`,
@@ -282,7 +282,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       'Invoice Number',
       'Student Name',
       'Student ID',
-      'Grade Level',
+      'Year Group',
       'Amount (THB)',
       'Term',
       'Payment Method',
@@ -371,7 +371,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     console.log("Downloading receipt for payment:", payment.invoiceNumber)
     // Create a mock download
     const element = document.createElement('a')
-    const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nGrade: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "MMM dd, yyyy")}`
+    const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nYear Group: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "MMM dd, yyyy")}`
     const file = new Blob([content], { type: 'text/plain' })
     element.href = URL.createObjectURL(file)
     element.download = `receipt-${payment.invoiceNumber}.txt`
@@ -463,15 +463,15 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
           {/* Row 2 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Grade */}
+            {/* Year Group */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Grade</label>
+              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Grades" />
+                  <SelectValue placeholder="All Year Groups" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="all">All Year Groups</SelectItem>
                   {uniqueGrades.map((grade) => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -565,6 +565,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
                 <SelectItem value="50">50</SelectItem>
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
@@ -597,7 +598,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                   <div className="flex items-center gap-1">
-                    Grade
+                    Year Group
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -675,7 +676,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                           <Eye className="w-4 h-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
+                      <DialogContent className="max-w-2xl p-6">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
                             <Receipt className="w-5 h-5" />
@@ -717,7 +718,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                                   <p className="font-mono text-sm">{payment.studentId}</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Grade Level</p>
+                                  <p className="text-sm text-muted-foreground">Year Group</p>
                                   <Badge variant="secondary">{payment.studentGrade}</Badge>
                                 </div>
                               </div>

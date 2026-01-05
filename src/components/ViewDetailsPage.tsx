@@ -240,7 +240,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
 
   const renderItemSelectionDialog = () => (
     <Dialog open={isItemSelectionOpen} onOpenChange={setIsItemSelectionOpen}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col p-6">
         <DialogHeader>
           <DialogTitle>Select Item to Add</DialogTitle>
           <DialogDescription>
@@ -304,7 +304,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                         <div className="flex items-center gap-4">
                           <p className="font-medium text-lg">{formatCurrency(item.amount)}</p>
                           <Badge variant="secondary" className="text-xs">
-                            {item.applicableGrades.length} grades
+                            {item.applicableGrades.length} year groups
                           </Badge>
                         </div>
                       </div>
@@ -358,32 +358,55 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
         </div>
       </div>
 
-      {/* Student & Invoice Info */}
+      {/* Student/Recipient & Invoice Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-4 h-4" />
-              Student Information
+              {data.invoiceType === "external" || data.studentId === "EXTERNAL"
+                ? "Recipient Information"
+                : "Student Information"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <label className="text-sm text-muted-foreground">Student Name</label>
-              <p className="font-medium">{data.studentName || data.student?.name || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Student ID</label>
-              <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Grade</label>
-              <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Parent Email</label>
-              <p className="font-medium">{data.parentEmail || data.student?.parentEmail || "N/A"}</p>
-            </div>
+            {data.invoiceType === "external" || data.studentId === "EXTERNAL" ? (
+              <>
+                <div>
+                  <label className="text-sm text-muted-foreground">Recipient Name</label>
+                  <p className="font-medium">{data.recipientName || data.studentName || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Email</label>
+                  <p className="font-medium">{data.parentEmail || "N/A"}</p>
+                </div>
+                {data.recipientAddress && (
+                  <div>
+                    <label className="text-sm text-muted-foreground">Address</label>
+                    <p className="font-medium">{data.recipientAddress}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-sm text-muted-foreground">Student Name</label>
+                  <p className="font-medium">{data.studentName || data.student?.name || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Student ID</label>
+                  <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Year Group</label>
+                  <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Parent Email</label>
+                  <p className="font-medium">{data.parentEmail || data.student?.parentEmail || "N/A"}</p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -405,11 +428,19 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
             </div>
             <div>
               <label className="text-sm text-muted-foreground">Category</label>
-              <Badge variant="outline">{data.category || "General"}</Badge>
+              <Badge variant="outline">
+                {data.invoiceType === "external" ? "External" : (data.category || "Invoice")}
+              </Badge>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Academic Year</label>
-              <p className="font-medium">{data.academicYear || "2024-2025"}</p>
+              <label className="text-sm text-muted-foreground">
+                {data.invoiceType === "external" || data.studentId === "EXTERNAL" ? "Event" : "Academic Year"}
+              </label>
+              <p className="font-medium">
+                {data.invoiceType === "external" || data.studentId === "EXTERNAL"
+                  ? (data.eventName || "-")
+                  : (data.academicYear || "2024-2025")}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -569,7 +600,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
               <p className="font-medium">{data.id}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Grade Level</label>
+              <label className="text-sm text-muted-foreground">Year Group</label>
               <p className="font-medium">{data.grade}</p>
             </div>
             <div>
@@ -676,7 +707,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
 
         <Card>
           <CardHeader>
-            <CardTitle>Applicable Grades</CardTitle>
+            <CardTitle>Applicable Year Groups</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -685,8 +716,8 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
               ))}
             </div>
             <div className="mt-4">
-              <label className="text-sm text-muted-foreground">Total Grades</label>
-              <p className="font-medium">{data.applicableGrades?.length || 0} grades</p>
+              <label className="text-sm text-muted-foreground">Total Year Groups</label>
+              <p className="font-medium">{data.applicableGrades?.length || 0} year groups</p>
             </div>
           </CardContent>
         </Card>
@@ -766,7 +797,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
               <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Grade</label>
+              <label className="text-sm text-muted-foreground">Year Group</label>
               <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
             </div>
             <div>
@@ -867,7 +898,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
             </>
           ) : (
             <>
-              {onEdit && (type === "invoice" || type === "item" || type === "template") && (
+              {onEdit && !data.viewOnly && (type === "invoice" || type === "item" || type === "template") && (
                 <Button
                   variant="outline"
                   size="sm"

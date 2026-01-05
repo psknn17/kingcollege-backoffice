@@ -50,11 +50,18 @@ interface DateRange {
 }
 
 export function TuitionDashboard() {
-  // Filter states
+  // Filter states (for UI selection)
   const [selectedYear, setSelectedYear] = useState<string>("")
   const [selectedTerm, setSelectedTerm] = useState<string>("")
   const [dateRange, setDateRange] = useState<DateRange>({})
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
+
+  // Applied filters (actual filters being used)
+  const [appliedFilters, setAppliedFilters] = useState<{
+    year: string
+    term: string
+    dateRange: DateRange
+  }>({ year: "", term: "", dateRange: {} })
   
   const academicYears = generateAcademicYears()
   const currentYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`
@@ -76,14 +83,15 @@ export function TuitionDashboard() {
     setSelectedYear("")
     setSelectedTerm("")
     setDateRange({})
+    setAppliedFilters({ year: "", term: "", dateRange: {} })
   }
 
   const applyFilters = () => {
-    // In a real application, this would trigger data fetching with the applied filters
-    console.log("Applied filters:", {
+    // Apply the selected filters
+    setAppliedFilters({
       year: selectedYear,
       term: selectedTerm,
-      dateRange
+      dateRange: dateRange
     })
     setIsDatePickerOpen(false)
   }
@@ -134,10 +142,10 @@ export function TuitionDashboard() {
                 </p>
               </div>
             </div>
-            {(selectedYear || selectedTerm || dateRange.from) && (
+            {(appliedFilters.year || appliedFilters.term || appliedFilters.dateRange.from) && (
               <div className="text-right">
                 <p className="text-sm font-medium text-primary">
-                  {[selectedYear, selectedTerm, dateRange.from].filter(Boolean).length} Filter(s) Active
+                  {[appliedFilters.year, appliedFilters.term, appliedFilters.dateRange.from].filter(Boolean).length} Filter(s) Active
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Data is being filtered
@@ -302,22 +310,25 @@ export function TuitionDashboard() {
           </div>
 
           {/* Active Filters Display */}
-          {(selectedYear || selectedTerm || dateRange.from) && (
+          {(appliedFilters.year || appliedFilters.term || appliedFilters.dateRange.from) && (
             <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-l-primary">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-medium">Active Filters</h3>
                   <span className="text-xs text-muted-foreground">
-                    ({[selectedYear, selectedTerm, dateRange.from].filter(Boolean).length} applied)
+                    ({[appliedFilters.year, appliedFilters.term, appliedFilters.dateRange.from].filter(Boolean).length} applied)
                   </span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {selectedYear && (
+                  {appliedFilters.year && (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-sm">
                       <span className="font-medium">Year:</span>
-                      <span>{academicYears.find(y => y.value === selectedYear)?.label}</span>
+                      <span>{academicYears.find(y => y.value === appliedFilters.year)?.label}</span>
                       <button
-                        onClick={() => setSelectedYear("")}
+                        onClick={() => {
+                          setSelectedYear("")
+                          setAppliedFilters(prev => ({ ...prev, year: "" }))
+                        }}
                         className="hover:bg-primary-foreground/20 rounded-full p-0.5 transition-colors"
                         aria-label="Remove year filter"
                       >
@@ -325,12 +336,15 @@ export function TuitionDashboard() {
                       </button>
                     </span>
                   )}
-                  {selectedTerm && (
+                  {appliedFilters.term && (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-chart-2 text-white rounded-full text-sm">
                       <span className="font-medium">Term:</span>
-                      <span>{selectedTerm === "term1" ? "Term 1" : selectedTerm === "term2" ? "Term 2" : "Term 3"}</span>
+                      <span>{appliedFilters.term === "term1" ? "Term 1" : appliedFilters.term === "term2" ? "Term 2" : "Term 3"}</span>
                       <button
-                        onClick={() => setSelectedTerm("")}
+                        onClick={() => {
+                          setSelectedTerm("")
+                          setAppliedFilters(prev => ({ ...prev, term: "" }))
+                        }}
                         className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
                         aria-label="Remove term filter"
                       >
@@ -338,17 +352,20 @@ export function TuitionDashboard() {
                       </button>
                     </span>
                   )}
-                  {dateRange.from && (
+                  {appliedFilters.dateRange.from && (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-chart-3 text-white rounded-full text-sm">
                       <CalendarIcon className="w-3 h-3" />
                       <span>
-                        {dateRange.to ? 
-                          `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}` :
-                          format(dateRange.from, "MMM dd, yyyy")
+                        {appliedFilters.dateRange.to ?
+                          `${format(appliedFilters.dateRange.from, "MMM dd")} - ${format(appliedFilters.dateRange.to, "MMM dd")}` :
+                          format(appliedFilters.dateRange.from, "MMM dd, yyyy")
                         }
                       </span>
                       <button
-                        onClick={() => setDateRange({})}
+                        onClick={() => {
+                          setDateRange({})
+                          setAppliedFilters(prev => ({ ...prev, dateRange: {} }))
+                        }}
                         className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
                         aria-label="Remove date filter"
                       >

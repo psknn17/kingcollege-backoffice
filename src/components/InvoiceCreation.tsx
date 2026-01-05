@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import { Separator } from "./ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import { Label } from "./ui/label"
+import { Textarea } from "./ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
-import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save } from "lucide-react"
+import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, Building } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner@2.0.3"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
@@ -192,10 +195,16 @@ interface SavedInvoice {
   netAmount: number
   dueDate: string
   issueDate: string
-  status: "pending" | "sent" | "paid" | "partial" | "unpaid" | "overdue" | "cancelled"
+  status: "draft" | "pending" | "sent" | "paid" | "partial" | "unpaid" | "overdue" | "cancelled"
   term: string
   paymentType: "termly"
   createdAt: string
+  // External invoice fields
+  invoiceType?: "student" | "external"
+  recipientName?: string
+  recipientAddress?: string
+  eventName?: string
+  notes?: string
 }
 
 // Load created invoices from localStorage
@@ -480,6 +489,7 @@ interface InvoiceCreationProps {
   defaultCategory?: string
   invoiceType?: string
   onNavigateToEmailSending?: (data: any) => void
+  onNavigateBack?: () => void
 }
 
 // Interface for invoice student with discounts
@@ -502,7 +512,7 @@ interface InvoiceStudent {
   }
 }
 
-export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmailSending }: InvoiceCreationProps) {
+export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmailSending, onNavigateBack }: InvoiceCreationProps) {
   // Discount Options context
   const { getRegistrationFees, getLatePaymentSettings, getSiblingDiscountPercentage } = useDiscountOptions()
 
@@ -618,6 +628,18 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false)
   const [addItemSearchTerm, setAddItemSearchTerm] = useState("")
   const [addItemCategory, setAddItemCategory] = useState("all")
+
+  // Invoice type tab state
+  const [invoiceTab, setInvoiceTab] = useState<"student" | "external">("student")
+
+  // External invoice state
+  const [externalRecipientName, setExternalRecipientName] = useState("")
+  const [externalRecipientEmail, setExternalRecipientEmail] = useState("")
+  const [externalRecipientAddress, setExternalRecipientAddress] = useState("")
+  const [externalEventName, setExternalEventName] = useState("")
+  const [externalSelectedItems, setExternalSelectedItems] = useState<PreCreatedItem[]>([])
+  const [externalPaymentDeadline, setExternalPaymentDeadline] = useState<Date | undefined>(undefined)
+  const [externalNotes, setExternalNotes] = useState("")
 
   // Load items when grade or category changes
   useEffect(() => {
@@ -842,7 +864,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
   // Add item from list
   const handleAddItemFromList = (item: PreCreatedItem) => {
-    setSelectedItems([...selectedItems, item])
+    if (invoiceTab === "external") {
+      setExternalSelectedItems([...externalSelectedItems, item])
+    } else {
+      setSelectedItems([...selectedItems, item])
+    }
     toast.success(`Added: ${item.name}`)
   }
 
@@ -1022,6 +1048,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     toast.success(`Saved ${selectedStudents.length} invoices as draft`)
     setIsPreviewDialogOpen(false)
 
+    // Navigate back to Invoice Management
+    if (onNavigateBack) {
+      onNavigateBack()
+      return
+    }
+
     // Reset form
     setSelectedAcademicYear("")
     setSelectedTerm("")
@@ -1042,6 +1074,169 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     return selectedItems.reduce((sum, item) => sum + item.amount, 0)
   }
 
+  // Generate invoice number for external invoice
+  const generateExternalInvoiceNumber = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+    return `EXT-${year}-${random}`
+  }
+
+  // Get total amount for external invoice
+  const getExternalTotalAmount = () => {
+    return externalSelectedItems.reduce((sum, item) => sum + item.amount, 0)
+  }
+
+  // Reset external invoice form
+  const resetExternalForm = () => {
+    setExternalRecipientName("")
+    setExternalRecipientEmail("")
+    setExternalRecipientAddress("")
+    setExternalEventName("")
+    setExternalSelectedItems([])
+    setExternalPaymentDeadline(undefined)
+    setExternalNotes("")
+  }
+
+  // Save External Invoice as Draft
+  const handleSaveExternalAsDraft = () => {
+    if (!externalRecipientName || !externalRecipientEmail) {
+      toast.error("Please fill in recipient name and email")
+      return
+    }
+
+    const now = new Date()
+    const subtotal = getExternalTotalAmount()
+
+    const savedInvoice: SavedInvoice = {
+      id: `ext-inv-${Date.now()}`,
+      invoiceNumber: generateExternalInvoiceNumber(),
+      studentName: externalRecipientName, // Use recipientName as studentName for compatibility
+      studentId: "EXTERNAL",
+      studentGrade: "-",
+      studentRoom: "-",
+      parentName: externalRecipientName,
+      parentEmail: externalRecipientEmail,
+      items: externalSelectedItems,
+      subtotal: subtotal,
+      discounts: [],
+      totalDiscount: 0,
+      netAmount: subtotal,
+      dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
+      issueDate: now.toISOString().split('T')[0],
+      status: "draft",
+      term: externalEventName || "External",
+      paymentType: "termly",
+      createdAt: now.toISOString(),
+      // External specific fields
+      invoiceType: "external",
+      recipientName: externalRecipientName,
+      recipientAddress: externalRecipientAddress,
+      eventName: externalEventName,
+      notes: externalNotes
+    }
+
+    saveInvoiceToStorage(savedInvoice)
+    toast.success("External invoice saved as draft")
+    resetExternalForm()
+
+    if (onNavigateBack) {
+      onNavigateBack()
+    }
+  }
+
+  // Create External Invoice (pending status)
+  const handleCreateExternalInvoice = () => {
+    if (!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0) {
+      toast.error("Please fill in required fields and add at least one item")
+      return
+    }
+
+    const now = new Date()
+    const subtotal = getExternalTotalAmount()
+
+    const savedInvoice: SavedInvoice = {
+      id: `ext-inv-${Date.now()}`,
+      invoiceNumber: generateExternalInvoiceNumber(),
+      studentName: externalRecipientName,
+      studentId: "EXTERNAL",
+      studentGrade: "-",
+      studentRoom: "-",
+      parentName: externalRecipientName,
+      parentEmail: externalRecipientEmail,
+      items: externalSelectedItems,
+      subtotal: subtotal,
+      discounts: [],
+      totalDiscount: 0,
+      netAmount: subtotal,
+      dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
+      issueDate: now.toISOString().split('T')[0],
+      status: "pending",
+      term: externalEventName || "External",
+      paymentType: "termly",
+      createdAt: now.toISOString(),
+      invoiceType: "external",
+      recipientName: externalRecipientName,
+      recipientAddress: externalRecipientAddress,
+      eventName: externalEventName,
+      notes: externalNotes
+    }
+
+    saveInvoiceToStorage(savedInvoice)
+    toast.success("External invoice created successfully")
+    resetExternalForm()
+
+    if (onNavigateBack) {
+      onNavigateBack()
+    }
+  }
+
+  // Create External Invoice and Send Email
+  const handleCreateExternalAndSendEmail = () => {
+    if (!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0) {
+      toast.error("Please fill in required fields and add at least one item")
+      return
+    }
+
+    const now = new Date()
+    const subtotal = getExternalTotalAmount()
+
+    const savedInvoice: SavedInvoice = {
+      id: `ext-inv-${Date.now()}`,
+      invoiceNumber: generateExternalInvoiceNumber(),
+      studentName: externalRecipientName,
+      studentId: "EXTERNAL",
+      studentGrade: "-",
+      studentRoom: "-",
+      parentName: externalRecipientName,
+      parentEmail: externalRecipientEmail,
+      items: externalSelectedItems,
+      subtotal: subtotal,
+      discounts: [],
+      totalDiscount: 0,
+      netAmount: subtotal,
+      dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
+      issueDate: now.toISOString().split('T')[0],
+      status: "sent",
+      term: externalEventName || "External",
+      paymentType: "termly",
+      createdAt: now.toISOString(),
+      invoiceType: "external",
+      recipientName: externalRecipientName,
+      recipientAddress: externalRecipientAddress,
+      eventName: externalEventName,
+      notes: externalNotes
+    }
+
+    saveInvoiceToStorage(savedInvoice)
+    toast.success("External invoice created and email sent")
+    resetExternalForm()
+
+    if (onNavigateBack) {
+      onNavigateBack()
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -1049,6 +1244,19 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           <CardTitle>Create New Invoice</CardTitle>
         </CardHeader>
         <CardContent>
+          <Tabs value={invoiceTab} onValueChange={(value) => setInvoiceTab(value as "student" | "external")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="student" className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                Student Invoice
+              </TabsTrigger>
+              <TabsTrigger value="external" className="flex items-center gap-2">
+                <Building className="w-4 h-4" />
+                External Invoice
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="student">
           <div className="space-y-6">
             {/* Step 1: Select Academic Year */}
             <div className="space-y-3">
@@ -1765,12 +1973,186 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               </div>
             )}
           </div>
+          </TabsContent>
+
+            {/* External Invoice Tab */}
+            <TabsContent value="external">
+              <div className="space-y-6">
+                {/* Recipient Information */}
+                <div className="space-y-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    1. Recipient Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Recipient Name / Organization *</Label>
+                      <Input
+                        placeholder="Enter recipient name or organization"
+                        value={externalRecipientName}
+                        onChange={(e) => setExternalRecipientName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        placeholder="Enter email address"
+                        value={externalRecipientEmail}
+                        onChange={(e) => setExternalRecipientEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Address (Optional)</Label>
+                    <Textarea
+                      placeholder="Enter address"
+                      value={externalRecipientAddress}
+                      onChange={(e) => setExternalRecipientAddress(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                {/* Event Selection */}
+                <div className="space-y-3">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    2. Event (Optional)
+                  </h3>
+                  <Input
+                    placeholder="Enter event name (e.g., Summer Camp 2025, Sports Day)"
+                    value={externalEventName}
+                    onChange={(e) => setExternalEventName(e.target.value)}
+                  />
+                </div>
+
+                {/* Item Selection for External */}
+                <div className="space-y-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    3. Select Items
+                  </h3>
+
+                  {/* Add Item Button */}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddItemDialogOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Item
+                  </Button>
+
+                  {/* Selected Items List */}
+                  {externalSelectedItems.length > 0 && (
+                    <div className="border rounded-lg p-4 space-y-3">
+                      <h4 className="font-medium text-sm">Selected Items</h4>
+                      {externalSelectedItems.map((item, index) => (
+                        <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">{item.description}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">฿{item.amount.toLocaleString()}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setExternalSelectedItems(prev => prev.filter((_, i) => i !== index))
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <Separator />
+                      <div className="flex justify-between font-semibold">
+                        <span>Total</span>
+                        <span>฿{externalSelectedItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Deadline */}
+                <div className="space-y-3">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    4. Payment Deadline
+                  </h3>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {externalPaymentDeadline ? format(externalPaymentDeadline, "PPP") : "Select deadline"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={externalPaymentDeadline}
+                        onSelect={setExternalPaymentDeadline}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-3">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    5. Notes (Optional)
+                  </h3>
+                  <Textarea
+                    placeholder="Additional notes for this invoice"
+                    value={externalNotes}
+                    onChange={(e) => setExternalNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveExternalAsDraft}
+                    className="w-44 flex items-center justify-center gap-2"
+                    disabled={!externalRecipientName || !externalRecipientEmail}
+                  >
+                    <Bookmark className="w-4 h-4" />
+                    Save Draft
+                  </Button>
+                  <Button
+                    onClick={handleCreateExternalInvoice}
+                    className="w-44 flex items-center justify-center gap-2"
+                    disabled={!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0}
+                  >
+                    <Save className="w-4 h-4" />
+                    Create Invoice
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCreateExternalAndSendEmail}
+                    className="w-44 flex items-center justify-center gap-2"
+                    disabled={!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0}
+                  >
+                    <Mail className="w-4 h-4" />
+                    Create & Send Email
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
       {/* Confirmation Dialog */}
       <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Confirm Email Sending</DialogTitle>
             <DialogDescription>
@@ -1809,7 +2191,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
       {/* Invoice Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] p-0">
+        <DialogContent className="sm:max-w-4xl w-[95vw] p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Invoice Preview</DialogTitle>
           </DialogHeader>
@@ -1846,47 +2228,47 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
                       {/* Student & Invoice Info */}
                       <div className="p-6 border-b">
-                        <div className="grid grid-cols-2 gap-8">
+                        <div className="flex justify-center" style={{ gap: '120px' }}>
                           {/* Left Column - Student Info */}
                           <div className="space-y-2">
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Student Name:</span>
+                            <div>
+                              <span className="text-gray-500">Student Name: </span>
                               <span className="font-medium">{currentStudent.name}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Student ID:</span>
+                            <div>
+                              <span className="text-gray-500">Student ID: </span>
                               <span>{currentStudent.id}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Year Group:</span>
+                            <div>
+                              <span className="text-gray-500">Year Group: </span>
                               <span>{selectedGrade}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Academic Year:</span>
+                            <div>
+                              <span className="text-gray-500">Academic Year: </span>
                               <span>{getAcademicYear(issueDate)}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Bill To:</span>
+                            <div>
+                              <span className="text-gray-500">Bill To: </span>
                               <span>{currentStudent.parentName}</span>
                             </div>
                           </div>
 
                           {/* Right Column - Invoice Info */}
                           <div className="space-y-2">
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Invoice No:</span>
+                            <div>
+                              <span className="text-gray-500">Invoice No: </span>
                               <span className="font-medium">{invoiceNumber}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Invoice Date:</span>
+                            <div>
+                              <span className="text-gray-500">Invoice Date: </span>
                               <span>{issueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Due Date:</span>
+                            <div>
+                              <span className="text-gray-500">Due Date: </span>
                               <span className="text-red-600 font-medium">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
                             </div>
-                            <div className="grid grid-cols-[100px_1fr] gap-1">
-                              <span className="text-gray-500">Term:</span>
+                            <div>
+                              <span className="text-gray-500">Term: </span>
                               <span>Term 1</span>
                             </div>
                           </div>
@@ -2146,7 +2528,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
       {/* Add Item from List Dialog */}
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent className="max-w-lg flex flex-col" style={{ maxHeight: '85vh' }}>
+        <DialogContent className="max-w-md flex flex-col p-6" style={{ maxHeight: '65vh' }}>
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add Item from List</DialogTitle>
             <DialogDescription>

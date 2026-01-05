@@ -235,7 +235,7 @@ export function EventPaymentDeadline() {
               Add Deadline
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg p-6">
             <DialogHeader>
               <DialogTitle>
                 {editingDeadline ? "Edit Payment Deadline" : "Add Payment Deadline"}
@@ -424,7 +424,7 @@ export function EventPaymentDeadline() {
 
       {/* Reminder Dialog */}
       <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />

@@ -9,10 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown } from "lucide-react"
+import { SearchInput } from "./ui/advanced-filter"
+import { EmptySearchResults, EmptyDataState } from "./ui/states"
+import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
 import { toast } from "sonner@2.0.3"
@@ -38,6 +41,11 @@ interface Invoice {
   issuedBy: string
   items: InvoiceItem[]
   notes: string
+  // External invoice fields
+  invoiceType?: "student" | "external"
+  recipientName?: string
+  recipientAddress?: string
+  eventName?: string
 }
 
 interface InvoiceItem {
@@ -97,30 +105,41 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
     const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
     if (stored) {
       const savedInvoices = JSON.parse(stored)
-      return savedInvoices.map((inv: any) => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber,
-        studentName: inv.studentName,
-        studentId: inv.studentId,
-        studentGrade: inv.studentGrade,
-        parentName: inv.parentName || "Parent",
-        parentEmail: inv.parentEmail || "",
-        totalAmount: inv.subtotal ?? 0,
-        discountAmount: inv.totalDiscount ?? 0,
-        finalAmount: inv.netAmount ?? inv.subtotal ?? 0,
-        status: (inv.status === "pending" ? "draft" : inv.status) as "draft" | "sent" | "paid" | "overdue" | "cancelled",
-        issueDate: new Date(inv.issueDate),
-        dueDate: new Date(inv.dueDate),
-        issuedBy: "System",
-        items: (inv.items || []).map((item: any, idx: number) => ({
-          id: String(idx + 1),
-          description: item.name || item.description,
-          amount: item.amount,
-          discountPercent: 0,
-          discountedAmount: item.amount
-        })),
-        notes: ""
-      }))
+      return savedInvoices.map((inv: any) => {
+        // Handle empty or invalid dates
+        const issueDate = inv.issueDate ? new Date(inv.issueDate) : new Date()
+        const dueDate = inv.dueDate ? new Date(inv.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days from now
+
+        return {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          studentName: inv.studentName || inv.recipientName || "Unknown",
+          studentId: inv.studentId,
+          studentGrade: inv.studentGrade || "-",
+          parentName: inv.parentName || inv.recipientName || "Parent",
+          parentEmail: inv.parentEmail || "",
+          totalAmount: inv.subtotal ?? 0,
+          discountAmount: inv.totalDiscount ?? 0,
+          finalAmount: inv.netAmount ?? inv.subtotal ?? 0,
+          status: (inv.status === "pending" ? "draft" : inv.status) as "draft" | "sent" | "paid" | "overdue" | "cancelled",
+          issueDate: isNaN(issueDate.getTime()) ? new Date() : issueDate,
+          dueDate: isNaN(dueDate.getTime()) ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : dueDate,
+          issuedBy: "System",
+          items: (inv.items || []).map((item: any, idx: number) => ({
+            id: String(idx + 1),
+            description: item.name || item.description,
+            amount: item.amount,
+            discountPercent: 0,
+            discountedAmount: item.amount
+          })),
+          notes: inv.notes || "",
+          // External invoice fields
+          invoiceType: inv.invoiceType,
+          recipientName: inv.recipientName,
+          recipientAddress: inv.recipientAddress,
+          eventName: inv.eventName
+        }
+      })
     }
   } catch (error) {
     console.error("Failed to load created invoices:", error)
@@ -292,6 +311,13 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  // Invoice type tab state
+  const [invoiceTypeTab, setInvoiceTypeTab] = useState<"student" | "external">("student")
+
   // Get available terms based on selected academic year
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
@@ -324,6 +350,12 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
+
+  // Re-apply filters when tab changes
+  useEffect(() => {
+    applyFilters(invoiceTypeTab)
+  }, [invoiceTypeTab, invoices])
+
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
@@ -361,8 +393,16 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     discountPercent: ""
   })
 
-  const applyFilters = () => {
+  const applyFilters = (tabType?: "student" | "external") => {
+    const currentTab = tabType || invoiceTypeTab
     let filtered = invoices
+
+    // Filter by invoice type tab
+    if (currentTab === "external") {
+      filtered = filtered.filter(inv => inv.invoiceType === "external" || inv.studentId === "EXTERNAL")
+    } else {
+      filtered = filtered.filter(inv => inv.invoiceType !== "external" && inv.studentId !== "EXTERNAL")
+    }
 
     if (searchTerm) {
       filtered = filtered.filter(inv =>
@@ -377,7 +417,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
       filtered = filtered.filter(inv => inv.status === statusFilter)
     }
 
-    if (gradeFilter !== "all") {
+    if (gradeFilter !== "all" && currentTab === "student") {
       filtered = filtered.filter(inv => inv.studentGrade === gradeFilter)
     }
 
@@ -390,6 +430,19 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     }
 
     setFilteredInvoices(filtered)
+    setCurrentPage(1)
+  }
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredInvoices.length / pageSize)
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredInvoices.slice(startIndex, startIndex + pageSize)
+  }, [filteredInvoices, currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
   }
 
   const clearFilters = () => {
@@ -401,6 +454,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     setDateFrom(null)
     setDateTo(null)
     setFilteredInvoices(invoices)
+    setCurrentPage(1)
   }
 
   const openInvoiceDetail = (invoice: Invoice) => {
@@ -766,13 +820,22 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     }
   }
 
+  // Filter invoices based on active tab
+  const tabFilteredInvoices = invoices.filter(inv => {
+    if (invoiceTypeTab === "external") {
+      return inv.invoiceType === "external" || inv.studentId === "EXTERNAL"
+    } else {
+      return inv.invoiceType !== "external" && inv.studentId !== "EXTERNAL"
+    }
+  })
+
   const summaryStats = {
-    total: invoices.length,
-    draft: invoices.filter(inv => inv.status === "draft").length,
-    sent: invoices.filter(inv => inv.status === "sent").length,
-    paid: invoices.filter(inv => inv.status === "paid").length,
-    overdue: invoices.filter(inv => inv.status === "overdue").length,
-    totalAmount: invoices.reduce((sum, inv) => sum + inv.finalAmount, 0)
+    total: tabFilteredInvoices.length,
+    draft: tabFilteredInvoices.filter(inv => inv.status === "draft").length,
+    sent: tabFilteredInvoices.filter(inv => inv.status === "sent").length,
+    paid: tabFilteredInvoices.filter(inv => inv.status === "paid").length,
+    overdue: tabFilteredInvoices.filter(inv => inv.status === "overdue").length,
+    totalAmount: tabFilteredInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0)
   }
 
   return (
@@ -861,6 +924,20 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
         </Card>
       </div>
 
+      {/* Invoice Type Tabs */}
+      <Tabs value={invoiceTypeTab} onValueChange={(value) => setInvoiceTypeTab(value as "student" | "external")} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="student" className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" />
+            Student Invoice
+          </TabsTrigger>
+          <TabsTrigger value="external" className="flex items-center gap-2">
+            <Building className="w-4 h-4" />
+            External Invoice
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="student" className="space-y-4">
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
@@ -881,10 +958,10 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
             {/* Search */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Search</label>
-              <Input
+              <SearchInput
                 placeholder="Invoice, student, parent..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={setSearchTerm}
                 className="h-9"
               />
             </div>
@@ -927,15 +1004,15 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
           {/* Row 2 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Grade */}
+            {/* Year Group */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Grade</label>
+              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Grades" />
+                  <SelectValue placeholder="All Year Groups" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="all">All Year Groups</SelectItem>
                   {grades.map(grade => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -1029,16 +1106,16 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               <TableRow>
                 <TableHead>Invoice Number</TableHead>
                 <TableHead>Student</TableHead>
-                <TableHead>Grade</TableHead>
+                <TableHead>Year Group</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Issue Date</TableHead>
                 <TableHead>Due Date</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map((invoice) => (
+              {paginatedInvoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-mono text-sm">
                     {invoice.invoiceNumber}
@@ -1070,21 +1147,55 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => openEditModal(invoice)}
-                        title="View Details"
+                        onClick={() => {
+                          // Open Modal (view only)
+                          setSelectedInvoice(invoice)
+                          setIsModalOpen(true)
+                        }}
+                        title="View"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      {invoice.status === "draft" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openViewModal(invoice)}
-                          title="Edit Draft"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={invoice.status !== "draft"}
+                        className={invoice.status !== "draft" ? "opacity-30 cursor-not-allowed" : ""}
+                        onClick={() => {
+                          if (invoice.status !== "draft") return
+                          // Navigate to full page (can edit)
+                          if (onNavigateToView) {
+                            const invoiceData = {
+                              ...invoice,
+                              invoiceNumber: invoice.invoiceNumber,
+                              studentName: invoice.studentName,
+                              studentId: invoice.studentId,
+                              grade: invoice.studentGrade,
+                              parentEmail: invoice.parentEmail,
+                              amount: invoice.finalAmount,
+                              total: invoice.finalAmount,
+                              status: invoice.status,
+                              issueDate: invoice.issueDate.toISOString(),
+                              dueDate: invoice.dueDate.toISOString(),
+                              items: invoice.items.map(item => ({
+                                name: item.description,
+                                description: item.description,
+                                quantity: 1,
+                                amount: item.discountedAmount
+                              })),
+                              invoiceType: "student",
+                              viewOnly: false  // Can edit
+                            }
+                            onNavigateToView("invoice", invoiceData)
+                          } else {
+                            setSelectedInvoice(invoice)
+                            setIsEditModalOpen(true)
+                          }
+                        }}
+                        title={invoice.status === "draft" ? "Edit" : "Cannot edit (not draft)"}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1107,12 +1218,344 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {filteredInvoices.length > 0 && (
+            <div className="flex items-center justify-between border-t p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Show</span>
+                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>entries</span>
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredInvoices.length)} of {filteredInvoices.length} invoices
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* External Invoice Tab */}
+        <TabsContent value="external" className="space-y-4">
+          {/* Filters for External */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Filter className="w-4 h-4" />
+                  Search & Filter
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button onClick={() => applyFilters("external")} className="h-9">Apply</Button>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Search */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">Search</label>
+                  <SearchInput
+                    placeholder="Invoice, recipient..."
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    className="h-9"
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="sent">Sent</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date From */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">From Date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {dateFrom ? format(dateFrom, "PP") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date || null)} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Date To */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">To Date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {dateTo ? format(dateTo, "PP") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date || null)} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* External Invoice Table */}
+          <Card>
+            <CardContent className="pt-6">
+              {filteredInvoices.length === 0 ? (
+                <EmptyDataState
+                  title="No external invoices"
+                  description="Create an external invoice to get started"
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice Number</TableHead>
+                      <TableHead>Recipient</TableHead>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Issue Date</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-mono text-sm">{invoice.invoiceNumber}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invoice.recipientName || invoice.studentName}</div>
+                            <div className="text-sm text-muted-foreground">{invoice.parentEmail}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{invoice.eventName || "-"}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            invoice.status === "paid" ? "default" :
+                            invoice.status === "sent" ? "secondary" :
+                            invoice.status === "draft" ? "outline" :
+                            invoice.status === "overdue" ? "destructive" : "outline"
+                          }>
+                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
+                        <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Open Modal (view only)
+                                setSelectedInvoice(invoice)
+                                setIsModalOpen(true)
+                              }}
+                              title="View"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={invoice.status !== "draft"}
+                              className={invoice.status !== "draft" ? "opacity-30 cursor-not-allowed" : ""}
+                              onClick={() => {
+                                if (invoice.status !== "draft") return
+                                // Navigate to full page (can edit)
+                                if (onNavigateToView) {
+                                  const invoiceData = {
+                                    ...invoice,
+                                    invoiceNumber: invoice.invoiceNumber,
+                                    studentName: invoice.recipientName || invoice.studentName,
+                                    studentId: invoice.studentId,
+                                    grade: invoice.studentGrade,
+                                    parentEmail: invoice.parentEmail,
+                                    amount: invoice.finalAmount,
+                                    total: invoice.finalAmount,
+                                    status: invoice.status,
+                                    issueDate: invoice.issueDate.toISOString(),
+                                    dueDate: invoice.dueDate.toISOString(),
+                                    items: invoice.items.map(item => ({
+                                      name: item.description,
+                                      description: item.description,
+                                      quantity: 1,
+                                      amount: item.discountedAmount
+                                    })),
+                                    // External invoice specific fields
+                                    invoiceType: invoice.invoiceType || "external",
+                                    recipientName: invoice.recipientName,
+                                    recipientAddress: invoice.recipientAddress,
+                                    eventName: invoice.eventName,
+                                    viewOnly: false  // Can edit
+                                  }
+                                  onNavigateToView("invoice", invoiceData)
+                                } else {
+                                  setSelectedInvoice(invoice)
+                                  setIsEditModalOpen(true)
+                                }
+                              }}
+                              title={invoice.status === "draft" ? "Edit" : "Cannot edit (not draft)"}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadInvoice(invoice.id)}
+                              title="Download"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => sendInvoice(invoice.id)}
+                              title="Send Email"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+
+              {/* Pagination for External */}
+              {filteredInvoices.length > 0 && (
+                <div className="flex items-center justify-between border-t p-4 mt-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Show</span>
+                    <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                      <SelectTrigger className="w-[70px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>entries</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredInvoices.length)} of {filteredInvoices.length} invoices
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Invoice Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[75vh] overflow-y-auto p-6">
           {selectedInvoice && (
             <div className="bg-white">
               {/* School Header */}
@@ -1120,158 +1563,137 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                 <img
                   src={SchoolLogo}
                   alt="King's College International School Bangkok"
-                  style={{ height: '80px', margin: '0 auto 12px auto', display: 'block' }}
+                  style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
                 />
                 <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
-                <p className="text-xs text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
-                <p className="text-xs text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+                <p className="text-xs text-gray-500 mt-1">727 Ratchadapisek Road, Bang Phongphang, Yannawa, Bangkok 10120, Thailand</p>
+                <p className="text-xs text-gray-500">+66 (0) 2481 9955, finance@kingsbangkok.ac.th, www.kingsbangkok.ac.th</p>
               </div>
 
               {/* Invoice Title */}
               <div className="text-center py-4">
                 <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
-                <div className="mt-2">{getStatusBadge(selectedInvoice.status)}</div>
+                <Badge variant="outline" className="mt-2">
+                  <Eye className="w-3 h-3 mr-1" />
+                  View Only
+                </Badge>
               </div>
 
               {/* Student & Invoice Info */}
-              <div className="px-6 pb-6">
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-2">
-                    {/* Left - Student Info */}
-                    <div className="p-4 space-y-2 border-r">
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Student ID no.</span>
-                        <span className="text-sm font-medium">{selectedInvoice.studentId}</span>
-                      </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Student name</span>
-                        <span className="text-sm font-medium">{selectedInvoice.studentName}</span>
-                      </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Year group</span>
-                        <span className="text-sm font-medium">{selectedInvoice.studentGrade}</span>
-                      </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Contact name</span>
-                        <span className="text-sm font-medium">{selectedInvoice.parentName}</span>
-                      </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Address</span>
-                        <span className="text-sm font-medium">-</span>
-                      </div>
+              <div className="px-8 py-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+                  {/* Left - Student/Recipient Info */}
+                  <div className="p-6 pr-8">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                      {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
+                        ? "Recipient Information"
+                        : "Student Information"}
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL" ? (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Recipient Name</span>
+                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.recipientName || selectedInvoice.studentName}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Email</span>
+                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentEmail}</span>
+                          </div>
+                          {selectedInvoice.recipientAddress && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Address</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.recipientAddress}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Student ID</span>
+                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentId}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Student Name</span>
+                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentName}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Year Group</span>
+                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Contact Name</span>
+                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {/* Right - Invoice Info */}
-                    <div className="p-4 space-y-2">
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Invoice no.</span>
-                        <span className="text-sm font-medium">{selectedInvoice.invoiceNumber.replace('INV-', '')}</span>
+                  </div>
+                  {/* Right - Invoice Info */}
+                  <div className="p-6 pl-8">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Invoice No.</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.invoiceNumber}</span>
                       </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Invoice date</span>
-                        <span className="text-sm font-medium">{format(selectedInvoice.issueDate, "dd MMMM yyyy")}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Invoice Date</span>
+                        <span className="text-sm font-medium text-gray-800">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
                       </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">Due date</span>
-                        <span className="text-sm font-medium">{format(selectedInvoice.dueDate, "dd MMMM yyyy")}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Due Date</span>
+                        <span className="text-sm font-medium text-red-600">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
                       </div>
-                      <div className="grid grid-cols-[120px_1fr] gap-1">
-                        <span className="text-sm text-gray-600">School year</span>
-                        <span className="text-sm font-medium">{getAcademicYear(selectedInvoice.issueDate)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">
+                          {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
+                            ? "Event"
+                            : "School Year"}
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
+                            ? (selectedInvoice.eventName || "-")
+                            : getAcademicYear(selectedInvoice.issueDate)}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Discounts Section */}
-                {(() => {
-                  // Find student from context
-                  const student = students.find(s =>
-                    s.studentId === selectedInvoice.studentId ||
-                    s.id === selectedInvoice.studentId ||
-                    `${s.firstName} ${s.lastName}` === selectedInvoice.studentName
-                  )
-
-                  const discounts: { name: string; value: string; color: string }[] = []
-
-                  // Get sibling discount
-                  if (student && student.childOrder >= 2) {
-                    const siblingPercent = getSiblingDiscount(student)
-                    if (siblingPercent > 0) {
-                      discounts.push({
-                        name: `Sibling (Child #${student.childOrder})`,
-                        value: `${siblingPercent}%`,
-                        color: "bg-blue-100 text-blue-800"
-                      })
-                    }
-                  }
-
-                  // Get student group discounts
-                  const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId)
-                  groupDiscounts.forEach(group => {
-                    discounts.push({
-                      name: group.name,
-                      value: group.discountType === "percentage"
-                        ? `${group.discountPercentage}%`
-                        : `฿${group.fixedAmount.toLocaleString()}`,
-                      color: "bg-purple-100 text-purple-800"
-                    })
-                  })
-
-                  if (discounts.length === 0) return null
-
-                  return (
-                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800 mb-2">Discounts Applied:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {discounts.map((discount, idx) => (
-                          <Badge key={idx} className={`${discount.color}`}>
-                            {discount.name} {discount.value}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })()}
               </div>
 
               {/* Invoice Items Table */}
-              <div className="px-6 pb-4">
+              <div className="px-8 pb-6">
                 <div className="border rounded-lg overflow-hidden">
-                  <Table className="table-fixed w-full">
-                    <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="w-12 text-center">No.</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right w-36">Amount (THB)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b">
+                        <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
+                        <th className="py-3 px-4 text-left font-semibold">Description</th>
+                        <th className="py-3 px-4 text-right font-semibold w-28">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {selectedInvoice.items.map((item, index) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-center align-top">{index + 1}</TableCell>
-                          <TableCell className="align-top" style={{ wordBreak: 'break-word' }}>
+                        <tr key={item.id} className="border-b last:border-b-0">
+                          <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
+                          <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
                             {item.description}
                             {item.discountPercent > 0 && (
-                              <span className="text-gray-500 text-sm ml-2">(-{item.discountPercent}%)</span>
+                              <span className="text-gray-400 text-xs ml-2">(-{item.discountPercent}%)</span>
                             )}
-                          </TableCell>
-                          <TableCell className="text-right font-medium whitespace-nowrap align-top">
+                          </td>
+                          <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
                             {formatCurrency(item.discountedAmount)}
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))}
-                      {/* Empty rows for spacing */}
-                      {selectedInvoice.items.length < 5 && (
-                        <TableRow>
-                          <TableCell colSpan={3} className="h-8"></TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                   {/* Amount in Words + Total */}
-                  <div className="border-t p-3">
-                    <div className="text-xs text-gray-600 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
-                    <div className="flex justify-between items-center font-bold">
+                  <div className="border-t bg-gray-50 p-4">
+                    <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
+                    <div className="flex justify-between items-center font-bold text-base">
                       <span>TOTAL</span>
                       <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
                     </div>
@@ -1279,124 +1701,30 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                 </div>
               </div>
 
-              {/* Notes */}
-              <div className="px-6 pb-4 text-xs text-gray-600 space-y-1">
-                <p>{INVOICE_NOTES.latePayment}</p>
-                <p>{INVOICE_NOTES.refundCondition}</p>
+              {/* Payment Methods Preview */}
+              <div className="px-8 pb-6">
+                <p className="text-sm">
+                  <span className="font-medium text-gray-700">Payment methods: </span>
+                  <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
+                </p>
               </div>
 
-              {/* Payment Methods */}
-              <div className="px-6 pb-6">
-                <h3 className="font-semibold mb-3">Payment methods</h3>
-                <div className="space-y-4 text-sm">
-                  {/* Cheque */}
-                  <p className="text-gray-700">
-                    <span className="font-medium">- Cheque:</span> {INVOICE_NOTES.chequeInstruction.replace('Cheque: ', '')}
-                  </p>
-
-                  {/* Bank Transfer */}
-                  <div>
-                    <p className="text-gray-700 mb-2">
-                      <span className="font-medium">- Bank Transfer:</span> {INVOICE_NOTES.bankTransferInstruction.replace('Bank Transfer: ', '')}
-                    </p>
-                    <div className="ml-6 grid grid-cols-[140px_1fr] gap-y-1 text-sm">
-                      <span className="text-gray-600">Account name</span>
-                      <span>{BANK_DETAILS.accountName}</span>
-                      <span className="text-gray-600">Account number</span>
-                      <span>{BANK_DETAILS.accountNumber}</span>
-                      <span className="text-gray-600">Bank name</span>
-                      <span>{BANK_DETAILS.bankName}</span>
-                      <span className="text-gray-600">Branch</span>
-                      <span>{BANK_DETAILS.branch}</span>
-                      <span className="text-gray-600">Swift code</span>
-                      <span>{BANK_DETAILS.swiftCode}</span>
-                      <span className="text-gray-600">Bank address</span>
-                      <span>{BANK_DETAILS.bankAddress}</span>
-                    </div>
-                  </div>
-
-                  {/* Bill Payment */}
-                  <div>
-                    <p className="text-gray-700 mb-2">
-                      <span className="font-medium">- Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> {INVOICE_NOTES.billPaymentInstruction.replace('Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter: ', '')}
-                    </p>
-                    <div className="ml-6 flex items-start gap-8">
-                      <div className="grid grid-cols-[140px_1fr] gap-y-1 text-sm">
-                        <span className="text-gray-600">Biller ID no.</span>
-                        <span>{BILL_PAYMENT.billerId}</span>
-                        <span className="text-gray-600">Reference no. (Ref 1)</span>
-                        <span>{selectedInvoice.studentId.replace('KC', '')}</span>
-                        <span className="text-gray-600">Reference no. (Ref 2)</span>
-                        <span>{selectedInvoice.invoiceNumber.replace('INV-', '')}</span>
-                      </div>
-                      <div className="w-20 h-20 bg-white p-1">
-                        <div className="grid grid-cols-7 gap-px w-full h-full">
-                          {/* QR Code pattern - 7x7 grid with position markers */}
-                          {[
-                            1,1,1,1,1,1,1,
-                            1,0,0,0,0,0,1,
-                            1,0,1,1,1,0,1,
-                            1,0,1,1,1,0,1,
-                            1,0,1,1,1,0,1,
-                            1,0,0,0,0,0,1,
-                            1,1,1,1,1,1,1,
-                          ].map((cell, i) => (
-                            <div key={i} className={`${cell ? 'bg-black' : 'bg-white'}`} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Credit Card */}
-                  <p className="text-gray-700">
-                    <span className="font-medium">- Credit card:</span> {INVOICE_NOTES.creditCardNote.replace('Credit card: ', '')}
-                  </p>
+              {/* Action Buttons - View Only */}
+              <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50">
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={closeInvoiceModal}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      sendInvoice(selectedInvoice.id)
+                      closeInvoiceModal()
+                    }}
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Email
+                  </Button>
                 </div>
-              </div>
-
-              {/* Signature Section */}
-              <div className="px-6 pb-6 pt-4">
-                <div className="flex justify-between px-8">
-                  <div className="text-center">
-                    <div className="w-40 border-b border-gray-400 mb-1"></div>
-                    <p className="text-xs text-gray-600">Prepared by</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-40 border-b border-gray-400 mb-1"></div>
-                    <p className="text-xs text-gray-600">Authorised officer</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 p-6 border-t bg-gray-50">
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    downloadInvoice(selectedInvoice.id)
-                    closeInvoiceModal()
-                  }}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    sendInvoice(selectedInvoice.id)
-                    closeInvoiceModal()
-                  }}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Invoice
-                </Button>
-
-                <Button variant="ghost" onClick={closeInvoiceModal}>
-                  Close
-                </Button>
               </div>
             </div>
           )}
@@ -1405,7 +1733,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
       {/* Create Invoice Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
@@ -1787,7 +2115,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
       {/* Add Item Modal */}
       <Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Add Invoice Item</DialogTitle>
             <DialogDescription>
@@ -1877,7 +2205,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
       {/* Import Excel Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5" />
@@ -1955,7 +2283,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                           <TableRow className="bg-muted/50">
                             <TableHead>Student ID</TableHead>
                             <TableHead>Student Name</TableHead>
-                            <TableHead>Grade</TableHead>
+                            <TableHead>Year Group</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2023,7 +2351,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
       {/* Edit Draft Invoice Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0">
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[75vh] overflow-y-auto p-6">
           {selectedInvoice && (
             <div className="bg-white">
               {/* School Header */}
@@ -2031,7 +2359,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                 <img
                   src={SchoolLogo}
                   alt="King's College International School Bangkok"
-                  style={{ height: '80px', margin: '0 auto 12px auto', display: 'block' }}
+                  style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
                 />
                 <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
                 <p className="text-xs text-gray-500 mt-1">727 Ratchadapisek Road, Bang Phongphang, Yannawa, Bangkok 10120, Thailand</p>
@@ -2041,58 +2369,64 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               {/* Invoice Title */}
               <div className="text-center py-4">
                 <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
-                <Badge variant="outline" className="mt-2">
-                  <Eye className="w-3 h-3 mr-1" />
-                  View Only
+                <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-300">
+                  <Edit className="w-3 h-3 mr-1" />
+                  Edit Mode
                 </Badge>
               </div>
 
               {/* Student & Invoice Info */}
               <div className="px-8 py-6">
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-2 text-sm">
-                    {/* Left - Student Info */}
-                    <div className="p-4 space-y-2 border-r">
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Student ID :</span>
-                        <span className="font-semibold">{selectedInvoice.studentId}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+                  {/* Left - Student Info */}
+                  <div className="p-6 pr-8">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Student Information</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Student ID</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentId}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Student name :</span>
-                        <span className="font-semibold">{selectedInvoice.studentName}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Student Name</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentName}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Year group :</span>
-                        <span className="font-semibold">{selectedInvoice.studentGrade}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Year Group</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Contact name :</span>
-                        <span className="font-semibold">{selectedInvoice.parentName}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Contact Name</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
                       </div>
                     </div>
-                    {/* Right - Invoice Info */}
-                    <div className="p-4 space-y-2">
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Invoice no. :</span>
-                        <span className="font-semibold">{selectedInvoice.invoiceNumber.replace('INV-', '')}</span>
+                  </div>
+                  {/* Right - Invoice Info */}
+                  <div className="p-6 pl-8">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Invoice No.</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.invoiceNumber.replace('INV-', '')}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Invoice date :</span>
-                        <span className="font-semibold">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Invoice Date</span>
+                        <span className="text-sm font-medium text-gray-800">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">Due date :</span>
-                        <span className="font-semibold">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Due Date</span>
+                        <span className="text-sm font-medium text-red-600">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-28 shrink-0">School year :</span>
-                        <span className="font-semibold">{getAcademicYear(selectedInvoice.issueDate)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">School Year</span>
+                        <span className="text-sm font-medium text-gray-800">{getAcademicYear(selectedInvoice.issueDate)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Discounts Section */}
+              {/* Discounts Section */}
+              <div className="px-8">
                 {(() => {
                   // Find student from context
                   const student = students.find(s =>
@@ -2212,6 +2546,20 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={closeEditModal}>
                     Close
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Navigate to invoice creation page with edit data
+                      closeEditModal()
+                      onNavigateToSubPage("invoice-creation", {
+                        editInvoice: selectedInvoice,
+                        invoiceType: selectedInvoice.invoiceType || (selectedInvoice.studentId === "EXTERNAL" ? "external" : "student")
+                      })
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Invoice
                   </Button>
                   <Button onClick={saveAndSendInvoice}>
                     <Mail className="w-4 h-4 mr-2" />

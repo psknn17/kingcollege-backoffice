@@ -19,7 +19,19 @@ export function TuitionTermSettings() {
   const [expandedYears, setExpandedYears] = useState<string[]>(["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
   const [isSaveConfirmDialogOpen, setIsSaveConfirmDialogOpen] = useState(false)
-  const [newYearStart, setNewYearStart] = useState<string>(new Date().getFullYear().toString())
+
+  // Calculate next valid year (must be consecutive)
+  const getNextValidYear = (): number => {
+    if (academicYears.length === 0) {
+      return new Date().getFullYear()
+    }
+    // Get the latest year's end year
+    const latestYear = academicYears.sort((a, b) => b.id.localeCompare(a.id))[0]
+    const endYear = parseInt(latestYear.id.split('-')[1])
+    return endYear
+  }
+
+  const [newYearStart, setNewYearStart] = useState<string>("")
 
   const toggleYearExpanded = (yearId: string) => {
     setExpandedYears(prev =>
@@ -36,7 +48,16 @@ export function TuitionTermSettings() {
     const endYear = startYear + 1
     const yearId = `${startYear}-${endYear}`
 
+    // Check if year already exists
     if (academicYears.find(y => y.id === yearId)) {
+      toast.error("Academic year already exists")
+      return
+    }
+
+    // Validate consecutive year
+    const nextValidYear = getNextValidYear()
+    if (startYear !== nextValidYear) {
+      toast.error(`Must create consecutive year. Next valid year is ${nextValidYear}-${nextValidYear + 1}`)
       return
     }
 
@@ -392,8 +413,11 @@ export function TuitionTermSettings() {
       </div>
 
       {/* Add Academic Year Dialog */}
-      <Dialog open={isAddYearDialogOpen} onOpenChange={setIsAddYearDialogOpen}>
-        <DialogContent>
+      <Dialog open={isAddYearDialogOpen} onOpenChange={(open) => {
+        setIsAddYearDialogOpen(open)
+        if (!open) setNewYearStart("")
+      }}>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Add New Academic Year</DialogTitle>
           </DialogHeader>
@@ -407,17 +431,27 @@ export function TuitionTermSettings() {
               onChange={(e) => setNewYearStart(e.target.value)}
               min="2020"
               max="2050"
-              className="mt-2"
+              className={cn("mt-2", newYearStart && parseInt(newYearStart) !== getNextValidYear() && "border-red-500 focus-visible:ring-red-500")}
             />
-            <p className="text-sm text-gray-500 mt-2">
-              This will create academic year {newYearStart ? `${newYearStart}-${parseInt(newYearStart) + 1}` : "YYYY-YYYY"} with 3 default terms.
-            </p>
+            {newYearStart && parseInt(newYearStart) !== getNextValidYear() && (
+              <p className="text-sm text-red-500 mt-2">
+                Must create consecutive year. Next valid year is {getNextValidYear()}-{getNextValidYear() + 1}
+              </p>
+            )}
+            {(!newYearStart || parseInt(newYearStart) === getNextValidYear()) && (
+              <p className="text-sm text-gray-500 mt-2">
+                This will create academic year {newYearStart ? `${newYearStart}-${parseInt(newYearStart) + 1}` : "YYYY-YYYY"} with 3 default terms.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddYearDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={addNewAcademicYear} disabled={!newYearStart}>
+            <Button
+              onClick={addNewAcademicYear}
+              disabled={!newYearStart || parseInt(newYearStart) !== getNextValidYear()}
+            >
               Create Year
             </Button>
           </DialogFooter>
@@ -426,7 +460,7 @@ export function TuitionTermSettings() {
 
       {/* Save Confirmation Dialog */}
       <Dialog open={isSaveConfirmDialogOpen} onOpenChange={setIsSaveConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Confirm Save Changes</DialogTitle>
           </DialogHeader>

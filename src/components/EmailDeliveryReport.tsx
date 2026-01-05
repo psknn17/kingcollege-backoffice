@@ -474,13 +474,13 @@ export function EmailDeliveryReport() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Grade</label>
+              <label className="text-sm font-medium">Year Group</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="all">All Year Groups</SelectItem>
                   {grades.map(grade => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -677,7 +677,7 @@ export function EmailDeliveryReport() {
 
       {/* Record Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
@@ -720,7 +720,7 @@ export function EmailDeliveryReport() {
                       <p className="font-mono">{selectedRecord.studentId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Grade</p>
+                      <p className="text-sm text-muted-foreground">Year Group</p>
                       <Badge variant="secondary">{selectedRecord.grade}</Badge>
                     </div>
                     <div>

@@ -130,9 +130,9 @@ const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   registrationPrivileges: defaultRegistrationPrivileges,
   waiverAfter3rdYear: {
     enabled: true,
-    minimumGradeLevel: 3,
-    minimumYears: 3,
-    creditAmount: 225000,
+    minimumGradeLevel: 0,
+    minimumYears: 0,
+    creditAmount: 22500,
     termsToCredit: 3,
     firstChildImmediate: true,
   },
@@ -167,7 +167,6 @@ const saveToStorage = (data: Record<string, DiscountOptionsData>) => {
 export function DiscountOptions() {
   const { academicYears } = useAcademicYears()
   const [selectedYear, setSelectedYear] = useState<string>("")
-  const [selectedTerm, setSelectedTerm] = useState<string>("")
   const [allData, setAllData] = useState<Record<string, DiscountOptionsData>>(() => {
     return loadFromStorage() || {}
   })
@@ -181,23 +180,72 @@ export function DiscountOptions() {
   const availableTerms = selectedYearData?.terms || []
 
   // Create storage key combining year and term
-  const storageKey = selectedYear && selectedTerm ? `${selectedYear}_${selectedTerm}` : ""
+  const storageKey = selectedYear ? `${selectedYear}` : ""
 
-  // Set default year
-  useEffect(() => {
-    if (availableYears.length > 0 && (!selectedYear || !availableYears.includes(selectedYear))) {
-      setSelectedYear(availableYears[0])
+  // Find current academic year based on today's date and term dates
+  const getCurrentAcademicYear = (): string | null => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    for (const year of academicYears) {
+      // Get the earliest start date and latest end date of all terms in this year
+      let yearStart: Date | null = null
+      let yearEnd: Date | null = null
+
+      for (const term of year.terms) {
+        if (term.startDate) {
+          const termStart = new Date(term.startDate)
+          if (!yearStart || termStart < yearStart) {
+            yearStart = termStart
+          }
+        }
+        if (term.endDate) {
+          const termEnd = new Date(term.endDate)
+          if (!yearEnd || termEnd > yearEnd) {
+            yearEnd = termEnd
+          }
+        }
+      }
+
+      // Check if today falls within the academic year range
+      if (yearStart && yearEnd) {
+        yearStart.setHours(0, 0, 0, 0)
+        yearEnd.setHours(23, 59, 59, 999)
+
+        if (today >= yearStart && today <= yearEnd) {
+          return year.id
+        }
+      }
     }
-  }, [availableYears, selectedYear])
+    return null
+  }
 
-  // Set default term when year changes
+  // Set default year based on current academic year from term settings
+  const [hasInitialized, setHasInitialized] = useState(false)
+
   useEffect(() => {
-    if (availableTerms.length > 0 && (!selectedTerm || !availableTerms.find(t => t.id === selectedTerm))) {
-      setSelectedTerm(availableTerms[0].id)
+    if (academicYears.length > 0 && !hasInitialized) {
+      const currentYear = getCurrentAcademicYear()
+      if (currentYear) {
+        setSelectedYear(currentYear)
+      } else {
+        // Fallback to newest year if no current year found
+        const sortedYears = academicYears.map(y => y.id).sort((a, b) => b.localeCompare(a))
+        setSelectedYear(sortedYears[0])
+      }
+      setHasInitialized(true)
     }
-  }, [availableTerms, selectedTerm, selectedYear])
+  }, [academicYears, hasInitialized])
 
-  // Initialize data for year + term
+  // Handle case when selected year is no longer available
+  useEffect(() => {
+    if (hasInitialized && availableYears.length > 0 && selectedYear && !availableYears.includes(selectedYear)) {
+      const currentYear = getCurrentAcademicYear()
+      setSelectedYear(currentYear || availableYears[0])
+    }
+  }, [availableYears, hasInitialized])
+
+  // Initialize data for year
   useEffect(() => {
     if (storageKey && !allData[storageKey]) {
       setAllData(prev => ({
@@ -246,8 +294,7 @@ export function DiscountOptions() {
 
   const handleSaveAll = () => {
     saveToStorage(allData)
-    const termName = availableTerms.find(t => t.id === selectedTerm)?.name || selectedTerm
-    toast.success(`Discount options saved for ${selectedYear} - ${termName}`)
+    toast.success(`Discount options saved for ${selectedYear}`)
     setIsSaveDialogOpen(false)
   }
 
@@ -286,21 +333,6 @@ export function DiscountOptions() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-sm whitespace-nowrap">Term:</Label>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select term" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTerms.map(term => (
-                  <SelectItem key={term.id} value={term.id}>
-                    {term.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <Button onClick={() => setIsSaveDialogOpen(true)} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
             Save All Changes
@@ -316,7 +348,7 @@ export function DiscountOptions() {
             <div>
               <p className="text-sm text-blue-800 font-medium">King's College International School Bangkok</p>
               <p className="text-sm text-blue-700">
-                Fees and Tuition Information - Academic Year {selectedYear} - {availableTerms.find(t => t.id === selectedTerm)?.name || ""}
+                Fees and Tuition Information - Academic Year {selectedYear}
               </p>
             </div>
           </div>
@@ -543,7 +575,7 @@ export function DiscountOptions() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm">Min Grade Level (Year)</Label>
+                  <Label className="text-sm">Min Year Group</Label>
                   <Input
                     type="number"
                     value={currentData.waiverAfter3rdYear.minimumGradeLevel}
@@ -571,22 +603,18 @@ export function DiscountOptions() {
                   <Label className="text-sm">Credit Amount (THB)</Label>
                   <Input
                     type="number"
-                    value={currentData.waiverAfter3rdYear.creditAmount}
-                    onChange={(e) => updateCurrentData({
-                      waiverAfter3rdYear: { ...currentData.waiverAfter3rdYear, creditAmount: parseFloat(e.target.value) || 0 }
-                    })}
-                    disabled={!currentData.waiverAfter3rdYear.enabled}
+                    value={22500}
+                    readOnly
+                    className="bg-muted"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm">Terms to Credit</Label>
                   <Input
                     type="number"
-                    value={currentData.waiverAfter3rdYear.termsToCredit}
-                    onChange={(e) => updateCurrentData({
-                      waiverAfter3rdYear: { ...currentData.waiverAfter3rdYear, termsToCredit: parseInt(e.target.value) || 3 }
-                    })}
-                    disabled={!currentData.waiverAfter3rdYear.enabled}
+                    value={3}
+                    readOnly
+                    className="bg-muted"
                   />
                 </div>
               </div>
@@ -624,7 +652,7 @@ export function DiscountOptions() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span>Credit: {formatCurrency(currentData.waiverAfter3rdYear.creditAmount)}/{currentData.waiverAfter3rdYear.termsToCredit} terms</span>
+                      <span>Credit: {formatCurrency(22500)}/3 terms</span>
                     </div>
                   </div>
                 </div>
@@ -637,13 +665,13 @@ export function DiscountOptions() {
 
       {/* Save Confirmation Dialog */}
       <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Confirm Save Changes</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to save all discount options for academic year {selectedYear} - {availableTerms.find(t => t.id === selectedTerm)?.name || ""}?
+              Are you sure you want to save all discount options for academic year {selectedYear}?
             </p>
             <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
               <p className="text-sm">

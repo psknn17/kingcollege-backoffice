@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
-import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import {
-  Search,
   Download,
   Filter,
   Users,
@@ -16,7 +14,7 @@ import {
   GraduationCap,
   ArrowUpDown
 } from "lucide-react"
-import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useStudents } from "@/contexts/StudentContext"
 
 // Discount item interface
 interface DiscountItem {
@@ -44,174 +42,6 @@ interface StudentDiscount {
   validTo: string
 }
 
-const sampleStudentDiscounts: StudentDiscount[] = [
-  {
-    id: "1",
-    studentId: "STU001",
-    studentName: "Emma Thompson",
-    yearGroup: "Year 7",
-    parentName: "John Thompson",
-    discounts: [
-      { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 5, amount: 22500, appliedTo: ["Tuition"] }
-    ],
-    originalAmount: 450000,
-    totalDiscountAmount: 22500,
-    finalAmount: 427500,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "2",
-    studentId: "STU002",
-    studentName: "Liam Johnson",
-    yearGroup: "Year 7",
-    parentName: "Sarah Johnson",
-    discounts: [
-      { type: "scholarship", name: "Academic Excellence", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] },
-      { type: "early_bird", name: "Early Registration", mode: "fixed", value: 10000, amount: 10000, appliedTo: ["Tuition"] }
-    ],
-    originalAmount: 450000,
-    totalDiscountAmount: 77500,
-    finalAmount: 372500,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "3",
-    studentId: "STU003",
-    studentName: "Olivia Williams",
-    yearGroup: "Year 9",
-    parentName: "Michael Williams",
-    discounts: [
-      { type: "staff", name: "Staff Child Discount", mode: "percentage", value: 50, amount: 240000, appliedTo: ["Tuition", "School Bus"] }
-    ],
-    originalAmount: 480000,
-    totalDiscountAmount: 240000,
-    finalAmount: 240000,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "4",
-    studentId: "STU004",
-    studentName: "Noah Brown",
-    yearGroup: "Year 10",
-    parentName: "Emily Brown",
-    discounts: [
-      { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 3, amount: 15000, appliedTo: ["Tuition"] },
-      { type: "scholarship", name: "Music Excellence", mode: "percentage", value: 10, amount: 50000, appliedTo: ["Tuition"] },
-      { type: "campaign", name: "WELCOME2025", mode: "fixed", value: 5000, amount: 5000, appliedTo: ["School Bus"] }
-    ],
-    originalAmount: 500000,
-    totalDiscountAmount: 70000,
-    finalAmount: 430000,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "5",
-    studentId: "STU005",
-    studentName: "Sophia Davis",
-    yearGroup: "Year 8",
-    parentName: "James Davis",
-    discounts: [
-      { type: "group", name: "Year 8 Excellence", mode: "percentage", value: 15, amount: 69000, appliedTo: ["Tuition"] }
-    ],
-    originalAmount: 460000,
-    totalDiscountAmount: 69000,
-    finalAmount: 391000,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "6",
-    studentId: "STU006",
-    studentName: "Mason Wilson",
-    yearGroup: "Year 11",
-    parentName: "Lisa Wilson",
-    discounts: [
-      { type: "campaign", name: "SIBLING10", mode: "percentage", value: 10, amount: 52000, appliedTo: ["Tuition", "School Bus"] }
-    ],
-    originalAmount: 520000,
-    totalDiscountAmount: 52000,
-    finalAmount: 468000,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "7",
-    studentId: "STU007",
-    studentName: "Isabella Martinez",
-    yearGroup: "Year 6",
-    parentName: "Carlos Martinez",
-    discounts: [
-      { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 10, amount: 42000, appliedTo: ["Tuition"] },
-      { type: "early_bird", name: "Early Registration", mode: "fixed", value: 15000, amount: 15000, appliedTo: ["Tuition"] }
-    ],
-    originalAmount: 420000,
-    totalDiscountAmount: 57000,
-    finalAmount: 363000,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "8",
-    studentId: "STU008",
-    studentName: "Ethan Garcia",
-    yearGroup: "Year 12",
-    parentName: "Maria Garcia",
-    discounts: [
-      { type: "scholarship", name: "Sports Excellence", mode: "percentage", value: 25, amount: 135000, appliedTo: ["Tuition"] }
-    ],
-    originalAmount: 540000,
-    totalDiscountAmount: 135000,
-    finalAmount: 405000,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "9",
-    studentId: "STU009",
-    studentName: "Ava Anderson",
-    yearGroup: "Year 5",
-    parentName: "Robert Anderson",
-    discounts: [
-      { type: "early_bird", name: "Early Registration", mode: "fixed", value: 20000, amount: 20000, appliedTo: ["Tuition"] },
-      { type: "campaign", name: "NEW2025", mode: "fixed", value: 10000, amount: 10000, appliedTo: ["School Bus"] }
-    ],
-    originalAmount: 400000,
-    totalDiscountAmount: 30000,
-    finalAmount: 370000,
-    status: "pending",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  },
-  {
-    id: "10",
-    studentId: "STU010",
-    studentName: "Lucas Taylor",
-    yearGroup: "Year 13",
-    parentName: "Jennifer Taylor",
-    discounts: [
-      { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 3, amount: 16800, appliedTo: ["Tuition"] }
-    ],
-    originalAmount: 560000,
-    totalDiscountAmount: 16800,
-    finalAmount: 543200,
-    status: "active",
-    validFrom: "2025-08-01",
-    validTo: "2026-07-31"
-  }
-]
-
 const discountTypeLabels: Record<string, { label: string; color: string }> = {
   sibling: { label: "Sibling", color: "bg-blue-100 text-blue-800" },
   scholarship: { label: "Scholarship", color: "bg-purple-100 text-purple-800" },
@@ -222,28 +52,67 @@ const discountTypeLabels: Record<string, { label: string; color: string }> = {
 }
 
 export function DiscountReports() {
-  const { academicYears = [] } = useAcademicYears()
+  const { students, families, getSiblingDiscount } = useStudents()
+
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterYearGroup, setFilterYearGroup] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
-  const [filterTerm, setFilterTerm] = useState<string>("all")
-  const [filterAppliedTo, setFilterAppliedTo] = useState<string>("all")
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
-  // Get terms based on selected academic year
-  const availableTerms = filterAcademicYear === "all"
-    ? [...new Map(academicYears.flatMap(y => y.terms).map(t => [t.name, t])).values()]
-    : (academicYears.find(y => y.id === filterAcademicYear)?.terms || [])
+  // Transform students to StudentDiscount format
+  const studentDiscounts: StudentDiscount[] = useMemo(() => {
+    return students.map(student => {
+      // Get sibling discount percentage
+      const siblingDiscountPercent = getSiblingDiscount(student, student.enrollmentTerm)
 
-  // Reset term filter when academic year changes
-  useEffect(() => {
-    setFilterTerm("all")
-  }, [filterAcademicYear])
+      // Get parent name from student's parents
+      const primaryParent = student.parents.find(p => p.isPrimary) || student.parents[0]
+      const parentName = primaryParent?.name || "N/A"
+
+      // Calculate amounts (assuming base tuition of 450,000 THB)
+      const baseTuition = 450000
+      const discountAmount = Math.round(baseTuition * siblingDiscountPercent / 100)
+
+      // Build discounts array
+      const discounts: DiscountItem[] = []
+
+      if (siblingDiscountPercent > 0) {
+        const childOrderLabel = student.childOrder === 2 ? "Second" :
+                               student.childOrder === 3 ? "Third" :
+                               student.childOrder === 4 ? "Fourth" :
+                               student.childOrder >= 5 ? "Fifth+" : ""
+        discounts.push({
+          type: "sibling",
+          name: `${childOrderLabel} Child Discount`,
+          mode: "percentage",
+          value: siblingDiscountPercent,
+          amount: discountAmount,
+          appliedTo: ["Tuition"]
+        })
+      }
+
+      const totalDiscountAmount = discounts.reduce((sum, d) => sum + d.amount, 0)
+
+      return {
+        id: student.id,
+        studentId: student.studentId,
+        studentName: `${student.firstName} ${student.lastName}`,
+        yearGroup: student.gradeLevel,
+        parentName,
+        discounts,
+        originalAmount: baseTuition,
+        totalDiscountAmount,
+        finalAmount: baseTuition - totalDiscountAmount,
+        status: student.status === "active" ? "active" : student.status === "on_leave" ? "pending" : "expired",
+        validFrom: student.academicYear.split("-")[0] + "-08-01",
+        validTo: student.academicYear.split("-")[1] + "-07-31"
+      } as StudentDiscount
+    }).filter(s => s.discounts.length > 0) // Only show students with discounts
+  }, [students, getSiblingDiscount])
 
   // Clear all filters
   const clearFilters = () => {
@@ -251,19 +120,13 @@ export function DiscountReports() {
     setFilterType("all")
     setFilterYearGroup("all")
     setFilterStatus("all")
-    setFilterAcademicYear("all")
-    setFilterTerm("all")
-    setFilterAppliedTo("all")
   }
 
-  // Get unique applied to options from all discounts
-  const appliedToOptions = [...new Set(sampleStudentDiscounts.flatMap(s => s.discounts.flatMap(d => d.appliedTo)))].sort()
-
-  // Get unique year groups
-  const yearGroups = [...new Set(sampleStudentDiscounts.map(s => s.yearGroup))].sort()
+  // Get unique year groups from actual students
+  const yearGroups = [...new Set(studentDiscounts.map(s => s.yearGroup))].sort()
 
   // Filter students
-  const filteredStudents = sampleStudentDiscounts.filter(student => {
+  const filteredStudents = studentDiscounts.filter(student => {
     const matchesSearch =
       student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -272,9 +135,8 @@ export function DiscountReports() {
     const matchesType = filterType === "all" || student.discounts.some(d => d.type === filterType)
     const matchesYearGroup = filterYearGroup === "all" || student.yearGroup === filterYearGroup
     const matchesStatus = filterStatus === "all" || student.status === filterStatus
-    const matchesAppliedTo = filterAppliedTo === "all" || student.discounts.some(d => d.appliedTo.includes(filterAppliedTo))
 
-    return matchesSearch && matchesType && matchesYearGroup && matchesStatus && matchesAppliedTo
+    return matchesSearch && matchesType && matchesYearGroup && matchesStatus
   })
 
   // Calculate summary stats
@@ -478,7 +340,7 @@ export function DiscountReports() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Search</label>
               <Input
@@ -487,36 +349,6 @@ export function DiscountReports() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
-              <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All years" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
-              <Select value={filterTerm} onValueChange={setFilterTerm}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All terms" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Terms</SelectItem>
-                  {availableTerms.map(term => (
-                    <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-1.5">
@@ -553,21 +385,6 @@ export function DiscountReports() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Applied To</label>
-              <Select value={filterAppliedTo} onValueChange={setFilterAppliedTo}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {appliedToOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Status</label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-9">
@@ -590,7 +407,7 @@ export function DiscountReports() {
         <CardHeader>
           <CardTitle>Student Discount Details</CardTitle>
           <CardDescription>
-            Showing {filteredStudents.length} of {sampleStudentDiscounts.length} students
+            Showing {filteredStudents.length} of {studentDiscounts.length} students
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -732,11 +549,11 @@ export function DiscountReports() {
             <div className="space-y-4">
               {Object.entries(discountTypeLabels).map(([type, { label, color }]) => {
                 // Count students who have this discount type
-                const studentsWithType = sampleStudentDiscounts.filter(s =>
+                const studentsWithType = studentDiscounts.filter(s =>
                   s.discounts.some(d => d.type === type)
                 )
                 // Sum up the discount amounts for this type
-                const total = sampleStudentDiscounts.reduce((sum, s) => {
+                const total = studentDiscounts.reduce((sum, s) => {
                   const typeDiscounts = s.discounts.filter(d => d.type === type)
                   return sum + typeDiscounts.reduce((dSum, d) => dSum + d.amount, 0)
                 }, 0)
@@ -764,14 +581,14 @@ export function DiscountReports() {
           <CardContent>
             <div className="space-y-4">
               {yearGroups.map(year => {
-                const students = sampleStudentDiscounts.filter(s => s.yearGroup === year)
-                const total = students.reduce((sum, s) => sum + s.totalDiscountAmount, 0)
+                const studentsInYear = studentDiscounts.filter(s => s.yearGroup === year)
+                const total = studentsInYear.reduce((sum, s) => sum + s.totalDiscountAmount, 0)
                 return (
                   <div key={year} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{year}</span>
                       <span className="text-sm text-muted-foreground">
-                        {students.length} students
+                        {studentsInYear.length} students
                       </span>
                     </div>
                     <span className="font-medium">{formatCurrency(total)}</span>

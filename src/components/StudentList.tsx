@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -11,6 +11,8 @@ import { Badge } from "./ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { SearchInput } from "./ui/advanced-filter"
+import { EmptySearchResults, EmptyDataState } from "./ui/states"
 import {
   Search,
   Plus,
@@ -33,8 +35,10 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Minus,
-  ArrowUpDown
+  ArrowUpDown,
+  RotateCcw
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -240,13 +244,15 @@ export function StudentList() {
 
   const [searchTerm, setSearchTerm] = useState("")
   const [filterGrade, setFilterGrade] = useState<string>("all")
-  const [filterYear, setFilterYear] = useState<string>("all")
-  const [filterTerm, setFilterTerm] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -272,7 +278,7 @@ export function StudentList() {
 
   const availableYears = academicYears.map(y => y.id).sort((a, b) => b.localeCompare(a))
 
-  // Filter students
+  // Filter students - Note: Year and Term filters are disabled to show all students across all years/terms
   const filteredStudents = useMemo(() => {
     return students.filter(student => {
       const matchesSearch =
@@ -282,13 +288,14 @@ export function StudentList() {
         student.nickname.toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesGrade = filterGrade === "all" || student.gradeLevel === filterGrade
-      const matchesYear = filterYear === "all" || student.academicYear === filterYear
-      const matchesTerm = filterTerm === "all" || student.enrollmentTerm === filterTerm
+      // Year and Term filters disabled - students should appear in all years and terms
+      // const matchesYear = filterYear === "all" || student.academicYear === filterYear
+      // const matchesTerm = filterTerm === "all" || student.enrollmentTerm === filterTerm
       const matchesStatus = filterStatus === "all" || student.status === filterStatus
 
-      return matchesSearch && matchesGrade && matchesYear && matchesTerm && matchesStatus
+      return matchesSearch && matchesGrade && matchesStatus
     })
-  }, [students, searchTerm, filterGrade, filterYear, filterTerm, filterStatus])
+  }, [students, searchTerm, filterGrade, filterStatus])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -355,6 +362,24 @@ export function StudentList() {
       }
     })
   }, [filteredStudents, sortColumn, sortDirection])
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedStudents.length / pageSize)
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return sortedStudents.slice(startIndex, startIndex + pageSize)
+  }, [sortedStudents, currentPage, pageSize])
+
+  // Reset to page 1 when filters change
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  // Reset to page 1 when filters or sorting changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterGrade, filterStatus, sortColumn, sortDirection])
 
   // Stats
   const stats = useMemo(() => {
@@ -503,7 +528,7 @@ export function StudentList() {
       "Nickname",
       "Date of Birth",
       "Gender",
-      "Grade Level",
+      "Year Group",
       "Academic Year",
       "Status",
       "Family Code",
@@ -592,7 +617,7 @@ export function StudentList() {
     }
 
     const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""))
-    const requiredHeaders = ["Student ID", "First Name", "Last Name", "Grade Level", "Academic Year"]
+    const requiredHeaders = ["Student ID", "First Name", "Last Name", "Year Group", "Academic Year"]
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
 
     if (missingHeaders.length > 0) {
@@ -661,7 +686,7 @@ export function StudentList() {
         nickname: row["Nickname"] || "",
         dateOfBirth: row["Date of Birth"] ? new Date(row["Date of Birth"]) : null,
         gender: (row["Gender"]?.toLowerCase() || "other") as "male" | "female" | "other",
-        gradeLevel: row["Grade Level"]?.toLowerCase().replace(" ", "") || "",
+        gradeLevel: row["Year Group"]?.toLowerCase().replace(" ", "") || "",
         academicYear: row["Academic Year"] || availableYears[0] || "",
         status: (row["Status"]?.toLowerCase() || "active") as "active" | "graduated" | "withdrawn" | "on_leave",
         familyId: "",
@@ -714,7 +739,7 @@ export function StudentList() {
       "Nickname",
       "Date of Birth",
       "Gender",
-      "Grade Level",
+      "Year Group",
       "Academic Year",
       "Status",
       "Child Order",
@@ -1136,7 +1161,7 @@ export function StudentList() {
         {/* Academic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Grade Level *</Label>
+            <Label>Year Group *</Label>
             <Select
               value={formData.gradeLevel}
               onValueChange={(value) => setFormData(prev => ({ ...prev, gradeLevel: value }))}
@@ -1471,52 +1496,23 @@ export function StudentList() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Input
-                  placeholder="Search by name or student ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className=""
-                />
-              </div>
+            <div className="flex-1 min-w-[250px]">
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Search by name or student ID..."
+              />
             </div>
             <Select value={filterGrade} onValueChange={setFilterGrade}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Grade" />
+                <SelectValue placeholder="Year Group" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Grades</SelectItem>
+                <SelectItem value="all">All Year Groups</SelectItem>
                 {gradeLevels.map(grade => (
                   <SelectItem key={grade.id} value={grade.label}>
                     {grade.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterYear} onValueChange={setFilterYear}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterTerm} onValueChange={setFilterTerm}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Term" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Terms</SelectItem>
-                {termOptions.map(term => (
-                  <SelectItem key={term.id} value={term.id}>
-                    {term.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1534,6 +1530,21 @@ export function StudentList() {
                 ))}
               </SelectContent>
             </Select>
+            {(searchTerm || filterGrade !== "all" || filterStatus !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm("")
+                  setFilterGrade("all")
+                  setFilterStatus("all")
+                }}
+                className="text-muted-foreground"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Clear filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1558,7 +1569,7 @@ export function StudentList() {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("gradeLevel")}>
                   <div className="flex items-center gap-1">
-                    Grade
+                    Year Group
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -1602,14 +1613,25 @@ export function StudentList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedStudents.length === 0 ? (
+              {paginatedStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                    No students found
+                  <TableCell colSpan={10} className="p-0">
+                    {searchTerm || filterGrade !== "all" || filterStatus !== "all" ? (
+                      <EmptySearchResults
+                        onClear={() => {
+                          setSearchTerm("")
+                          setFilterGrade("all")
+                          setFilterStatus("all")
+                          setCurrentPage(1)
+                        }}
+                      />
+                    ) : (
+                      <EmptyDataState type="students" onCreate={handleAddStudent} />
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedStudents.map(student => (
+                paginatedStudents.map(student => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.studentId}</TableCell>
                     <TableCell>
@@ -1660,12 +1682,83 @@ export function StudentList() {
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {sortedStudents.length > 0 && (
+            <div className="flex items-center justify-between border-t pt-4 mt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Show</span>
+                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>entries</span>
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedStudents.length)} of {sortedStudents.length} students
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Add Student Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Add New Student</DialogTitle>
           </DialogHeader>
@@ -1683,7 +1776,7 @@ export function StudentList() {
 
       {/* Edit Student Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Edit Student</DialogTitle>
           </DialogHeader>
@@ -1701,7 +1794,7 @@ export function StudentList() {
 
       {/* View Student Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
           </DialogHeader>
@@ -1729,7 +1822,7 @@ export function StudentList() {
               {/* Academic Info */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-sm text-muted-foreground">Grade Level</p>
+                  <p className="text-sm text-muted-foreground">Year Group</p>
                   <p className="font-medium">{getGradeLabel(selectedStudent.gradeLevel)}</p>
                 </div>
                 <div>
@@ -1933,7 +2026,7 @@ export function StudentList() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Delete Student</DialogTitle>
           </DialogHeader>
@@ -1956,7 +2049,7 @@ export function StudentList() {
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Import Students</DialogTitle>
             <DialogDescription>
@@ -2007,7 +2100,7 @@ export function StudentList() {
                         <TableRow>
                           <TableHead>Student ID</TableHead>
                           <TableHead>Name</TableHead>
-                          <TableHead>Grade</TableHead>
+                          <TableHead>Year Group</TableHead>
                           <TableHead>Year</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
@@ -2017,7 +2110,7 @@ export function StudentList() {
                           <TableRow key={index}>
                             <TableCell className="font-mono text-sm">{row["Student ID"]}</TableCell>
                             <TableCell>{row["First Name"]} {row["Last Name"]}</TableCell>
-                            <TableCell>{row["Grade Level"]}</TableCell>
+                            <TableCell>{row["Year Group"]}</TableCell>
                             <TableCell>{row["Academic Year"]}</TableCell>
                             <TableCell>
                               <Badge variant="outline">{row["Status"] || "active"}</Badge>
@@ -2054,7 +2147,7 @@ export function StudentList() {
 
       {/* Promote Grade Dialog */}
       <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-6">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpCircle className="w-5 h-5" />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -16,6 +16,7 @@ import {
   Users,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Home,
   Phone,
   Mail,
@@ -75,6 +76,10 @@ export function FamilyGroups() {
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -146,6 +151,23 @@ export function FamilyGroups() {
       }
     })
   }, [filteredFamilies, sortColumn, sortDirection, getStudentsByFamily, getSiblingDiscount])
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedFamilies.length / pageSize)
+  const paginatedFamilies = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return sortedFamilies.slice(startIndex, startIndex + pageSize)
+  }, [sortedFamilies, currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, sortColumn, sortDirection])
 
   // Stats
   const stats = useMemo(() => {
@@ -348,14 +370,14 @@ export function FamilyGroups() {
 
       {/* Family List */}
       <div className="space-y-4">
-        {sortedFamilies.length === 0 ? (
+        {paginatedFamilies.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
               No families found. Create a family to group siblings together.
             </CardContent>
           </Card>
         ) : (
-          sortedFamilies.map(family => {
+          paginatedFamilies.map(family => {
             const familyStudents = getStudentsByFamily(family.id)
             const isExpanded = expandedFamilies.includes(family.id)
             const totalDiscount = getTotalDiscount(family.id)
@@ -455,7 +477,7 @@ export function FamilyGroups() {
                               <TableHead className="w-[60px]">Order</TableHead>
                               <TableHead>Student</TableHead>
                               <TableHead>Student ID</TableHead>
-                              <TableHead>Grade</TableHead>
+                              <TableHead>Year Group</TableHead>
                               <TableHead>Sibling Discount</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -537,6 +559,77 @@ export function FamilyGroups() {
         )}
       </div>
 
+      {/* Pagination Controls */}
+      {sortedFamilies.length > 0 && (
+        <div className="flex items-center justify-between border rounded-lg p-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Show</span>
+            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+              <SelectTrigger className="w-[70px] h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span>entries</span>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedFamilies.length)} of {sortedFamilies.length} families
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </Button>
+            <div className="flex items-center gap-1 mx-2">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 5) {
+                  pageNum = i + 1
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i
+                } else {
+                  pageNum = currentPage - 2 + i
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    className="w-8 h-8 p-0"
+                    onClick={() => setCurrentPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Students without family */}
       {studentsWithoutFamily.length > 0 && (
         <Card>
@@ -566,7 +659,7 @@ export function FamilyGroups() {
 
       {/* Add Family Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle>Create New Family</DialogTitle>
           </DialogHeader>
@@ -629,7 +722,7 @@ export function FamilyGroups() {
 
       {/* Edit Family Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle>Edit Family</DialogTitle>
           </DialogHeader>
@@ -692,7 +785,7 @@ export function FamilyGroups() {
 
       {/* Delete Family Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Delete Family</DialogTitle>
           </DialogHeader>
@@ -717,7 +810,7 @@ export function FamilyGroups() {
 
       {/* Add Student to Family Dialog */}
       <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Add Student to {selectedFamily?.familyName} Family</DialogTitle>
           </DialogHeader>

@@ -228,7 +228,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 15,
         fixedAmount: 0,
-        departments: ["Tuition"]
+        departments: ["Tuition"],
+        isActive: true
       },
       {
         id: "GRP002",
@@ -237,7 +238,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 10,
         fixedAmount: 0,
-        departments: ["Tuition", "School Bus"]
+        departments: ["Tuition", "School Bus"],
+        isActive: true
       },
       {
         id: "GRP003",
@@ -246,7 +248,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "fixed" as "percentage" | "fixed",
         discountPercentage: 0,
         fixedAmount: 25000,
-        departments: ["Tuition"]
+        departments: ["Tuition"],
+        isActive: true
       },
       {
         id: "GRP004",
@@ -255,7 +258,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 5,
         fixedAmount: 0,
-        departments: ["Tuition", "School Bus"]
+        departments: ["Tuition", "School Bus"],
+        isActive: true
       }
     ]
   }
@@ -289,7 +293,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
     discountPercentage: 0,
     fixedAmount: 0,
     departments: [] as string[],
-    selectedStudents: [] as Student[]
+    selectedStudents: [] as Student[],
+    isActive: true
   })
 
   // Student selection states
@@ -492,7 +497,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
       discountPercentage: 0,
       fixedAmount: 0,
       departments: [],
-      selectedStudents: []
+      selectedStudents: [],
+      isActive: true
     })
     setStudentInput("")
     setUploadedFile(null)
@@ -671,7 +677,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
         fixedAmount: groupForm.fixedAmount,
-        departments: groupForm.departments
+        departments: groupForm.departments,
+        isActive: groupForm.isActive
       }
 
       setStudentGroups(prev => prev.map(g => g.id === editGroupDialog.group.id ? updatedGroup : g))
@@ -686,7 +693,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
         fixedAmount: groupForm.fixedAmount,
-        departments: groupForm.departments
+        departments: groupForm.departments,
+        isActive: groupForm.isActive
       }
 
       setStudentGroups(prev => [...prev, newGroup])
@@ -708,7 +716,8 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
       discountPercentage: group.discountPercentage,
       fixedAmount: group.fixedAmount || 0,
       departments: [...group.departments],
-      selectedStudents: [...group.students]
+      selectedStudents: [...group.students],
+      isActive: group.isActive ?? true
     })
   }
 
@@ -1005,7 +1014,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
                   Create Student Group
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl">
+              <DialogContent className="max-w-3xl p-6">
                 <DialogHeader>
                   <DialogTitle>Create Student Group</DialogTitle>
                   <DialogDescription>
@@ -1328,13 +1337,13 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           {/* Student Groups Display */}
           <div className="space-y-4">
             {studentGroups.map((group) => (
-              <Card key={group.id}>
+              <Card key={group.id} className={group.isActive === false ? "opacity-60" : ""}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="font-medium">{group.name}</h4>
-                        <Badge variant="secondary">
+                        <Badge variant={group.isActive === false ? "outline" : "secondary"} className={group.isActive === false ? "text-gray-500" : ""}>
                           {group.discountType === "fixed"
                             ? `฿${group.fixedAmount?.toLocaleString() || 0} Discount`
                             : `${group.discountPercentage}% Discount`
@@ -1343,6 +1352,9 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         {group.departments.map(dept => (
                           <Badge key={dept} variant="outline" className="text-xs">{dept}</Badge>
                         ))}
+                        {group.isActive === false && (
+                          <Badge variant="outline" className="text-red-500 border-red-300">Disabled</Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
@@ -1392,7 +1404,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
           {/* View Group Dialog */}
           <Dialog open={viewGroupDialog.isOpen} onOpenChange={(open) => setViewGroupDialog({isOpen: open, group: null})}>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-4xl p-6">
               <DialogHeader>
                 <DialogTitle>
                   {viewGroupDialog.group?.name} - Student List
@@ -1481,15 +1493,27 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
               resetGroupForm()
             }
           }}>
-            <DialogContent className="max-w-3xl">
+            <DialogContent className="max-w-3xl p-6">
               <DialogHeader>
                 <DialogTitle>Edit Student Group</DialogTitle>
                 <DialogDescription>
                   Update group information and manage student whitelist
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-4">
+                {/* Enable/Disable Group Toggle */}
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label className="text-base font-medium">Enable Group</Label>
+                    <p className="text-sm text-muted-foreground">Toggle to enable or disable this discount group</p>
+                  </div>
+                  <Switch
+                    checked={groupForm.isActive}
+                    onCheckedChange={(checked) => setGroupForm({...groupForm, isActive: checked})}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="edit-group-name">Group Name</Label>
                   <Input
@@ -1853,7 +1877,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           setIsPreviewingCsv(false)
         }
       }}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl p-6">
           <DialogHeader>
             <DialogTitle>Upload Students via CSV</DialogTitle>
             <DialogDescription>
@@ -1961,7 +1985,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           clearStudentSearch()
         }
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Add Individual Student</DialogTitle>
             <DialogDescription>

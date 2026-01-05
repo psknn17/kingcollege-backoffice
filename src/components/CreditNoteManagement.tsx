@@ -10,7 +10,7 @@ import { Separator } from "./ui/separator"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown } from "lucide-react"
+import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner@2.0.3"
 import { useStudents } from "@/contexts/StudentContext"
@@ -113,6 +113,10 @@ export function CreditNoteManagement() {
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Load invoices from localStorage
   const [invoices, setInvoices] = useState<any[]>([])
@@ -401,6 +405,23 @@ export function CreditNoteManagement() {
   // Apply sorting to filtered credit notes
   const sortedCreditNotes = getSortedCreditNotes(filteredCreditNotes)
 
+  // Pagination logic
+  const totalPages = Math.ceil(sortedCreditNotes.length / pageSize)
+  const paginatedCreditNotes = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return sortedCreditNotes.slice(startIndex, startIndex + pageSize)
+  }, [sortedCreditNotes, currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, typeFilter, dateFrom, dateTo, sortColumn, sortDirection])
+
   const summaryStats = {
     total: creditNotes.length,
     draft: creditNotes.filter(cn => cn.status === "draft").length,
@@ -611,7 +632,7 @@ export function CreditNoteManagement() {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                   <div className="flex items-center gap-1">
-                    Grade
+                    Year Group
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -643,7 +664,7 @@ export function CreditNoteManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedCreditNotes.map((creditNote) => (
+              {paginatedCreditNotes.map((creditNote) => (
                 <TableRow key={creditNote.id}>
                   <TableCell className="font-mono text-sm">
                     {creditNote.creditNoteNumber}
@@ -700,12 +721,83 @@ export function CreditNoteManagement() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {sortedCreditNotes.length > 0 && (
+            <div className="flex items-center justify-between border-t p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Show</span>
+                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>entries</span>
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedCreditNotes.length)} of {sortedCreditNotes.length} credit notes
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Credit Note Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
@@ -746,7 +838,7 @@ export function CreditNoteManagement() {
                       <p className="font-mono">{selectedCreditNote.studentId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Grade</p>
+                      <p className="text-sm text-muted-foreground">Year Group</p>
                       <Badge variant="secondary">{selectedCreditNote.studentGrade}</Badge>
                     </div>
                     <div>
@@ -871,7 +963,7 @@ export function CreditNoteManagement() {
 
       {/* Create Credit Note Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />

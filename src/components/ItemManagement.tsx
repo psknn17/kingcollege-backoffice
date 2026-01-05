@@ -231,22 +231,31 @@ const generateItemCode = (category: string, index: number): string => {
   return `${prefix}-${String(index).padStart(3, '0')}`
 }
 
-// Load items from localStorage
-const loadItemsFromStorage = (): Item[] | null => {
+// Load items from localStorage and merge with mockItems
+const loadItemsFromStorage = (): Item[] => {
   try {
     const stored = localStorage.getItem(ITEMS_STORAGE_KEY)
     if (stored) {
-      const items = JSON.parse(stored)
+      const storedItems = JSON.parse(stored)
       // Ensure all items have itemCode
-      return items.map((item: any, index: number) => ({
+      const itemsWithCode = storedItems.map((item: any, index: number) => ({
         ...item,
         itemCode: item.itemCode || generateItemCode(item.category || "Other", index + 1)
       }))
+
+      // Merge: add any mockItems that don't exist in stored items
+      const storedIds = new Set(itemsWithCode.map((item: Item) => item.id))
+      const newMockItems = mockItems.filter(mockItem => !storedIds.has(mockItem.id))
+
+      if (newMockItems.length > 0) {
+        return [...itemsWithCode, ...newMockItems]
+      }
+      return itemsWithCode
     }
   } catch (error) {
     console.error("Failed to load items from localStorage:", error)
   }
-  return null
+  return mockItems
 }
 
 // Save items to localStorage
@@ -287,7 +296,7 @@ interface ItemManagementProps {
 
 export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemManagementProps) {
   const [activeTab, setActiveTab] = useState<"items" | "templates">("items")
-  const [items, setItems] = useState<Item[]>(() => loadItemsFromStorage() || mockItems)
+  const [items, setItems] = useState<Item[]>(() => loadItemsFromStorage())
   const [templates, setTemplates] = useState<ItemTemplate[]>(() => loadTemplatesFromStorage() || mockTemplates)
 
   // Save items to localStorage when changed
@@ -797,7 +806,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Applicable Grades</TableHead>
+                    <TableHead>Applicable Year Groups</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("isActive")}>
                       <div className="flex items-center gap-1">
                         Status
@@ -1010,7 +1019,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
 
       {/* Create/Edit Item Modal */}
       <Dialog open={isCreateItemModalOpen} onOpenChange={closeItemModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Item" : "Create New Item"}</DialogTitle>
             <DialogDescription>
@@ -1084,7 +1093,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">Applicable Grades *</label>
+              <label className="font-medium">Applicable Year Groups *</label>
               <div className="grid grid-cols-4 gap-2">
                 {grades.map(grade => (
                   <Button
@@ -1117,7 +1126,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
 
       {/* Create/Edit Template Modal */}
       <Dialog open={isCreateTemplateModalOpen} onOpenChange={closeTemplateModal}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl p-6">
           <DialogHeader>
             <DialogTitle>{editingTemplate ? "Edit Template" : "Create New Template"}</DialogTitle>
             <DialogDescription>
@@ -1130,7 +1139,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
               <div className="space-y-2">
                 <label className="font-medium">Template Name *</label>
                 <Input
-                  placeholder="Grade 1 Essential"
+                  placeholder="Year 1 Essential"
                   value={newTemplate.name}
                   onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
                 />
@@ -1138,7 +1147,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
               <div className="space-y-2">
                 <label className="font-medium">Description</label>
                 <Input
-                  placeholder="Essential items for Grade 1 students"
+                  placeholder="Essential items for Year 1 students"
                   value={newTemplate.description}
                   onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
                 />
@@ -1146,7 +1155,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">Applicable Grades *</label>
+              <label className="font-medium">Applicable Year Groups *</label>
               <div className="grid grid-cols-4 gap-2">
                 {grades.map(grade => (
                   <Button

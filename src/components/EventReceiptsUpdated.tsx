@@ -814,7 +814,7 @@ export function EventReceipts() {
 
       {/* View Receipt Detail Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5" />
@@ -875,7 +875,7 @@ export function EventReceipts() {
                     <p className="font-medium font-mono">{selectedReceipt.participantId}</p>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Grade</Label>
+                    <Label className="text-xs text-muted-foreground">Year Group</Label>
                     <p className="font-medium">{selectedReceipt.participantGrade}</p>
                   </div>
                   <div className="space-y-1">

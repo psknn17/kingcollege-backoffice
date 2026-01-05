@@ -543,7 +543,7 @@ export function ExternalParentManagement() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
+                        <DialogContent className="max-w-2xl p-6">
                           <DialogHeader>
                             <DialogTitle>Application Details - {parent.studentName}</DialogTitle>
                             <DialogDescription>
@@ -573,7 +573,7 @@ export function ExternalParentManagement() {
                                 <p className="text-sm">{parent.studentAge} years old</p>
                               </div>
                               <div>
-                                <Label>Grade</Label>
+                                <Label>Year Group</Label>
                                 <p className="text-sm">{parent.studentGrade}</p>
                               </div>
                             </div>

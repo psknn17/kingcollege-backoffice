@@ -326,15 +326,6 @@ export function ReceiptPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Tuition Receipt Management</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage receipts and internal email notifications
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
           <h3 className="text-lg font-medium">Receipt Management</h3>
           <p className="text-sm text-muted-foreground">
             View and download tuition payment receipts
@@ -417,16 +408,16 @@ export function ReceiptPage() {
             </div>
           </div>
 
-          {/* Row 2: Grade, Payment Channel, Date Range */}
+          {/* Row 2: Year Group, Payment Channel, Date Range */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Grade</label>
+              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Grades" />
+                  <SelectValue placeholder="All Year Groups" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="all">All Year Groups</SelectItem>
                   {gradeOptions.map((grade) => (
                     <SelectItem key={grade} value={grade}>
                       {grade}
@@ -568,7 +559,7 @@ export function ReceiptPage() {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                   <div className="flex items-center gap-1">
-                    Grade
+                    Year Group
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>

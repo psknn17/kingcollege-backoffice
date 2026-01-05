@@ -386,7 +386,7 @@ export function SummerRegistrationControl() {
                 Add Period
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg p-6">
               <DialogHeader>
                 <DialogTitle>
                   {editingPeriod ? "Edit Registration Period" : "Add Registration Period"}
@@ -792,7 +792,7 @@ export function SummerRegistrationControl() {
 
       {/* Price Settings Dialog */}
       <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="w-5 h-5" />

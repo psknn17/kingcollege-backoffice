@@ -970,7 +970,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
       {/* Course Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
@@ -1128,7 +1128,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
       {/* Student Report Modal */}
       <Dialog open={isStudentReportModalOpen} onOpenChange={setIsStudentReportModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCheck className="w-5 h-5" />
@@ -1325,7 +1325,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
       {/* Course Management Modal */}
       <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5" />

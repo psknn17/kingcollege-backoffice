@@ -558,13 +558,13 @@ export function ReceiptPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Grade Level</label>
+                  <label className="text-sm font-medium">Year Group</label>
                   <Select value={gradeFilter} onValueChange={setGradeFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
+                      <SelectItem value="all">All Year Groups</SelectItem>
                       {gradeOptions.map((grade) => (
                         <SelectItem key={grade} value={grade}>
                           {grade}
@@ -696,7 +696,7 @@ export function ReceiptPage() {
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                       <div className="flex items-center gap-1">
-                        Grade
+                        Year Group
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
@@ -911,7 +911,7 @@ export function ReceiptPage() {
       {/* Receipt Detail Modal */}
       {selectedReceipt && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl p-6">
             <DialogHeader>
               <DialogTitle>Receipt Details</DialogTitle>
               <DialogDescription>
@@ -974,7 +974,7 @@ export function ReceiptPage() {
 
       {/* Bulk Resend Modal - keeping it simple for now */}
       <Dialog open={isBulkResendModalOpen} onOpenChange={closeBulkResendModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Bulk Resend Receipts</DialogTitle>
             <DialogDescription>

@@ -768,7 +768,7 @@ export function RolesPermissions() {
 
       {/* Add Role Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Create New Role</DialogTitle>
             <DialogDescription>Define a new role with specific permissions</DialogDescription>
@@ -816,7 +816,7 @@ export function RolesPermissions() {
 
       {/* Edit Role Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b bg-muted/30">
             <DialogTitle className="text-xl">Edit Role</DialogTitle>
             <DialogDescription>Modify role settings and permissions</DialogDescription>
@@ -957,7 +957,7 @@ export function RolesPermissions() {
 
       {/* View Role Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5" />
@@ -1010,7 +1010,7 @@ export function RolesPermissions() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Delete Role</DialogTitle>
           </DialogHeader>

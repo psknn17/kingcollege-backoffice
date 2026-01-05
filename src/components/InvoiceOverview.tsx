@@ -216,7 +216,7 @@ export function InvoiceOverview() {
         `Invoice Number,${invoice.invoiceNumber}`,
         `Student Name,${invoice.studentName}`,
         `Student ID,${invoice.studentId}`,
-        `Grade,${invoice.studentGrade}`,
+        `Year Group,${invoice.studentGrade}`,
         `Amount,${invoice.amount}`,
         `Due Date,${format(invoice.dueDate, "yyyy-MM-dd")}`,
         `Issue Date,${format(invoice.issueDate, "yyyy-MM-dd")}`,
@@ -507,15 +507,15 @@ export function InvoiceOverview() {
 
           {/* Row 2 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Grade */}
+            {/* Year Group */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Grade</label>
+              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Grades" />
+                  <SelectValue placeholder="All Year Groups" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="all">All Year Groups</SelectItem>
                   {gradeOptions.map((grade) => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -637,7 +637,7 @@ export function InvoiceOverview() {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                   <div className="flex items-center gap-1">
-                    Grade
+                    Year Group
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -886,7 +886,7 @@ export function InvoiceOverview() {
 
       {/* Invoice Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
@@ -931,7 +931,7 @@ export function InvoiceOverview() {
                     <p className="font-mono">{selectedInvoice.studentId}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Grade Level</p>
+                    <p className="text-sm text-muted-foreground">Year Group</p>
                     <Badge variant="secondary">{selectedInvoice.studentGrade}</Badge>
                   </div>
                 </div>
