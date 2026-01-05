@@ -1690,14 +1690,115 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                       ))}
                     </tbody>
                   </table>
-                  {/* Amount in Words + Total */}
-                  <div className="border-t bg-gray-50 p-4">
-                    <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
-                    <div className="flex justify-between items-center font-bold text-base">
-                      <span>TOTAL</span>
-                      <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
-                    </div>
-                  </div>
+                  {/* Subtotal, Discounts, Late Fee, Total */}
+                  {(() => {
+                    // Calculate subtotal (sum of all items before discounts)
+                    const subtotal = selectedInvoice.items.reduce((sum, item) => sum + item.amount, 0)
+
+                    // Find student from context
+                    const student = students.find(s =>
+                      s.studentId === selectedInvoice.studentId ||
+                      s.id === selectedInvoice.studentId ||
+                      `${s.firstName} ${s.lastName}` === selectedInvoice.studentName
+                    )
+
+                    const discountLines: { name: string; amount: number; percent?: number }[] = []
+
+                    // 1. Sibling discount
+                    if (student && student.childOrder >= 2 && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                      const siblingPercent = getSiblingDiscount(student)
+                      if (siblingPercent > 0) {
+                        const siblingAmount = Math.round(subtotal * siblingPercent / 100)
+                        discountLines.push({
+                          name: `Sibling Discount (Child #${student.childOrder})`,
+                          amount: siblingAmount,
+                          percent: siblingPercent
+                        })
+                      }
+                    }
+
+                    // 2. Registration Fee Waiver - check if any item has waiver
+                    const registrationFeeWaiver = selectedInvoice.items
+                      .filter(item => item.description.toLowerCase().includes('registration') && item.discountPercent > 0)
+                      .reduce((sum, item) => sum + (item.amount - item.discountedAmount), 0)
+                    if (registrationFeeWaiver > 0) {
+                      discountLines.push({
+                        name: "Registration Fee Waiver",
+                        amount: registrationFeeWaiver
+                      })
+                    }
+
+                    // 3. Student group discounts
+                    if (selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                      const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId)
+                      groupDiscounts.forEach(group => {
+                        const groupAmount = group.discountType === "percentage"
+                          ? Math.round(subtotal * group.discountPercentage / 100)
+                          : group.fixedAmount
+                        discountLines.push({
+                          name: group.name,
+                          amount: groupAmount,
+                          percent: group.discountType === "percentage" ? group.discountPercentage : undefined
+                        })
+                      })
+                    }
+
+                    // Calculate late fee (1.5% if overdue)
+                    const today = new Date()
+                    const dueDate = new Date(selectedInvoice.dueDate)
+                    const isOverdue = today > dueDate && selectedInvoice.status !== "paid"
+                    const lateFeePercent = 1.5
+                    const lateFeeAmount = isOverdue ? Math.round(subtotal * lateFeePercent / 100) : 0
+
+                    // Calculate total discounts
+                    const totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
+
+                    // Final total
+                    const finalTotal = subtotal - totalDiscounts + lateFeeAmount
+
+                    return (
+                      <div className="border-t">
+                        {/* Subtotal */}
+                        <div className="flex justify-between items-center px-4 py-3 bg-gray-50">
+                          <span className="text-sm font-medium text-gray-600">Subtotal</span>
+                          <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
+                        </div>
+
+                        {/* Discount Lines */}
+                        {discountLines.map((discount, idx) => (
+                          <div key={idx} className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-green-600">
+                              {discount.name} {discount.percent ? `(${discount.percent}%)` : ''}
+                            </span>
+                            <span className="text-sm font-medium text-green-600">
+                              -{formatCurrency(discount.amount)}
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Late Fee */}
+                        {lateFeeAmount > 0 && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-red-600">
+                              Late Payment Fee ({lateFeePercent}%)
+                            </span>
+                            <span className="text-sm font-medium text-red-600">
+                              +{formatCurrency(lateFeeAmount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Amount in Words + Total */}
+                        <div className="border-t bg-gray-50 p-4">
+                          <div className="text-xs text-gray-500 mb-2">{numberToWords(finalTotal)}</div>
+                          <div className="flex justify-between items-center font-bold text-base">
+                            <span>TOTAL</span>
+                            <span>{formatCurrency(finalTotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
 
