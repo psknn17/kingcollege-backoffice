@@ -22,6 +22,7 @@ export interface Student {
   enrollmentTerm: "term1" | "term2" | "term3" // Term when student enrolled
   status: "active" | "graduated" | "withdrawn" | "on_leave"
   familyId: string
+  familyCode?: string // Added for easier display and search
   childOrder: number // 1 = first child, 2 = second child, etc.
   parents: Parent[]
   enrollmentDate: Date | null
@@ -62,14 +63,17 @@ interface StudentContextType {
     eligible: boolean
     reason: string
     completedYears: number
+    creditPerTerm?: number
   }
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined)
 
-const STUDENTS_STORAGE_KEY = "students"
-const FAMILIES_STORAGE_KEY = "families"
+const STUDENTS_STORAGE_KEY = "students_v3" // เปลี่ยนชื่อ Key เพื่อบังคับ Hard Reset
+const FAMILIES_STORAGE_KEY = "families_v3"
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
+const STUDENT_DATA_VERSION_KEY = "student_data_version_v3"
+const CURRENT_DATA_VERSION = "3.0" // เวอร์ชันใหม่ล่าสุด
 
 // Helper to load discount options from localStorage
 const loadDiscountOptions = (academicYear: string, term: string) => {
@@ -77,8 +81,8 @@ const loadDiscountOptions = (academicYear: string, term: string) => {
     const stored = localStorage.getItem(DISCOUNT_OPTIONS_STORAGE_KEY)
     if (stored) {
       const allData = JSON.parse(stored)
-      const storageKey = `${academicYear}_${term}`
-      return allData[storageKey] || null
+      // Storage key is just the academic year (e.g., "2024-2025")
+      return allData[academicYear] || null
     }
   } catch (error) {
     console.error("Failed to load discount options:", error)
@@ -96,7 +100,7 @@ const defaultSiblingDiscounts = [
 ]
 
 // Convert term format from "term1" to "1" for storage key lookup
-const convertTermFormat = (term: string): string => {
+export const convertTermFormat = (term: string): string => {
   if (term === "term1") return "1"
   if (term === "term2") return "2"
   if (term === "term3") return "3"
@@ -227,313 +231,136 @@ const saveFamiliesToStorage = (families: Family[]) => {
 
 // Helper function to generate mock data
 const generateMockData = () => {
-  const familyNames = [
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-    "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
-    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson",
-    "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson",
-    "Walker", "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen",
-    "Hill", "Flores", "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera",
-    "Campbell", "Mitchell", "Carter", "Roberts", "Turner", "Phillips", "Evans",
-    "Parker", "Edwards", "Collins", "Stewart", "Morris", "Murphy", "Cook"
+  const familyNamesList = [
+    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Taylor", "Anderson",
+    "Thomas", "Jackson", "White", "Harris", "Martin", "Thompson", "Martinez", "Robinson", "Clark", "Rodriguez",
+    "Lewis", "Lee", "Walker", "Hall", "Allen", "Young", "Hernandez", "King", "Wright", "Lopez",
+    "Hill", "Scott", "Green", "Adams", "Baker", "Gonzalez", "Nelson", "Carter", "Mitchell", "Perez",
+    "Roberts", "Turner", "Phillips", "Campbell", "Parker", "Evans", "Edwards", "Collins", "Stewart", "Sanchez",
+    "Morris", "Rogers", "Reed", "Cook", "Morgan", "Bell", "Murphy", "Bailey", "Rivera", "Cooper",
+    "Richardson", "Cox", "Howard", "Ward", "Torres", "Peterson", "Gray", "Ramirez", "James", "Watson",
+    "Brooks", "Kelly", "Sanders", "Price", "Bennett", "Wood", "Barnes", "Ross", "Henderson", "Coleman",
+    "Jenkins", "Perry", "Powell", "Long", "Patterson", "Hughes", "Flores", "Washington", "Butler", "Simmons",
+    "Foster", "Gonzales", "Bryant", "Alexander", "Russell", "Griffin", "Diaz", "Hayes", "Myers", "Ford",
+    "Hamilton", "Graham", "Sullivan", "Wallace", "Woods", "Cole", "West", "Jordan", "Owens", "Reynolds",
+    "Fisher", "Ellis", "Harrison", "Gibson", "Mcdonald", "Cruz", "Marshall", "Ortiz", "Gomez", "Murray",
+    "Freeman", "Wells", "Webb", "Simpson", "Stevens", "Tucker", "Porter", "Hunter", "Hicks", "Crawford",
+    "Henry", "Boyd", "Mason", "Morales", "Kennedy", "Warren", "Dixon", "Ramos", "Reyes", "Burns",
+    "Gordon", "Shaw", "Holmes", "Rice", "Robertson", "Hunt", "Black", "Daniels", "Palmer", "Mills"
   ]
-
-  const maleFirstNames = [
-    "James", "Michael", "Oliver", "Lucas", "Ethan", "Alexander", "William", "Benjamin",
-    "Henry", "Sebastian", "Jack", "Daniel", "Matthew", "Joseph", "David", "Andrew",
-    "Christopher", "Joshua", "Nathan", "Ryan", "Samuel", "Thomas", "Gabriel", "Leo",
-    "Isaac", "Owen", "Adrian", "Julian", "Aaron", "Dylan", "Elijah", "Caleb"
-  ]
-
-  const femaleFirstNames = [
-    "Emily", "Sophia", "Charlotte", "Mia", "Ava", "Isabella", "Amelia", "Harper",
-    "Evelyn", "Abigail", "Emma", "Olivia", "Elizabeth", "Sofia", "Victoria", "Grace",
-    "Chloe", "Camila", "Penelope", "Riley", "Layla", "Zoey", "Nora", "Lily",
-    "Eleanor", "Hannah", "Lillian", "Addison", "Aubrey", "Stella", "Natalie", "Zoe"
-  ]
-
-  const nicknames: Record<string, string> = {
-    "James": "Jamie", "Michael": "Mike", "Oliver": "Ollie", "Lucas": "Luke",
-    "Alexander": "Alex", "William": "Will", "Benjamin": "Ben", "Sebastian": "Seb",
-    "Daniel": "Dan", "Matthew": "Matt", "Joseph": "Joe", "Christopher": "Chris",
-    "Joshua": "Josh", "Nathan": "Nate", "Samuel": "Sam", "Thomas": "Tom",
-    "Emily": "Em", "Sophia": "Sophie", "Charlotte": "Charlie", "Isabella": "Bella",
-    "Amelia": "Amy", "Abigail": "Abby", "Elizabeth": "Liz", "Victoria": "Vicky",
-    "Chloe": "Clo", "Penelope": "Penny", "Eleanor": "Ellie", "Lillian": "Lily",
-    "Natalie": "Nat", "Addison": "Addie"
-  }
-
-  const addresses = [
-    "123 Sukhumvit Road, Bangkok 10110",
-    "456 Silom Road, Bangkok 10500",
-    "789 Sathorn Road, Bangkok 10120",
-    "321 Ratchadaphisek Road, Bangkok 10400",
-    "555 Ladprao Road, Bangkok 10230",
-    "999 Phahonyothin Road, Bangkok 10900",
-    "111 Rama IV Road, Bangkok 10330",
-    "222 Thonglor Road, Bangkok 10110",
-    "333 Ekkamai Road, Bangkok 10110",
-    "444 Asoke Road, Bangkok 10110"
-  ]
-
-  const gradeLevels = [
-    "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
-    "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
-  ]
-
-  // Calculate birth year based on grade level (assuming current year 2025)
-  const getBirthYear = (gradeLevel: string): number => {
-    const gradeToAge: Record<string, number> = {
-      "Nursery": 4, "Reception": 5, "Year 1": 6, "Year 2": 7, "Year 3": 8,
-      "Year 4": 9, "Year 5": 10, "Year 6": 11, "Year 7": 12, "Year 8": 13,
-      "Year 9": 14, "Year 10": 15, "Year 11": 16, "Year 12": 17, "Year 13": 18
-    }
-    return 2025 - (gradeToAge[gradeLevel] || 10)
-  }
+  const maleFirstNames = ["James", "Michael", "Oliver", "Lucas", "Ethan", "Alexander", "William", "Benjamin", "Henry", "Sebastian", "Jack", "Daniel", "Matthew", "Joseph", "David", "Andrew", "Christopher", "Joshua", "Nathan", "Ryan", "Samuel", "Thomas", "Gabriel", "Leo"]
+  const femaleFirstNames = ["Emily", "Sophia", "Charlotte", "Mia", "Ava", "Isabella", "Amelia", "Harper", "Evelyn", "Abigail", "Emma", "Olivia", "Elizabeth", "Sofia", "Victoria", "Grace", "Chloe", "Camila", "Penelope", "Riley", "Layla", "Zoey"]
+  const gradeLevels = ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
 
   const families: Family[] = []
   const students: Student[] = []
 
-  let studentCounter = 1
-  let familyCounter = 1
-  let parentCounter = 1
+  // สร้าง 150 ครอบครัวให้ครบถ้วน
+  let studentCount = 0
 
-  // Create families with varying sizes to distribute 150 students
-  // Strategy: We need 150 students across 15 grades (10 per grade)
-  // Create a mix of 1-child (40), 2-child (35), and 3-child (10) families = 150 students total
+  for (let familyIndex = 0; familyIndex < 150; familyIndex++) {
+    const familyName = familyNamesList[familyIndex % familyNamesList.length]
+    // ทำให้ชื่อครอบครัวไม่ซ้ำด้วยการต่อท้าย index ถ้ามีชื่อซ้ำ
+    const uniqueFamilyName = familyIndex >= familyNamesList.length ? `${familyName} ${Math.floor(familyIndex / familyNamesList.length) + 1}` : familyName
+    const familyId = `FAM-${String(familyIndex + 1).padStart(3, '0')}`
 
-  // Track students per grade to ensure 10 per grade
-  const studentsPerGrade: Record<string, number> = {}
-  gradeLevels.forEach(g => studentsPerGrade[g] = 0)
+    // สร้างรหัสครอบครัวที่แน่นอน
+    const familyCode = `${uniqueFamilyName.substring(0, 2).toUpperCase()}2025${String(familyIndex + 1).padStart(3, '0')}`
 
-  // Helper to get next available grade with less than 10 students
-  const getAvailableGrade = (preferredGrades: string[]): string | null => {
-    for (const grade of preferredGrades) {
-      if (studentsPerGrade[grade] < 10) return grade
-    }
-    // Fallback: find any grade with space
-    for (const grade of gradeLevels) {
-      if (studentsPerGrade[grade] < 10) return grade
-    }
-    return null
-  }
+    // จำนวนนักเรียน: 1-3 คนต่อบ้าน
+    // 30% มี 1 คน, 50% มี 2 คน, 20% มี 3 คน
+    const rand = Math.random()
+    const numChildrenInFamily = rand < 0.3 ? 1 : rand < 0.8 ? 2 : 3
+    const familyStudentIds: string[] = []
 
-  // Create families
-  for (let f = 0; f < 60; f++) {
-    const familyName = familyNames[f % familyNames.length]
-    const familyId = `FAM${String(familyCounter).padStart(3, '0')}`
-    const familyCode = `${familyName.substring(0, 2).toUpperCase()}2024${String(familyCounter).padStart(3, '0')}`
+    // สร้างข้อมูลผู้ปกครองชุดเดียวสำหรับทั้งบ้าน
+    const fatherName = `${maleFirstNames[Math.floor(Math.random() * maleFirstNames.length)]} ${uniqueFamilyName}`
+    const motherName = `${femaleFirstNames[Math.floor(Math.random() * femaleFirstNames.length)]} ${uniqueFamilyName}`
+    const familyParents: Parent[] = [
+      { id: `P-${familyId}-1`, name: fatherName, relationship: "father", phone: `081-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`, email: `${uniqueFamilyName.toLowerCase().replace(/\s/g, '')}@email.com`, isPrimary: true },
+      { id: `P-${familyId}-2`, name: motherName, relationship: "mother", phone: `081-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`, email: `${uniqueFamilyName.toLowerCase().replace(/\s/g, '')}2@email.com`, isPrimary: false }
+    ]
 
-    // Determine number of children for this family
-    let numChildren: number
-    if (f < 30) numChildren = 1  // 30 single-child families
-    else if (f < 50) numChildren = 2  // 20 two-child families (40 students)
-    else numChildren = 3  // 10 three-child families (30 students)
-    // Total: 30 + 40 + 30 = 100 students from this structure
-    // We need 150 total, so we'll add more families below
-
-    const studentIds: string[] = []
-    const familyStudents: { id: string; grade: string }[] = []
-
-    // Create students for this family
-    for (let c = 0; c < numChildren; c++) {
-      // Determine grade based on child order (older children in higher grades)
-      let preferredGrades: string[]
-      if (numChildren === 1) {
-        preferredGrades = [...gradeLevels]
-      } else if (numChildren === 2) {
-        preferredGrades = c === 0
-          ? gradeLevels.slice(5) // First child: Year 4+
-          : gradeLevels.slice(0, 8) // Second child: Nursery to Year 6
-      } else {
-        preferredGrades = c === 0
-          ? gradeLevels.slice(7) // First child: Year 6+
-          : c === 1
-            ? gradeLevels.slice(3, 10) // Second child: Year 2 to Year 8
-            : gradeLevels.slice(0, 6) // Third child: Nursery to Year 4
-      }
-
-      const grade = getAvailableGrade(preferredGrades)
-      if (!grade) continue // Skip if all grades are full
-
-      studentsPerGrade[grade]++
-
-      const studentId = `STU${String(studentCounter).padStart(3, '0')}`
-      const isMale = studentCounter % 2 === 1
-      const firstName = isMale
-        ? maleFirstNames[(studentCounter - 1) % maleFirstNames.length]
-        : femaleFirstNames[(studentCounter - 1) % femaleFirstNames.length]
-      const nickname = nicknames[firstName] || firstName.substring(0, 3)
-
-      const birthYear = getBirthYear(grade)
-      const birthMonth = ((studentCounter * 3) % 12) + 1
-      const birthDay = ((studentCounter * 7) % 28) + 1
-
-      const enrollmentYear = Math.max(2020, birthYear + 4)
-
-      const fatherId = `P${String(parentCounter).padStart(3, '0')}`
-      const motherId = `P${String(parentCounter + 1).padStart(3, '0')}`
-      parentCounter += 2
+    for (let i = 0; i < numChildrenInFamily; i++) {
+      studentCount++
+      const sid = String(studentCount).padStart(3, '0')
+      const isMale = Math.random() > 0.5
+      const firstName = isMale ? maleFirstNames[Math.floor(Math.random() * maleFirstNames.length)] : femaleFirstNames[Math.floor(Math.random() * femaleFirstNames.length)]
 
       const student: Student = {
-        id: studentId,
-        studentId: `KC2024${String(studentCounter).padStart(3, '0')}`,
+        id: `STU-${sid}`,
+        studentId: `KC2025${sid}`,
         firstName,
-        lastName: familyName,
-        nickname,
-        dateOfBirth: new Date(`${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`),
+        lastName: uniqueFamilyName,
+        nickname: firstName.substring(0, 3).toUpperCase(),
+        dateOfBirth: new Date(2010 + Math.floor(Math.random() * 10), 0, 1),
         gender: isMale ? "male" : "female",
-        gradeLevel: grade,
+        gradeLevel: gradeLevels[Math.floor(Math.random() * gradeLevels.length)],
         academicYear: "2025-2026",
         enrollmentTerm: "term1",
         status: "active",
-        familyId,
-        childOrder: c + 1,
-        parents: [
-          {
-            id: fatherId,
-            name: `${maleFirstNames[(f * 2) % maleFirstNames.length]} ${familyName}`,
-            relationship: "father",
-            phone: `08${1 + (f % 9)}-${String(100 + f).padStart(3, '0')}-${String(1000 + studentCounter).padStart(4, '0')}`,
-            email: `${familyName.toLowerCase()}.father@email.com`,
-            isPrimary: true
-          },
-          {
-            id: motherId,
-            name: `${femaleFirstNames[(f * 2) % femaleFirstNames.length]} ${familyName}`,
-            relationship: "mother",
-            phone: `08${1 + (f % 9)}-${String(200 + f).padStart(3, '0')}-${String(2000 + studentCounter).padStart(4, '0')}`,
-            email: `${familyName.toLowerCase()}.mother@email.com`,
-            isPrimary: false
-          }
-        ],
-        enrollmentDate: new Date(`${enrollmentYear}-08-15`),
-        notes: c > 0 ? "Sibling" : "",
-        createdBy: "Admin",
-        createdAt: new Date(`${enrollmentYear}-08-15`),
-        updatedBy: "Admin",
-        updatedAt: new Date("2024-01-10")
+        familyId: familyId,
+        familyCode: familyCode, // ใส่ Family Code โดยตรงตามคำขอ
+        childOrder: i + 1,
+        parents: familyParents,
+        enrollmentDate: new Date(),
+        notes: i > 0 ? "Sibling" : "",
+        createdBy: "System",
+        createdAt: new Date(),
+        updatedBy: "System",
+        updatedAt: new Date()
       }
-
       students.push(student)
-      studentIds.push(studentId)
-      familyStudents.push({ id: studentId, grade })
-      studentCounter++
+      familyStudentIds.push(student.id)
     }
 
-    if (studentIds.length > 0) {
-      families.push({
-        id: familyId,
-        familyCode,
-        familyName,
-        studentIds,
-        primaryContactId: `P${String((familyCounter - 1) * 2 + 1).padStart(3, '0')}`,
-        address: addresses[f % addresses.length],
-        email: `${familyName.toLowerCase()}.family@email.com`,
-        phone: `08${1 + (f % 9)}-${String(f + 100).padStart(3, '0')}-${String(f + 1000).padStart(4, '0')}`,
-        createdAt: new Date(`2024-0${1 + (f % 9)}-${String(10 + (f % 20)).padStart(2, '0')}`)
-      })
-      familyCounter++
-    }
-  }
-
-  // Fill remaining slots to reach 10 students per grade
-  // Add additional single-child families for grades that need more students
-  for (const grade of gradeLevels) {
-    while (studentsPerGrade[grade] < 10) {
-      const familyName = familyNames[familyCounter % familyNames.length]
-      const familyId = `FAM${String(familyCounter).padStart(3, '0')}`
-      const familyCode = `${familyName.substring(0, 2).toUpperCase()}2024${String(familyCounter).padStart(3, '0')}`
-
-      const studentId = `STU${String(studentCounter).padStart(3, '0')}`
-      const isMale = studentCounter % 2 === 1
-      const firstName = isMale
-        ? maleFirstNames[(studentCounter - 1) % maleFirstNames.length]
-        : femaleFirstNames[(studentCounter - 1) % femaleFirstNames.length]
-      const nickname = nicknames[firstName] || firstName.substring(0, 3)
-
-      const birthYear = getBirthYear(grade)
-      const birthMonth = ((studentCounter * 3) % 12) + 1
-      const birthDay = ((studentCounter * 7) % 28) + 1
-      const enrollmentYear = Math.max(2020, birthYear + 4)
-
-      const fatherId = `P${String(parentCounter).padStart(3, '0')}`
-      const motherId = `P${String(parentCounter + 1).padStart(3, '0')}`
-      parentCounter += 2
-
-      const student: Student = {
-        id: studentId,
-        studentId: `KC2024${String(studentCounter).padStart(3, '0')}`,
-        firstName,
-        lastName: familyName,
-        nickname,
-        dateOfBirth: new Date(`${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`),
-        gender: isMale ? "male" : "female",
-        gradeLevel: grade,
-        academicYear: "2025-2026",
-        enrollmentTerm: "term1",
-        status: "active",
-        familyId,
-        childOrder: 1,
-        parents: [
-          {
-            id: fatherId,
-            name: `${maleFirstNames[(familyCounter * 2) % maleFirstNames.length]} ${familyName}`,
-            relationship: "father",
-            phone: `08${1 + (familyCounter % 9)}-${String(100 + familyCounter).padStart(3, '0')}-${String(1000 + studentCounter).padStart(4, '0')}`,
-            email: `${familyName.toLowerCase()}.father@email.com`,
-            isPrimary: true
-          },
-          {
-            id: motherId,
-            name: `${femaleFirstNames[(familyCounter * 2) % femaleFirstNames.length]} ${familyName}`,
-            relationship: "mother",
-            phone: `08${1 + (familyCounter % 9)}-${String(200 + familyCounter).padStart(3, '0')}-${String(2000 + studentCounter).padStart(4, '0')}`,
-            email: `${familyName.toLowerCase()}.mother@email.com`,
-            isPrimary: false
-          }
-        ],
-        enrollmentDate: new Date(`${enrollmentYear}-08-15`),
-        notes: "",
-        createdBy: "Admin",
-        createdAt: new Date(`${enrollmentYear}-08-15`),
-        updatedBy: "Admin",
-        updatedAt: new Date("2024-01-10")
-      }
-
-      students.push(student)
-      studentsPerGrade[grade]++
-
-      families.push({
-        id: familyId,
-        familyCode,
-        familyName,
-        studentIds: [studentId],
-        primaryContactId: fatherId,
-        address: addresses[familyCounter % addresses.length],
-        email: `${familyName.toLowerCase()}.family@email.com`,
-        phone: `08${1 + (familyCounter % 9)}-${String(familyCounter + 100).padStart(3, '0')}-${String(familyCounter + 1000).padStart(4, '0')}`,
-        createdAt: new Date(`2024-0${1 + (familyCounter % 9)}-${String(10 + (familyCounter % 20)).padStart(2, '0')}`)
-      })
-
-      studentCounter++
-      familyCounter++
-    }
+    families.push({
+      id: familyId,
+      familyCode: familyCode,
+      familyName: uniqueFamilyName,
+      studentIds: familyStudentIds,
+      primaryContactId: familyParents[0].id,
+      address: `${Math.floor(Math.random() * 999) + 1} Sukhumvit Rd, Bangkok ${10110 + Math.floor(Math.random() * 100)}`,
+      email: familyParents[0].email,
+      phone: familyParents[0].phone,
+      createdAt: new Date()
+    })
   }
 
   return { families, students }
 }
 
+
 // Generate sample data
-const { families: sampleFamilies, students: sampleStudents } = generateMockData()
+const sampleData = generateMockData()
 
 export function StudentProvider({ children }: { children: ReactNode }) {
+  // ตรวจสอบเวอร์ชันข้อมูลก่อนเริ่มต้น State
+  const savedVersion = localStorage.getItem(STUDENT_DATA_VERSION_KEY)
+  const shouldReset = savedVersion !== CURRENT_DATA_VERSION
+
   const [students, setStudentsState] = useState<Student[]>(() => {
-    return loadStudentsFromStorage() || sampleStudents
+    if (shouldReset) {
+      return sampleData.students
+    }
+    return loadStudentsFromStorage() || sampleData.students
   })
+
   const [families, setFamiliesState] = useState<Family[]>(() => {
-    return loadFamiliesFromStorage() || sampleFamilies
+    if (shouldReset) {
+      return sampleData.families
+    }
+    return loadFamiliesFromStorage() || sampleData.families
   })
+
+  // บันทึกเวอร์ชันใหม่หลังจากโหลดข้อมูลเสร็จ
+  useEffect(() => {
+    if (shouldReset) {
+      localStorage.setItem(STUDENT_DATA_VERSION_KEY, CURRENT_DATA_VERSION)
+      saveStudentsToStorage(students)
+      saveFamiliesToStorage(families)
+    }
+  }, [shouldReset, students, families])
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -597,22 +424,8 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Check minimum grade level requirement (Year 3+)
-    // Parse grade level from student.gradeLevel (e.g., "year3" or "Year 3" -> 3)
-    let studentGradeLevel = 0
-    const gradeLevelLower = student.gradeLevel.toLowerCase()
-    if (gradeLevelLower === "nursery" || gradeLevelLower === "reception") {
-      studentGradeLevel = 0
-    } else {
-      const gradeLevelMatch = student.gradeLevel.match(/(\d+)/)
-      studentGradeLevel = gradeLevelMatch ? parseInt(gradeLevelMatch[1]) : 0
-    }
-
-    // Must be in Year 3 or higher to receive sibling discount
-    if (studentGradeLevel < 3) {
-      return 0
-    }
-
+    // Sibling discount is available from 1st child onwards
+    // No Year 3+ requirement for sibling discount (that's only for Registration Fee Waiver)
     // Get discount from Discount Options settings
     const academicYear = student.academicYear || "2025-2026"
     return getSiblingDiscountFromSettings(student.childOrder, academicYear, term)
@@ -622,7 +435,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     student: Student,
     currentYear: string,
     term: string
-  ): { eligible: boolean; reason: string; completedYears: number } => {
+  ): { eligible: boolean; reason: string; completedYears: number; creditPerTerm?: number } => {
     // Load waiver settings (convert term format if needed)
     const convertedTerm = convertTermFormat(term)
     const options = loadDiscountOptions(currentYear, convertedTerm)
@@ -632,21 +445,12 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       minimumYears: 3,
       creditAmount: 225000,
       termsToCredit: 3,
-      firstChildImmediate: true,
+      firstChildImmediate: false, // First child must wait 3 years
     }
 
     // Check if waiver is enabled
     if (!waiverSettings.enabled) {
       return { eligible: false, reason: "Fee waiver privilege is disabled", completedYears: 0 }
-    }
-
-    // Check if student has withdrawn sibling (no privilege for family with withdrawn student)
-    if (student.familyId) {
-      const familySiblings = students.filter(s => s.familyId === student.familyId)
-      const hasWithdrawnSibling = familySiblings.some(s => s.status === "withdrawn")
-      if (hasWithdrawnSibling) {
-        return { eligible: false, reason: "Family has withdrawn student - not eligible", completedYears: 0 }
-      }
     }
 
     // Parse grade level from student.gradeLevel (e.g., "Year 3" -> 3, "Year 10" -> 10, "Nursery" -> 0, "Reception" -> 0)
@@ -658,53 +462,96 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       studentGradeLevel = gradeLevelMatch ? parseInt(gradeLevelMatch[1]) : 0
     }
 
-    // Check minimum grade level requirement
+    // Check minimum grade level requirement (must be Year 3+)
     if (studentGradeLevel < waiverSettings.minimumGradeLevel) {
       return {
         eligible: false,
-        reason: `Must enroll in Year ${waiverSettings.minimumGradeLevel}+ (currently Year ${studentGradeLevel})`,
+        reason: `Must be in Year ${waiverSettings.minimumGradeLevel}+ (currently Year ${studentGradeLevel})`,
         completedYears: 0
       }
     }
 
-    // First child gets privilege immediately (if enabled)
-    if (student.childOrder === 1 && waiverSettings.firstChildImmediate) {
-      return { eligible: true, reason: "First child - immediate privilege", completedYears: 0 }
-    }
+    // Get family siblings to check for withdrawn/graduated status
+    const familySiblings = student.familyId
+      ? students.filter(s => s.familyId === student.familyId && s.id !== student.id)
+      : []
 
-    // For 2nd child+, calculate completed academic years
-    const enrollmentYear = student.enrollmentDate
-      ? student.enrollmentDate.getFullYear()
-      : new Date().getFullYear()
-    const currentYearNum = parseInt(currentYear.split("-")[0])
+    // Find first child in family (childOrder === 1)
+    const firstChild = familySiblings.find(s => s.childOrder === 1)
 
-    let completedYears = currentYearNum - enrollmentYear
-
-    // Determine enrollment term based on enrollment date month
-    // Term 1: Aug-Dec, Term 2: Jan-Mar, Term 3: Apr-Jun
-    if (student.enrollmentDate) {
-      const enrollmentMonth = student.enrollmentDate.getMonth() + 1 // 1-12
-      const isTermOne = enrollmentMonth >= 8 && enrollmentMonth <= 12
-      // If not enrolled in Term 1, first year is half-term (doesn't count)
-      if (!isTermOne) {
-        completedYears = Math.max(0, completedYears - 1)
-      }
-    }
-
-    // Check if completed minimum years
-    if (completedYears >= waiverSettings.minimumYears) {
+    // Check if first child has withdrawn (affects second child+)
+    // If first child is "graduated", siblings still keep their privilege
+    if (student.childOrder > 1 && firstChild?.status === "withdrawn") {
       return {
-        eligible: true,
-        reason: `Completed ${completedYears} academic years`,
-        completedYears
+        eligible: false,
+        reason: "First child has withdrawn - privilege suspended",
+        completedYears: 0
       }
     }
 
-    const yearsRemaining = waiverSettings.minimumYears - completedYears
+    // Calculate credit per term
+    const creditPerTerm = Math.round(waiverSettings.creditAmount / waiverSettings.termsToCredit)
+
+    // Number of terms for credit
+    const termsToCredit = waiverSettings.termsToCredit
+
+    // Get current term number (1, 2, or 3)
+    const currentTermNum = term === "term1" || term === "1" ? 1
+      : term === "term2" || term === "2" ? 2
+        : term === "term3" || term === "3" ? 3 : 1
+
+    // Get enrollment term number (when they started Year 3)
+    const enrollmentTermNum = student.enrollmentTerm === "term1" ? 1
+      : student.enrollmentTerm === "term2" ? 2
+        : student.enrollmentTerm === "term3" ? 3 : 1
+
+    // Calculate terms completed since entering Year 3
+    // Current position = (gradeLevel - 3) * 3 + currentTerm
+    // Enrollment position = enrollmentTerm
+    // Terms completed = current position - enrollment position
+    const currentPosition = (studentGradeLevel - waiverSettings.minimumGradeLevel) * 3 + currentTermNum
+    const termsCompletedSinceYear3 = currentPosition - enrollmentTermNum
+
+    // Default childOrder to 1 if not set
+    const childOrder = student.childOrder || 1
+
+    // Fee Waiver is ONLY for 2nd child or later (ลูกคนที่ 2+)
+    // First child is NOT eligible for Fee Waiver
+    if (childOrder === 1) {
+      return {
+        eligible: false,
+        reason: "Fee waiver is for 2nd child or later only",
+        completedYears: 0
+      }
+    }
+
+    // CASE: Second child or later (childOrder >= 2)
+    // Gets credit immediately from Year 3 (no waiting period) for 3 terms
+    // But only if first child is active or graduated (not withdrawn)
+    if (childOrder >= 2) {
+      // Check if first child is still in school (active) or graduated
+      // If no first child found, assume they're eligible (single child with childOrder misconfigured)
+      if (!firstChild || firstChild.status === "active" || firstChild.status === "graduated") {
+        return {
+          eligible: true,
+          reason: `Child #${childOrder} - ฿${creditPerTerm.toLocaleString()}/term x ${termsToCredit} terms`,
+          completedYears: termsCompletedSinceYear3,
+          creditPerTerm
+        }
+      }
+
+      // First child is on_leave or other status
+      return {
+        eligible: false,
+        reason: "First child status prevents privilege",
+        completedYears: termsCompletedSinceYear3
+      }
+    }
+
     return {
       eligible: false,
-      reason: `Need ${yearsRemaining} more year(s) (completed ${completedYears}/${waiverSettings.minimumYears})`,
-      completedYears
+      reason: "Not eligible for fee waiver",
+      completedYears: 0
     }
   }
 

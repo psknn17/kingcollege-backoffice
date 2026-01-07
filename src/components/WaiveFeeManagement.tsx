@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "./ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Progress } from "./ui/progress"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Upload,
   Download,
@@ -30,11 +31,14 @@ import {
   RotateCcw,
   Home,
   Building2,
-  GraduationCap
+  GraduationCap,
+  Gift
 } from "lucide-react"
 import { toast } from "sonner"
+import { Switch } from "./ui/switch"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useStudents } from "@/contexts/StudentContext"
+import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 
 // Types
 interface WaiverRecord {
@@ -89,11 +93,25 @@ interface WaiveFeeManagementProps {
 }
 
 export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementProps = {}) {
+  const { t } = useLanguage()
   const { academicYears } = useAcademicYears()
   const { students, families, getStudentsByFamily } = useStudents()
+  const { getDiscountOptions, updateDiscountOptions } = useDiscountOptions()
   const [selectedYear, setSelectedYear] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+
+  // Get current discount options for waiver settings
+  const currentAcademicYearForSettings = selectedYear || getCurrentAcademicYearStatic()
+  const currentDiscountOptions = getDiscountOptions(currentAcademicYearForSettings, "1")
+  const waiverSettings = currentDiscountOptions.waiverAfter3rdYear
+
+  // Update waiver settings
+  const updateWaiverSettings = (updates: Partial<typeof waiverSettings>) => {
+    updateDiscountOptions(currentAcademicYearForSettings, "1", {
+      waiverAfter3rdYear: { ...waiverSettings, ...updates }
+    })
+  }
 
   // Generate waiver records from Family Groups data
   const waiverRecords = useMemo(() => {
@@ -144,7 +162,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
               studentGrade: student.gradeLevel,
               waiverAmount: WAIVER_AMOUNT,
               status,
-              startDate: `${year.split('-')[0]}-0${((term-1) * 4) + 1}-01`,
+              startDate: `${year.split('-')[0]}-0${((term - 1) * 4) + 1}-01`,
               endDate: `${year.split('-')[0]}-${String(term * 4).padStart(2, '0')}-30`
             })
           })
@@ -191,11 +209,11 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
   // Calculate summary data
   const calculateWaiverSummary = (year: string): WaiverSummary => {
     const yearRecords = waiverRecords.filter(record => record.academicYear === year)
-    
+
     const termSummaries = [1, 2, 3].map(termNumber => {
       const termRecords = yearRecords.filter(record => record.term === termNumber)
       const uniqueFamilies = new Set(termRecords.map(record => record.familyCode))
-      
+
       return {
         term: termNumber,
         totalStudents: termRecords.length,
@@ -230,10 +248,10 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
   const filteredRecords = waiverRecords.filter(record => {
     const matchesYear = record.academicYear === selectedYear
     const matchesStatus = filterStatus === 'all' || record.status === filterStatus
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       record.familyCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.studentName.toLowerCase().includes(searchQuery.toLowerCase())
-    
+
     return matchesYear && matchesStatus && matchesSearch
   })
 
@@ -259,11 +277,11 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+        return <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">{t("waiveFee.active")}</Badge>
       case 'completed':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Completed</Badge>
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t("waiveFee.completed")}</Badge>
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">Pending</Badge>
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">{t("waiveFee.pending")}</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -286,19 +304,19 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Waive Fee Management Dashboard</h2>
+          <h2 className="mb-2">{t("waiveFee.title")}</h2>
           <p className="text-muted-foreground">
-            Track and manage sibling discount waivers across academic years
+            {t("waiveFee.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export Data
+            {t("waiveFee.exportData")}
           </Button>
           <Button className="flex items-center gap-2">
             <Upload className="w-4 h-4" />
-            Import CSV
+            {t("waiveFee.importCsv")}
           </Button>
         </div>
       </div>
@@ -308,7 +326,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-2 min-w-[200px]">
-              <Label>Academic Year</Label>
+              <Label>{t("waiveFee.academicYear")}</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger>
                   <SelectValue />
@@ -323,7 +341,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
 
             <Button variant="outline" onClick={resetFilters} className="flex items-center gap-2">
               <RotateCcw className="w-4 h-4" />
-              Reset
+              {t("waiveFee.reset")}
             </Button>
           </div>
         </CardContent>
@@ -333,71 +351,174 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.totalStudents")}</CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{currentSummary.yearlyTotal.totalStudents}</div>
             <p className="text-xs text-muted-foreground">
-              receiving waivers in {selectedYear}
+              {t("waiveFee.receivingWaivers").replace("{year}", selectedYear)}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Families</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.totalFamilies")}</CardTitle>
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{currentSummary.yearlyTotal.totalFamilies}</div>
             <p className="text-xs text-muted-foreground">
-              families benefiting from waiver
+              {t("waiveFee.familiesBenefiting")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Waiver Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.totalWaiverAmount")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(currentSummary.yearlyTotal.totalAmount)}</div>
             <p className="text-xs text-muted-foreground">
-              total waivers for {selectedYear}
+              {t("waiveFee.totalWaiversFor").replace("{year}", selectedYear)}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average per Family</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.averagePerFamily")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currentSummary.yearlyTotal.totalFamilies > 0 
+              {currentSummary.yearlyTotal.totalFamilies > 0
                 ? formatCurrency(currentSummary.yearlyTotal.totalAmount / currentSummary.yearlyTotal.totalFamilies)
                 : '฿0'
               }
             </div>
             <p className="text-xs text-muted-foreground">
-              average waiver per family
+              {t("waiveFee.avgWaiverPerFamily")}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Registration Fee Waiver Program */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Gift className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{t("waiveFee.registrationFeeWaiverProgram")}</CardTitle>
+                <CardDescription>{t("waiveFee.configureWaiver")}</CardDescription>
+              </div>
+            </div>
+            <Switch
+              checked={waiverSettings.enabled}
+              onCheckedChange={(checked) => updateWaiverSettings({ enabled: checked })}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm">{t("waiveFee.minYearGroup")}</Label>
+              <Input
+                type="number"
+                value={waiverSettings.minimumGradeLevel}
+                onChange={(e) => updateWaiverSettings({ minimumGradeLevel: parseInt(e.target.value) || 3 })}
+                disabled={!waiverSettings.enabled}
+                min={1}
+                max={13}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">{t("waiveFee.minTerms1stChild")}</Label>
+              <Input
+                type="number"
+                value={waiverSettings.minimumYears}
+                onChange={(e) => updateWaiverSettings({ minimumYears: parseInt(e.target.value) || 3 })}
+                disabled={!waiverSettings.enabled}
+                min={1}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">{t("waiveFee.creditAmountThb")}</Label>
+              <Input
+                type="number"
+                value={waiverSettings.creditAmount}
+                onChange={(e) => updateWaiverSettings({ creditAmount: Number(e.target.value) })}
+                disabled={!waiverSettings.enabled}
+                min={0}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">{t("waiveFee.termsToCredit")}</Label>
+              <Input
+                type="number"
+                value={waiverSettings.termsToCredit}
+                onChange={(e) => updateWaiverSettings({ termsToCredit: Number(e.target.value) })}
+                disabled={!waiverSettings.enabled}
+                min={1}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-100">
+            <div>
+              <Label className="text-sm font-medium text-purple-900">{t("waiveFee.firstChildPrivilege")}</Label>
+              <p className="text-sm text-purple-700 mt-1">{t("waiveFee.skipMinTerms")}</p>
+            </div>
+            <Switch
+              checked={waiverSettings.firstChildImmediate}
+              onCheckedChange={(checked) => updateWaiverSettings({ firstChildImmediate: checked })}
+              disabled={!waiverSettings.enabled}
+            />
+          </div>
+
+          {/* Eligibility Summary */}
+          {waiverSettings.enabled && (
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <h5 className="text-sm font-medium mb-3">{t("waiveFee.eligibilitySummary")}</h5>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span>{t("waiveFee.yearPlusStudents").replace("{year}", String(waiverSettings.minimumGradeLevel))}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span>{waiverSettings.firstChildImmediate ? t("waiveFee.firstChildImmediate") : t("waiveFee.firstChildAfterTerms").replace("{terms}", String(waiverSettings.minimumYears))}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span>{t("waiveFee.secondChildImmediate").replace("{year}", String(waiverSettings.minimumGradeLevel))}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span>{t("waiveFee.creditPerTerm").replace("{amount}", formatCurrency(waiverSettings.creditAmount / waiverSettings.termsToCredit)).replace("{terms}", String(waiverSettings.termsToCredit))}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Multi-Year Summary Matrix */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
-            Multi-Year Waiver Summary Matrix
+            {t("waiveFee.multiYearSummary")}
           </CardTitle>
           <CardDescription>
-            Average waiver amount per student across all academic years and terms
+            {t("waiveFee.avgWaiverAcrossYears")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -406,19 +527,19 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
               {/* Header Row */}
               <div className="grid grid-cols-[120px_repeat(5,160px)] gap-2 mb-4">
                 <div className="font-medium text-sm text-muted-foreground flex items-center justify-center">
-                  Academic Year
+                  {t("waiveFee.academicYear")}
                 </div>
                 {availableYears.map(year => (
                   <div key={year} className="font-medium text-sm text-center p-2 bg-muted rounded-lg flex flex-col items-center gap-2">
                     <span>{year}</span>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="text-xs h-6 px-2"
                       onClick={() => onNavigateToSubPage?.('waive-fee-year-details', { academicYear: year })}
                     >
                       <Eye className="w-3 h-3 mr-1" />
-                      View More
+                      {t("waiveFee.viewMore")}
                     </Button>
                   </div>
                 ))}
@@ -429,7 +550,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                 {[1, 2, 3].map(termNumber => (
                   <div key={termNumber} className="grid grid-cols-[120px_repeat(5,160px)] gap-2">
                     <div className="font-medium text-sm bg-muted rounded-lg flex items-center justify-center p-2">
-                      Term {termNumber}
+                      {t("waiveFee.term").replace("{num}", String(termNumber))}
                     </div>
                     {availableYears.map(year => {
                       const yearSummary = calculateWaiverSummary(year)
@@ -445,19 +566,19 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                               {formatCurrency(averagePerStudent)}
                             </div>
                             <div className="text-xs text-muted-foreground text-center">
-                              {termSummary?.totalStudents || 0} students
+                              {t("waiveFee.studentsCount").replace("{count}", String(termSummary?.totalStudents || 0))}
                             </div>
                             <div className="text-xs text-muted-foreground text-center">
-                              {termSummary?.totalFamilies || 0} families
+                              {t("waiveFee.familiesCount").replace("{count}", String(termSummary?.totalFamilies || 0))}
                             </div>
                             {termSummary && termSummary.totalStudents > 0 && (
                               <div className="text-xs text-center">
                                 <span className="text-orange-600">
-                                  {termSummary.olderSiblings}พี่
+                                  {termSummary.olderSiblings}{t("waiveFee.olderSibling")}
                                 </span>
                                 {" / "}
                                 <span className="text-green-600">
-                                  {termSummary.youngerSiblings}น้อง
+                                  {termSummary.youngerSiblings}{t("waiveFee.youngerSibling")}
                                 </span>
                               </div>
                             )}
@@ -472,7 +593,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
               {/* Summary Row */}
               <div className="grid grid-cols-[120px_repeat(5,160px)] gap-2 mt-4 pt-4 border-t">
                 <div className="font-medium text-sm bg-primary/10 rounded-lg flex items-center justify-center p-2">
-                  Year Total
+                  {t("waiveFee.yearTotal")}
                 </div>
                 {availableYears.map(year => {
                   const yearSummary = calculateWaiverSummary(year)
@@ -487,13 +608,13 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                           {formatCurrency(yearAveragePerStudent)}
                         </div>
                         <div className="text-xs text-muted-foreground text-center">
-                          {yearSummary.yearlyTotal.totalStudents} students
+                          {t("waiveFee.studentsCount").replace("{count}", String(yearSummary.yearlyTotal.totalStudents))}
                         </div>
                         <div className="text-xs text-muted-foreground text-center">
-                          {yearSummary.yearlyTotal.totalFamilies} families
+                          {t("waiveFee.familiesCount").replace("{count}", String(yearSummary.yearlyTotal.totalFamilies))}
                         </div>
                         <div className="text-xs text-muted-foreground text-center">
-                          {formatCurrency(yearSummary.yearlyTotal.totalAmount)} total
+                          {formatCurrency(yearSummary.yearlyTotal.totalAmount)} {t("waiveFee.total")}
                         </div>
                       </div>
                     </div>
@@ -505,9 +626,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
 
           <div className="mt-4 p-3 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> Values show average waiver amount per student. 
-              Years 1-3: Younger siblings receive discounts. Years 4-6: Older siblings receive discounts.
-              Each cell shows: Average Amount / Number of Students / Number of Families / Sibling Distribution
+              <strong>Note:</strong> {t("waiveFee.noteValues")}
             </p>
           </div>
         </CardContent>

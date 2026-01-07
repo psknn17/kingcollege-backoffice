@@ -50,7 +50,7 @@ export interface DiscountOptionsData {
     enabled: boolean
     creditAmount: number
     termsToCredit: number
-    limitedFamilies: number
+    limitedFamily: number
   }
 }
 
@@ -61,6 +61,7 @@ interface DiscountOptionsContextType {
   getRegistrationFees: (academicYear: string, term: string) => RegistrationFeeSettings
   getLatePaymentSettings: (academicYear: string, term: string) => LatePaymentSettings
   getWaiverSettings: (academicYear: string, term: string) => DiscountOptionsData["waiverAfter3rdYear"]
+  updateDiscountOptions: (academicYear: string, term: string, updates: Partial<DiscountOptionsData>) => void
   refreshData: () => void
 }
 
@@ -102,7 +103,7 @@ const defaultRegistrationPrivileges: RegistrationPrivilege[] = [
   {
     id: "2",
     condition: "Any subsequent child or children enrolled at the same time",
-    privilege: "Registration fee waiver (limited to first 100 families)",
+    privilege: "Registration fee waiver (limited to first 100 family)",
     enabled: true,
   },
   {
@@ -131,7 +132,7 @@ const createDefaultData = (academicYear: string): DiscountOptionsData => ({
     enabled: true,
     creditAmount: 225000,
     termsToCredit: 3,
-    limitedFamilies: 100,
+    limitedFamily: 100,
   },
 })
 
@@ -170,10 +171,10 @@ export function DiscountOptionsProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", handleStorageChange)
   }, [])
 
-  // Get discount options for a specific year and term
+  // Get discount options for a specific year (term is kept for API compatibility but not used for lookup)
   const getDiscountOptions = (academicYear: string, term: string): DiscountOptionsData => {
-    const storageKey = `${academicYear}_${term}`
-    return allData[storageKey] || createDefaultData(academicYear)
+    // Storage key is just the academic year (e.g., "2024-2025")
+    return allData[academicYear] || createDefaultData(academicYear)
   }
 
   // Get sibling discount percentage by child order
@@ -208,8 +209,22 @@ export function DiscountOptionsProvider({ children }: { children: ReactNode }) {
   }
 
   // Get waiver settings
+  // Get waiver settings
   const getWaiverSettings = (academicYear: string, term: string) => {
     return getDiscountOptions(academicYear, term).waiverAfter3rdYear
+  }
+
+  // Update discount options
+  const updateDiscountOptions = (academicYear: string, term: string, updates: Partial<DiscountOptionsData>) => {
+    setAllData(prev => {
+      const current = prev[academicYear] || createDefaultData(academicYear)
+      const newData = {
+        ...prev,
+        [academicYear]: { ...current, ...updates }
+      }
+      localStorage.setItem(DISCOUNT_OPTIONS_STORAGE_KEY, JSON.stringify(newData))
+      return newData
+    })
   }
 
   return (
@@ -220,6 +235,7 @@ export function DiscountOptionsProvider({ children }: { children: ReactNode }) {
       getRegistrationFees,
       getLatePaymentSettings,
       getWaiverSettings,
+      updateDiscountOptions,
       refreshData
     }}>
       {children}

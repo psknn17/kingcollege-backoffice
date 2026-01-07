@@ -10,7 +10,7 @@ import { Separator } from "./ui/separator"
 import { Search, Filter, Eye, CheckCircle, XCircle, Clock, Mail, Phone, User, Calendar, AlertTriangle, FileText, MessageSquare, ArrowUpDown } from "lucide-react"
 import { Textarea } from "./ui/textarea"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface ExternalParentApplication {
   id: string

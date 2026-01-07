@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -15,10 +15,73 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { useStudents } from "@/contexts/StudentContext"
+import { useLanguage } from "@/contexts/LanguageContext"
+
+// Storage keys
+const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
+const FEE_WAIVER_STORAGE_KEY = "feeWaiverRecords"
+const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
+const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
+const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
+
+// Load Student Groups from localStorage
+const loadStudentGroups = () => {
+  try {
+    const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch (error) {
+    console.error("Failed to load student groups:", error)
+  }
+  return []
+}
+
+// Load Fee Waiver records from localStorage
+const loadFeeWaiverRecords = () => {
+  try {
+    const stored = localStorage.getItem(FEE_WAIVER_STORAGE_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch (error) {
+    console.error("Failed to load fee waiver records:", error)
+  }
+  return []
+}
+
+// Load Scholarship records from localStorage
+const loadScholarshipRecords = () => {
+  try {
+    const stored = localStorage.getItem(SCHOLARSHIP_RECORDS_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch (error) {
+    console.error("Failed to load scholarship records:", error)
+  }
+  return []
+}
+
+// Load Staff Child records from localStorage
+const loadStaffChildRecords = () => {
+  try {
+    const stored = localStorage.getItem(STAFF_CHILD_RECORDS_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch (error) {
+    console.error("Failed to load staff child records:", error)
+  }
+  return []
+}
+
+// Load Early Bird records from localStorage
+const loadEarlyBirdRecords = () => {
+  try {
+    const stored = localStorage.getItem(EARLY_BIRD_RECORDS_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch (error) {
+    console.error("Failed to load early bird records:", error)
+  }
+  return []
+}
 
 // Discount item interface
 interface DiscountItem {
-  type: "sibling" | "scholarship" | "staff" | "early_bird" | "group" | "campaign"
+  type: "sibling" | "scholarship" | "staff" | "early_bird" | "group" | "campaign" | "fee_waiver"
   name: string
   mode: "percentage" | "fixed"
   value: number  // percentage value or fixed amount
@@ -48,10 +111,12 @@ const discountTypeLabels: Record<string, { label: string; color: string }> = {
   staff: { label: "Staff", color: "bg-green-100 text-green-800" },
   early_bird: { label: "Early Bird", color: "bg-orange-100 text-orange-800" },
   group: { label: "Group", color: "bg-pink-100 text-pink-800" },
-  campaign: { label: "Campaign", color: "bg-cyan-100 text-cyan-800" }
+  campaign: { label: "Campaign", color: "bg-cyan-100 text-cyan-800" },
+  fee_waiver: { label: "Fee Waiver", color: "bg-emerald-100 text-emerald-800" }
 }
 
 export function DiscountReports() {
+  const { t } = useLanguage()
   const { students, families, getSiblingDiscount } = useStudents()
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -62,6 +127,21 @@ export function DiscountReports() {
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Load external data
+  const [studentGroups, setStudentGroups] = useState<any[]>([])
+  const [feeWaiverRecords, setFeeWaiverRecords] = useState<any[]>([])
+  const [scholarshipRecords, setScholarshipRecords] = useState<any[]>([])
+  const [staffChildRecords, setStaffChildRecords] = useState<any[]>([])
+  const [earlyBirdRecords, setEarlyBirdRecords] = useState<any[]>([])
+
+  useEffect(() => {
+    setStudentGroups(loadStudentGroups())
+    setFeeWaiverRecords(loadFeeWaiverRecords())
+    setScholarshipRecords(loadScholarshipRecords())
+    setStaffChildRecords(loadStaffChildRecords())
+    setEarlyBirdRecords(loadEarlyBirdRecords())
+  }, [])
 
   // Transform students to StudentDiscount format
   const studentDiscounts: StudentDiscount[] = useMemo(() => {
@@ -75,21 +155,134 @@ export function DiscountReports() {
 
       // Calculate amounts (assuming base tuition of 450,000 THB)
       const baseTuition = 450000
-      const discountAmount = Math.round(baseTuition * siblingDiscountPercent / 100)
 
       // Build discounts array
       const discounts: DiscountItem[] = []
 
+      // 1. Sibling Discount
       if (siblingDiscountPercent > 0) {
         const childOrderLabel = student.childOrder === 2 ? "Second" :
                                student.childOrder === 3 ? "Third" :
                                student.childOrder === 4 ? "Fourth" :
                                student.childOrder >= 5 ? "Fifth+" : ""
+        const discountAmount = Math.round(baseTuition * siblingDiscountPercent / 100)
         discounts.push({
           type: "sibling",
           name: `${childOrderLabel} Child Discount`,
           mode: "percentage",
           value: siblingDiscountPercent,
+          amount: discountAmount,
+          appliedTo: ["Tuition"]
+        })
+      }
+
+      // 2. Group Discount (from Student Groups)
+      const studentInGroups = studentGroups.filter((group: any) =>
+        group.isActive && group.students?.some((s: any) =>
+          s.studentId === student.studentId || s.id === student.id
+        )
+      )
+
+      studentInGroups.forEach((group: any) => {
+        if (group.discountType === "percentage" && group.discountPercentage > 0) {
+          const discountAmount = Math.round(baseTuition * group.discountPercentage / 100)
+          discounts.push({
+            type: "group",
+            name: group.name,
+            mode: "percentage",
+            value: group.discountPercentage,
+            amount: discountAmount,
+            appliedTo: ["Tuition"]
+          })
+        } else if (group.discountType === "fixed" && group.fixedAmount > 0) {
+          discounts.push({
+            type: "group",
+            name: group.name,
+            mode: "fixed",
+            value: group.fixedAmount,
+            amount: group.fixedAmount,
+            appliedTo: ["Tuition"]
+          })
+        }
+      })
+
+      // 3. Fee Waiver (Registration Fee Waiver)
+      const studentWaiver = feeWaiverRecords.find((record: any) =>
+        record.studentId === student.studentId || record.studentId === student.id
+      )
+
+      if (studentWaiver && studentWaiver.status === "approved") {
+        discounts.push({
+          type: "fee_waiver",
+          name: "Registration Fee Waiver",
+          mode: "fixed",
+          value: studentWaiver.amount || 225000,
+          amount: studentWaiver.amount || 225000,
+          appliedTo: ["Registration Fee"]
+        })
+      }
+
+      // 4. Scholarship Discount
+      const hasScholarship = scholarshipRecords.some((record: any) =>
+        record.studentId === student.studentId || record.studentId === student.id || record === student.studentId
+      ) || student.notes?.toLowerCase().includes('scholarship')
+
+      if (hasScholarship) {
+        // Default 50% scholarship, can be customized in record
+        const scholarshipRecord = scholarshipRecords.find((record: any) =>
+          record.studentId === student.studentId || record.studentId === student.id
+        )
+        const scholarshipPercent = scholarshipRecord?.percentage || 50
+        const discountAmount = Math.round(baseTuition * scholarshipPercent / 100)
+        discounts.push({
+          type: "scholarship",
+          name: "Scholarship Discount",
+          mode: "percentage",
+          value: scholarshipPercent,
+          amount: discountAmount,
+          appliedTo: ["Tuition"]
+        })
+      }
+
+      // 5. Staff Child Discount
+      const isStaffChild = staffChildRecords.some((record: any) =>
+        record.studentId === student.studentId || record.studentId === student.id || record === student.studentId
+      ) || student.notes?.toLowerCase().includes('staff')
+
+      if (isStaffChild) {
+        // Default 50% staff child discount, can be customized in record
+        const staffRecord = staffChildRecords.find((record: any) =>
+          record.studentId === student.studentId || record.studentId === student.id
+        )
+        const staffPercent = staffRecord?.percentage || 50
+        const discountAmount = Math.round(baseTuition * staffPercent / 100)
+        discounts.push({
+          type: "staff",
+          name: "Staff Child Discount",
+          mode: "percentage",
+          value: staffPercent,
+          amount: discountAmount,
+          appliedTo: ["Tuition"]
+        })
+      }
+
+      // 6. Early Bird Discount
+      const hasEarlyBird = earlyBirdRecords.some((record: any) =>
+        record.studentId === student.studentId || record.studentId === student.id || record === student.studentId
+      ) || student.notes?.toLowerCase().includes('early bird')
+
+      if (hasEarlyBird) {
+        // Default 5% early bird discount, can be customized in record
+        const earlyBirdRecord = earlyBirdRecords.find((record: any) =>
+          record.studentId === student.studentId || record.studentId === student.id
+        )
+        const earlyBirdPercent = earlyBirdRecord?.percentage || 5
+        const discountAmount = Math.round(baseTuition * earlyBirdPercent / 100)
+        discounts.push({
+          type: "early_bird",
+          name: "Early Bird Discount",
+          mode: "percentage",
+          value: earlyBirdPercent,
           amount: discountAmount,
           appliedTo: ["Tuition"]
         })
@@ -112,7 +305,7 @@ export function DiscountReports() {
         validTo: student.academicYear.split("-")[1] + "-07-31"
       } as StudentDiscount
     }).filter(s => s.discounts.length > 0) // Only show students with discounts
-  }, [students, getSiblingDiscount])
+  }, [students, getSiblingDiscount, studentGroups, feeWaiverRecords, scholarshipRecords, staffChildRecords, earlyBirdRecords])
 
   // Clear all filters
   const clearFilters = () => {
@@ -267,14 +460,14 @@ export function DiscountReports() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Discount Reports</h2>
+          <h2 className="text-xl font-semibold">{t("discountReports.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            View student discount details and generate reports
+            {t("discountReports.subtitle")}
           </p>
         </div>
         <Button onClick={handleExport} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
-          Export CSV
+          {t("discountReports.exportCsv")}
         </Button>
       </div>
 
@@ -282,45 +475,45 @@ export function DiscountReports() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("discountReports.totalStudents")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-muted-foreground">with discounts applied</p>
+            <p className="text-xs text-muted-foreground">{t("discountReports.withDiscountsApplied")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Discount</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("discountReports.totalDiscount")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalDiscountAmountSum)}</div>
-            <p className="text-xs text-muted-foreground">total savings provided</p>
+            <p className="text-xs text-muted-foreground">{t("discountReports.totalSavingsProvided")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Discount</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("discountReports.averageDiscount")}</CardTitle>
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{averagePercentage}%</div>
-            <p className="text-xs text-muted-foreground">avg percentage discount</p>
+            <p className="text-xs text-muted-foreground">{t("discountReports.avgPercentageDiscount")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Year Groups</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("discountReports.yearGroups")}</CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{yearGroups.length}</div>
-            <p className="text-xs text-muted-foreground">with discount students</p>
+            <p className="text-xs text-muted-foreground">{t("discountReports.withDiscountStudents")}</p>
           </CardContent>
         </Card>
       </div>
@@ -331,20 +524,20 @@ export function DiscountReports() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("discountReports.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button className="h-9">{t("discountReports.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("discountReports.clear")}</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Search</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.search")}</label>
               <Input
-                placeholder="Name or ID..."
+                placeholder={t("discountReports.nameOrId")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
@@ -352,13 +545,13 @@ export function DiscountReports() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.yearGroup")}</label>
               <Select value={filterYearGroup} onValueChange={setFilterYearGroup}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All year groups" />
+                  <SelectValue placeholder={t("discountReports.allYearGroups")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Year Groups</SelectItem>
+                  <SelectItem value="all">{t("discountReports.allYearGroups")}</SelectItem>
                   {yearGroups.map(year => (
                     <SelectItem key={year} value={year}>{year}</SelectItem>
                   ))}
@@ -367,34 +560,35 @@ export function DiscountReports() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Discount Type</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.discountType")}</label>
               <Select value={filterType} onValueChange={setFilterType}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder={t("discountReports.allTypes")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="sibling">Sibling</SelectItem>
-                  <SelectItem value="scholarship">Scholarship</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="early_bird">Early Bird</SelectItem>
-                  <SelectItem value="group">Group</SelectItem>
-                  <SelectItem value="campaign">Campaign</SelectItem>
+                  <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
+                  <SelectItem value="sibling">{t("discountReports.sibling")}</SelectItem>
+                  <SelectItem value="scholarship">{t("discountReports.scholarship")}</SelectItem>
+                  <SelectItem value="staff">{t("discountReports.staff")}</SelectItem>
+                  <SelectItem value="early_bird">{t("discountReports.earlyBird")}</SelectItem>
+                  <SelectItem value="group">{t("discountReports.group")}</SelectItem>
+                  <SelectItem value="campaign">{t("discountReports.campaign")}</SelectItem>
+                  <SelectItem value="fee_waiver">{t("discountReports.feeWaiver")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.status")}</label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t("discountReports.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="all">{t("discountReports.allStatus")}</SelectItem>
+                  <SelectItem value="active">{t("discountReports.active")}</SelectItem>
+                  <SelectItem value="pending">{t("discountReports.pending")}</SelectItem>
+                  <SelectItem value="expired">{t("discountReports.expired")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -405,9 +599,9 @@ export function DiscountReports() {
       {/* Student Discount Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Student Discount Details</CardTitle>
+          <CardTitle>{t("discountReports.studentDiscountDetails")}</CardTitle>
           <CardDescription>
-            Showing {filteredStudents.length} of {studentDiscounts.length} students
+            {t("discountReports.showingOf").replace("{shown}", String(filteredStudents.length)).replace("{total}", String(studentDiscounts.length))}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -417,52 +611,52 @@ export function DiscountReports() {
                 <TableRow className="bg-muted/50">
                   <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentId")}>
                     <div className="flex items-center gap-1">
-                      Student ID
+                      {t("discountReports.studentId")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentName")}>
                     <div className="flex items-center gap-1">
-                      Student Name
+                      {t("discountReports.studentName")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("yearGroup")}>
                     <div className="flex items-center gap-1">
-                      Year Group
+                      {t("discountReports.yearGroup")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("parentName")}>
                     <div className="flex items-center gap-1">
-                      Parent
+                      {t("discountReports.parent")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Discount Types</TableHead>
-                  <TableHead>Discounts Detail</TableHead>
+                  <TableHead>{t("discountReports.discountTypes")}</TableHead>
+                  <TableHead>{t("discountReports.discountsDetail")}</TableHead>
                   <TableHead className="text-right cursor-pointer hover:bg-muted" onClick={() => handleSort("originalAmount")}>
                     <div className="flex items-center justify-end gap-1">
-                      Amount
+                      {t("discountReports.amount")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="text-right cursor-pointer hover:bg-muted" onClick={() => handleSort("totalDiscountAmount")}>
                     <div className="flex items-center justify-end gap-1">
-                      Discount
+                      {t("discountReports.discount")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="text-right cursor-pointer hover:bg-muted" onClick={() => handleSort("finalAmount")}>
                     <div className="flex items-center justify-end gap-1">
-                      Net
+                      {t("discountReports.net")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Applied To</TableHead>
+                  <TableHead>{t("discountReports.appliedTo")}</TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("status")}>
                     <div className="flex items-center gap-1">
-                      Status
+                      {t("discountReports.status")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
@@ -472,7 +666,7 @@ export function DiscountReports() {
                 {sortedStudents.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                      No students found matching the filters
+                      {t("discountReports.noStudentsFound")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -542,8 +736,8 @@ export function DiscountReports() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Discount by Type</CardTitle>
-            <CardDescription>Breakdown of discounts by category</CardDescription>
+            <CardTitle>{t("discountReports.discountByType")}</CardTitle>
+            <CardDescription>{t("discountReports.breakdownByCategory")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -560,9 +754,9 @@ export function DiscountReports() {
                 return (
                   <div key={type} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Badge className={color}>{label}</Badge>
+                      <Badge className={color}>{t(`discountReports.${type === "early_bird" ? "earlyBird" : type === "fee_waiver" ? "feeWaiver" : type}`)}</Badge>
                       <span className="text-sm text-muted-foreground">
-                        {studentsWithType.length} students
+                        {studentsWithType.length} {t("discountReports.students")}
                       </span>
                     </div>
                     <span className="font-medium">{formatCurrency(total)}</span>
@@ -575,8 +769,8 @@ export function DiscountReports() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Discount by Year Group</CardTitle>
-            <CardDescription>Breakdown of discounts by year group</CardDescription>
+            <CardTitle>{t("discountReports.discountByYearGroup")}</CardTitle>
+            <CardDescription>{t("discountReports.breakdownByYearGroup")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -588,7 +782,7 @@ export function DiscountReports() {
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{year}</span>
                       <span className="text-sm text-muted-foreground">
-                        {studentsInYear.length} students
+                        {studentsInYear.length} {t("discountReports.students")}
                       </span>
                     </div>
                     <span className="font-medium">{formatCurrency(total)}</span>

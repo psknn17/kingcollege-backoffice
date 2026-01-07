@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Progress } from "./ui/progress"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Percent,
   Tag,
@@ -178,6 +179,7 @@ interface DiscountManagementProps {
 }
 
 export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange }: DiscountManagementProps) {
+  const { t } = useLanguage()
   const { students: contextStudents } = useStudents()
 
   // Convert students from context to local format
@@ -842,9 +844,9 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Discount Management</h2>
+          <h2 className="mb-2">{t("discount.title")}</h2>
           <p className="text-muted-foreground">
-            Manage discount codes and analyze discount performance
+            {t("discount.subtitle")}
           </p>
         </div>
       </div>

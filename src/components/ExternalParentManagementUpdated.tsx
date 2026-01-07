@@ -10,7 +10,7 @@ import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface ExternalParent {
   id: string

@@ -12,7 +12,7 @@ import { Textarea } from "./ui/textarea"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Search, Filter, Users, DollarSign, AlertTriangle, CheckCircle, Clock, Edit, Eye, Upload, Plus, Minus, Save, X, FileText, ChevronLeft, ChevronRight, Download, UserCheck, Calendar, CreditCard, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface Course {
   id: string

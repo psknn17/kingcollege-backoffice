@@ -8,6 +8,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
 import { Checkbox } from "./ui/checkbox"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -155,6 +156,7 @@ const mockUsers: User[] = [
 ]
 
 export function UserManagement() {
+  const { t } = useLanguage()
   const [users, setUsers] = useState<User[]>(mockUsers)
   const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers)
   const [searchTerm, setSearchTerm] = useState("")
@@ -453,11 +455,11 @@ export function UserManagement() {
   const getStatusBadge = (status: UserStatus) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("users.active")}</Badge>
       case "inactive":
-        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">{t("users.inactive")}</Badge>
       case "suspended":
-        return <Badge className="bg-red-100 text-red-800">Suspended</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("users.suspended")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -484,9 +486,9 @@ export function UserManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">User Management</h2>
+          <h2 className="text-xl font-semibold">{t("users.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage system users, roles, and permissions
+            {t("users.subtitle")}
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

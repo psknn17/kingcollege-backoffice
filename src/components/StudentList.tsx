@@ -13,6 +13,7 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { SearchInput } from "./ui/advanced-filter"
 import { EmptySearchResults, EmptyDataState } from "./ui/states"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Search,
   Plus,
@@ -42,8 +43,9 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
-import { useStudents, Student, Parent } from "@/contexts/StudentContext"
+import { useStudents, Student, Parent, Family, convertTermFormat } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { cn } from "./ui/utils"
 
 const gradeLevels = [
@@ -79,6 +81,49 @@ const termOptions = [
 
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
+const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
+const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
+const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
+
+// Helper functions to check discount types from localStorage
+const hasScholarshipDiscount = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(SCHOLARSHIP_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
+  } catch {
+    return false
+  }
+}
+
+const isStaffChildStudent = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(STAFF_CHILD_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
+  } catch {
+    return false
+  }
+}
+
+const hasEarlyBirdDiscount = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(EARLY_BIRD_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
+  } catch {
+    return false
+  }
+}
 
 // Get Registration Fees from Discount Options
 const getRegistrationFees = (academicYear: string, term: string): { applicationFee: number; registrationFee: number; securityDeposit: number; waitListFee: number } | null => {
@@ -132,81 +177,6 @@ const getStudentGroupDiscounts = (studentId: string): { name: string; discountTy
   return []
 }
 
-// Default sibling discounts (fallback if no settings found)
-const defaultSiblingDiscounts = [
-  { childOrder: "first", percentage: 0, enabled: true },
-  { childOrder: "second", percentage: 0, enabled: true },
-  { childOrder: "third", percentage: 5, enabled: true },
-  { childOrder: "fourth", percentage: 10, enabled: true },
-  { childOrder: "fifth", percentage: 20, enabled: true },
-]
-
-// Convert term format from "term1" to "1" for storage key lookup
-const convertTermFormat = (term: string): string => {
-  if (term === "term1") return "1"
-  if (term === "term2") return "2"
-  if (term === "term3") return "3"
-  return term
-}
-
-// Get sibling discount percentage for dropdown display
-// Note: This shows what discount the student WOULD get based on childOrder
-// The actual discount also requires Year 3+ (checked in getSiblingDiscount from context)
-const getSiblingDiscountPercentage = (childOrder: number, academicYear: string, term: string, gradeLevel?: string): number => {
-  // Check minimum grade level requirement (Year 3+) if gradeLevel is provided
-  if (gradeLevel) {
-    let studentGradeLevel = 0
-    const gradeLevelLower = gradeLevel.toLowerCase()
-    if (gradeLevelLower === "nursery" || gradeLevelLower === "reception") {
-      studentGradeLevel = 0
-    } else {
-      const gradeLevelMatch = gradeLevel.match(/(\d+)/)
-      studentGradeLevel = gradeLevelMatch ? parseInt(gradeLevelMatch[1]) : 0
-    }
-    // Must be Year 3+ to get sibling discount
-    if (studentGradeLevel < 3) {
-      return 0
-    }
-  }
-
-  try {
-    const stored = localStorage.getItem(DISCOUNT_OPTIONS_STORAGE_KEY)
-    if (stored) {
-      const allData = JSON.parse(stored)
-      const convertedTerm = convertTermFormat(term)
-      const storageKey = `${academicYear}_${convertedTerm}`
-      const options = allData[storageKey]
-      if (options?.siblingDiscounts) {
-        let discountIndex: number
-        if (childOrder <= 0) return 0
-        if (childOrder === 1) discountIndex = 0
-        else if (childOrder === 2) discountIndex = 1
-        else if (childOrder === 3) discountIndex = 2
-        else if (childOrder === 4) discountIndex = 3
-        else discountIndex = 4
-
-        const discount = options.siblingDiscounts[discountIndex]
-        if (discount && discount.enabled) {
-          return discount.percentage
-        }
-        return 0
-      }
-    }
-  } catch (error) {
-    console.error("Failed to load discount options:", error)
-  }
-  // Return default if no settings found
-  let discountIndex: number
-  if (childOrder <= 0) return 0
-  if (childOrder === 1) discountIndex = 0
-  else if (childOrder === 2) discountIndex = 1
-  else if (childOrder === 3) discountIndex = 2
-  else if (childOrder === 4) discountIndex = 3
-  else discountIndex = 4
-
-  const discount = defaultSiblingDiscounts[discountIndex]
-  return discount?.enabled ? discount.percentage : 0
-}
 
 const emptyStudent: Omit<Student, "id"> = {
   studentId: "",
@@ -239,12 +209,15 @@ const emptyParent: Omit<Parent, "id"> = {
 }
 
 export function StudentList() {
+  const { t } = useLanguage()
   const { students, families, addStudent, updateStudent, deleteStudent, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
+  const { getSiblingDiscountPercentage } = useDiscountOptions()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [filterGrade, setFilterGrade] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -276,26 +249,28 @@ export function StudentList() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
   const [expandedGrades, setExpandedGrades] = useState<Set<string>>(new Set())
 
-  const availableYears = academicYears.map(y => y.id).sort((a, b) => b.localeCompare(a))
+  const availableYears = academicYears.map((y: any) => y.id).sort((a: string, b: string) => b.localeCompare(a))
 
   // Filter students - Note: Year and Term filters are disabled to show all students across all years/terms
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
+    return students.filter((student: Student) => {
       const matchesSearch =
         student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.nickname.toLowerCase().includes(searchTerm.toLowerCase())
+        student.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student.familyCode && student.familyCode.toLowerCase().includes(searchTerm.toLowerCase()))
 
       const matchesGrade = filterGrade === "all" || student.gradeLevel === filterGrade
       // Year and Term filters disabled - students should appear in all years and terms
       // const matchesYear = filterYear === "all" || student.academicYear === filterYear
       // const matchesTerm = filterTerm === "all" || student.enrollmentTerm === filterTerm
       const matchesStatus = filterStatus === "all" || student.status === filterStatus
+      const matchesAcademicYear = filterAcademicYear === "all" || student.academicYear === filterAcademicYear
 
-      return matchesSearch && matchesGrade && matchesStatus
+      return matchesSearch && matchesGrade && matchesStatus && matchesAcademicYear
     })
-  }, [students, searchTerm, filterGrade, filterStatus])
+  }, [students, searchTerm, filterGrade, filterStatus, filterAcademicYear])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -309,7 +284,7 @@ export function StudentList() {
 
   const sortedStudents = useMemo(() => {
     if (!sortColumn) return filteredStudents
-    return [...filteredStudents].sort((a, b) => {
+    return [...filteredStudents].sort((a: Student, b: Student) => {
       let aValue: any
       let bValue: any
 
@@ -333,6 +308,10 @@ export function StudentList() {
         case "enrollmentTerm":
           aValue = a.enrollmentTerm
           bValue = b.enrollmentTerm
+          break
+        case "familyCode":
+          aValue = a.familyCode || ""
+          bValue = b.familyCode || ""
           break
         case "familyId":
           aValue = a.familyId || ""
@@ -383,10 +362,10 @@ export function StudentList() {
 
   // Stats
   const stats = useMemo(() => {
-    const active = students.filter(s => s.status === "active").length
-    const total = students.length
-    const familyCount = families.length
-    return { active, total, familyCount }
+    const activeStudentsCount: number = students.filter((s: Student) => s.status === "active").length
+    const totalStudentsCount: number = students.length
+    const familyCount: number = families.length
+    return { active: activeStudentsCount, total: totalStudentsCount, familyCount: familyCount }
   }, [students, families])
 
   const getGradeLabel = (gradeId: string) => {
@@ -406,8 +385,9 @@ export function StudentList() {
     ) : null
   }
 
-  const getFamilyCode = (familyId: string) => {
-    return families.find(f => f.id === familyId)?.familyCode || "-"
+  const getFamilyCode = (familyId: string, studentFamilyCode?: string) => {
+    if (studentFamilyCode) return studentFamilyCode
+    return families.find((f: Family) => f.id === familyId)?.familyCode || "-"
   }
 
   const generateStudentId = () => {
@@ -428,23 +408,8 @@ export function StudentList() {
 
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student)
-    setFormData({
-      studentId: student.studentId,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      nickname: student.nickname,
-      dateOfBirth: student.dateOfBirth,
-      gender: student.gender,
-      gradeLevel: student.gradeLevel,
-      academicYear: student.academicYear,
-      enrollmentTerm: student.enrollmentTerm || "term1",
-      status: student.status,
-      familyId: student.familyId,
-      childOrder: student.childOrder,
-      parents: student.parents,
-      enrollmentDate: student.enrollmentDate,
-      notes: student.notes
-    })
+    const { id, ...studentData } = student
+    setFormData(studentData)
     setActiveTab("basic")
     setIsEditDialogOpen(true)
   }
@@ -515,7 +480,7 @@ export function StudentList() {
   const handleRemoveParent = (parentId: string) => {
     setFormData(prev => ({
       ...prev,
-      parents: prev.parents.filter(p => p.id !== parentId)
+      parents: prev.parents.filter((p: Parent) => p.id !== parentId)
     }))
   }
 
@@ -549,10 +514,10 @@ export function StudentList() {
       "Updated At"
     ]
 
-    const rows = filteredStudents.map(student => {
+    const rows = filteredStudents.map((student: Student) => {
       const parent1 = student.parents[0]
       const parent2 = student.parents[1]
-      const family = families.find(f => f.id === student.familyId)
+      const family = families.find((f: any) => f.id === student.familyId)
 
       return [
         student.studentId,
@@ -585,7 +550,7 @@ export function StudentList() {
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      ...rows.map((row: any[]) => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     ].join("\n")
 
     // Create and download file
@@ -672,14 +637,14 @@ export function StudentList() {
 
     importPreview.forEach(row => {
       // Check if student already exists
-      const existingStudent = students.find(s => s.studentId === row["Student ID"])
+      const existingStudent = students.find((s: Student) => s.studentId === row["Student ID"])
       if (existingStudent) {
         skipped++
         return
       }
 
       const newStudent: Student = {
-        id: `STU${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `STU-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         studentId: row["Student ID"],
         firstName: row["First Name"],
         lastName: row["Last Name"],
@@ -692,6 +657,7 @@ export function StudentList() {
         familyId: "",
         childOrder: parseInt(row["Child Order"]) || 1,
         parents: [],
+        enrollmentTerm: "term1",
         enrollmentDate: row["Enrollment Date"] ? new Date(row["Enrollment Date"]) : null,
         notes: row["Notes"] || "",
         createdBy: currentUser,
@@ -728,7 +694,7 @@ export function StudentList() {
     })
 
     setIsImportDialogOpen(false)
-    toast.success(`Imported ${imported} students${skipped > 0 ? `, skipped ${skipped} duplicates` : ""}`)
+    toast.success(`Imported ${imported} students${skipped > 0 ? `, skipped ${skipped} duplicates` : ""} `)
   }
 
   const downloadTemplate = () => {
@@ -826,7 +792,7 @@ export function StudentList() {
     if (!promoteFromYear) return []
 
     const studentsToPromote = students.filter(
-      s => s.academicYear === promoteFromYear && s.status === "active"
+      (s: Student) => s.academicYear === promoteFromYear && s.status === "active"
     )
 
     // Group by current grade with student details
@@ -836,7 +802,7 @@ export function StudentList() {
       isGraduation: boolean
     }> = {}
 
-    studentsToPromote.forEach(student => {
+    studentsToPromote.forEach((student: Student) => {
       const currentGrade = student.gradeLevel.toLowerCase().replace(" ", "")
       const nextGrade = getNextGrade(currentGrade)
 
@@ -959,9 +925,9 @@ export function StudentList() {
     // If month >= 5 (May), academic year = currentYear-nextYear
     // If month < 5 (Jan-Apr), academic year = previousYear-currentYear
     if (month >= 5) {
-      return `${year}-${year + 1}`
+      return `${year} -${year + 1} `
     } else {
-      return `${year - 1}-${year}`
+      return `${year - 1} -${year} `
     }
   }
 
@@ -977,13 +943,13 @@ export function StudentList() {
       setPromoteFromYear(defaultFromYear)
       // Generate next academic year
       const [startYear] = defaultFromYear.split("-").map(Number)
-      const nextYear = `${startYear + 1}-${startYear + 2}`
+      const nextYear = `${startYear + 1} -${startYear + 2} `
       setPromoteToYear(nextYear)
 
       // Select all students by default
       const allStudentIds = students
-        .filter(s => s.academicYear === defaultFromYear && s.status === "active")
-        .map(s => s.id)
+        .filter((s: Student) => s.academicYear === defaultFromYear && s.status === "active")
+        .map((s: Student) => s.id)
       setSelectedStudentIds(new Set(allStudentIds))
     }
     setPromoteConfirmed(false)
@@ -996,13 +962,13 @@ export function StudentList() {
     setPromoteFromYear(year)
     // Select all students for the new year
     const allStudentIds = students
-      .filter(s => s.academicYear === year && s.status === "active")
-      .map(s => s.id)
+      .filter((s: Student) => s.academicYear === year && s.status === "active")
+      .map((s: Student) => s.id)
     setSelectedStudentIds(new Set(allStudentIds))
 
     // Update to year
     const [startYear] = year.split("-").map(Number)
-    const nextYear = `${startYear + 1}-${startYear + 2}`
+    const nextYear = `${startYear + 1} -${startYear + 2} `
     setPromoteToYear(nextYear)
   }
 
@@ -1020,13 +986,13 @@ export function StudentList() {
 
     // Only promote selected students
     const studentsToPromote = students.filter(
-      s => selectedStudentIds.has(s.id)
+      (s: Student) => selectedStudentIds.has(s.id)
     )
 
     let promotedCount = 0
     let graduatedCount = 0
 
-    studentsToPromote.forEach(student => {
+    studentsToPromote.forEach((student: Student) => {
       const currentGrade = student.gradeLevel.toLowerCase().replace(" ", "")
       const nextGrade = getNextGrade(currentGrade)
 
@@ -1058,7 +1024,7 @@ export function StudentList() {
     if (graduatedCount > 0) {
       toast.success(`Promoted ${promotedCount} students and graduated ${graduatedCount} students`)
     } else {
-      toast.success(`Promoted ${promotedCount} students to ${promoteToYear}`)
+      toast.success(`Promoted ${promotedCount} students to ${promoteToYear} `)
     }
   }
 
@@ -1182,7 +1148,7 @@ export function StudentList() {
             <Label>Academic Year *</Label>
             <Select
               value={formData.academicYear}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, academicYear: value }))}
+              onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select year" />
@@ -1266,9 +1232,15 @@ export function StudentList() {
                   setFormData(prev => ({ ...prev, familyId: "", childOrder: 1 }))
                 } else {
                   // Auto-calculate child order based on existing family members
-                  const familyStudents = students.filter(s => s.familyId === value && s.studentId !== formData.studentId)
+                  const family = families.find((f: Family) => f.id === value)
+                  const familyStudents = students.filter((s: Student) => s.familyId === value && s.studentId !== formData.studentId)
                   const newChildOrder = familyStudents.length + 1
-                  setFormData(prev => ({ ...prev, familyId: value, childOrder: newChildOrder }))
+                  setFormData(prev => ({
+                    ...prev,
+                    familyId: value,
+                    familyCode: family?.familyCode || "",
+                    childOrder: newChildOrder
+                  }))
                 }
               }}
             >
@@ -1277,7 +1249,7 @@ export function StudentList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="no-family">No Family</SelectItem>
-                {families.map(family => (
+                {families.map((family: Family) => (
                   <SelectItem key={family.id} value={family.id}>
                     <span className="font-mono">{family.familyCode || family.id}</span>
                     <span className="text-muted-foreground ml-2">({family.familyName})</span>
@@ -1300,7 +1272,9 @@ export function StudentList() {
                 <Label className="text-sm text-muted-foreground">Child Order</Label>
                 <Select
                   value={formData.childOrder.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, childOrder: parseInt(value) }))}
+                  onValueChange={(value: string) => {
+                    setFormData(prev => ({ ...prev, childOrder: parseInt(value) }))
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1317,13 +1291,14 @@ export function StudentList() {
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">Discount Rate</Label>
                 <div className="h-10 px-3 py-2 border rounded-md bg-background text-sm flex items-center justify-center font-semibold">
-                  {getSiblingDiscountPercentage(formData.childOrder, formData.academicYear, formData.enrollmentTerm, formData.gradeLevel) > 0 ? (
-                    <span className="text-green-600">
-                      {getSiblingDiscountPercentage(formData.childOrder, formData.academicYear, formData.enrollmentTerm, formData.gradeLevel)}% off
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">No discount (Year 3+ required)</span>
-                  )}
+                  {(() => {
+                    const discountPct = getSiblingDiscountPercentage(formData.childOrder, formData.academicYear, formData.enrollmentTerm)
+                    if (discountPct > 0) {
+                      return <span className="text-green-600">{discountPct}% off</span>
+                    } else {
+                      return <span className="text-muted-foreground">No sibling discount</span>
+                    }
+                  })()}
                 </div>
               </div>
             </div>
@@ -1337,7 +1312,7 @@ export function StudentList() {
           <div className="space-y-2">
             <Label>Current Parents/Guardians</Label>
             <div className="space-y-2">
-              {formData.parents.map(parent => (
+              {formData.parents.map((parent: Parent) => (
                 <div key={parent.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">{parent.name}</p>
@@ -1430,27 +1405,27 @@ export function StudentList() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Student List</h2>
+          <h2 className="text-xl font-semibold">{t("student.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage student information and enrollment
+            {t("student.description")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleOpenPromoteDialog}>
             <ArrowUpCircle className="w-4 h-4 mr-2" />
-            Promote Grade
+            {t("student.promoteGrade")}
           </Button>
           <Button variant="outline" onClick={handleImport}>
             <Upload className="w-4 h-4 mr-2" />
-            Import
+            {t("common.import")}
           </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t("common.export")}
           </Button>
           <Button onClick={handleAddStudent}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Student
+            {t("student.addStudent")}
           </Button>
         </div>
       </div>
@@ -1459,7 +1434,7 @@ export function StudentList() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("student.totalStudents")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -1467,7 +1442,7 @@ export function StudentList() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Students</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("student.activeStudents")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.active}</div>
@@ -1475,7 +1450,7 @@ export function StudentList() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Families</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("student.families")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.familyCount}</div>
@@ -1483,7 +1458,7 @@ export function StudentList() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Last Updated</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common.lastUpdated")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{format(new Date(), "dd/MM/yyyy")}</div>
@@ -1500,16 +1475,16 @@ export function StudentList() {
               <SearchInput
                 value={searchTerm}
                 onChange={setSearchTerm}
-                placeholder="Search by name or student ID..."
+                placeholder={t("student.searchPlaceholder")}
               />
             </div>
             <Select value={filterGrade} onValueChange={setFilterGrade}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Year Group" />
+                <SelectValue placeholder={t("invoice.yearGroup")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Year Groups</SelectItem>
+                <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
                 {gradeLevels.map(grade => (
                   <SelectItem key={grade.id} value={grade.label}>
                     {grade.label}
@@ -1519,10 +1494,10 @@ export function StudentList() {
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t("common.status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
                 {statusOptions.map(status => (
                   <SelectItem key={status.id} value={status.id}>
                     {status.label}
@@ -1530,7 +1505,21 @@ export function StudentList() {
                 ))}
               </SelectContent>
             </Select>
-            {(searchTerm || filterGrade !== "all" || filterStatus !== "all") && (
+            <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
+              <SelectTrigger className="w-[180px]">
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                <SelectValue placeholder={t("common.academicYear")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
+                {availableYears.map((year: string) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(searchTerm || filterGrade !== "all" || filterStatus !== "all" || filterAcademicYear !== "all") && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1538,11 +1527,12 @@ export function StudentList() {
                   setSearchTerm("")
                   setFilterGrade("all")
                   setFilterStatus("all")
+                  setFilterAcademicYear("all")
                 }}
                 className="text-muted-foreground"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Clear filters
+                {t("common.clearFilters")}
               </Button>
             )}
           </div>
@@ -1557,19 +1547,19 @@ export function StudentList() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentId")}>
                   <div className="flex items-center gap-1">
-                    Student ID
+                    {t("student.studentId")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                   <div className="flex items-center gap-1">
-                    Name
+                    {t("common.name")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("gradeLevel")}>
                   <div className="flex items-center gap-1">
-                    Year Group
+                    {t("invoice.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -1585,7 +1575,7 @@ export function StudentList() {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyId")}>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyCode")}>
                   <div className="flex items-center gap-1">
                     Family Code
                     <ArrowUpDown className="h-4 w-4" />
@@ -1593,7 +1583,7 @@ export function StudentList() {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("childOrder")}>
                   <div className="flex items-center gap-1">
-                    Sibling Discount
+                    Discounts & Benefits
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -1631,7 +1621,7 @@ export function StudentList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedStudents.map(student => (
+                paginatedStudents.map((student: Student) => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.studentId}</TableCell>
                     <TableCell>
@@ -1647,15 +1637,86 @@ export function StudentList() {
                     <TableCell>
                       <Badge variant="outline">{getTermLabel(student.enrollmentTerm)}</Badge>
                     </TableCell>
-                    <TableCell>{getFamilyCode(student.familyId)}</TableCell>
                     <TableCell>
-                      {getSiblingDiscount(student, student.enrollmentTerm) > 0 ? (
-                        <Badge className="bg-green-100 text-green-800">
-                          {getSiblingDiscount(student, student.enrollmentTerm)}%
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                      <Badge variant="outline" className="font-mono">
+                        {getFamilyCode(student.familyId, student.familyCode)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const discounts: any[] = []
+                        const siblingDiscount = getSiblingDiscount(student, student.enrollmentTerm)
+                        const feeWaiver = checkFeePrivilegeEligibility(student, student.academicYear, student.enrollmentTerm)
+                        const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+                        // Check for special discounts from localStorage records (fallback to notes)
+                        const isStaff = isStaffChildStudent(student.studentId) || student.notes?.toLowerCase().includes('staff')
+                        const hasScholarship = hasScholarshipDiscount(student.studentId) || student.notes?.toLowerCase().includes('scholarship')
+                        const hasEarlyBird = hasEarlyBirdDiscount(student.studentId) || student.notes?.toLowerCase().includes('early bird')
+
+                        // Sibling Discount
+                        if (siblingDiscount > 0) {
+                          discounts.push(
+                            <Badge key="sibling" className="bg-green-100 text-green-800 text-xs">
+                              Sibling {siblingDiscount}%
+                            </Badge>
+                          )
+                        }
+
+                        // Fee Waiver
+                        if (feeWaiver.eligible) {
+                          discounts.push(
+                            <Badge key="waiver" className="bg-indigo-100 text-indigo-800 text-xs">
+                              Waiver ฿{(feeWaiver.creditPerTerm || 0).toLocaleString()}
+                            </Badge>
+                          )
+                        }
+
+                        // Staff Child
+                        if (isStaff) {
+                          discounts.push(
+                            <Badge key="staff" className="bg-blue-100 text-blue-800 text-xs">
+                              Staff 50%
+                            </Badge>
+                          )
+                        }
+
+                        // Scholarship
+                        if (hasScholarship) {
+                          discounts.push(
+                            <Badge key="scholarship" className="bg-purple-100 text-purple-800 text-xs">
+                              Scholarship
+                            </Badge>
+                          )
+                        }
+
+                        // Early Bird
+                        if (hasEarlyBird) {
+                          discounts.push(
+                            <Badge key="earlybird" className="bg-amber-100 text-amber-800 text-xs">
+                              Early Bird 5%
+                            </Badge>
+                          )
+                        }
+
+                        // Student Group Discounts
+                        groupDiscounts.forEach((group: any, idx: number) => {
+                          discounts.push(
+                            <Badge key={`group-${idx}`} className="bg-teal-100 text-teal-800 text-xs">
+                              {group.name} {group.discountPercentage}%
+                            </Badge>
+                          )
+                        })
+
+                        if (discounts.length === 0) {
+                          return <span className="text-muted-foreground">-</span>
+                        }
+
+                        return (
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {discounts}
+                          </div>
+                        )
+                      })()}
                     </TableCell>
                     <TableCell>{getStatusBadge(student.status)}</TableCell>
                     <TableCell>
@@ -1835,7 +1896,7 @@ export function StudentList() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Family Code</p>
-                  <p className="font-medium">{getFamilyCode(selectedStudent.familyId)} (Child #{selectedStudent.childOrder})</p>
+                  <p className="font-medium">{getFamilyCode(selectedStudent.familyId, selectedStudent.familyCode)} (Child #{selectedStudent.childOrder})</p>
                 </div>
               </div>
 
@@ -1863,13 +1924,13 @@ export function StudentList() {
                       <div key={index} className="flex justify-between text-sm">
                         <span>{group.name}</span>
                         <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">
-                          {group.discountType === "percentage" ? `${group.discountPercentage}%` : `฿${group.fixedAmount.toLocaleString()}`}
+                          {group.discountType === "percentage" ? `${group.discountPercentage}% ` : `฿${group.fixedAmount.toLocaleString()} `}
                         </Badge>
                       </div>
                     ))}
 
                     {/* Staff Child Discount */}
-                    {selectedStudent.notes?.toLowerCase().includes('staff') && (
+                    {(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) && (
                       <div className="flex justify-between text-sm">
                         <span>Staff Child</span>
                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">50%</Badge>
@@ -1877,7 +1938,7 @@ export function StudentList() {
                     )}
 
                     {/* Scholarship */}
-                    {selectedStudent.notes?.toLowerCase().includes('scholarship') && (
+                    {(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) && (
                       <div className="flex justify-between text-sm">
                         <span>Scholarship</span>
                         <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Yes</Badge>
@@ -1885,37 +1946,56 @@ export function StudentList() {
                     )}
 
                     {/* Early Bird */}
-                    {selectedStudent.notes?.toLowerCase().includes('early bird') && (
+                    {(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
                       <div className="flex justify-between text-sm">
                         <span>Early Bird</span>
                         <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">5%</Badge>
                       </div>
                     )}
 
-                    {/* Fee Waiver (3+ years) */}
+                    {/* Registration Fee Waiver Program */}
                     {(() => {
                       const eligibility = checkFeePrivilegeEligibility(
                         selectedStudent,
                         selectedStudent.academicYear,
                         selectedStudent.enrollmentTerm
                       )
-                      return eligibility.eligible ? (
-                        <div className="flex justify-between text-sm">
-                          <span>Fee Waiver (3+ years)</span>
-                          <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">Yes</Badge>
-                        </div>
-                      ) : null
+                      if (eligibility.eligible) {
+                        return (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>Registration Fee Waiver</span>
+                              <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">
+                                ฿{eligibility.creditPerTerm?.toLocaleString()}/term
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-indigo-600">{eligibility.reason}</p>
+                          </div>
+                        )
+                      } else if (selectedStudent.childOrder >= 1) {
+                        // Show waiting status for students who might be eligible later
+                        return (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Registration Fee Waiver</span>
+                              <Badge variant="outline" className="text-gray-500">Pending</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
+                          </div>
+                        )
+                      }
+                      return null
                     })()}
 
                     {/* No discounts message */}
                     {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) === 0 &&
-                     getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
-                     !selectedStudent.notes?.toLowerCase().includes('staff') &&
-                     !selectedStudent.notes?.toLowerCase().includes('scholarship') &&
-                     !selectedStudent.notes?.toLowerCase().includes('early bird') &&
-                     !checkFeePrivilegeEligibility(selectedStudent, selectedStudent.academicYear, selectedStudent.enrollmentTerm).eligible && (
-                      <span className="text-sm text-muted-foreground">No discounts applied</span>
-                    )}
+                      getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
+                      !(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) &&
+                      !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
+                      !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) &&
+                      !checkFeePrivilegeEligibility(selectedStudent, selectedStudent.academicYear, selectedStudent.enrollmentTerm).eligible && (
+                        <span className="text-sm text-muted-foreground">No discounts applied</span>
+                      )}
                   </div>
                 </div>
 
@@ -1959,7 +2039,7 @@ export function StudentList() {
                 <div>
                   <h4 className="font-medium mb-3">Parents/Guardians</h4>
                   <div className="space-y-2">
-                    {selectedStudent.parents.map(parent => (
+                    {selectedStudent.parents.map((parent: Parent) => (
                       <div key={parent.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                           <p className="font-medium">{parent.name}</p>
@@ -2164,12 +2244,12 @@ export function StudentList() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>From Academic Year</Label>
-                <Select value={promoteFromYear} onValueChange={handleFromYearChange}>
+                <Select value={promoteFromYear} onValueChange={(year: string) => setPromoteFromYear(year)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableYears.map(year => (
+                    {availableYears.map((year: string) => (
                       <SelectItem key={year} value={year}>
                         {year}
                       </SelectItem>
@@ -2190,15 +2270,15 @@ export function StudentList() {
                       // Add next year from selected "From" year
                       if (promoteFromYear) {
                         const [startYear] = promoteFromYear.split("-").map(Number)
-                        yearsSet.add(`${startYear + 1}-${startYear + 2}`)
+                        yearsSet.add(`${startYear + 1} -${startYear + 2} `)
                       }
                       // Add next year from latest available year
                       if (availableYears.length > 0) {
                         const [startYear] = availableYears[0].split("-").map(Number)
-                        yearsSet.add(`${startYear + 1}-${startYear + 2}`)
+                        yearsSet.add(`${startYear + 1} -${startYear + 2} `)
                       }
-                      return Array.from(yearsSet).sort((a, b) => b.localeCompare(a))
-                    })().map(year => (
+                      return Array.from(yearsSet).sort((a: string, b: string) => b.localeCompare(a))
+                    })().map((year: string) => (
                       <SelectItem key={year} value={year}>
                         {year}
                       </SelectItem>

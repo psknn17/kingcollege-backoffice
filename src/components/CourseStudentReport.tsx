@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Search, Filter, Download, Users, Calendar, CreditCard, Mail, Phone, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface Course {
   id: string

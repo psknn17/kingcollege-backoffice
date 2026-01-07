@@ -8,9 +8,12 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard } from "lucide-react"
 import { ViewModal } from "./ViewModal"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
+import { useDiscountOptions } from "../contexts/DiscountOptionsContext"
+import { useAcademicYears } from "../contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface Item {
   id: string
@@ -155,7 +158,7 @@ const mockItems: Item[] = [
     itemCode: "BUS-001",
     name: "Annual school bus service fee - zone 1 (one-way afternoon)",
     description: "School bus service for zone 1, one-way afternoon route",
-    amount: 45000,
+    amount: 65000,
     category: "School Bus",
     isActive: true,
     applicableGrades: ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
@@ -164,8 +167,8 @@ const mockItems: Item[] = [
     id: "item-013",
     itemCode: "BUS-002",
     name: "Annual school bus service fee - zone 1 (round-trip)",
-    description: "School bus service for zone 1, round-trip (morning and afternoon)",
-    amount: 85000,
+    description: "School bus service for zone 1, round-trip",
+    amount: 55000,
     category: "School Bus",
     isActive: true,
     applicableGrades: ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
@@ -175,7 +178,7 @@ const mockItems: Item[] = [
     itemCode: "BUS-003",
     name: "Annual school bus service fee - zone 2 (one-way morning)",
     description: "School bus service for zone 2, one-way morning route",
-    amount: 55000,
+    amount: 90000,
     category: "School Bus",
     isActive: true,
     applicableGrades: ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
@@ -192,7 +195,7 @@ const mockTemplates: ItemTemplate[] = [
     isActive: true
   },
   {
-    id: "template-002", 
+    id: "template-002",
     name: "Year 1 Basic Tuition",
     description: "Essential tuition fees only for Year 1",
     items: ["item-001", "item-002", "item-003"],
@@ -206,6 +209,14 @@ const mockTemplates: ItemTemplate[] = [
     items: ["item-005", "item-007", "item-008"],
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
     isActive: true
+  },
+  {
+    id: "template-004",
+    name: "Annual Bus Service Package",
+    description: "Transportation package for all zones",
+    items: ["item-012", "item-013", "item-014"],
+    applicableGrades: grades,
+    isActive: true
   }
 ]
 
@@ -216,18 +227,18 @@ const TEMPLATES_STORAGE_KEY = "invoiceTemplates"
 // Generate item code based on category
 const generateItemCode = (category: string, index: number): string => {
   const prefix = category === "Tuition" ? "TUI" :
-                 category === "ECA" ? "ECA" :
-                 category === "Trip & Other Activity" ? "TRP" :
-                 category === "School Bus" ? "BUS" :
-                 category === "Sports & Activities" ? "SPT" :
-                 category === "Academic Programs" ? "ACA" :
-                 category === "Creative Arts" ? "ART" :
-                 category === "Technology" ? "TEC" :
-                 category === "Educational Activities" ? "EDU" :
-                 category === "School Supplies" ? "SUP" :
-                 category === "Transportation" ? "TRN" :
-                 category === "Meals" ? "MEA" :
-                 "ITM"
+    category === "ECA" ? "ECA" :
+      category === "Trip & Other Activity" ? "TRP" :
+        category === "School Bus" ? "BUS" :
+          category === "Sports & Activities" ? "SPT" :
+            category === "Academic Programs" ? "ACA" :
+              category === "Creative Arts" ? "ART" :
+                category === "Technology" ? "TEC" :
+                  category === "Educational Activities" ? "EDU" :
+                    category === "School Supplies" ? "SUP" :
+                      category === "Transportation" ? "TRN" :
+                        category === "Meals" ? "MEA" :
+                          "ITM"
   return `${prefix}-${String(index).padStart(3, '0')}`
 }
 
@@ -243,14 +254,30 @@ const loadItemsFromStorage = (): Item[] => {
         itemCode: item.itemCode || generateItemCode(item.category || "Other", index + 1)
       }))
 
+      // Map through stored items and update properties for standard mock items if they match
+      const updatedItems = itemsWithCode.map((item: Item) => {
+        const mockMatch = mockItems.find(m => m.id === item.id);
+        if (mockMatch) {
+          return {
+            ...item,
+            amount: mockMatch.amount,
+            name: mockMatch.name,
+            description: mockMatch.description,
+            category: mockMatch.category,
+            itemCode: mockMatch.itemCode || item.itemCode
+          };
+        }
+        return item;
+      });
+
       // Merge: add any mockItems that don't exist in stored items
-      const storedIds = new Set(itemsWithCode.map((item: Item) => item.id))
-      const newMockItems = mockItems.filter(mockItem => !storedIds.has(mockItem.id))
+      const updatedIds = new Set(updatedItems.map((item: Item) => item.id))
+      const newMockItems = mockItems.filter(mockItem => !updatedIds.has(mockItem.id))
 
       if (newMockItems.length > 0) {
-        return [...itemsWithCode, ...newMockItems]
+        return [...updatedItems, ...newMockItems]
       }
-      return itemsWithCode
+      return updatedItems
     }
   } catch (error) {
     console.error("Failed to load items from localStorage:", error)
@@ -272,7 +299,15 @@ const loadTemplatesFromStorage = (): ItemTemplate[] | null => {
   try {
     const stored = localStorage.getItem(TEMPLATES_STORAGE_KEY)
     if (stored) {
-      return JSON.parse(stored)
+      const storedTemplates = JSON.parse(stored)
+      // Merge: add any mockTemplates that don't exist in stored templates
+      const storedIds = new Set(storedTemplates.map((t: ItemTemplate) => t.id))
+      const newMockTemplates = mockTemplates.filter(mockT => !storedIds.has(mockT.id))
+
+      if (newMockTemplates.length > 0) {
+        return [...storedTemplates, ...newMockTemplates]
+      }
+      return storedTemplates
     }
   } catch (error) {
     console.error("Failed to load templates from localStorage:", error)
@@ -295,9 +330,36 @@ interface ItemManagementProps {
 }
 
 export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemManagementProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<"items" | "templates">("items")
   const [items, setItems] = useState<Item[]>(() => loadItemsFromStorage())
   const [templates, setTemplates] = useState<ItemTemplate[]>(() => loadTemplatesFromStorage() || mockTemplates)
+
+  // Discount options context for Registration Fees
+  const { getRegistrationFees, updateRegistrationFees } = useDiscountOptions()
+  const { academicYears } = useAcademicYears()
+
+  // Get current academic year
+  const getCurrentAcademicYear = () => {
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    if (month >= 5) {
+      return `${year}-${year + 1}`
+    } else {
+      return `${year - 1}-${year}`
+    }
+  }
+
+  const currentAcademicYear = academicYears[0]?.id || getCurrentAcademicYear()
+  const registrationFees = getRegistrationFees(currentAcademicYear, "1")
+
+  // Update registration fee
+  const handleRegistrationFeeChange = (feeType: string, value: number) => {
+    updateRegistrationFees(currentAcademicYear, "1", {
+      [feeType]: value
+    })
+  }
 
   // Save items to localStorage when changed
   useEffect(() => {
@@ -308,7 +370,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   useEffect(() => {
     saveTemplatesToStorage(templates)
   }, [templates])
-  
+
   // Items state
   const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
@@ -318,18 +380,18 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-  
+
   // Templates state
   const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<ItemTemplate | null>(null)
   const [searchTemplateTerm, setSearchTemplateTerm] = useState("")
   const [selectedItemsForTemplate, setSelectedItemsForTemplate] = useState<string[]>([])
-  
+
   // View Modal state
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [viewModalData, setViewModalData] = useState<any>(null)
   const [viewModalType, setViewModalType] = useState<"item" | "template">("item")
-  
+
   // New item form state
   const [newItem, setNewItem] = useState({
     itemCode: "",
@@ -362,7 +424,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
     },
     {
       id: "eca",
-      title: "ECA Invoice", 
+      title: "ECA Invoice",
       description: "Create invoice for extra-curricular activities",
       icon: Zap,
       color: "green",
@@ -381,9 +443,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   const handleCreateInvoice = (type: string) => {
     const invoiceType = invoiceTypes.find(t => t.id === type)
     if (onNavigateToSubPage && invoiceType) {
-      onNavigateToSubPage("invoice-creation", { 
+      onNavigateToSubPage("invoice-creation", {
         defaultCategory: invoiceType.defaultCategory,
-        invoiceType: type 
+        invoiceType: type
       })
     }
   }
@@ -609,12 +671,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   const filteredItems = items.filter(item => {
     const searchLower = searchItemTerm.toLowerCase().trim()
     const matchesSearch = !searchLower ||
-                         item.itemCode.toLowerCase().includes(searchLower) ||
-                         item.name.toLowerCase().includes(searchLower) ||
-                         item.description.toLowerCase().includes(searchLower) ||
-                         item.category.toLowerCase().includes(searchLower) ||
-                         item.applicableGrades.some(grade => grade.toLowerCase() === searchLower) ||
-                         item.applicableGrades.some(grade => grade.toLowerCase().startsWith(searchLower))
+      item.itemCode.toLowerCase().includes(searchLower) ||
+      item.name.toLowerCase().includes(searchLower) ||
+      item.description.toLowerCase().includes(searchLower) ||
+      item.category.toLowerCase().includes(searchLower) ||
+      item.applicableGrades.some(grade => grade.toLowerCase() === searchLower) ||
+      item.applicableGrades.some(grade => grade.toLowerCase().startsWith(searchLower))
     const matchesCategory = !selectedCategory || selectedCategory === "all" || item.category === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -670,27 +732,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Create Invoice
+            {t("invoiceCreate.title")}
           </CardTitle>
           <p className="text-muted-foreground">
-            Choose the type of invoice you want to create
+            {t("item.chooseInvoiceType")}
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {invoiceTypes.map((type) => (
-              <Card 
+              <Card
                 key={type.id}
                 className="cursor-pointer transition-all hover:shadow-md hover:scale-105 group"
                 onClick={() => handleCreateInvoice(type.id)}
               >
                 <CardContent className="p-6 text-center">
                   <div className="flex flex-col items-center space-y-3">
-                    <div className={`p-3 rounded-full ${
-                      type.color === "blue" ? "bg-blue-100 text-blue-600" :
+                    <div className={`p-3 rounded-full ${type.color === "blue" ? "bg-blue-100 text-blue-600" :
                       type.color === "green" ? "bg-green-100 text-green-600" :
-                      "bg-orange-100 text-orange-600"
-                    }`}>
+                        "bg-orange-100 text-orange-600"
+                      }`}>
                       <type.icon className="w-8 h-8" />
                     </div>
                     <div>
@@ -701,17 +762,125 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                         {type.description}
                       </p>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      type.color === "blue" ? "bg-blue-50 text-blue-700" :
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${type.color === "blue" ? "bg-blue-50 text-blue-700" :
                       type.color === "green" ? "bg-green-50 text-green-700" :
-                      "bg-orange-50 text-orange-700"
-                    }`}>
+                        "bg-orange-50 text-orange-700"
+                      }`}>
                       {type.defaultCategory}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Application & Registration Fees */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <CreditCard className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <CardTitle className="text-base">Application & Registration Fees</CardTitle>
+              <p className="text-sm text-muted-foreground">Configure initial charges for new applicants</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[200px]">Fee Type</TableHead>
+                <TableHead className="w-[200px]">Amount (THB)</TableHead>
+                <TableHead className="w-[150px]">Refundable</TableHead>
+                <TableHead>Notes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Application Fee</TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    value={registrationFees.applicationFee}
+                    onChange={(e) => handleRegistrationFeeChange('applicationFee', Number(e.target.value))}
+                    className="w-[150px]"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">No</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">Non-refundable/non-transferable</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Registration Fee</TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    value={registrationFees.registrationFee}
+                    onChange={(e) => handleRegistrationFeeChange('registrationFee', Number(e.target.value))}
+                    className="w-[150px]"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">No</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">Non-refundable/non-transferable</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Security Deposit</TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    value={registrationFees.securityDeposit}
+                    onChange={(e) => handleRegistrationFeeChange('securityDeposit', Number(e.target.value))}
+                    className="w-[150px]"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Yes</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">Refundable upon graduation and withdrawal</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Wait List Fee</TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    value={registrationFees.waitListFee}
+                    onChange={(e) => handleRegistrationFeeChange('waitListFee', Number(e.target.value))}
+                    className="w-[150px]"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Conditional</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">Acts as registration fee when place becomes available</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+
+          {/* Security Deposit Refund Conditions */}
+          <div className="mt-6 p-4 border border-green-200 rounded-lg bg-green-50/50">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="font-medium text-green-900">Security Deposit Refund Conditions</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-start gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium flex-shrink-0">1</span>
+                <p className="text-green-800">Upon the student's graduation (completion of Year 13) from the school</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-800 text-xs font-medium flex-shrink-0">2</span>
+                <p className="text-green-800">When advance written notice is received at least one full term's notice before the child leaves</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-800 text-xs font-medium flex-shrink-0">3</span>
+                <p className="text-green-800">When the school requires the applicant's departure for reasons other than disciplinary</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -831,14 +1000,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
+                        <Badge
                           variant="outline"
-                          className={`${
-                            item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                          className={`${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                             item.category === "ECA" ? "border-green-300 text-green-700" :
-                            item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
-                            ""
-                          }`}
+                              item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                                ""
+                            }`}
                         >
                           {item.category}
                         </Badge>
@@ -967,9 +1135,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                         </Button>
                       </div>
                     </div>
-                    
+
                     <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
-                    
+
                     <div className="flex flex-wrap gap-1 mb-3">
                       {template.applicableGrades.slice(0, 3).map(grade => (
                         <Badge key={grade} variant="secondary" className="text-xs">
@@ -982,7 +1150,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <p className="text-sm font-medium">{template.items.length} items:</p>
                       <div className="space-y-1">
@@ -1026,7 +1194,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
               {editingItem ? "Update the item information" : "Add a new item to the system"}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1133,7 +1301,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
               {editingTemplate ? "Update the template information" : "Create a shortcut for commonly used item combinations"}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1180,9 +1348,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                 {items.map(item => (
                   <div
                     key={item.id}
-                    className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${
-                      selectedItemsForTemplate.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
-                    }`}
+                    className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${selectedItemsForTemplate.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
+                      }`}
                     onClick={() => handleToggleItemForTemplate(item.id)}
                   >
                     <div className="flex justify-between items-center">
@@ -1197,14 +1364,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                       </div>
                       <div className="text-right">
                         <p className="font-medium">{formatCurrency(item.amount)}</p>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${
-                            item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                             item.category === "ECA" ? "border-green-300 text-green-700" :
-                            item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
-                            ""
-                          }`}
+                              item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                                ""
+                            }`}
                         >
                           {item.category}
                         </Badge>

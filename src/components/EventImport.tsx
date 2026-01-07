@@ -8,7 +8,7 @@ import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, RefreshCw } from "lucide-react"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface ImportStatus {
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error'

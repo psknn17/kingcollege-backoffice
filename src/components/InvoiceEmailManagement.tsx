@@ -38,6 +38,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useStudents } from "@/contexts/StudentContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface Student {
   id: string
@@ -219,6 +220,7 @@ const grades = [
 ]
 
 export function InvoiceEmailManagement() {
+  const { t } = useLanguage()
   const { students: contextStudents, families } = useStudents()
 
   // Convert students from context to local format
@@ -357,7 +359,7 @@ export function InvoiceEmailManagement() {
     const targetCount = getTargetCount()
     
     if (targetCount === 0) {
-      toast.error("Please select recipients before sending")
+      toast.error(t("invoiceEmail.selectRecipients"))
       return
     }
 
@@ -400,21 +402,21 @@ export function InvoiceEmailManagement() {
     }
 
     setIsSending(false)
-    toast.success(`Emails sent successfully! ${newJob.sentCount} sent, ${newJob.failedCount} failed`)
+    toast.success(t("invoiceEmail.emailsSent").replace("{sent}", String(newJob.sentCount)).replace("{failed}", String(newJob.failedCount)))
   }
 
   const getJobStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />{t("invoiceEmail.pending")}</Badge>
       case "running":
-        return <Badge className="bg-blue-100 text-blue-800"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Running</Badge>
+        return <Badge className="bg-blue-100 text-blue-800"><Loader2 className="w-3 h-3 mr-1 animate-spin" />{t("invoiceEmail.running")}</Badge>
       case "completed":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t("invoiceEmail.completed")}</Badge>
       case "failed":
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Failed</Badge>
+        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />{t("invoiceEmail.failed")}</Badge>
       case "cancelled":
-        return <Badge variant="outline"><Square className="w-3 h-3 mr-1" />Cancelled</Badge>
+        return <Badge variant="outline"><Square className="w-3 h-3 mr-1" />{t("invoiceEmail.cancelled")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -467,17 +469,17 @@ export function InvoiceEmailManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Invoice Email Management</h2>
+          <h2 className="text-xl font-semibold">{t("invoiceEmail.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Send invoice emails to parents with automated templates and delivery tracking
+            {t("invoiceEmail.subtitle")}
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="send-emails">Send Emails</TabsTrigger>
-          <TabsTrigger value="email-jobs">Email Jobs</TabsTrigger>
+          <TabsTrigger value="send-emails">{t("invoiceEmail.sendEmails")}</TabsTrigger>
+          <TabsTrigger value="email-jobs">{t("invoiceEmail.emailJobs")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="send-emails" className="space-y-6">
@@ -486,7 +488,7 @@ export function InvoiceEmailManagement() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Send className="w-5 h-5" />
-                Email Sending Options
+                {t("invoiceEmail.sendingOptions")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -496,12 +498,12 @@ export function InvoiceEmailManagement() {
                     <div className="flex items-center justify-center mb-2">
                       <Globe className="w-8 h-8 text-blue-600" />
                     </div>
-                    <h3 className="font-medium text-center">Send All</h3>
+                    <h3 className="font-medium text-center">{t("invoiceEmail.sendAll")}</h3>
                     <p className="text-sm text-muted-foreground text-center mt-1">
-                      Send to all students in the system
+                      {t("invoiceEmail.sendAllDesc")}
                     </p>
                     <div className="text-center mt-2">
-                      <Badge variant="outline">{allStudents.length} students</Badge>
+                      <Badge variant="outline">{allStudents.length} {t("invoiceEmail.students")}</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -511,12 +513,12 @@ export function InvoiceEmailManagement() {
                     <div className="flex items-center justify-center mb-2">
                       <Users className="w-8 h-8 text-green-600" />
                     </div>
-                    <h3 className="font-medium text-center">Batch Send</h3>
+                    <h3 className="font-medium text-center">{t("invoiceEmail.batchSend")}</h3>
                     <p className="text-sm text-muted-foreground text-center mt-1">
-                      Send to filtered groups
+                      {t("invoiceEmail.batchSendDesc")}
                     </p>
                     <div className="text-center mt-2">
-                      <Badge variant="outline">{filteredStudents.length} students</Badge>
+                      <Badge variant="outline">{filteredStudents.length} {t("invoiceEmail.students")}</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -526,12 +528,12 @@ export function InvoiceEmailManagement() {
                     <div className="flex items-center justify-center mb-2">
                       <User className="w-8 h-8 text-purple-600" />
                     </div>
-                    <h3 className="font-medium text-center">Individual Send</h3>
+                    <h3 className="font-medium text-center">{t("invoiceEmail.individualSend")}</h3>
                     <p className="text-sm text-muted-foreground text-center mt-1">
-                      Send to specific students
+                      {t("invoiceEmail.individualSendDesc")}
                     </p>
                     <div className="text-center mt-2">
-                      <Badge variant="outline">{selectedStudents.length} selected</Badge>
+                      <Badge variant="outline">{selectedStudents.length} {t("invoiceEmail.selected")}</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -545,13 +547,13 @@ export function InvoiceEmailManagement() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Filter className="w-5 h-5" />
-                  Filter Criteria
+                  {t("invoiceEmail.filterCriteria")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="font-medium">Grades</label>
+                    <label className="font-medium">{t("invoiceEmail.grades")}</label>
                     <div className="grid grid-cols-3 gap-2">
                       {grades.map(grade => (
                         <div key={grade} className="flex items-center space-x-2">
@@ -567,7 +569,7 @@ export function InvoiceEmailManagement() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="font-medium">Student Status</label>
+                    <label className="font-medium">{t("invoiceEmail.studentStatus")}</label>
                     <div className="space-y-2">
                       {["active", "inactive", "graduated"].map(status => (
                         <div key={status} className="flex items-center space-x-2">
@@ -583,7 +585,7 @@ export function InvoiceEmailManagement() {
                   </div>
                 </div>
 
-                <Button onClick={applyBatchFilters}>Apply Filters</Button>
+                <Button onClick={applyBatchFilters}>{t("invoiceEmail.applyFilters")}</Button>
               </CardContent>
             </Card>
           )}
@@ -594,13 +596,13 @@ export function InvoiceEmailManagement() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Search className="w-5 h-5" />
-                  Select Students
+                  {t("invoiceEmail.selectStudents")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="relative">
                   <Input
-                    placeholder="Search by name, student ID, family code..."
+                    placeholder={t("invoiceEmail.searchPlaceholder")}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className=""
@@ -634,7 +636,7 @@ export function InvoiceEmailManagement() {
 
                 {selectedStudents.length > 0 && (
                   <div className="space-y-2">
-                    <label className="font-medium">Selected Students</label>
+                    <label className="font-medium">{t("invoiceEmail.selectedStudents")}</label>
                     <div className="space-y-2">
                       {selectedStudents.map((student) => (
                         <div key={student.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
@@ -665,21 +667,21 @@ export function InvoiceEmailManagement() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Email Template
+                {t("invoiceEmail.emailTemplate")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {mockTemplates.map((template) => (
-                  <Card 
-                    key={template.id} 
+                  <Card
+                    key={template.id}
                     className={`cursor-pointer transition-all ${selectedTemplate.id === template.id ? "ring-2 ring-primary" : ""}`}
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span>{getLanguageFlag(template.language)}</span>
-                        {template.isDefault && <Badge variant="outline">Default</Badge>}
+                        {template.isDefault && <Badge variant="outline">{t("invoiceEmail.default")}</Badge>}
                       </div>
                       <h4 className="font-medium">{template.name}</h4>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -693,7 +695,7 @@ export function InvoiceEmailManagement() {
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handlePreview}>
                   <Eye className="w-4 h-4 mr-2" />
-                  Preview Email
+                  {t("invoiceEmail.previewEmail")}
                 </Button>
               </div>
             </CardContent>
@@ -704,55 +706,55 @@ export function InvoiceEmailManagement() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="w-5 h-5" />
-                Send Controls
+                {t("invoiceEmail.sendControls")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Recipients</p>
+                  <p className="text-sm text-muted-foreground">{t("invoiceEmail.recipients")}</p>
                   <p className="text-2xl font-bold">{getTargetCount()}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Template</p>
+                  <p className="text-sm text-muted-foreground">{t("invoiceEmail.template")}</p>
                   <p className="font-medium">{selectedTemplate.name}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Estimated Time</p>
-                  <p className="font-medium">{Math.ceil(getTargetCount() / 20)} minutes</p>
+                  <p className="text-sm text-muted-foreground">{t("invoiceEmail.estimatedTime")}</p>
+                  <p className="font-medium">{Math.ceil(getTargetCount() / 20)} {t("invoiceEmail.minutes")}</p>
                 </div>
               </div>
 
               {isSending && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Sending emails...</span>
+                    <span>{t("invoiceEmail.sendingEmails")}</span>
                     <span>{Math.round(sendingProgress)}%</span>
                   </div>
                   <Progress value={sendingProgress} />
                   {currentJob && (
                     <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Sent: {currentJob.sentCount}</span>
-                      <span>Failed: {currentJob.failedCount}</span>
+                      <span>{t("invoiceEmail.sent")}: {currentJob.sentCount}</span>
+                      <span>{t("invoiceEmail.failed")}: {currentJob.failedCount}</span>
                     </div>
                   )}
                 </div>
               )}
 
-              <Button 
-                onClick={handleSendEmails} 
+              <Button
+                onClick={handleSendEmails}
                 disabled={isSending || getTargetCount() === 0}
                 className="w-full"
               >
                 {isSending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Sending Emails...
+                    {t("invoiceEmail.sendingEmailsBtn")}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Send {getTargetCount()} Emails
+                    {t("invoiceEmail.sendEmails2").replace("{count}", String(getTargetCount()))}
                   </>
                 )}
               </Button>
@@ -766,7 +768,7 @@ export function InvoiceEmailManagement() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                Email Sending History
+                {t("invoiceEmail.emailHistory")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -775,41 +777,41 @@ export function InvoiceEmailManagement() {
                   <TableRow>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                       <div className="flex items-center gap-1">
-                        Job Name
+                        {t("invoiceEmail.jobName")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("type")}>
                       <div className="flex items-center gap-1">
-                        Type
+                        {t("invoiceOverview.type")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                       <div className="flex items-center gap-1">
-                        Status
+                        {t("common.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("progress")}>
                       <div className="flex items-center gap-1">
-                        Progress
+                        {t("invoiceEmail.progress")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
                       <div className="flex items-center gap-1">
-                        Created
+                        {t("invoiceEmail.created")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdBy")}>
                       <div className="flex items-center gap-1">
-                        Created By
+                        {t("invoiceEmail.createdBy")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -856,7 +858,7 @@ export function InvoiceEmailManagement() {
                           <Progress value={(job.sentCount / job.targetCount) * 100} className="h-1" />
                           {job.failedCount > 0 && (
                             <div className="text-xs text-red-600">
-                              {job.failedCount} failed
+                              {job.failedCount} {t("invoiceEmail.failed")}
                             </div>
                           )}
                         </div>
@@ -883,13 +885,13 @@ export function InvoiceEmailManagement() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Email Preview
+              {t("invoiceEmail.emailPreview")}
             </DialogTitle>
             <DialogDescription>
-              Preview how the email will look for parents
+              {t("invoiceEmail.previewDesc")}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Select value={previewStudent?.id || ""} onValueChange={(id) => {
@@ -897,7 +899,7 @@ export function InvoiceEmailManagement() {
                 if (student) setPreviewStudent(student)
               }}>
                 <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Select student" />
+                  <SelectValue placeholder={t("invoiceEmail.selectStudent")} />
                 </SelectTrigger>
                 <SelectContent>
                   {allStudents.map((student) => (
@@ -914,43 +916,43 @@ export function InvoiceEmailManagement() {
               <div className="border rounded-lg p-4 bg-muted/20">
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">To:</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoiceEmail.to")}:</label>
                     <p className="font-medium">{previewStudent.parentEmail}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Subject:</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoiceEmail.subject")}:</label>
                     <p className="font-medium">{generatePreview(previewStudent).subject}</p>
                   </div>
                   <Separator />
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Message:</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoiceEmail.message")}:</label>
                     <div className="mt-2 whitespace-pre-wrap font-mono text-sm bg-white p-4 rounded border">
                       {generatePreview(previewStudent).body}
                     </div>
                   </div>
                   <Separator />
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Footer:</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoiceEmail.footer")}:</label>
                     <div className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
                       {selectedTemplate.footerText}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <FileText className="w-4 h-4" />
-                    <span>Attachment: Invoice_{previewStudent.studentId}.pdf</span>
+                    <span>{t("invoiceEmail.attachment")}: Invoice_{previewStudent.studentId}.pdf</span>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                No students available for preview
+                {t("invoiceEmail.noStudentsPreview")}
               </div>
             )}
           </div>
 
           <div className="flex gap-3 pt-4">
             <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
-              Close
+              {t("common.close")}
             </Button>
           </div>
         </DialogContent>

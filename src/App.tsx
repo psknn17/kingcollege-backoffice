@@ -19,7 +19,9 @@ import { Toaster } from "./components/ui/sonner"
 import { AcademicYearProvider } from "./contexts/AcademicYearContext"
 import { StudentProvider } from "./contexts/StudentContext"
 import { DiscountOptionsProvider } from "./contexts/DiscountOptionsContext"
+import { useLanguage } from "./contexts/LanguageContext"
 import { Button } from "./components/ui/button"
+import { Globe } from "lucide-react"
 import {
   BarChart3,
   Calendar,
@@ -99,56 +101,57 @@ import { ViewDetailsPage } from "./components/ViewDetailsPage"
 
 const menuItems = {
   tuition: [
-    { id: "tuition-dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "tuition-term-settings", label: "Term Settings", icon: Calendar },
-    { id: "tuition-by-year", label: "Tuition by Year", icon: DollarSign },
-    { id: "debt-reminder-settings", label: "Debt Reminders", icon: Bell },
-    { id: "payment-history", label: "Payment History", icon: CreditCard },
-    { id: "tuition-invoice-management", label: "Transaction Management", icon: FileText },
+    { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
+    { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
+    { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
+    { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
+    { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
+    { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
   ],
   afterSchool: [
-    { id: "afterschool-dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "afterschool-settings", label: "Registration Settings", icon: Settings },
-    { id: "afterschool-payment-history", label: "Payment History", icon: CreditCard },
-    { id: "course-quota-overview", label: "Course & Quota", icon: GraduationCap },
-    { id: "external-parent-management", label: "External Parents", icon: UserCheck },
-    { id: "afterschool-receipts", label: "Receipts", icon: Receipt },
+    { id: "afterschool-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
+    { id: "afterschool-settings", labelKey: "menu.registrationSettings", icon: Settings },
+    { id: "afterschool-payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
+    { id: "course-quota-overview", labelKey: "menu.courses", icon: GraduationCap },
+    { id: "external-parent-management", labelKey: "menu.externalParents", icon: UserCheck },
+    { id: "afterschool-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   eventManagement: [
-    { id: "event-import", label: "Event Import", icon: Upload },
-    { id: "event-payment-deadline", label: "Payment Deadline", icon: Clock },
-    { id: "event-registration-reports", label: "Registration Reports", icon: FileBarChart },
-    { id: "event-receipts", label: "Receipts", icon: Receipt },
+    { id: "event-import", labelKey: "menu.eventImport", icon: Upload },
+    { id: "event-payment-deadline", labelKey: "menu.paymentDeadlines", icon: Clock },
+    { id: "event-registration-reports", labelKey: "menu.registrationReports", icon: FileBarChart },
+    { id: "event-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   summerActivities: [
-    { id: "summer-activities-import", label: "Summer Activities Import", icon: Upload },
-    { id: "summer-registration-control", label: "Registration Control", icon: Play },
-    { id: "summer-payment-reports", label: "Payment Reports", icon: DollarSign },
-    { id: "summer-activities-receipts", label: "Receipts", icon: Receipt },
+    { id: "summer-activities-import", labelKey: "menu.import", icon: Upload },
+    { id: "summer-registration-control", labelKey: "menu.registrationControl", icon: Play },
+    { id: "summer-payment-reports", labelKey: "menu.paymentReports", icon: DollarSign },
+    { id: "summer-activities-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   discountManagement: [
-    { id: "discount-overview", label: "Discount Overview", icon: Percent },
-    { id: "discount-options", label: "Discount Options", icon: Settings2 },
-    { id: "student-groups", label: "Student Groups", icon: Users },
-    { id: "waive-fee", label: "Waive Fee", icon: TrendingDown },
-    { id: "discount-reports", label: "Discount Reports", icon: FileBarChart },
+    { id: "discount-overview", labelKey: "menu.overview", icon: Percent },
+    { id: "discount-options", labelKey: "menu.promotions", icon: Settings2 },
+    { id: "student-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "waive-fee", labelKey: "menu.waiveFees", icon: TrendingDown },
+    { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
   ],
   invoiceManagement: [
-    { id: "invoice-management", label: "Invoices", icon: FileInvoice },
-    { id: "item-management", label: "Items & Templates", icon: Tag },
-    { id: "email-jobs", label: "Email Jobs", icon: Mail },
+    { id: "invoice-management", labelKey: "menu.invoices", icon: FileInvoice },
+    { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "email-jobs", labelKey: "menu.emailJobs", icon: Mail },
   ],
   userManagement: [
-    { id: "user-management", label: "Users", icon: UsersRound },
-    { id: "role-management", label: "Roles & Permissions", icon: Shield },
+    { id: "user-management", labelKey: "menu.users", icon: UsersRound },
+    { id: "role-management", labelKey: "menu.rolesPermissions", icon: Shield },
   ],
   studentManagement: [
-    { id: "student-list", label: "Student List", icon: GraduationCap },
-    { id: "family-groups", label: "Family Groups", icon: Users },
+    { id: "student-list", labelKey: "menu.studentList", icon: GraduationCap },
+    { id: "family-groups", labelKey: "menu.familyGroups", icon: Users },
   ]
 }
 
 export default function App() {
+  const { language, setLanguage, t } = useLanguage()
   const [activeSection, setActiveSection] = useState("tuition-dashboard")
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
   const [subPageParams, setSubPageParams] = useState<any>(null)
@@ -369,7 +372,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    Tuition Management
+                    {t("menu.tuitionManagement")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["tuition"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -383,7 +386,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -398,7 +401,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    After School
+                    {t("menu.afterSchool")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["afterSchool"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -412,7 +415,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -427,7 +430,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    Event Management
+                    {t("menu.eventManagement")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["eventManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -441,7 +444,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -456,7 +459,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    Summer Activities
+                    {t("menu.summerActivities")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["summerActivities"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -470,7 +473,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -485,7 +488,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    Discount Management
+                    {t("menu.discountManagement")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["discountManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -499,7 +502,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -514,7 +517,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    Invoice Management
+                    {t("menu.invoiceManagement")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["invoiceManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -528,7 +531,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -543,7 +546,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    Student Management
+                    {t("menu.studentManagement")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["studentManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -557,7 +560,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -572,7 +575,7 @@ export default function App() {
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    User Management
+                    {t("menu.userManagement")}
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["userManagement"] ? "rotate-180" : ""}`} />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -586,7 +589,7 @@ export default function App() {
                             isActive={activeSection === item.id}
                           >
                             <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey)}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -604,14 +607,14 @@ export default function App() {
           <header className="border-b p-4 flex items-center gap-4">
             <SidebarTrigger />
             {isSubPage && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={navigateBack}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                {t("common.back")}
               </Button>
             )}
             <div className="flex-1">
@@ -644,7 +647,17 @@ export default function App() {
                   activeSection === "item-management" ? "Items & Templates" : "Dashboard")}
               </h1>
             </div>
-            
+
+            {/* Language Switcher */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLanguage(language === 'en' ? 'th' : 'en')}
+              className="flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4" />
+              {language === 'en' ? 'TH' : 'EN'}
+            </Button>
 
           </header>
           

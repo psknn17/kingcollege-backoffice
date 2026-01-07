@@ -12,8 +12,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
 import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 import { useStudents } from "@/contexts/StudentContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface CreditNote {
   id: string
@@ -96,6 +97,7 @@ const generateCreditNoteNumber = (existingNotes: CreditNote[]): string => {
 }
 
 export function CreditNoteManagement() {
+  const { t } = useLanguage()
   const { students } = useStudents()
 
   // Load credit notes from localStorage
@@ -434,19 +436,19 @@ export function CreditNoteManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Credit Note Management</h2>
+          <h2 className="text-xl font-semibold">{t("creditNote.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage credit notes, refunds, and billing adjustments
+            {t("creditNote.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export Report
+            {t("invoice.exportReport")}
           </Button>
           <Button onClick={openCreateModal} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            Create Credit Note
+            {t("creditNote.createCreditNote")}
           </Button>
         </div>
       </div>
@@ -455,7 +457,7 @@ export function CreditNoteManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Credit Notes</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("creditNote.totalCreditNotes")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
@@ -464,7 +466,7 @@ export function CreditNoteManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Draft</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("creditNote.draft")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-600">{summaryStats.draft}</div>
@@ -473,7 +475,7 @@ export function CreditNoteManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Issued</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("creditNote.issued")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.issued}</div>
@@ -482,7 +484,7 @@ export function CreditNoteManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Applied</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("creditNote.applied")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.applied}</div>
@@ -491,7 +493,7 @@ export function CreditNoteManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Credit Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("creditNote.totalCreditAmount")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₿{summaryStats.totalAmount.toLocaleString()}</div>
@@ -505,20 +507,20 @@ export function CreditNoteManagement() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("invoiceOverview.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Search</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
               <Input
-                placeholder="Credit note, invoice, student..."
+                placeholder={t("creditNote.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
@@ -526,33 +528,33 @@ export function CreditNoteManagement() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="issued">Issued</SelectItem>
-                  <SelectItem value="applied">Applied</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                  <SelectItem value="draft">{t("creditNote.draft")}</SelectItem>
+                  <SelectItem value="issued">{t("creditNote.issued")}</SelectItem>
+                  <SelectItem value="applied">{t("creditNote.applied")}</SelectItem>
+                  <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Type</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("invoiceOverview.type")}</label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="refund">Refund</SelectItem>
-                  <SelectItem value="adjustment">Adjustment</SelectItem>
-                  <SelectItem value="cancellation">Cancellation</SelectItem>
-                  <SelectItem value="discount">Discount</SelectItem>
+                  <SelectItem value="all">{t("creditNote.allTypes")}</SelectItem>
+                  <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
+                  <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
+                  <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
+                  <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

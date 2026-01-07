@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "./ui/textarea"
 import { Clock, CalendarDays, Edit, Trash2, Plus, AlertTriangle, CheckCircle, Send, Mail } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface PaymentDeadline {
   id: number

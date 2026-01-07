@@ -7,6 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts"
 import { Users, DollarSign, Calendar as CalendarIcon, CreditCard, Filter, RotateCcw, GraduationCap } from "lucide-react"
 import { format, subDays, startOfYear, endOfYear } from "date-fns"
+import { useLanguage } from "@/contexts/LanguageContext"
+import { DateRange } from "react-day-picker"
 
 const paymentData = [
   { month: "Aug", yearly: 45, termly: 30 },
@@ -44,16 +46,14 @@ const generateAcademicYears = () => {
   return years.reverse()
 }
 
-interface DateRange {
-  from?: Date
-  to?: Date
-}
+
 
 export function TuitionDashboard() {
+  const { t } = useLanguage()
   // Filter states (for UI selection)
   const [selectedYear, setSelectedYear] = useState<string>("")
   const [selectedTerm, setSelectedTerm] = useState<string>("")
-  const [dateRange, setDateRange] = useState<DateRange>({})
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined })
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   // Applied filters (actual filters being used)
@@ -61,8 +61,8 @@ export function TuitionDashboard() {
     year: string
     term: string
     dateRange: DateRange
-  }>({ year: "", term: "", dateRange: {} })
-  
+  }>({ year: "", term: "", dateRange: { from: undefined } })
+
   const academicYears = generateAcademicYears()
   const currentYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`
 
@@ -76,14 +76,14 @@ export function TuitionDashboard() {
   }
 
   const handleDateRangeSelect = (range: DateRange | undefined) => {
-    setDateRange(range || {})
+    setDateRange(range || { from: undefined })
   }
 
   const resetFilters = () => {
     setSelectedYear("")
     setSelectedTerm("")
-    setDateRange({})
-    setAppliedFilters({ year: "", term: "", dateRange: {} })
+    setDateRange({ from: undefined })
+    setAppliedFilters({ year: "", term: "", dateRange: { from: undefined } })
   }
 
   const applyFilters = () => {
@@ -99,29 +99,29 @@ export function TuitionDashboard() {
   // Get filtered data display text
   const getFilteredDisplay = () => {
     if (!selectedYear && !selectedTerm && !dateRange.from) {
-      return "All data"
+      return t("dashboard.allData")
     }
-    
-    let display = "Filtered: "
+
+    let display = t("dashboard.filtered")
     const filters = []
-    
+
     if (selectedYear) {
       filters.push(academicYears.find(y => y.value === selectedYear)?.label || selectedYear)
     }
-    
+
     if (selectedTerm) {
-      const termDisplay = selectedTerm === "term1" ? "Term 1" : selectedTerm === "term2" ? "Term 2" : "Term 3"
+      const termDisplay = selectedTerm === "term1" ? t("invoice.term") + " 1" : selectedTerm === "term2" ? t("invoice.term") + " 2" : t("invoice.term") + " 3"
       filters.push(termDisplay)
     }
-    
+
     if (dateRange.from) {
       if (dateRange.to) {
         filters.push(`${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`)
       } else {
-        filters.push(`From ${format(dateRange.from, "MMM dd")}`)
+        filters.push(`${t("date.from")} ${format(dateRange.from, "MMM dd")}`)
       }
     }
-    
+
     return display + filters.join(", ")
   }
 
@@ -136,19 +136,19 @@ export function TuitionDashboard() {
                 <Filter className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Data Filters</CardTitle>
+                <CardTitle className="text-lg">{t("dashboard.dataFilters")}</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Filter your tuition data by academic year, term, or date range
+                  {t("dashboard.filterDesc")}
                 </p>
               </div>
             </div>
             {(appliedFilters.year || appliedFilters.term || appliedFilters.dateRange.from) && (
               <div className="text-right">
                 <p className="text-sm font-medium text-primary">
-                  {[appliedFilters.year, appliedFilters.term, appliedFilters.dateRange.from].filter(Boolean).length} Filter(s) Active
+                  {[appliedFilters.year, appliedFilters.term, appliedFilters.dateRange.from].filter(Boolean).length} {t("common.filter")}(s) {t("common.active")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Data is being filtered
+                  {t("dashboard.filtered")}
                 </p>
               </div>
             )}
@@ -158,17 +158,17 @@ export function TuitionDashboard() {
           {/* Main Filters Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Filter Options</h3>
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">{t("dashboard.filterOptions")}</h3>
               <div className="flex-1 h-px bg-border"></div>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Academic Year Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Academic Year</label>
+                <label className="text-sm font-medium text-foreground">{t("common.academicYear")}</label>
                 <Select value={selectedYear} onValueChange={handleYearChange}>
                   <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select year" />
+                    <SelectValue placeholder={t("invoice.academicYear")} />
                   </SelectTrigger>
                   <SelectContent>
                     {academicYears.map((year) => (
@@ -182,22 +182,22 @@ export function TuitionDashboard() {
 
               {/* Term Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Term</label>
+                <label className="text-sm font-medium text-foreground">{t("invoice.term")}</label>
                 <Select value={selectedTerm} onValueChange={handleTermChange}>
                   <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select term" />
+                    <SelectValue placeholder={t("invoice.term")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="term1">Term 1</SelectItem>
-                    <SelectItem value="term2">Term 2</SelectItem>
-                    <SelectItem value="term3">Term 3</SelectItem>
+                    <SelectItem value="term1">{t("invoice.term")} 1</SelectItem>
+                    <SelectItem value="term2">{t("invoice.term")} 2</SelectItem>
+                    <SelectItem value="term3">{t("invoice.term")} 3</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Date Range Filter */}
               <div className="space-y-2 lg:col-span-2">
-                <label className="text-sm font-medium text-foreground">Date Range</label>
+                <label className="text-sm font-medium text-foreground">{t("invoice.dateRange")}</label>
                 <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full h-10 justify-start text-left">
@@ -212,7 +212,7 @@ export function TuitionDashboard() {
                             format(dateRange.from, "MMM dd, yyyy")
                           )
                         ) : (
-                          "Pick a date range"
+                          t("dashboard.pickDateRange")
                         )}
                       </span>
                     </Button>
@@ -235,10 +235,10 @@ export function TuitionDashboard() {
           {/* Quick Actions Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Quick Actions</h3>
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">{t("dashboard.quickActions")}</h3>
               <div className="flex-1 h-px bg-border"></div>
             </div>
-            
+
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               {/* Quick Filter Buttons */}
               <div className="flex flex-wrap gap-2">
@@ -255,7 +255,7 @@ export function TuitionDashboard() {
                   className="h-9 text-xs"
                 >
                   <CalendarIcon className="w-3 h-3 mr-1.5" />
-                  Last 30 Days
+                  {t("dashboard.last30Days")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -270,7 +270,7 @@ export function TuitionDashboard() {
                   className="h-9 text-xs"
                 >
                   <CalendarIcon className="w-3 h-3 mr-1.5" />
-                  This Year
+                  {t("dashboard.thisYear")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -282,7 +282,7 @@ export function TuitionDashboard() {
                   className="h-9 text-xs"
                 >
                   <GraduationCap className="w-3 h-3 mr-1.5" />
-                  Current Academic Year
+                  {t("dashboard.currentAcademicYear")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -292,18 +292,18 @@ export function TuitionDashboard() {
                   }}
                   className="h-9 text-xs"
                 >
-                  Term 1 Only
+                  {t("dashboard.termOnly").replace("{term}", "1")}
                 </Button>
               </div>
 
               {/* Action Buttons */}
               <div className="flex gap-2">
                 <Button onClick={applyFilters} className="h-9 px-6">
-                  Apply Filters
+                  {t("dashboard.applyFilters")}
                 </Button>
                 <Button variant="outline" onClick={resetFilters} className="h-9 px-4">
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  Reset
+                  {t("common.reset")}
                 </Button>
               </div>
             </div>
@@ -314,9 +314,9 @@ export function TuitionDashboard() {
             <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-l-primary">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium">Active Filters</h3>
+                  <h3 className="text-sm font-medium">{t("dashboard.activeFilters")}</h3>
                   <span className="text-xs text-muted-foreground">
-                    ({[appliedFilters.year, appliedFilters.term, appliedFilters.dateRange.from].filter(Boolean).length} applied)
+                    ({[appliedFilters.year, appliedFilters.term, appliedFilters.dateRange.from].filter(Boolean).length} {t("common.filter")})
                   </span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -338,8 +338,8 @@ export function TuitionDashboard() {
                   )}
                   {appliedFilters.term && (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-chart-2 text-white rounded-full text-sm">
-                      <span className="font-medium">Term:</span>
-                      <span>{appliedFilters.term === "term1" ? "Term 1" : appliedFilters.term === "term2" ? "Term 2" : "Term 3"}</span>
+                      <span className="font-medium">{t("invoice.term")}:</span>
+                      <span>{appliedFilters.term === "term1" ? t("invoice.term") + " 1" : appliedFilters.term === "term2" ? t("invoice.term") + " 2" : t("invoice.term") + " 3"}</span>
                       <button
                         onClick={() => {
                           setSelectedTerm("")
@@ -363,8 +363,8 @@ export function TuitionDashboard() {
                       </span>
                       <button
                         onClick={() => {
-                          setDateRange({})
-                          setAppliedFilters(prev => ({ ...prev, dateRange: {} }))
+                          setDateRange({ from: undefined })
+                          setAppliedFilters(prev => ({ ...prev, dateRange: { from: undefined } }))
                         }}
                         className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
                         aria-label="Remove date filter"
@@ -384,7 +384,7 @@ export function TuitionDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Students Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.studentsPaid")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -397,7 +397,7 @@ export function TuitionDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.totalRevenue")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -410,7 +410,7 @@ export function TuitionDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Yearly Payments</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.yearlyPayments")}</CardTitle>
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -423,7 +423,7 @@ export function TuitionDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Termly Payments</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.termlyPayments")}</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -440,7 +440,7 @@ export function TuitionDashboard() {
         {/* Payment Type Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Payment Type Distribution</CardTitle>
+            <CardTitle>{t("dashboard.paymentTypeDistribution")}</CardTitle>
             <p className="text-sm text-muted-foreground">{getFilteredDisplay()}</p>
           </CardHeader>
           <CardContent>
@@ -450,8 +450,8 @@ export function TuitionDashboard() {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="yearly" fill="#8884d8" name="Yearly" />
-                <Bar dataKey="termly" fill="#82ca9d" name="Termly" />
+                <Bar dataKey="yearly" fill="#8884d8" name={t("dashboard.yearly")} />
+                <Bar dataKey="termly" fill="#82ca9d" name={t("dashboard.termly")} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -460,7 +460,7 @@ export function TuitionDashboard() {
         {/* Payment Channels */}
         <Card>
           <CardHeader>
-            <CardTitle>Payment Channels</CardTitle>
+            <CardTitle>{t("dashboard.paymentChannels")}</CardTitle>
             <p className="text-sm text-muted-foreground">{getFilteredDisplay()}</p>
           </CardHeader>
           <CardContent>
@@ -490,7 +490,7 @@ export function TuitionDashboard() {
       {/* Term Revenue */}
       <Card>
         <CardHeader>
-          <CardTitle>Revenue by Term</CardTitle>
+          <CardTitle>{t("dashboard.revenueByTerm")}</CardTitle>
           <p className="text-sm text-muted-foreground">{getFilteredDisplay()}</p>
         </CardHeader>
         <CardContent>
@@ -499,7 +499,7 @@ export function TuitionDashboard() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="term" />
               <YAxis />
-              <Tooltip formatter={(value) => [`₿${value.toLocaleString()}`, "Revenue"]} />
+              <Tooltip formatter={(value) => [`₿${value.toLocaleString()}`, t("invoice.totalRevenue")]} />
               <Bar dataKey="amount" fill="#8884d8" />
             </BarChart>
           </ResponsiveContainer>
@@ -509,7 +509,7 @@ export function TuitionDashboard() {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Payment Activity</CardTitle>
+          <CardTitle>{t("dashboard.recentActivity")}</CardTitle>
           <p className="text-sm text-muted-foreground">{getFilteredDisplay()}</p>
         </CardHeader>
         <CardContent>

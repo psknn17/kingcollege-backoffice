@@ -7,18 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Switch } from "./ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Badge } from "./ui/badge"
 import {
   Save,
   Users,
-  CreditCard,
-  Gift,
-  Shield,
   Info
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Storage key for discount options
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
@@ -130,11 +127,11 @@ const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   registrationPrivileges: defaultRegistrationPrivileges,
   waiverAfter3rdYear: {
     enabled: true,
-    minimumGradeLevel: 0,
-    minimumYears: 0,
-    creditAmount: 22500,
+    minimumGradeLevel: 3,
+    minimumYears: 3,
+    creditAmount: 225000,
     termsToCredit: 3,
-    firstChildImmediate: true,
+    firstChildImmediate: false, // First child must wait 3 terms
   },
   waiverImmediate: {
     enabled: true,
@@ -165,13 +162,13 @@ const saveToStorage = (data: Record<string, DiscountOptionsData>) => {
 }
 
 export function DiscountOptions() {
+  const { t } = useLanguage()
   const { academicYears } = useAcademicYears()
   const [selectedYear, setSelectedYear] = useState<string>("")
   const [allData, setAllData] = useState<Record<string, DiscountOptionsData>>(() => {
     return loadFromStorage() || {}
   })
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("sibling")
 
   const availableYears = academicYears.map(y => y.id).sort((a, b) => b.localeCompare(a))
 
@@ -294,7 +291,7 @@ export function DiscountOptions() {
 
   const handleSaveAll = () => {
     saveToStorage(allData)
-    toast.success(`Discount options saved for ${selectedYear}`)
+    toast.success(t("discountOptions.savedSuccess").replace("{year}", selectedYear))
     setIsSaveDialogOpen(false)
   }
 
@@ -312,17 +309,17 @@ export function DiscountOptions() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Discount Options</h2>
+          <h2 className="text-xl font-semibold">{t("discountOptions.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Configure sibling discounts, late payment charges, and registration fee privileges
+            {t("discountOptions.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Label className="text-sm whitespace-nowrap">Academic Year:</Label>
+            <Label className="text-sm whitespace-nowrap">{t("discountOptions.academicYear")}:</Label>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Select year" />
+                <SelectValue placeholder={t("discountOptions.selectYear")} />
               </SelectTrigger>
               <SelectContent>
                 {availableYears.map(year => (
@@ -335,7 +332,7 @@ export function DiscountOptions() {
           </div>
           <Button onClick={() => setIsSaveDialogOpen(true)} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
-            Save All Changes
+            {t("discountOptions.saveAllChanges")}
           </Button>
         </div>
       </div>
@@ -346,49 +343,34 @@ export function DiscountOptions() {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
-              <p className="text-sm text-blue-800 font-medium">King's College International School Bangkok</p>
+              <p className="text-sm text-blue-800 font-medium">{t("discountOptions.schoolName")}</p>
               <p className="text-sm text-blue-700">
-                Fees and Tuition Information - Academic Year {selectedYear}
+                {t("discountOptions.feesInfo").replace("{year}", selectedYear)}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="sibling" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Sibling Discounts
-          </TabsTrigger>
-          <TabsTrigger value="fees" className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4" />
-            Registration Fees
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Sibling Discounts Tab */}
-        <TabsContent value="sibling" className="space-y-4">
-          <Card>
+      {/* Sibling Discounts */}
+      <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Sibling Discounts
+                {t("discountOptions.siblingDiscounts")}
               </CardTitle>
               <CardDescription>
-                Siblings in the School at the same time are eligible for a discount on tuition fees.
-                In cases that the eldest sibling graduates at the end of Year 13, the younger siblings will maintain their sibling rights.
+                {t("discountOptions.siblingDiscountsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">Enabled</TableHead>
-                    <TableHead>Child Order</TableHead>
-                    <TableHead className="w-[200px]">Discount Percentage</TableHead>
-                    <TableHead className="w-[150px] text-right">Preview</TableHead>
+                    <TableHead className="w-[50px]">{t("discountOptions.enabled")}</TableHead>
+                    <TableHead>{t("discountOptions.childOrder")}</TableHead>
+                    <TableHead className="w-[200px]">{t("discountOptions.discountPercentage")}</TableHead>
+                    <TableHead className="w-[150px] text-right">{t("discountOptions.preview")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -400,7 +382,7 @@ export function DiscountOptions() {
                           onCheckedChange={(checked) => updateSiblingDiscount(index, { enabled: checked })}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{discount.label}</TableCell>
+                      <TableCell className="font-medium">{t(`discountOptions.${discount.childOrder}Child`)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Input
@@ -418,10 +400,10 @@ export function DiscountOptions() {
                       <TableCell className="text-right">
                         {discount.percentage > 0 ? (
                           <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {discount.percentage}% off
+                            {t("discountOptions.percentOff").replace("{percent}", String(discount.percentage))}
                           </Badge>
                         ) : (
-                          <Badge variant="outline">No discount</Badge>
+                          <Badge variant="outline">{t("discountOptions.noDiscount")}</Badge>
                         )}
                       </TableCell>
                     </TableRow>
@@ -429,261 +411,29 @@ export function DiscountOptions() {
                 </TableBody>
               </Table>
             </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Registration Fees Tab */}
-        <TabsContent value="fees" className="space-y-6">
-          {/* Fee Configuration Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Application & Registration Fees
-              </CardTitle>
-              <CardDescription>Configure initial charges for new applicants</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Fee Type</TableHead>
-                    <TableHead className="w-[250px]">Amount (THB)</TableHead>
-                    <TableHead className="w-[120px]">Refundable</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium">Application Fee</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={currentData.registrationFees.applicationFee}
-                        onChange={(e) => updateRegistrationFees({ applicationFee: parseFloat(e.target.value) || 0 })}
-                        min={0}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">No</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">Non-refundable/non-transferable</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Registration Fee</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={currentData.registrationFees.registrationFee}
-                        onChange={(e) => updateRegistrationFees({ registrationFee: parseFloat(e.target.value) || 0 })}
-                        min={0}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">No</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">Non-refundable/non-transferable</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Security Deposit</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={currentData.registrationFees.securityDeposit}
-                        onChange={(e) => updateRegistrationFees({ securityDeposit: parseFloat(e.target.value) || 0 })}
-                        min={0}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-600">Yes</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">Refundable upon graduation and withdrawal</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Wait List Fee</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={currentData.registrationFees.waitListFee}
-                        onChange={(e) => updateRegistrationFees({ waitListFee: parseFloat(e.target.value) || 0 })}
-                        min={0}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Conditional</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">Acts as registration fee when place becomes available</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Security Deposit Refund Conditions */}
-          <Card className="border-green-200 bg-green-50/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Shield className="w-4 h-4 text-green-600" />
-                Security Deposit Refund Conditions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-green-100">
-                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-green-700 text-sm font-bold">1</span>
-                  </div>
-                  <p className="text-sm text-green-800">Upon the student's graduation (completion of Year 13) from the school</p>
-                </div>
-                <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-green-100">
-                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-green-700 text-sm font-bold">2</span>
-                  </div>
-                  <p className="text-sm text-green-800">When advance written notice is received at least one full term's notice before the child leaves</p>
-                </div>
-                <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-green-100">
-                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-green-700 text-sm font-bold">3</span>
-                  </div>
-                  <p className="text-sm text-green-800">When the school requires the applicant's departure for reasons other than disciplinary</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Registration Fee Waiver Program */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Gift className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Registration Fee Waiver Program</CardTitle>
-                    <CardDescription>Configure waiver eligibility and credit distribution</CardDescription>
-                  </div>
-                </div>
-                <Switch
-                  checked={currentData.waiverAfter3rdYear.enabled}
-                  onCheckedChange={(checked) => updateCurrentData({
-                    waiverAfter3rdYear: { ...currentData.waiverAfter3rdYear, enabled: checked }
-                  })}
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm">Min Year Group</Label>
-                  <Input
-                    type="number"
-                    value={currentData.waiverAfter3rdYear.minimumGradeLevel}
-                    onChange={(e) => updateCurrentData({
-                      waiverAfter3rdYear: { ...currentData.waiverAfter3rdYear, minimumGradeLevel: parseInt(e.target.value) || 3 }
-                    })}
-                    disabled={!currentData.waiverAfter3rdYear.enabled}
-                    min={1}
-                    max={13}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">Min Years (2nd child+)</Label>
-                  <Input
-                    type="number"
-                    value={currentData.waiverAfter3rdYear.minimumYears}
-                    onChange={(e) => updateCurrentData({
-                      waiverAfter3rdYear: { ...currentData.waiverAfter3rdYear, minimumYears: parseInt(e.target.value) || 3 }
-                    })}
-                    disabled={!currentData.waiverAfter3rdYear.enabled}
-                    min={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">Credit Amount (THB)</Label>
-                  <Input
-                    type="number"
-                    value={22500}
-                    readOnly
-                    className="bg-muted"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">Terms to Credit</Label>
-                  <Input
-                    type="number"
-                    value={3}
-                    readOnly
-                    className="bg-muted"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-100">
-                <div>
-                  <Label className="text-sm font-medium text-purple-900">First Child Gets Privilege Immediately</Label>
-                  <p className="text-sm text-purple-700 mt-1">Skip minimum years requirement for first child</p>
-                </div>
-                <Switch
-                  checked={currentData.waiverAfter3rdYear.firstChildImmediate}
-                  onCheckedChange={(checked) => updateCurrentData({
-                    waiverAfter3rdYear: { ...currentData.waiverAfter3rdYear, firstChildImmediate: checked }
-                  })}
-                  disabled={!currentData.waiverAfter3rdYear.enabled}
-                />
-              </div>
-
-              {/* Eligibility Summary */}
-              {currentData.waiverAfter3rdYear.enabled && (
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h5 className="text-sm font-medium mb-3">Eligibility Summary</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span>Year {currentData.waiverAfter3rdYear.minimumGradeLevel}+ students</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span>1st child: {currentData.waiverAfter3rdYear.firstChildImmediate ? "Immediate" : `After ${currentData.waiverAfter3rdYear.minimumYears} years`}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span>2nd child+: After {currentData.waiverAfter3rdYear.minimumYears} years</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span>Credit: {formatCurrency(22500)}/3 terms</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-      </Tabs>
+      </Card>
 
       {/* Save Confirmation Dialog */}
       <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Confirm Save Changes</DialogTitle>
+            <DialogTitle>{t("discountOptions.confirmSaveTitle")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to save all discount options for academic year {selectedYear}?
+              {t("discountOptions.confirmSaveMessage").replace("{year}", selectedYear)}
             </p>
             <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
               <p className="text-sm">
-                <span className="font-medium">Sibling Discounts:</span>{" "}
-                {currentData.siblingDiscounts.filter(d => d.enabled && d.percentage > 0).length} configured
+                <span className="font-medium">{t("discountOptions.siblingDiscounts")}:</span>{" "}
+                {currentData.siblingDiscounts.filter(d => d.enabled && d.percentage > 0).length} {t("discountOptions.configured")}
               </p>
               <p className="text-sm">
-                <span className="font-medium">Late Payment:</span>{" "}
-                {currentData.latePayment.enabled ? `${currentData.latePayment.chargePercentage}% per ${currentData.latePayment.chargeFrequency === "monthly" ? "month" : "week"}` : "Disabled"}
+                <span className="font-medium">{t("discountOptions.latePayment")}:</span>{" "}
+                {currentData.latePayment.enabled ? `${currentData.latePayment.chargePercentage}% ${t("discountOptions.per")} ${currentData.latePayment.chargeFrequency === "monthly" ? t("discountOptions.month") : t("discountOptions.week")}` : t("discountOptions.disabled")}
               </p>
               <p className="text-sm">
-                <span className="font-medium">Total Initial Fees:</span>{" "}
+                <span className="font-medium">{t("discountOptions.totalInitialFees")}:</span>{" "}
                 {formatCurrency(
                   currentData.registrationFees.applicationFee +
                   currentData.registrationFees.registrationFee +
@@ -694,10 +444,10 @@ export function DiscountOptions() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
-              Cancel
+              {t("discountOptions.cancel")}
             </Button>
             <Button onClick={handleSaveAll}>
-              Confirm Save
+              {t("discountOptions.confirmSave")}
             </Button>
           </DialogFooter>
         </DialogContent>

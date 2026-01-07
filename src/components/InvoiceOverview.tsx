@@ -16,6 +16,7 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface Invoice {
   id: string
@@ -65,6 +66,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
 }
 
 export function InvoiceOverview() {
+  const { t } = useLanguage()
   const { students } = useStudents()
   const { academicYears = [] } = useAcademicYears()
 
@@ -203,7 +205,7 @@ export function InvoiceOverview() {
     const invoice = invoices.find(inv => inv.id === invoiceId)
     if (invoice) {
       // Update reminders sent count in a real app
-      toast.success(`Reminder sent to ${invoice.studentName}'s parent`)
+      toast.success(t("invoiceOverview.reminderSent").replace("{name}", invoice.studentName))
     }
   }
 
@@ -236,7 +238,7 @@ export function InvoiceOverview() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
       
-      toast.success(`Invoice ${invoice.invoiceNumber} downloaded`)
+      toast.success(t("invoiceOverview.invoiceDownloaded").replace("{number}", invoice.invoiceNumber))
     }
   }
 
@@ -253,17 +255,17 @@ export function InvoiceOverview() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("common.paid")}</Badge>
       case "unpaid":
-        return <Badge className="bg-blue-100 text-blue-800">Unpaid</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("common.unpaid")}</Badge>
       case "sent":
-        return <Badge className="bg-purple-100 text-purple-800">Sent</Badge>
+        return <Badge className="bg-purple-100 text-purple-800">{t("common.sent")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("common.overdue")}</Badge>
       case "cancelled":
-        return <Badge className="bg-gray-100 text-gray-800">Cancelled</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">{t("common.cancelled")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -366,26 +368,26 @@ export function InvoiceOverview() {
   const refreshInvoices = () => {
     const storedInvoices = loadCreatedInvoicesFromStorage()
     setInvoices(storedInvoices)
-    toast.success("Invoice list refreshed")
+    toast.success(t("invoiceOverview.listRefreshed"))
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Invoice Overview</h2>
+          <h2 className="text-xl font-semibold">{t("invoiceOverview.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage all invoices and track payment status
+            {t("invoiceOverview.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={refreshInvoices} className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            {t("common.refresh")}
           </Button>
           <Button className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export Report
+            {t("invoice.exportReport")}
           </Button>
         </div>
       </div>
@@ -394,48 +396,48 @@ export function InvoiceOverview() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoiceOverview.totalInvoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
             <p className="text-xs text-muted-foreground">
-              Total value: ₿{summaryStats.totalAmount.toLocaleString()}
+              {t("invoiceOverview.totalValue")}: ₿{summaryStats.totalAmount.toLocaleString()}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoiceOverview.paidInvoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.paid}</div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((summaryStats.paid / summaryStats.total) * 100)}% of total
+              {Math.round((summaryStats.paid / summaryStats.total) * 100)}% {t("invoiceOverview.ofTotal")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoiceOverview.unpaidInvoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.unpaid}</div>
             <p className="text-xs text-muted-foreground">
-              ₿{invoices.filter(i => i.status === "unpaid").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} pending
+              ₿{invoices.filter(i => i.status === "unpaid").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.pending").toLowerCase()}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoiceOverview.overdueInvoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{summaryStats.overdue}</div>
             <p className="text-xs text-muted-foreground">
-              ₿{invoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} overdue
+              ₿{invoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.overdue").toLowerCase()}
             </p>
           </CardContent>
         </Card>
@@ -447,11 +449,11 @@ export function InvoiceOverview() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("invoiceOverview.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
@@ -460,9 +462,9 @@ export function InvoiceOverview() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Search</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
               <Input
-                placeholder="Invoice, student, parent..."
+                placeholder={t("invoiceOverview.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
@@ -471,16 +473,16 @@ export function InvoiceOverview() {
 
             {/* Academic Year */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
               <Select value={academicYearFilter} onValueChange={(value) => {
                 setAcademicYearFilter(value)
                 setTermFilter("all") // Reset term when year changes
               }}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Years" />
+                  <SelectValue placeholder={t("invoice.allYears")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
                   {academicYears.map(year => (
                     <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
                   ))}
@@ -490,13 +492,13 @@ export function InvoiceOverview() {
 
             {/* Term */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
               <Select value={termFilter} onValueChange={setTermFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Terms" />
+                  <SelectValue placeholder={t("invoice.allTerms")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Terms</SelectItem>
+                  <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
                   {availableTerms.map(term => (
                     <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
                   ))}
@@ -509,13 +511,13 @@ export function InvoiceOverview() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Year Group */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Year Groups" />
+                  <SelectValue placeholder={t("invoice.allYearGroups")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Year Groups</SelectItem>
+                  <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
                   {gradeOptions.map((grade) => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -525,24 +527,24 @@ export function InvoiceOverview() {
 
             {/* Status */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PaymentStatus)}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder={t("invoice.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
                   <SelectItem value="paid">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("common.paid")}</Badge>
                   </SelectItem>
                   <SelectItem value="unpaid">
-                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Unpaid</Badge>
+                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t("common.unpaid")}</Badge>
                   </SelectItem>
                   <SelectItem value="overdue">
-                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>
+                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.overdue")}</Badge>
                   </SelectItem>
                   <SelectItem value="cancelled">
-                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Cancelled</Badge>
+                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t("common.cancelled")}</Badge>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -550,13 +552,13 @@ export function InvoiceOverview() {
 
             {/* Date Range */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Date Range</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("invoice.dateRange")}</label>
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : "From"}
+                      {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -573,7 +575,7 @@ export function InvoiceOverview() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDateTo ? format(dueDateTo, "dd/MM/yy") : "To"}
+                      {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -595,14 +597,14 @@ export function InvoiceOverview() {
       {invoices.length > 0 && (
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} invoices
+            {t("invoiceOverview.showing")} {startIndex + 1}-{Math.min(endIndex, filteredInvoices.length)} {t("invoiceOverview.of")} {filteredInvoices.length} {t("invoiceOverview.invoices")}
             {filteredInvoices.length !== invoices.length && (
-              <span> (filtered from {invoices.length} total)</span>
+              <span> ({t("invoiceOverview.filteredFrom")} {invoices.length} {t("invoiceOverview.total")})</span>
             )}
           </p>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
+              {t("invoiceOverview.page")} {currentPage} {t("invoiceOverview.of")} {totalPages}
             </span>
           </div>
         </div>
@@ -614,9 +616,9 @@ export function InvoiceOverview() {
           {invoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">No invoices yet</h3>
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">{t("invoiceOverview.noInvoicesYet")}</h3>
               <p className="text-sm text-muted-foreground text-center max-w-md">
-                Invoices created from the "Create Invoice" page will appear here. Go to Invoice Management → Create Invoice to create new invoices.
+                {t("invoiceOverview.noInvoicesDescription")}
               </p>
             </div>
           ) : (
@@ -625,59 +627,59 @@ export function InvoiceOverview() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
                   <div className="flex items-center gap-1">
-                    Invoice Number
+                    {t("invoice.invoiceNumber")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student
+                    {t("invoice.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                   <div className="flex items-center gap-1">
-                    Year Group
+                    {t("invoice.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                   <div className="flex items-center gap-1">
-                    Amount
+                    {t("common.amount")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("dueDate")}>
                   <div className="flex items-center gap-1">
-                    Due Date
+                    {t("invoice.dueDate")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentType")}>
                   <div className="flex items-center gap-1">
-                    Type
+                    {t("invoiceOverview.type")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentChannel")}>
                   <div className="flex items-center gap-1">
-                    Channel
+                    {t("invoiceOverview.channel")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("remindersSent")}>
                   <div className="flex items-center gap-1">
-                    Reminders
+                    {t("invoiceOverview.reminders")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -706,7 +708,7 @@ export function InvoiceOverview() {
                         <div>{format(invoice.dueDate, "MMM dd, yyyy")}</div>
                         {invoice.status === "unpaid" && (
                           <div className={`text-sm ${daysUntilDue < 0 ? "text-red-600" : daysUntilDue <= 7 ? "text-orange-600" : "text-muted-foreground"}`}>
-                            {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days left`}
+                            {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} ${t("invoiceOverview.daysOverdue")}` : `${daysUntilDue} ${t("invoiceOverview.daysLeft")}`}
                           </div>
                         )}
                       </div>
@@ -714,7 +716,7 @@ export function InvoiceOverview() {
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                     <TableCell>
                       <Badge variant={invoice.paymentType === "yearly" ? "default" : "outline"}>
-                        {invoice.paymentType === "yearly" ? "Yearly" : "Termly"}
+                        {invoice.paymentType === "yearly" ? t("invoiceOverview.yearly") : t("invoiceOverview.termly")}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -722,7 +724,7 @@ export function InvoiceOverview() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {invoice.remindersSent} sent
+                        {invoice.remindersSent} {t("invoiceOverview.sent")}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -731,26 +733,26 @@ export function InvoiceOverview() {
                           size="sm"
                           variant="ghost"
                           onClick={() => openInvoiceDetail(invoice)}
-                          title="View Details"
+                          title={t("invoiceOverview.viewDetails")}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        
-                        <Button 
-                          size="sm" 
+
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => downloadInvoice(invoice.id)}
-                          title="Download Invoice"
+                          title={t("invoiceOverview.downloadInvoice")}
                         >
                           <Download className="w-4 h-4 text-blue-600" />
                         </Button>
 
                         {(invoice.status === "unpaid" || invoice.status === "overdue") && (
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => sendReminder(invoice.id)}
-                            title="Send Reminder"
+                            title={t("invoiceOverview.sendReminder")}
                           >
                             <Send className="w-4 h-4 text-purple-600" />
                           </Button>
@@ -777,7 +779,7 @@ export function InvoiceOverview() {
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
+              {t("invoice.previous")}
             </Button>
             <Button
               variant="outline"
@@ -785,7 +787,7 @@ export function InvoiceOverview() {
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
-              Next
+              {t("invoice.next")}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -866,7 +868,7 @@ export function InvoiceOverview() {
           </Pagination>
           
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Go to page:</span>
+            <span className="text-sm text-muted-foreground">{t("invoiceOverview.goToPage")}:</span>
             <Input
               type="number"
               min={1}
@@ -890,10 +892,10 @@ export function InvoiceOverview() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Invoice Details
+              {t("invoiceOverview.invoiceDetails")}
             </DialogTitle>
             <DialogDescription>
-              View complete invoice information, payment status, and send reminders
+              {t("invoiceOverview.viewInvoiceInfo")}
             </DialogDescription>
           </DialogHeader>
           
@@ -902,13 +904,13 @@ export function InvoiceOverview() {
               {/* Invoice Number and Status */}
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Invoice Number</p>
+                  <p className="text-sm text-muted-foreground">{t("invoice.invoiceNumber")}</p>
                   <p className="font-mono text-lg font-medium">{selectedInvoice.invoiceNumber}</p>
                 </div>
                 <div className="flex gap-2">
                   {getStatusBadge(selectedInvoice.status)}
                   <Badge variant={selectedInvoice.paymentType === "yearly" ? "default" : "outline"}>
-                    {selectedInvoice.paymentType === "yearly" ? "Yearly" : "Termly"}
+                    {selectedInvoice.paymentType === "yearly" ? t("invoiceOverview.yearly") : t("invoiceOverview.termly")}
                   </Badge>
                 </div>
               </div>
@@ -919,19 +921,19 @@ export function InvoiceOverview() {
               <div className="space-y-3">
                 <h3 className="flex items-center gap-2 font-medium">
                   <User className="w-4 h-4" />
-                  Student Information
+                  {t("invoiceOverview.studentInfo")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Full Name</p>
+                    <p className="text-sm text-muted-foreground">{t("invoiceOverview.fullName")}</p>
                     <p className="font-medium">{selectedInvoice.studentName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Student ID</p>
+                    <p className="text-sm text-muted-foreground">{t("invoice.studentId")}</p>
                     <p className="font-mono">{selectedInvoice.studentId}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Year Group</p>
+                    <p className="text-sm text-muted-foreground">{t("invoice.yearGroup")}</p>
                     <Badge variant="secondary">{selectedInvoice.studentGrade}</Badge>
                   </div>
                 </div>
@@ -943,15 +945,15 @@ export function InvoiceOverview() {
               <div className="space-y-3">
                 <h3 className="flex items-center gap-2 font-medium">
                   <DollarSign className="w-4 h-4" />
-                  Financial Details
+                  {t("invoiceOverview.financialDetails")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Amount Due</p>
+                    <p className="text-sm text-muted-foreground">{t("invoiceOverview.amountDue")}</p>
                     <p className="text-2xl font-bold">₿{selectedInvoice.amount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Academic Term</p>
+                    <p className="text-sm text-muted-foreground">{t("invoiceOverview.academicTerm")}</p>
                     <p className="font-medium">{selectedInvoice.term}</p>
                   </div>
                 </div>
@@ -963,15 +965,15 @@ export function InvoiceOverview() {
               <div className="space-y-3">
                 <h3 className="flex items-center gap-2 font-medium">
                   <CalendarEmoji className="w-4 h-4" />
-                  Important Dates
+                  {t("invoiceOverview.importantDates")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Issue Date</p>
+                    <p className="text-sm text-muted-foreground">{t("invoice.issueDate")}</p>
                     <p className="font-medium">{format(selectedInvoice.issueDate, "MMM dd, yyyy")}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Due Date</p>
+                    <p className="text-sm text-muted-foreground">{t("invoice.dueDate")}</p>
                     <div>
                       <p className="font-medium">{format(selectedInvoice.dueDate, "MMM dd, yyyy")}</p>
                       {selectedInvoice.status === "unpaid" && (
@@ -981,7 +983,7 @@ export function InvoiceOverview() {
                             const daysUntilDue = getDaysUntilDue(selectedInvoice.dueDate)
                             return (
                               <span className={`text-xs ${daysUntilDue < 0 ? "text-red-600" : daysUntilDue <= 7 ? "text-orange-600" : "text-muted-foreground"}`}>
-                                {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days remaining`}
+                                {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} ${t("invoiceOverview.daysOverdue")}` : `${daysUntilDue} ${t("invoiceOverview.daysRemaining")}`}
                               </span>
                             )
                           })()}
@@ -998,14 +1000,14 @@ export function InvoiceOverview() {
               <div className="space-y-3">
                 <h3 className="flex items-center gap-2 font-medium">
                   <MessageSquare className="w-4 h-4" />
-                  Communication History
+                  {t("invoiceOverview.communicationHistory")}
                 </h3>
                 <div className="bg-muted/50 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">Payment Reminders Sent</p>
+                      <p className="font-medium">{t("invoiceOverview.paymentRemindersSent")}</p>
                       <p className="text-sm text-muted-foreground">
-                        Total reminders sent to parent/guardian
+                        {t("invoiceOverview.totalRemindersDescription")}
                       </p>
                     </div>
                     <Badge variant="outline" className="text-lg px-3 py-1">
@@ -1017,20 +1019,20 @@ export function InvoiceOverview() {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
-                <Button 
+                <Button
                   className="flex-1"
                   onClick={() => {
-                    toast.success("Invoice downloaded successfully")
+                    toast.success(t("invoiceOverview.downloadSuccess"))
                     closeModal()
                   }}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download Invoice
+                  {t("invoiceOverview.downloadInvoice")}
                 </Button>
-                
+
                 {(selectedInvoice.status === "unpaid" || selectedInvoice.status === "overdue") && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex-1"
                     onClick={() => {
                       sendReminder(selectedInvoice.id)
@@ -1038,13 +1040,13 @@ export function InvoiceOverview() {
                     }}
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    Send Reminder
+                    {t("invoiceOverview.sendReminder")}
                   </Button>
                 )}
-                
+
                 <Button variant="ghost" onClick={closeModal}>
                   <X className="w-4 h-4 mr-2" />
-                  Close
+                  {t("common.close")}
                 </Button>
               </div>
             </div>

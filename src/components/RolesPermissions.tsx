@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from "./ui/badge"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Search,
   Plus,
@@ -33,7 +34,7 @@ const permissionModules = [
   },
   {
     id: "families",
-    name: "Families",
+    name: "Family",
     description: "Family groups management",
     actions: ["view", "create", "edit", "delete"]
   },
@@ -226,6 +227,7 @@ const emptyRole: Omit<Role, "id" | "createdAt" | "updatedAt"> = {
 }
 
 export function RolesPermissions() {
+  const { t } = useLanguage()
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -587,12 +589,12 @@ export function RolesPermissions() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Roles & Permissions</h1>
-          <p className="text-muted-foreground mt-1">Manage user roles and access control</p>
+          <h1 className="text-3xl font-bold">{t("roles.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("roles.subtitle")}</p>
         </div>
         <Button onClick={handleAddRole}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Role
+          {t("roles.addRole")}
         </Button>
       </div>
 

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Badge } from "./ui/badge"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Search,
   Plus,
@@ -59,6 +60,7 @@ const emptyFamily: Omit<Family, "id" | "createdAt"> = {
 }
 
 export function FamilyGroups() {
+  const { t } = useLanguage()
   const {
     students,
     families,
@@ -67,6 +69,7 @@ export function FamilyGroups() {
     deleteFamily,
     getStudentsByFamily,
     getSiblingDiscount,
+    checkFeePrivilegeEligibility,
     updateStudent
   } = useStudents()
 
@@ -92,16 +95,24 @@ export function FamilyGroups() {
 
   // Get students without family
   const studentsWithoutFamily = useMemo(() => {
-    return students.filter(s => !s.familyId || s.familyId === "")
+    return students.filter((s: Student) => !s.familyId || s.familyId === "")
   }, [students])
 
-  // Filter families
+  // Filter families - search by familyName, familyCode, and student names
   const filteredFamilies = useMemo(() => {
     return families.filter(family => {
-      const matchesSearch = family.familyName.toLowerCase().includes(searchTerm.toLowerCase())
-      return matchesSearch
+      const searchLower = searchTerm.toLowerCase()
+      const matchesFamilyName = family.familyName.toLowerCase().includes(searchLower)
+      const matchesFamilyCode = family.familyCode?.toLowerCase().includes(searchLower)
+      // Also search by student names in the family
+      const familyStudents = students.filter((s: Student) => s.familyId === family.id)
+      const matchesStudentName = familyStudents.some((s: Student) =>
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchLower) ||
+        s.studentId?.toLowerCase().includes(searchLower)
+      )
+      return matchesFamilyName || matchesFamilyCode || matchesStudentName
     })
-  }, [families, searchTerm])
+  }, [families, searchTerm, students])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -136,8 +147,8 @@ export function FamilyGroups() {
         case "totalDiscount":
           const aStudents = getStudentsByFamily(a.id)
           const bStudents = getStudentsByFamily(b.id)
-          aValue = aStudents.reduce((total, student) => total + getSiblingDiscount(student), 0)
-          bValue = bStudents.reduce((total, student) => total + getSiblingDiscount(student), 0)
+          aValue = aStudents.reduce((total: number, student: Student) => total + getSiblingDiscount(student), 0)
+          bValue = bStudents.reduce((total: number, student: Student) => total + getSiblingDiscount(student), 0)
           break
         default:
           return 0
@@ -172,16 +183,16 @@ export function FamilyGroups() {
   // Stats
   const stats = useMemo(() => {
     const totalFamilies = families.length
-    const totalStudentsInFamilies = students.filter(s => s.familyId).length
-    const studentsWithDiscount = students.filter(s => getSiblingDiscount(s) > 0).length
-    const multiChildFamilies = families.filter(f => getStudentsByFamily(f.id).length > 1).length
+    const totalStudentsInFamilies = students.filter((s: Student) => s.familyId).length
+    const studentsWithDiscount = students.filter((s: Student) => getSiblingDiscount(s) > 0).length
+    const multiChildFamilies = families.filter((f: Family) => getStudentsByFamily(f.id).length > 1).length
     return { totalFamilies, totalStudentsInFamilies, studentsWithDiscount, multiChildFamilies }
   }, [families, students, getStudentsByFamily, getSiblingDiscount])
 
   const toggleFamilyExpanded = (familyId: string) => {
-    setExpandedFamilies(prev =>
+    setExpandedFamilies((prev: string[]) =>
       prev.includes(familyId)
-        ? prev.filter(id => id !== familyId)
+        ? prev.filter((id: string) => id !== familyId)
         : [...prev, familyId]
     )
   }
@@ -223,7 +234,7 @@ export function FamilyGroups() {
       createdAt: new Date()
     }
     addFamily(newFamily)
-    toast.success("Family created successfully")
+    toast.success(t("familyGroups.familyCreated"))
     setIsAddDialogOpen(false)
     setFormData(emptyFamily)
   }
@@ -231,7 +242,7 @@ export function FamilyGroups() {
   const handleSaveEditFamily = () => {
     if (selectedFamily) {
       updateFamily(selectedFamily.id, formData)
-      toast.success("Family updated successfully")
+      toast.success(t("familyGroups.familyUpdated"))
       setIsEditDialogOpen(false)
       setSelectedFamily(null)
     }
@@ -241,12 +252,12 @@ export function FamilyGroups() {
     if (selectedFamily) {
       // Remove family reference from all students in this family
       const familyStudents = getStudentsByFamily(selectedFamily.id)
-      familyStudents.forEach(student => {
+      familyStudents.forEach((student: Student) => {
         updateStudent(student.id, { familyId: "", childOrder: 1 })
       })
 
       deleteFamily(selectedFamily.id)
-      toast.success("Family deleted successfully")
+      toast.success(t("familyGroups.familyDeleted"))
       setIsDeleteDialogOpen(false)
       setSelectedFamily(null)
     }
@@ -268,7 +279,7 @@ export function FamilyGroups() {
         studentIds: [...selectedFamily.studentIds, selectedStudentToAdd]
       })
 
-      toast.success("Student added to family")
+      toast.success(t("familyGroups.studentAdded"))
       setIsAddStudentDialogOpen(false)
       setSelectedStudentToAdd("")
     }
@@ -292,7 +303,7 @@ export function FamilyGroups() {
           updateStudent(s.id, { childOrder: index + 1 })
         })
 
-        toast.success("Student removed from family")
+        toast.success(t("familyGroups.studentRemoved"))
       }
     }
   }
@@ -307,14 +318,14 @@ export function FamilyGroups() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Family Groups</h2>
+          <h2 className="text-xl font-semibold">{t("familyGroups.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage family groups and sibling relationships for discount calculation
+            {t("familyGroups.subtitle")}
           </p>
         </div>
         <Button onClick={handleAddFamily}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Family
+          {t("familyGroups.addFamily")}
         </Button>
       </div>
 
@@ -322,7 +333,7 @@ export function FamilyGroups() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Families</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("familyGroups.totalFamilies")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalFamilies}</div>
@@ -330,7 +341,7 @@ export function FamilyGroups() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Students in Families</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("familyGroups.studentsInFamilies")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalStudentsInFamilies}</div>
@@ -338,7 +349,7 @@ export function FamilyGroups() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Multi-Child Families</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("familyGroups.multiChildFamilies")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{stats.multiChildFamilies}</div>
@@ -346,7 +357,7 @@ export function FamilyGroups() {
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Students with Discount</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700">{t("familyGroups.studentsWithDiscount")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">{stats.studentsWithDiscount}</div>
@@ -359,9 +370,9 @@ export function FamilyGroups() {
         <CardContent className="pt-6">
           <div className="relative max-w-md">
             <Input
-              placeholder="Search families..."
+              placeholder={t("familyGroups.searchFamilies")}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className=""
             />
           </div>
@@ -373,11 +384,11 @@ export function FamilyGroups() {
         {paginatedFamilies.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              No families found. Create a family to group siblings together.
+              {t("familyGroups.noFamiliesFound")}
             </CardContent>
           </Card>
         ) : (
-          paginatedFamilies.map(family => {
+          paginatedFamilies.map((family: Family) => {
             const familyStudents = getStudentsByFamily(family.id)
             const isExpanded = expandedFamilies.includes(family.id)
             const totalDiscount = getTotalDiscount(family.id)
@@ -479,6 +490,7 @@ export function FamilyGroups() {
                               <TableHead>Student ID</TableHead>
                               <TableHead>Year Group</TableHead>
                               <TableHead>Sibling Discount</TableHead>
+                              <TableHead>Fee Waiver</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -518,6 +530,32 @@ export function FamilyGroups() {
                                     <span className="text-muted-foreground">No discount</span>
                                   )}
                                 </TableCell>
+                                <TableCell>
+                                  {(() => {
+                                    const eligibility = checkFeePrivilegeEligibility(
+                                      student,
+                                      student.academicYear,
+                                      student.enrollmentTerm
+                                    )
+                                    if (eligibility.eligible) {
+                                      return (
+                                        <div>
+                                          <Badge className="bg-indigo-100 text-indigo-800">
+                                            ฿{eligibility.creditPerTerm?.toLocaleString()}/term
+                                          </Badge>
+                                          <p className="text-xs text-indigo-600 mt-1">{eligibility.reason}</p>
+                                        </div>
+                                      )
+                                    } else {
+                                      return (
+                                        <div>
+                                          <Badge variant="outline" className="text-gray-500">Pending</Badge>
+                                          <p className="text-xs text-muted-foreground mt-1">{eligibility.reason}</p>
+                                        </div>
+                                      )
+                                    }
+                                  })()}
+                                </TableCell>
                                 <TableCell className="text-right">
                                   <Button
                                     variant="ghost"
@@ -534,19 +572,58 @@ export function FamilyGroups() {
                         </Table>
                       )}
 
-                      {/* Discount Summary */}
-                      {familyStudents.length > 1 && (
-                        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <h4 className="font-medium text-green-800 mb-2">Sibling Discount Summary</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            {familyStudents.map(student => (
-                              <div key={student.id}>
-                                <p className="text-green-700">{student.firstName}</p>
-                                <p className="font-bold text-green-800">
-                                  {getSiblingDiscount(student)}% discount
-                                </p>
+                      {/* Discount & Fee Waiver Summary */}
+                      {familyStudents.length >= 1 && (
+                        <div className="mt-4 space-y-3">
+                          {/* Sibling Discount Summary */}
+                          {familyStudents.some(s => getSiblingDiscount(s) > 0) && (
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                              <h4 className="font-medium text-green-800 mb-2">Sibling Discount Summary</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                {familyStudents.map(student => (
+                                  <div key={student.id}>
+                                    <p className="text-green-700">{student.firstName}</p>
+                                    <p className="font-bold text-green-800">
+                                      {getSiblingDiscount(student)}% discount
+                                    </p>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+                          )}
+
+                          {/* Fee Waiver Summary */}
+                          <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                            <h4 className="font-medium text-indigo-800 mb-2">Registration Fee Waiver Program</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              {familyStudents.map(student => {
+                                const eligibility = checkFeePrivilegeEligibility(
+                                  student,
+                                  student.academicYear,
+                                  student.enrollmentTerm
+                                )
+                                return (
+                                  <div key={student.id}>
+                                    <p className="text-indigo-700 font-medium">
+                                      {student.firstName} (Child #{student.childOrder})
+                                    </p>
+                                    {eligibility.eligible ? (
+                                      <>
+                                        <p className="font-bold text-indigo-800">
+                                          ฿{eligibility.creditPerTerm?.toLocaleString()}/term
+                                        </p>
+                                        <p className="text-xs text-indigo-600">{eligibility.reason}</p>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="font-medium text-gray-500">Pending</p>
+                                        <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
+                                      </>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -575,11 +652,14 @@ export function FamilyGroups() {
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <span>entries</span>
+            <span>{t("familyGroups.entries")}</span>
           </div>
 
           <div className="text-sm text-muted-foreground">
-            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedFamilies.length)} of {sortedFamilies.length} families
+            {t("familyGroups.showingOf")
+              .replace("{from}", String(((currentPage - 1) * pageSize) + 1))
+              .replace("{to}", String(Math.min(currentPage * pageSize, sortedFamilies.length)))
+              .replace("{total}", String(sortedFamilies.length))}
           </div>
 
           <div className="flex items-center gap-1">
@@ -590,7 +670,7 @@ export function FamilyGroups() {
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
+              {t("familyGroups.previous")}
             </Button>
             <div className="flex items-center gap-1 mx-2">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -623,7 +703,7 @@ export function FamilyGroups() {
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
             >
-              Next
+              {t("familyGroups.next")}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -661,12 +741,12 @@ export function FamilyGroups() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>Create New Family</DialogTitle>
+            <DialogTitle>{t("familyGroups.createNewFamily")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Family Code *</Label>
+                <Label>{t("familyGroups.familyCode")} *</Label>
                 <Input
                   value={formData.familyCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyCode: e.target.value.toUpperCase() }))}
@@ -675,7 +755,7 @@ export function FamilyGroups() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Family Name *</Label>
+                <Label>{t("familyGroups.familyName")} *</Label>
                 <Input
                   value={formData.familyName}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyName: e.target.value }))}
@@ -684,7 +764,7 @@ export function FamilyGroups() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label>{t("familyGroups.address")}</Label>
               <Input
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
@@ -692,7 +772,7 @@ export function FamilyGroups() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email * (for invoices)</Label>
+              <Label>{t("familyGroups.emailForInvoices")} *</Label>
               <Input
                 type="email"
                 value={formData.email}
@@ -701,7 +781,7 @@ export function FamilyGroups() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{t("familyGroups.phone")}</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
@@ -711,10 +791,10 @@ export function FamilyGroups() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
+              {t("familyGroups.cancel")}
             </Button>
             <Button onClick={handleSaveNewFamily} disabled={!formData.familyCode || !formData.familyName || !formData.email}>
-              Create Family
+              {t("familyGroups.createFamily")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -724,12 +804,12 @@ export function FamilyGroups() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>Edit Family</DialogTitle>
+            <DialogTitle>{t("familyGroups.editFamily")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Family Code *</Label>
+                <Label>{t("familyGroups.familyCode")} *</Label>
                 <Input
                   value={formData.familyCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyCode: e.target.value.toUpperCase() }))}
@@ -738,7 +818,7 @@ export function FamilyGroups() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Family Name *</Label>
+                <Label>{t("familyGroups.familyName")} *</Label>
                 <Input
                   value={formData.familyName}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyName: e.target.value }))}
@@ -747,7 +827,7 @@ export function FamilyGroups() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label>{t("familyGroups.address")}</Label>
               <Input
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
@@ -755,7 +835,7 @@ export function FamilyGroups() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email * (for invoices)</Label>
+              <Label>{t("familyGroups.emailForInvoices")} *</Label>
               <Input
                 type="email"
                 value={formData.email}
@@ -764,7 +844,7 @@ export function FamilyGroups() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{t("familyGroups.phone")}</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
@@ -774,10 +854,10 @@ export function FamilyGroups() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
+              {t("familyGroups.cancel")}
             </Button>
             <Button onClick={handleSaveEditFamily} disabled={!formData.familyCode || !formData.familyName || !formData.email}>
-              Save Changes
+              {t("familyGroups.saveChanges")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -787,22 +867,22 @@ export function FamilyGroups() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Delete Family</DialogTitle>
+            <DialogTitle>{t("familyGroups.deleteFamily")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-muted-foreground">
-              Are you sure you want to delete the <strong>{selectedFamily?.familyName}</strong> family?
+              {t("familyGroups.confirmDeleteFamily").replace("{name}", selectedFamily?.familyName || "")}
             </p>
             <p className="text-sm text-amber-600 mt-2">
-              All students in this family will be removed from the family group and will lose their sibling discounts.
+              {t("familyGroups.deleteWarning")}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
+              {t("familyGroups.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete Family
+              {t("familyGroups.deleteFamily")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -812,22 +892,22 @@ export function FamilyGroups() {
       <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Add Student to {selectedFamily?.familyName} Family</DialogTitle>
+            <DialogTitle>{t("familyGroups.addStudentTo").replace("{name}", selectedFamily?.familyName || "")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             {studentsWithoutFamily.length === 0 ? (
               <p className="text-muted-foreground text-center">
-                All students are already assigned to a family.
+                {t("familyGroups.allStudentsAssigned")}
               </p>
             ) : (
               <div className="space-y-2">
-                <Label>Select Student</Label>
+                <Label>{t("familyGroups.selectStudent")}</Label>
                 <Select value={selectedStudentToAdd} onValueChange={setSelectedStudentToAdd}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a student" />
+                    <SelectValue placeholder={t("familyGroups.selectAStudent")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {studentsWithoutFamily.map(student => (
+                    {studentsWithoutFamily.map((student: Student) => (
                       <SelectItem key={student.id} value={student.id}>
                         {student.firstName} {student.lastName} ({student.studentId})
                       </SelectItem>
@@ -835,20 +915,20 @@ export function FamilyGroups() {
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground mt-2">
-                  The student will be added as child #{(getStudentsByFamily(selectedFamily?.id || "").length || 0) + 1}
+                  {t("familyGroups.willBeAddedAsChild").replace("{num}", String((getStudentsByFamily(selectedFamily?.id || "").length || 0) + 1))}
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>
-              Cancel
+              {t("familyGroups.cancel")}
             </Button>
             <Button
               onClick={handleConfirmAddStudent}
               disabled={!selectedStudentToAdd || studentsWithoutFamily.length === 0}
             >
-              Add to Family
+              {t("familyGroups.addToFamily")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, RefreshCw, Sun, Calendar } from "lucide-react"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface ImportStatus {
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error'

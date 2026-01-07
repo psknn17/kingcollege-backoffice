@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useStudents } from "@/contexts/StudentContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
@@ -18,7 +19,7 @@ import { EmptySearchResults, EmptyDataState } from "./ui/states"
 import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
@@ -34,7 +35,7 @@ interface Invoice {
   totalAmount: number
   discountAmount: number
   finalAmount: number
-  status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
+  status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "overdue" | "cancelled"
   issueDate: Date
   dueDate: Date
   paidDate?: Date
@@ -46,6 +47,13 @@ interface Invoice {
   recipientName?: string
   recipientAddress?: string
   eventName?: string
+  // Approval fields
+  approvedBy?: string
+  approvedAt?: Date
+  rejectedReason?: string
+  // Academic info
+  term?: string
+  academicYear?: string
 }
 
 interface InvoiceItem {
@@ -137,7 +145,10 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           invoiceType: inv.invoiceType,
           recipientName: inv.recipientName,
           recipientAddress: inv.recipientAddress,
-          eventName: inv.eventName
+          eventName: inv.eventName,
+          // Academic info
+          term: inv.term || "",
+          academicYear: inv.academicYear || ""
         }
       })
     }
@@ -294,10 +305,11 @@ interface InvoiceManagementProps {
 }
 
 export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: InvoiceManagementProps) {
+  const { t } = useLanguage()
   // Discount Options context for late payment calculations
   const { getLatePaymentSettings, getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears = [] } = useAcademicYears()
-  const { students, getSiblingDiscount } = useStudents()
+  const { students, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
 
   // Load invoices from localStorage
   const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
@@ -370,28 +382,34 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [isImporting, setIsImporting] = useState(false)
-  
+
   // Create invoice state
   const [selectedGrade, setSelectedGrade] = useState("")
   const [selectedTemplate, setSelectedTemplate] = useState<InvoiceTemplate | null>(null)
-  
+
   // Student selection state
   const [studentSelectionType, setStudentSelectionType] = useState<"individual" | "csv" | "all">("individual")
   const [searchStudentTerm, setSearchStudentTerm] = useState("")
   const [selectedStudents, setSelectedStudents] = useState<any[]>([])
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvStudents, setCsvStudents] = useState<any[]>([])
-  
+
   // Item selection state
   const [availableItems, setAvailableItems] = useState<PreCreatedItem[]>([])
   const [selectedItems, setSelectedItems] = useState<PreCreatedItem[]>([])
-  
+
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false)
   const [newItem, setNewItem] = useState({
     description: "",
     amount: "",
     discountPercent: ""
   })
+
+  // Approval dialog state
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false)
+  const [selectedInvoiceForApproval, setSelectedInvoiceForApproval] = useState<Invoice | null>(null)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve")
 
   const applyFilters = (tabType?: "student" | "external") => {
     const currentTab = tabType || invoiceTypeTab
@@ -491,7 +509,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
         parentName: invoice.parentName
       }
     }
-    
+
     // Use new navigation instead of modal
     if (onNavigateToView) {
       onNavigateToView("invoice", modalData)
@@ -648,17 +666,17 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     setCsvStudents([])
     setCsvFile(null)
     setSelectedItems([])
-    
+
     // Filter available items for this grade
-    const gradeItems = mockPreCreatedItems.filter(item => 
+    const gradeItems = mockPreCreatedItems.filter(item =>
       item.isActive && item.applicableGrades.includes(grade)
     )
     setAvailableItems(gradeItems)
   }
 
-  const filteredStudents = mockStudents.filter(student => 
+  const filteredStudents = mockStudents.filter(student =>
     (student.id.toLowerCase().includes(searchStudentTerm.toLowerCase()) ||
-     student.name.toLowerCase().includes(searchStudentTerm.toLowerCase())) &&
+      student.name.toLowerCase().includes(searchStudentTerm.toLowerCase())) &&
     student.grade === selectedGrade &&
     !selectedStudents.find(s => s.id === student.id)
   )
@@ -764,7 +782,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     }
 
     const totalItems = selectedItems.reduce((sum, item) => sum + item.amount, 0)
-    
+
     toast.success(`Created ${selectedStudents.length} invoices with ${selectedItems.length} items each - Total per invoice: ₿${totalItems.toLocaleString()}`)
     closeCreateModal()
   }
@@ -803,18 +821,109 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     }
   }
 
+  // Approval handlers
+  const handleApproveInvoice = (invoice: Invoice) => {
+    const updatedInvoices = invoices.map(inv =>
+      inv.id === invoice.id
+        ? {
+          ...inv,
+          status: "approved" as const,
+          approvedBy: "Admin",
+          approvedAt: new Date()
+        }
+        : inv
+    )
+    setInvoices(updatedInvoices)
+
+    // Update localStorage
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      if (stored) {
+        const savedInvoices = JSON.parse(stored)
+        const updatedSavedInvoices = savedInvoices.map((inv: any) =>
+          inv.id === invoice.id
+            ? {
+              ...inv,
+              status: "approved",
+              approvedBy: "Admin",
+              approvedAt: new Date().toISOString()
+            }
+            : inv
+        )
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
+      }
+    } catch (error) {
+      console.error("Failed to update invoice approval in localStorage:", error)
+    }
+
+    toast.success(`Invoice ${invoice.invoiceNumber} has been approved`)
+    setIsApprovalDialogOpen(false)
+    setSelectedInvoiceForApproval(null)
+  }
+
+  const handleRejectInvoice = (invoice: Invoice, reason: string) => {
+    const updatedInvoices = invoices.map(inv =>
+      inv.id === invoice.id
+        ? {
+          ...inv,
+          status: "rejected" as const,
+          rejectedReason: reason
+        }
+        : inv
+    )
+    setInvoices(updatedInvoices)
+
+    // Update localStorage
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      if (stored) {
+        const savedInvoices = JSON.parse(stored)
+        const updatedSavedInvoices = savedInvoices.map((inv: any) =>
+          inv.id === invoice.id
+            ? {
+              ...inv,
+              status: "rejected",
+              rejectedReason: reason
+            }
+            : inv
+        )
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
+      }
+    } catch (error) {
+      console.error("Failed to update invoice rejection in localStorage:", error)
+    }
+
+    toast.success(`Invoice ${invoice.invoiceNumber} has been rejected`)
+    setIsApprovalDialogOpen(false)
+    setSelectedInvoiceForApproval(null)
+    setRejectionReason("")
+  }
+
+  const openApprovalDialog = (invoice: Invoice, action: "approve" | "reject") => {
+    setSelectedInvoiceForApproval(invoice)
+    setApprovalAction(action)
+    setRejectionReason("")
+    setIsApprovalDialogOpen(true)
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "draft":
-        return <Badge variant="secondary"><FileText className="w-3 h-3 mr-1" />Draft</Badge>
+        return <Badge variant="secondary"><FileText className="w-3 h-3 mr-1" />{t("common.draft")}</Badge>
+      case "pending_approval":
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />{t("invoice.pendingApproval")}</Badge>
+      case "approved":
+        return <Badge className="bg-purple-100 text-purple-800"><CheckCircle className="w-3 h-3 mr-1" />{t("common.approved")}</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800"><X className="w-3 h-3 mr-1" />{t("common.rejected")}</Badge>
       case "sent":
-        return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
+        return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />{t("common.sent")}</Badge>
       case "paid":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t("common.paid")}</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Overdue</Badge>
+        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />{t("common.overdue")}</Badge>
       case "cancelled":
-        return <Badge className="bg-gray-100 text-gray-800"><X className="w-3 h-3 mr-1" />Cancelled</Badge>
+        return <Badge className="bg-gray-100 text-gray-800"><X className="w-3 h-3 mr-1" />{t("common.cancelled")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -832,6 +941,9 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
   const summaryStats = {
     total: tabFilteredInvoices.length,
     draft: tabFilteredInvoices.filter(inv => inv.status === "draft").length,
+    pendingApproval: tabFilteredInvoices.filter(inv => inv.status === "pending_approval").length,
+    approved: tabFilteredInvoices.filter(inv => inv.status === "approved").length,
+    rejected: tabFilteredInvoices.filter(inv => inv.status === "rejected").length,
     sent: tabFilteredInvoices.filter(inv => inv.status === "sent").length,
     paid: tabFilteredInvoices.filter(inv => inv.status === "paid").length,
     overdue: tabFilteredInvoices.filter(inv => inv.status === "overdue").length,
@@ -842,36 +954,36 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Invoice Management</h2>
+          <h2 className="text-xl font-semibold">{t("invoice.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Create and manage student invoices with templates and discounts
+            {t("invoice.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2" onClick={() => { reloadInvoices(); toast.success("Invoice list refreshed") }}>
+          <Button variant="outline" className="flex items-center gap-2" onClick={() => { reloadInvoices(); toast.success(t("invoice.refreshed")) }}>
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            {t("common.refresh")}
           </Button>
           <Button variant="outline" className="flex items-center gap-2" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="w-4 h-4" />
-            Import Excel
+            {t("invoice.importExcel")}
           </Button>
           <Button variant="outline" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export Report
+            {t("invoice.exportReport")}
           </Button>
           <Button onClick={() => onNavigateToSubPage('invoice-creation')} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            Create Invoice
+            {t("invoice.createInvoice")}
           </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoice.totalInvoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
@@ -880,16 +992,25 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Draft</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoice.pendingApproval")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{summaryStats.draft}</div>
+            <div className="text-2xl font-bold text-yellow-600">{summaryStats.pendingApproval}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Sent</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.approved")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{summaryStats.approved}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">{t("common.sent")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.sent}</div>
@@ -898,7 +1019,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.paid")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.paid}</div>
@@ -907,7 +1028,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.overdue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{summaryStats.overdue}</div>
@@ -916,10 +1037,10 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("invoice.totalAmount")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₿{summaryStats.totalAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">฿{summaryStats.totalAmount.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -929,368 +1050,399 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="student" className="flex items-center gap-2">
             <GraduationCap className="w-4 h-4" />
-            Student Invoice
+            {t("invoice.studentInvoices")}
           </TabsTrigger>
           <TabsTrigger value="external" className="flex items-center gap-2">
             <Building className="w-4 h-4" />
-            External Invoice
+            {t("invoice.externalInvoices")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="student" className="space-y-4">
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="w-4 h-4" />
-              Search & Filter
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Row 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Search</label>
-              <SearchInput
-                placeholder="Invoice, student, parent..."
-                value={searchTerm}
-                onChange={setSearchTerm}
-                className="h-9"
-              />
-            </div>
-
-            {/* Academic Year */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
-              <Select value={academicYearFilter} onValueChange={(value) => {
-                setAcademicYearFilter(value)
-                setTermFilter("all") // Reset term when year changes
-              }}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Years" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Term */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
-              <Select value={termFilter} onValueChange={setTermFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Terms" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Terms</SelectItem>
-                  {availableTerms.map(term => (
-                    <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Row 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Year Group */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Year Groups" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Year Groups</SelectItem>
-                  {grades.map(grade => (
-                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Status */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">
-                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Draft</Badge>
-                  </SelectItem>
-                  <SelectItem value="sent">
-                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge>
-                  </SelectItem>
-                  <SelectItem value="paid">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
-                  </SelectItem>
-                  <SelectItem value="overdue">
-                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>
-                  </SelectItem>
-                  <SelectItem value="cancelled">
-                    <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Cancelled</Badge>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Range */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Date Range</label>
-              <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom || undefined}
-                      onSelect={setDateFrom}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <span className="text-muted-foreground">→</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo || undefined}
-                      onSelect={setDateTo}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredInvoices.length} of {invoices.length} invoices
-        </p>
-      </div>
-
-      {/* Invoices Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice Number</TableHead>
-                <TableHead>Student</TableHead>
-                <TableHead>Year Group</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Issue Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedInvoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-mono text-sm">
-                    {invoice.invoiceNumber}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{invoice.studentName}</div>
-                      <div className="text-sm text-muted-foreground">{invoice.studentId}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{invoice.studentGrade}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">
-                      ₿{invoice.finalAmount.toLocaleString()}
-                    </div>
-                    {invoice.discountAmount > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        Discount: ₿{invoice.discountAmount.toLocaleString()}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                  <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 justify-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          // Open Modal (view only)
-                          setSelectedInvoice(invoice)
-                          setIsModalOpen(true)
-                        }}
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={invoice.status !== "draft"}
-                        className={invoice.status !== "draft" ? "opacity-30 cursor-not-allowed" : ""}
-                        onClick={() => {
-                          if (invoice.status !== "draft") return
-                          // Navigate to full page (can edit)
-                          if (onNavigateToView) {
-                            const invoiceData = {
-                              ...invoice,
-                              invoiceNumber: invoice.invoiceNumber,
-                              studentName: invoice.studentName,
-                              studentId: invoice.studentId,
-                              grade: invoice.studentGrade,
-                              parentEmail: invoice.parentEmail,
-                              amount: invoice.finalAmount,
-                              total: invoice.finalAmount,
-                              status: invoice.status,
-                              issueDate: invoice.issueDate.toISOString(),
-                              dueDate: invoice.dueDate.toISOString(),
-                              items: invoice.items.map(item => ({
-                                name: item.description,
-                                description: item.description,
-                                quantity: 1,
-                                amount: item.discountedAmount
-                              })),
-                              invoiceType: "student",
-                              viewOnly: false  // Can edit
-                            }
-                            onNavigateToView("invoice", invoiceData)
-                          } else {
-                            setSelectedInvoice(invoice)
-                            setIsEditModalOpen(true)
-                          }
-                        }}
-                        title={invoice.status === "draft" ? "Edit" : "Cannot edit (not draft)"}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => downloadInvoice(invoice.id)}
-                        title="Download"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => sendInvoice(invoice.id)}
-                        title="Send Email"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          {filteredInvoices.length > 0 && (
-            <div className="flex items-center justify-between border-t p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Show</span>
-                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span>entries</span>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredInvoices.length)} of {filteredInvoices.length} invoices
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1 mx-2">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum: number
-                    if (totalPages <= 5) {
-                      pageNum = i + 1
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i
-                    } else {
-                      pageNum = currentPage - 2 + i
-                    }
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        className="w-8 h-8 p-0"
-                        onClick={() => setCurrentPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
+          {/* Filters */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Filter className="w-4 h-4" />
+                  {t("invoice.searchFilter")}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Row 1 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Search */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
+                  <SearchInput
+                    placeholder={t("invoice.searchPlaceholder")}
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    className="h-9"
+                  />
+                </div>
+
+                {/* Academic Year */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
+                  <Select value={academicYearFilter} onValueChange={(value) => {
+                    setAcademicYearFilter(value)
+                    setTermFilter("all") // Reset term when year changes
+                  }}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allYears")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
+                      {academicYears.map(year => (
+                        <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Term */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
+                  <Select value={termFilter} onValueChange={setTermFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allTerms")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
+                      {availableTerms.map(term => (
+                        <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Year Group */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
+                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allYearGroups")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
+                      {grades.map(grade => (
+                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="pending_approval">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("invoice.pendingApproval")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="approved">
+                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("common.approved")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="rejected">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.rejected")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="draft">
+                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t("common.draft")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="sent">
+                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t("common.sent")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="paid">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("common.paid")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="overdue">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.overdue")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="cancelled">
+                        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">{t("common.cancelled")}</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date Range */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.dateRange")}</label>
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("date.from")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dateFrom || undefined}
+                          onSelect={setDateFrom}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-muted-foreground">→</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateTo ? format(dateTo, "dd/MM/yy") : t("date.to")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dateTo || undefined}
+                          onSelect={setDateTo}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Results Summary */}
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              {t("invoice.show")} {filteredInvoices.length} / {invoices.length} {t("invoice.entries")}
+            </p>
+          </div>
+
+          {/* Invoices Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("invoice.invoiceNumber")}</TableHead>
+                    <TableHead>{t("invoice.student")}</TableHead>
+                    <TableHead>{t("invoice.yearGroup")}</TableHead>
+                    <TableHead>{t("common.amount")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("invoice.issueDate")}</TableHead>
+                    <TableHead>{t("invoice.dueDate")}</TableHead>
+                    <TableHead className="text-center">{t("common.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-mono text-sm">
+                        {invoice.invoiceNumber}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{invoice.studentName}</div>
+                          <div className="text-sm text-muted-foreground">{invoice.studentId}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{invoice.studentGrade}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          ₿{invoice.finalAmount.toLocaleString()}
+                        </div>
+                        {invoice.discountAmount > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Discount: ₿{invoice.discountAmount.toLocaleString()}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                      <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 justify-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              // Open Modal (view only)
+                              setSelectedInvoice(invoice)
+                              setIsModalOpen(true)
+                            }}
+                            title="View"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={invoice.status !== "draft"}
+                            className={invoice.status !== "draft" ? "opacity-30 cursor-not-allowed" : ""}
+                            onClick={() => {
+                              if (invoice.status !== "draft") return
+                              // Navigate to full page (can edit)
+                              if (onNavigateToView) {
+                                const invoiceData = {
+                                  ...invoice,
+                                  invoiceNumber: invoice.invoiceNumber,
+                                  studentName: invoice.studentName,
+                                  studentId: invoice.studentId,
+                                  grade: invoice.studentGrade,
+                                  parentEmail: invoice.parentEmail,
+                                  amount: invoice.finalAmount,
+                                  total: invoice.finalAmount,
+                                  status: invoice.status,
+                                  issueDate: invoice.issueDate.toISOString(),
+                                  dueDate: invoice.dueDate.toISOString(),
+                                  items: invoice.items.map(item => ({
+                                    name: item.description,
+                                    description: item.description,
+                                    quantity: 1,
+                                    amount: item.discountedAmount
+                                  })),
+                                  invoiceType: "student",
+                                  viewOnly: false  // Can edit
+                                }
+                                onNavigateToView("invoice", invoiceData)
+                              } else {
+                                setSelectedInvoice(invoice)
+                                setIsEditModalOpen(true)
+                              }
+                            }}
+                            title={invoice.status === "draft" ? "Edit" : "Cannot edit (not draft)"}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => downloadInvoice(invoice.id)}
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => sendInvoice(invoice.id)}
+                            title="Send Email"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </Button>
+                          {invoice.status === "pending_approval" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => openApprovalDialog(invoice, "approve")}
+                                title="Approve"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => openApprovalDialog(invoice, "reject")}
+                                title="Reject"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination Controls */}
+              {filteredInvoices.length > 0 && (
+                <div className="flex items-center justify-between border-t p-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{t("invoice.show")}</span>
+                    <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                      <SelectTrigger className="w-[70px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>{t("invoice.entries")}</span>
+                  </div>
+
+                  <div className="text-sm text-muted-foreground">
+                    {t("invoice.show")} {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredInvoices.length)} / {filteredInvoices.length} {t("invoice.entries")}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      {t("invoice.previous")}
+                    </Button>
+                    <div className="flex items-center gap-1 mx-2">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number
+                        if (totalPages <= 5) {
+                          pageNum = i + 1
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i
+                        } else {
+                          pageNum = currentPage - 2 + i
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => setCurrentPage(pageNum)}
+                          >
+                            {pageNum}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      {t("invoice.next")}
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* External Invoice Tab */}
@@ -1301,11 +1453,11 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Filter className="w-4 h-4" />
-                  Search & Filter
+                  {t("invoice.searchFilter")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={() => applyFilters("external")} className="h-9">Apply</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+                  <Button onClick={() => applyFilters("external")} className="h-9">{t("invoice.apply")}</Button>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>
             </CardHeader>
@@ -1313,9 +1465,9 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Search */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">Search</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                   <SearchInput
-                    placeholder="Invoice, recipient..."
+                    placeholder={t("invoice.searchPlaceholder")}
                     value={searchTerm}
                     onChange={setSearchTerm}
                     className="h-9"
@@ -1324,30 +1476,39 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
                 {/* Status */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="All Status" />
+                      <SelectValue placeholder={t("invoice.allStatus")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="sent">Sent</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="overdue">Overdue</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="pending_approval">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("invoice.pendingApproval")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="approved">
+                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("common.approved")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="rejected">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.rejected")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="draft">{t("common.draft")}</SelectItem>
+                      <SelectItem value="sent">{t("common.sent")}</SelectItem>
+                      <SelectItem value="paid">{t("common.paid")}</SelectItem>
+                      <SelectItem value="overdue">{t("common.overdue")}</SelectItem>
+                      <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Date From */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">From Date</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.fromDate")}</label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full h-9 justify-start font-normal">
                         <CalendarIcon className="w-4 h-4 mr-2" />
-                        {dateFrom ? format(dateFrom, "PP") : "Select date"}
+                        {dateFrom ? format(dateFrom, "PP") : t("invoice.selectDate")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -1358,12 +1519,12 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
 
                 {/* Date To */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">To Date</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.toDate")}</label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full h-9 justify-start font-normal">
                         <CalendarIcon className="w-4 h-4 mr-2" />
-                        {dateTo ? format(dateTo, "PP") : "Select date"}
+                        {dateTo ? format(dateTo, "PP") : t("invoice.selectDate")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -1380,21 +1541,21 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
             <CardContent className="pt-6">
               {filteredInvoices.length === 0 ? (
                 <EmptyDataState
-                  title="No external invoices"
-                  description="Create an external invoice to get started"
+                  title={t("invoice.noExternalInvoices")}
+                  description={t("invoice.createExternalDesc")}
                 />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice Number</TableHead>
-                      <TableHead>Recipient</TableHead>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Issue Date</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
+                      <TableHead>{t("invoice.invoiceNumber")}</TableHead>
+                      <TableHead>{t("invoice.recipient")}</TableHead>
+                      <TableHead>{t("invoice.event")}</TableHead>
+                      <TableHead>{t("common.amount")}</TableHead>
+                      <TableHead>{t("common.status")}</TableHead>
+                      <TableHead>{t("invoice.issueDate")}</TableHead>
+                      <TableHead>{t("invoice.dueDate")}</TableHead>
+                      <TableHead className="text-center">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1414,9 +1575,9 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                         <TableCell>
                           <Badge variant={
                             invoice.status === "paid" ? "default" :
-                            invoice.status === "sent" ? "secondary" :
-                            invoice.status === "draft" ? "outline" :
-                            invoice.status === "overdue" ? "destructive" : "outline"
+                              invoice.status === "sent" ? "secondary" :
+                                invoice.status === "draft" ? "outline" :
+                                  invoice.status === "overdue" ? "destructive" : "outline"
                           }>
                             {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                           </Badge>
@@ -1497,6 +1658,28 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                             >
                               <Mail className="w-4 h-4" />
                             </Button>
+                            {invoice.status === "pending_approval" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => openApprovalDialog(invoice, "approve")}
+                                  title="Approve"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => openApprovalDialog(invoice, "reject")}
+                                  title="Reject"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1509,7 +1692,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               {filteredInvoices.length > 0 && (
                 <div className="flex items-center justify-between border-t p-4 mt-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Show</span>
+                    <span>{t("invoice.show")}</span>
                     <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
                       <SelectTrigger className="w-[70px] h-8">
                         <SelectValue />
@@ -1521,10 +1704,10 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                         <SelectItem value="100">100</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span>entries</span>
+                    <span>{t("invoice.entries")}</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredInvoices.length)} of {filteredInvoices.length} invoices
+                    {t("invoice.show")} {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredInvoices.length)} / {filteredInvoices.length} {t("invoice.entries")}
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1534,7 +1717,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                       disabled={currentPage === 1}
                     >
                       <ChevronLeft className="w-4 h-4" />
-                      Previous
+                      {t("invoice.previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1542,7 +1725,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
                     >
-                      Next
+                      {t("invoice.next")}
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
@@ -1625,6 +1808,19 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                             <span className="text-sm text-gray-500">Contact Name</span>
                             <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
                           </div>
+                          {/* New Student Indicator - if Application/Registration fees exist */}
+                          {selectedInvoice.items.some(item =>
+                            item.description.toLowerCase().includes('application') ||
+                            item.description.toLowerCase().includes('registration fee') ||
+                            item.description.toLowerCase().includes('security deposit')
+                          ) && (
+                              <div className="flex justify-between items-center pt-2 border-t mt-2">
+                                <span className="text-sm text-gray-500">Status</span>
+                                <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                                  New Student
+                                </Badge>
+                              </div>
+                            )}
                         </>
                       )}
                     </div>
@@ -1674,20 +1870,33 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedInvoice.items.map((item, index) => (
-                        <tr key={item.id} className="border-b last:border-b-0">
-                          <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
-                          <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
-                            {item.description}
-                            {item.discountPercent > 0 && (
-                              <span className="text-gray-400 text-xs ml-2">(-{item.discountPercent}%)</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
-                            {formatCurrency(item.discountedAmount)}
-                          </td>
-                        </tr>
-                      ))}
+                      {selectedInvoice.items.map((item, index) => {
+                        const isRegistrationFee =
+                          item.description.toLowerCase().includes('application') ||
+                          item.description.toLowerCase().includes('registration fee') ||
+                          item.description.toLowerCase().includes('security deposit')
+                        return (
+                          <tr key={item.id} className={`border-b last:border-b-0 ${isRegistrationFee ? 'bg-amber-50' : ''}`}>
+                            <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
+                            <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span>{item.description}</span>
+                                {isRegistrationFee && (
+                                  <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                    New Student Fee
+                                  </Badge>
+                                )}
+                              </div>
+                              {item.discountPercent > 0 && (
+                                <span className="text-gray-400 text-xs">(-{item.discountPercent}%)</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
+                              {formatCurrency(item.discountedAmount)}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                   {/* Subtotal, Discounts, Late Fee, Total */}
@@ -1743,6 +1952,57 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                       })
                     }
 
+                    // 4. Fee Waiver Program (฿75,000/term for eligible students)
+                    if (student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                      const feeWaiverEligibility = checkFeePrivilegeEligibility(
+                        student,
+                        student.academicYear || selectedInvoice.academicYear,
+                        student.enrollmentTerm || "term1"
+                      )
+                      if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
+                        discountLines.push({
+                          name: `Fee Waiver Program`,
+                          amount: feeWaiverEligibility.creditPerTerm
+                        })
+                      }
+                    }
+
+                    // 5. Staff Child (50%)
+                    if (student && student.notes?.toLowerCase().includes('staff')) {
+                      const staffAmount = Math.round(subtotal * 50 / 100)
+                      discountLines.push({
+                        name: "Staff Child Discount",
+                        amount: staffAmount,
+                        percent: 50
+                      })
+                    }
+
+                    // 6. Scholarship
+                    if (student && student.notes?.toLowerCase().includes('scholarship')) {
+                      const scholarshipAmount = subtotal // 100% scholarship
+                      discountLines.push({
+                        name: "Scholarship",
+                        amount: scholarshipAmount,
+                        percent: 100
+                      })
+                    }
+
+                    // 7. Early Bird (5%)
+                    if (student && student.notes?.toLowerCase().includes('early bird')) {
+                      const earlyBirdAmount = Math.round(subtotal * 5 / 100)
+                      discountLines.push({
+                        name: "Early Bird Discount",
+                        amount: earlyBirdAmount,
+                        percent: 5
+                      })
+                    }
+
+                    // Get registration fees from saved invoice data (new students)
+                    const savedRegistrationFees = (selectedInvoice as any).registrationFees || []
+                    const savedIdCharges = (selectedInvoice as any).idCharges || 0
+                    const isNewStudent = (selectedInvoice as any).isNewStudent || savedRegistrationFees.length > 0
+                    const registrationFeesTotal = savedRegistrationFees.reduce((sum: number, fee: any) => sum + fee.amount, 0)
+
                     // Calculate late fee (1.5% if overdue)
                     const today = new Date()
                     const dueDate = new Date(selectedInvoice.dueDate)
@@ -1753,19 +2013,31 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                     // Calculate total discounts
                     const totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
 
+                    // Calculate subtotal before ID Charges
+                    const subtotalBeforeIdCharges = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
+
+                    // Use saved ID Charges or calculate if not saved
+                    const idCharges = savedIdCharges > 0 ? savedIdCharges : Math.round(subtotalBeforeIdCharges * 0.03)
+
                     // Final total
-                    const finalTotal = subtotal - totalDiscounts + lateFeeAmount
+                    const finalTotal = subtotalBeforeIdCharges + idCharges
+
+                    // Separate discounts: Fee Waiver Program vs others
+                    const feeWaiverDiscount = discountLines.find(d => d.name.includes('Fee Waiver Program'))
+                    const otherDiscounts = discountLines.filter(d => !d.name.includes('Fee Waiver Program'))
+
+                    // Find specific registration fees
+                    const applicationFee = savedRegistrationFees.find((f: any) => f.name.includes('Application Fee'))
+                    const registrationFee = savedRegistrationFees.find((f: any) => f.name.includes('Registration Fee') && !f.name.includes('Application'))
+                    const securityDeposit = savedRegistrationFees.find((f: any) => f.name.includes('Security Deposit'))
+
+                    // Check for Security Deposit Fee Waiver (stored separately or calculate)
+                    const savedSecurityDepositWaiver = (selectedInvoice as any).securityDepositWaiver || 0
 
                     return (
                       <div className="border-t">
-                        {/* Subtotal */}
-                        <div className="flex justify-between items-center px-4 py-3 bg-gray-50">
-                          <span className="text-sm font-medium text-gray-600">Subtotal</span>
-                          <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
-                        </div>
-
-                        {/* Discount Lines */}
-                        {discountLines.map((discount, idx) => (
+                        {/* 1. Other Discounts (NOT Fee Waiver Program) - Green */}
+                        {otherDiscounts.map((discount, idx) => (
                           <div key={idx} className="flex justify-between items-center px-4 py-2 border-t">
                             <span className="text-sm text-green-600">
                               {discount.name} {discount.percent ? `(${discount.percent}%)` : ''}
@@ -1776,7 +2048,63 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                           </div>
                         ))}
 
-                        {/* Late Fee */}
+                        {/* 2. Application Fee - Orange */}
+                        {applicationFee && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-orange-600">{applicationFee.name}</span>
+                            <span className="text-sm font-medium text-orange-600">+{formatCurrency(applicationFee.amount)}</span>
+                          </div>
+                        )}
+
+                        {/* 3. Registration Fee - Orange */}
+                        {registrationFee && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-orange-600">{registrationFee.name}</span>
+                            <span className="text-sm font-medium text-orange-600">+{formatCurrency(registrationFee.amount)}</span>
+                          </div>
+                        )}
+
+                        {/* 4. Registration Fee Waiver (Fee Waiver Program) - Green */}
+                        {feeWaiverDiscount && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-green-600">
+                              Registration Fee Waiver (฿{feeWaiverDiscount.amount.toLocaleString()}/term)
+                            </span>
+                            <span className="text-sm font-medium text-green-600">
+                              -{formatCurrency(feeWaiverDiscount.amount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 5. Security Deposit - Orange */}
+                        {securityDeposit && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-orange-600">{securityDeposit.name}</span>
+                            <span className="text-sm font-medium text-orange-600">+{formatCurrency(securityDeposit.amount)}</span>
+                          </div>
+                        )}
+
+                        {/* 6. Security Deposit Fee Waiver - Green */}
+                        {savedSecurityDepositWaiver > 0 && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-green-600">Security Deposit Fee Waiver</span>
+                            <span className="text-sm font-medium text-green-600">-{formatCurrency(savedSecurityDepositWaiver)}</span>
+                          </div>
+                        )}
+
+                        {/* 7. ID Charges (Purple, 3%) */}
+                        {idCharges > 0 && (
+                          <div className="flex justify-between items-center px-4 py-2 border-t">
+                            <span className="text-sm text-purple-600">
+                              ID Charges (3%)
+                            </span>
+                            <span className="text-sm font-medium text-purple-600">
+                              +{formatCurrency(idCharges)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 8. Late Fee (Red) */}
                         {lateFeeAmount > 0 && (
                           <div className="flex justify-between items-center px-4 py-2 border-t">
                             <span className="text-sm text-red-600">
@@ -1844,7 +2172,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               Create an invoice using templates or custom items for students
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Step 1: Select Grade */}
             <div className="space-y-3">
@@ -1865,7 +2193,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
             {selectedGrade && (
               <div className="space-y-4">
                 <h3 className="font-medium">2. Select Items</h3>
-                
+
                 {/* Available Items */}
                 <div className="space-y-3">
                   <label className="font-medium">Available Items for {selectedGrade}</label>
@@ -1873,8 +2201,8 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                     {availableItems.map((item) => {
                       const isSelected = selectedItems.find(i => i.id === item.id)
                       return (
-                        <Card 
-                          key={item.id} 
+                        <Card
+                          key={item.id}
                           className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
                           onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
                         >
@@ -1913,15 +2241,15 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="font-medium">Selected Items ({selectedItems.length})</label>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setSelectedItems([])}
                       >
                         Clear All
                       </Button>
                     </div>
-                    
+
                     <div className="border rounded-lg">
                       <Table>
                         <TableHeader>
@@ -2001,7 +2329,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
             {selectedItems.length > 0 && (
               <div className="space-y-4">
                 <h3 className="font-medium">3. Select Students</h3>
-                
+
                 {/* Selection Type */}
                 <div className="grid grid-cols-3 gap-4">
                   <Card className={`cursor-pointer transition-all ${studentSelectionType === "individual" ? "ring-2 ring-primary" : ""}`}>
@@ -2052,7 +2380,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                         className=""
                       />
                     </div>
-                    
+
                     {searchStudentTerm && (
                       <div className="border rounded-lg max-h-48 overflow-y-auto">
                         {filteredStudents.length > 0 ? (
@@ -2128,8 +2456,8 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <label className="font-medium">Selected Students ({selectedStudents.length})</label>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setSelectedStudents([])}
                       >
@@ -2164,7 +2492,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
             {selectedStudents.length > 0 && selectedItems.length > 0 && (
               <div className="space-y-4">
                 <h3 className="font-medium">4. Create Invoice</h3>
-                
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 mb-2">Invoice Summary</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -2182,7 +2510,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <Button 
+                  <Button
                     onClick={handleCreateInvoice}
                     className="flex-1"
                   >
@@ -2198,7 +2526,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
             {/* Action Buttons when not all steps completed */}
             {(selectedStudents.length === 0 || selectedItems.length === 0) && (
               <div className="flex gap-3 pt-4">
-                <Button 
+                <Button
                   onClick={handleCreateInvoice}
                   disabled={selectedStudents.length === 0 || selectedItems.length === 0}
                   className="flex-1"
@@ -2223,27 +2551,27 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               Add a new item to the invoice with optional discount
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Description *</label>
               <Input
                 placeholder="Item description"
                 value={newItem.description}
-                onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Amount (₿) *</label>
               <Input
                 type="number"
                 placeholder="0"
                 value={newItem.amount}
-                onChange={(e) => setNewItem({...newItem, amount: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Discount Percentage</label>
               <Input
@@ -2252,7 +2580,7 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                 min="0"
                 max="100"
                 value={newItem.discountPercent}
-                onChange={(e) => setNewItem({...newItem, discountPercent: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, discountPercent: e.target.value })}
               />
             </div>
 
@@ -2562,6 +2890,49 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
                     })
                   })
 
+                  // Fee Waiver Program
+                  if (student) {
+                    const feeWaiverEligibility = checkFeePrivilegeEligibility(
+                      student,
+                      student.academicYear || selectedInvoice.academicYear,
+                      student.enrollmentTerm || "term1"
+                    )
+                    if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
+                      discounts.push({
+                        name: "Fee Waiver Program",
+                        value: `฿${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term`,
+                        color: "bg-indigo-100 text-indigo-800"
+                      })
+                    }
+                  }
+
+                  // Staff Child
+                  if (student?.notes?.toLowerCase().includes('staff')) {
+                    discounts.push({
+                      name: "Staff Child",
+                      value: "50%",
+                      color: "bg-cyan-100 text-cyan-800"
+                    })
+                  }
+
+                  // Scholarship
+                  if (student?.notes?.toLowerCase().includes('scholarship')) {
+                    discounts.push({
+                      name: "Scholarship",
+                      value: "100%",
+                      color: "bg-amber-100 text-amber-800"
+                    })
+                  }
+
+                  // Early Bird
+                  if (student?.notes?.toLowerCase().includes('early bird')) {
+                    discounts.push({
+                      name: "Early Bird",
+                      value: "5%",
+                      color: "bg-orange-100 text-orange-800"
+                    })
+                  }
+
                   if (discounts.length === 0) return null
 
                   return (
@@ -2670,6 +3041,151 @@ export function InvoiceManagement({ onNavigateToSubPage, onNavigateToView }: Inv
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] p-6">
+          <DialogHeader>
+            <DialogTitle>
+              {approvalAction === "approve" ? t("invoice.confirmApproval") : t("invoice.confirmRejection")}
+            </DialogTitle>
+            <DialogDescription>
+              {approvalAction === "approve"
+                ? t("invoice.confirmApprovalMessage")
+                : t("invoice.confirmRejectionMessage")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedInvoiceForApproval && (
+            <div className="bg-gray-50 rounded-md p-4 text-sm space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-500">{t("invoice.invoiceNumber")}</span>
+                <span className="font-medium text-right">{selectedInvoiceForApproval.invoiceNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">{(selectedInvoiceForApproval.invoiceType === 'external' || selectedInvoiceForApproval.studentId === 'EXTERNAL' || selectedInvoiceForApproval.term === "External") ? t("invoice.recipient") : t("invoice.student")}</span>
+                <span className="font-medium text-right">{selectedInvoiceForApproval.studentName}</span>
+              </div>
+              {!(selectedInvoiceForApproval.invoiceType === 'external' || selectedInvoiceForApproval.studentId === 'EXTERNAL' || selectedInvoiceForApproval.term === "External") && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{t("invoice.grade")}</span>
+                  <span className="font-medium text-right">{selectedInvoiceForApproval.studentGrade}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-500">{(selectedInvoiceForApproval.invoiceType === 'external' || selectedInvoiceForApproval.studentId === 'EXTERNAL' || selectedInvoiceForApproval.term === "External") ? t("invoice.eventName") : t("invoice.term")}</span>
+                <span className="font-medium text-right">
+                  {(selectedInvoiceForApproval.invoiceType === 'external' || selectedInvoiceForApproval.studentId === 'EXTERNAL' || selectedInvoiceForApproval.term === "External")
+                    ? (selectedInvoiceForApproval.eventName || selectedInvoiceForApproval.term || "-")
+                    : (selectedInvoiceForApproval.term || "-")}
+                </span>
+              </div>
+              <div className="flex justify-between border-t pt-2 mt-2">
+                <span className="text-gray-500">{t("common.amount")}</span>
+                <span className="font-semibold text-green-600">฿{selectedInvoiceForApproval.finalAmount.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+
+          {approvalAction === "reject" && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("invoice.rejectedReason")} <span className="text-red-500">*</span></label>
+              <Textarea
+                placeholder={t("invoice.rejectionReasonPlaceholder")}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-6">
+            <button
+              type="button"
+              className="transition-all duration-200"
+              style={{
+                height: '38px',
+                padding: '0 20px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid #e2e8f0',
+                backgroundColor: 'white',
+                color: '#64748b',
+                cursor: 'pointer'
+              }}
+              onClick={() => setIsApprovalDialogOpen(false)}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+            >
+              {t("common.cancel")}
+            </button>
+
+            {approvalAction === "approve" && (
+              <button
+                type="button"
+                className="transition-all duration-200"
+                style={{
+                  height: '38px',
+                  padding: '0 20px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  border: 'none',
+                  backgroundColor: '#16a34a',
+                  color: 'white',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+                onClick={() => selectedInvoiceForApproval && handleApproveInvoice(selectedInvoiceForApproval)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#15803d')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#16a34a')}
+              >
+                <CheckCircle className="w-4 h-4" />
+                {t("common.approve")}
+              </button>
+            )}
+
+            {approvalAction === "reject" && (
+              <button
+                type="button"
+                className="transition-all duration-200"
+                style={{
+                  height: '38px',
+                  padding: '0 20px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  border: 'none',
+                  backgroundColor: rejectionReason.trim() ? '#dc2626' : '#fca5a5',
+                  color: 'white',
+                  cursor: rejectionReason.trim() ? 'pointer' : 'not-allowed',
+                  boxShadow: rejectionReason.trim() ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                }}
+                onClick={() => rejectionReason.trim() && selectedInvoiceForApproval && handleRejectInvoice(selectedInvoiceForApproval, rejectionReason)}
+                disabled={!rejectionReason.trim()}
+                onMouseEnter={(e) => rejectionReason.trim() && (e.currentTarget.style.backgroundColor = '#b91c1c')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = rejectionReason.trim() ? '#dc2626' : '#fca5a5')}
+              >
+                <X className="w-4 h-4" />
+                {t("common.reject")}
+              </button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

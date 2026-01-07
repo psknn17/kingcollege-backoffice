@@ -8,6 +8,7 @@ import { Input } from "./ui/input"
 import { Textarea } from "./ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { 
   User, 
   Mail, 
@@ -30,7 +31,7 @@ import {
   X,
   Search
 } from "lucide-react"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface ViewDetailsPageProps {
   type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template"
@@ -142,6 +143,7 @@ const availableItems = [
 ]
 
 export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBack }: ViewDetailsPageProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState("details")
   const [isEditMode, setIsEditMode] = useState(false)
   const [editData, setEditData] = useState(data)

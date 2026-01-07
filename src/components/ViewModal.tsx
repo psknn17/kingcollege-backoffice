@@ -5,15 +5,16 @@ import { Badge } from "./ui/badge"
 import { Separator } from "./ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { 
-  X, 
-  User, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
-  GraduationCap, 
+import { useLanguage } from "@/contexts/LanguageContext"
+import {
+  X,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  DollarSign,
+  FileText,
+  GraduationCap,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -22,7 +23,7 @@ import {
   Eye,
   Edit
 } from "lucide-react"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 interface ViewModalProps {
   isOpen: boolean
@@ -67,6 +68,7 @@ const getStatusBadge = (status: string) => {
 }
 
 export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onPrint }: ViewModalProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState("details")
 
   if (!data) return null

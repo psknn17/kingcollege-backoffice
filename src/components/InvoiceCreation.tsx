@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -15,9 +16,9 @@ import { Textarea } from "./ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
-import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, Building } from "lucide-react"
+import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, Building, CreditCard, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 
@@ -89,65 +90,56 @@ const getStudentGroupDiscounts = (studentId: string): { name: string, discountTy
   }
 }
 
-// Helper function to convert term format
-const convertTermFormat = (term: string): string => {
-  if (term === "term1") return "1"
-  if (term === "term2") return "2"
-  if (term === "term3") return "3"
-  return term
-}
+// Storage keys for discount types
+const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
+const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
+const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
 
-// Default sibling discounts (fallback if no settings found)
-const defaultSiblingDiscounts = [
-  { childOrder: "first", percentage: 0, enabled: true },
-  { childOrder: "second", percentage: 0, enabled: true },
-  { childOrder: "third", percentage: 5, enabled: true },
-  { childOrder: "fourth", percentage: 10, enabled: true },
-  { childOrder: "fifth", percentage: 20, enabled: true },
-]
-
-// Helper function to get sibling discount percentage from Discount Options
-const getSiblingDiscountFromOptions = (childOrder: number, academicYear: string, term: string): number => {
+// Helper function to check if student has Scholarship discount
+const hasScholarshipDiscount = (studentId: string): boolean => {
   try {
-    const convertedTerm = convertTermFormat(term)
-    // Read from "discountOptions" key with nested object (same as DiscountOptionsContext)
-    const stored = localStorage.getItem("discountOptions")
-    if (!stored) {
-      // Use default - only children 3+ get discount
-      const discountIndex = childOrder <= 0 ? -1 : childOrder - 1
-      const discount = defaultSiblingDiscounts[Math.min(discountIndex, 4)]
-      return discount?.enabled ? discount.percentage : 0
-    }
-
-    const allData = JSON.parse(stored)
-    const storageKey = `${academicYear}_${convertedTerm}`
-    const options = allData[storageKey]
-
-    if (!options?.siblingDiscounts) {
-      // Use default
-      const discountIndex = childOrder <= 0 ? -1 : childOrder - 1
-      const discount = defaultSiblingDiscounts[Math.min(discountIndex, 4)]
-      return discount?.enabled ? discount.percentage : 0
-    }
-
-    // Map child order number to discount index (1->0, 2->1, 3->2, 4->3, 5+->4)
-    let discountIndex: number
-    if (childOrder <= 0) return 0
-    if (childOrder === 1) discountIndex = 0
-    else if (childOrder === 2) discountIndex = 1
-    else if (childOrder === 3) discountIndex = 2
-    else if (childOrder === 4) discountIndex = 3
-    else discountIndex = 4 // 5th and beyond
-
-    const discount = options.siblingDiscounts[discountIndex]
-    if (discount && discount.enabled) {
-      return discount.percentage
-    }
-    return 0
+    const stored = localStorage.getItem(SCHOLARSHIP_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    // Records can be array of { studentId, ... } or just array of student IDs
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
   } catch {
-    return 0
+    return false
   }
 }
+
+// Helper function to check if student is Staff Child
+const isStaffChildStudent = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(STAFF_CHILD_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    // Records can be array of { studentId, ... } or just array of student IDs
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
+  } catch {
+    return false
+  }
+}
+
+// Helper function to check if student has Early Bird discount
+const hasEarlyBirdDiscount = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(EARLY_BIRD_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    // Records can be array of { studentId, ... } or just array of student IDs
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
+  } catch {
+    return false
+  }
+}
+
 
 // Grade level mapping (same as StudentList)
 const gradeLevelMap: { [key: string]: string } = {
@@ -195,7 +187,7 @@ interface SavedInvoice {
   netAmount: number
   dueDate: string
   issueDate: string
-  status: "draft" | "pending" | "sent" | "paid" | "partial" | "unpaid" | "overdue" | "cancelled"
+  status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "partial" | "unpaid" | "overdue" | "cancelled"
   term: string
   paymentType: "termly"
   createdAt: string
@@ -205,6 +197,11 @@ interface SavedInvoice {
   recipientAddress?: string
   eventName?: string
   notes?: string
+  // New student fields
+  isNewStudent?: boolean
+  registrationFees?: { name: string, amount: number }[]
+  idCharges?: number
+  securityDepositWaiver?: number
 }
 
 // Load created invoices from localStorage
@@ -300,15 +297,6 @@ const defaultItems: PreCreatedItem[] = [
     name: "Term 2 Tuition Fee",
     description: "Second term tuition payment for academic year",
     amount: 150000,
-    category: "Tuition",
-    isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
-  },
-  {
-    id: "item-003",
-    name: "Registration Fee",
-    description: "Annual registration and administrative fee",
-    amount: 25000,
     category: "Tuition",
     isActive: true,
     applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
@@ -502,6 +490,10 @@ interface InvoiceStudent {
   email: string
   // Original student data
   originalStudent?: any
+  // New student flag (for Application & Registration Fees)
+  isNewStudent: boolean
+  enrollmentTerm?: string
+  enrollmentYear?: string
   // Discount information
   discounts: {
     siblingDiscount: number
@@ -510,55 +502,77 @@ interface InvoiceStudent {
     scholarship: boolean
     earlyBird: boolean
   }
+  // Fee Waiver information
+  feeWaiver?: {
+    eligible: boolean
+    creditPerTerm: number
+    termsRemaining: number // 0-3, when 0 means completed
+    reason: string
+  }
 }
 
 export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmailSending, onNavigateBack }: InvoiceCreationProps) {
+  // Language context
+  const { t } = useLanguage()
+
   // Discount Options context
   const { getRegistrationFees, getLatePaymentSettings, getSiblingDiscountPercentage } = useDiscountOptions()
 
   // Student context
-  const { students } = useStudents()
+  const { students, addStudent, families, addFamily, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
 
   // Get current academic year and term (default to first ones)
   const academicYear = academicYears[0]?.id || "2025-2026"
   const term = "term1" // Default term
 
+  // Create invoice state - declare early so they can be used in useMemo
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState("")
+  const [selectedTerm, setSelectedTerm] = useState("")
+  const [selectedGrade, setSelectedGrade] = useState("")
+  const [selectedRoom, setSelectedRoom] = useState("")
+
   // Convert StudentContext students to invoice format
+  // Use selected values when available, fall back to defaults
+  const effectiveAcademicYear = selectedAcademicYear || academicYear
+  const effectiveTerm = selectedTerm || term
+
   const availableStudents = useMemo(() => {
     return students.map(student => {
-      // Get sibling discount - must be Year 3+ to receive discount
+      // Get sibling discount - available from 1st child onwards (no Year 3+ requirement)
       const childOrder = student.childOrder || 1
-
-      // Parse grade level to check minimum requirement (Year 3+)
-      let studentGradeLevel = 0
-      const gradeLevelLower = student.gradeLevel?.toLowerCase() || ""
-      if (gradeLevelLower === "nursery" || gradeLevelLower === "reception") {
-        studentGradeLevel = 0
-      } else {
-        const gradeLevelMatch = student.gradeLevel?.match(/(\d+)/)
-        studentGradeLevel = gradeLevelMatch ? parseInt(gradeLevelMatch[1]) : 0
-      }
-
-      // Only get sibling discount if Year 3 or higher
-      const siblingDiscount = (studentGradeLevel >= 3)
-        ? getSiblingDiscountFromOptions(childOrder, student.academicYear || academicYear, student.enrollmentTerm || term)
-        : 0
+      const siblingDiscount = getSiblingDiscountPercentage(childOrder, student.academicYear || effectiveAcademicYear, effectiveTerm)
 
       // Get student group discounts
       const groupDiscounts = getStudentGroupDiscounts(student.studentId)
 
-      // Check for special discounts based on notes
+      // Check for special discounts from localStorage records
+      // Fallback to notes-based detection for backward compatibility
       const notes = student.notes?.toLowerCase() || ""
-      const staffChild = notes.includes('staff')
-      const scholarship = notes.includes('scholarship')
-      const earlyBird = notes.includes('early bird')
+      const staffChild = isStaffChildStudent(student.studentId) || notes.includes('staff')
+      const scholarship = hasScholarshipDiscount(student.studentId) || notes.includes('scholarship')
+      const earlyBird = hasEarlyBirdDiscount(student.studentId) || notes.includes('early bird')
 
       // Convert gradeLevel ID to label format (e.g., "year2" -> "Year 2")
       const gradeLabel = getGradeLabel(student.gradeLevel)
 
       // Get room/section from student if available, or leave empty for "All Rooms"
       const studentRoom = student.section || student.room || ""
+
+      // Existing students in the system are NOT new students
+      // Only students added via "Add New Student" button are considered new
+
+      // Calculate Fee Waiver eligibility (same logic as Family Groups)
+      // Pass current invoice term (not enrollment term) to check if eligible NOW
+      const feeWaiverEligibility = checkFeePrivilegeEligibility(
+        student,
+        effectiveAcademicYear,  // Current academic year for invoice
+        effectiveTerm           // Current term for invoice
+      )
+
+      // Default to 3 terms remaining for eligible students
+      // In production, this should be tracked in database
+      const termsRemaining = feeWaiverEligibility.eligible ? 3 : 0
 
       return {
         id: student.studentId,
@@ -568,6 +582,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
         parentName: student.parents?.[0]?.name || "Parent",
         email: student.parents?.[0]?.email || "parent@email.com",
         originalStudent: student,
+        isNewStudent: false, // Existing students are NOT new - no registration fees
+        enrollmentTerm: student.enrollmentTerm || "",
+        enrollmentYear: student.academicYear || "",
         discounts: {
           siblingDiscount,
           studentGroupDiscounts: groupDiscounts.map(g => ({
@@ -579,21 +596,21 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           staffChild,
           scholarship,
           earlyBird
-        }
+        },
+        feeWaiver: feeWaiverEligibility.eligible && termsRemaining > 0 ? {
+          eligible: true,
+          creditPerTerm: feeWaiverEligibility.creditPerTerm || 75000,
+          termsRemaining,
+          reason: feeWaiverEligibility.reason
+        } : undefined
       } as InvoiceStudent
     })
-  }, [students, academicYear, term])
+  }, [students, effectiveAcademicYear, effectiveTerm, checkFeePrivilegeEligibility, getSiblingDiscountPercentage, getStudentGroupDiscounts])
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
     return loadItemsFromStorage()
   }, [])
-
-  // Create invoice state
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState("")
-  const [selectedTerm, setSelectedTerm] = useState("")
-  const [selectedGrade, setSelectedGrade] = useState("")
-  const [selectedRoom, setSelectedRoom] = useState("")
 
   // Get available terms based on selected academic year
   const availableTerms = selectedAcademicYear
@@ -616,13 +633,41 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const [selectedStudents, setSelectedStudents] = useState<InvoiceStudent[]>([])
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvStudents, setCsvStudents] = useState<any[]>([])
-  
+
+  // Update selected students' feeWaiver and discounts when term/year changes
+  useEffect(() => {
+    if (selectedStudents.length > 0 && availableStudents.length > 0) {
+      const updatedStudents = selectedStudents.map(selected => {
+        // Find the updated version from availableStudents
+        const updated = availableStudents.find(a => a.id === selected.id)
+        if (updated) {
+          // Update feeWaiver and discounts from the recalculated availableStudents
+          return {
+            ...selected,
+            feeWaiver: updated.feeWaiver,
+            discounts: { ...selected.discounts, siblingDiscount: updated.discounts.siblingDiscount }
+          }
+        }
+        return selected
+      })
+      // Only update if there are actual changes
+      const hasChanges = updatedStudents.some((s, i) =>
+        s.feeWaiver?.eligible !== selectedStudents[i]?.feeWaiver?.eligible ||
+        s.discounts.siblingDiscount !== selectedStudents[i]?.discounts.siblingDiscount
+      )
+      if (hasChanges) {
+        setSelectedStudents(updatedStudents)
+      }
+    }
+  }, [availableStudents]) // Runs when availableStudents recalculates (due to term/year change)
+
   // Item selection state
   const [availableItems, setAvailableItems] = useState<PreCreatedItem[]>([])
   const [selectedItems, setSelectedItems] = useState<PreCreatedItem[]>([])
   const [availableTemplates, setAvailableTemplates] = useState<ItemTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [selectedCategory, setSelectedCategory] = useState<string>(defaultCategory || "Tuition")
+
 
   // Add item from list state
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false)
@@ -640,6 +685,24 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const [externalSelectedItems, setExternalSelectedItems] = useState<PreCreatedItem[]>([])
   const [externalPaymentDeadline, setExternalPaymentDeadline] = useState<Date | undefined>(undefined)
   const [externalNotes, setExternalNotes] = useState("")
+
+  // Add New Student dialog state
+  const [isAddNewStudentOpen, setIsAddNewStudentOpen] = useState(false)
+  const [newStudentFirstName, setNewStudentFirstName] = useState("")
+  const [newStudentLastName, setNewStudentLastName] = useState("")
+  const [newStudentNickname, setNewStudentNickname] = useState("")
+  const [newStudentGender, setNewStudentGender] = useState<"male" | "female" | "other">("other")
+  const [newStudentDob, setNewStudentDob] = useState("")
+  // Family selection
+  const [newStudentFamilyType, setNewStudentFamilyType] = useState<"new" | "existing">("new")
+  const [newStudentFamilyId, setNewStudentFamilyId] = useState("")
+  const [newStudentChildOrder, setNewStudentChildOrder] = useState(1)
+  // Parent info (for new family)
+  const [newStudentParentName, setNewStudentParentName] = useState("")
+  const [newStudentParentRelation, setNewStudentParentRelation] = useState<"father" | "mother" | "guardian" | "other">("guardian")
+  const [newStudentEmail, setNewStudentEmail] = useState("")
+  const [newStudentPhone, setNewStudentPhone] = useState("")
+  const [newStudentAddress, setNewStudentAddress] = useState("")
 
   // Load items when grade or category changes
   useEffect(() => {
@@ -727,19 +790,48 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     const discountItems: { name: string, amount: number, percentage?: number }[] = []
     let totalDiscountAmount = 0
 
+    // Ensure discounts object exists
+    const discounts = student.discounts || {
+      siblingDiscount: 0,
+      studentGroupDiscounts: [],
+      staffChild: false,
+      scholarship: false,
+      earlyBird: false
+    }
+
     // Sibling Discount
-    if (student.discounts.siblingDiscount > 0) {
-      const amount = Math.round(subtotal * student.discounts.siblingDiscount / 100)
+    if (discounts.siblingDiscount > 0) {
+      const amount = Math.round(subtotal * discounts.siblingDiscount / 100)
       discountItems.push({
         name: `Sibling Discount`,
         amount,
-        percentage: student.discounts.siblingDiscount
+        percentage: discounts.siblingDiscount
+      })
+      totalDiscountAmount += amount
+    }
+
+    // Registration Fee Waiver (after Sibling) - only show if eligible
+    if (student.feeWaiver?.eligible && student.feeWaiver?.termsRemaining > 0) {
+      const termNumber = 4 - student.feeWaiver.termsRemaining
+      discountItems.push({
+        name: `Registration Fee Waiver (฿${student.feeWaiver.creditPerTerm.toLocaleString()}/term ${termNumber}/3)`,
+        amount: student.feeWaiver.creditPerTerm
+      })
+    }
+
+    // Scholarship (after Registration Fee Waiver)
+    if (discounts.scholarship) {
+      const amount = subtotal
+      discountItems.push({
+        name: "Scholarship",
+        amount,
+        percentage: 100
       })
       totalDiscountAmount += amount
     }
 
     // Student Group Discounts
-    student.discounts.studentGroupDiscounts.forEach(group => {
+    discounts.studentGroupDiscounts.forEach(group => {
       if (group.type === "percentage" && group.percentage > 0) {
         const amount = Math.round(subtotal * group.percentage / 100)
         discountItems.push({
@@ -758,7 +850,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     })
 
     // Staff Child (50%)
-    if (student.discounts.staffChild) {
+    if (discounts.staffChild) {
       const amount = Math.round(subtotal * 50 / 100)
       discountItems.push({
         name: "Staff Child Discount",
@@ -768,19 +860,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       totalDiscountAmount += amount
     }
 
-    // Scholarship (example: 100%)
-    if (student.discounts.scholarship) {
-      const amount = subtotal
-      discountItems.push({
-        name: "Scholarship",
-        amount,
-        percentage: 100
-      })
-      totalDiscountAmount += amount
-    }
-
     // Early Bird (5%)
-    if (student.discounts.earlyBird) {
+    if (discounts.earlyBird) {
       const amount = Math.round(subtotal * 5 / 100)
       discountItems.push({
         name: "Early Bird Discount",
@@ -803,7 +884,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       student.discounts.studentGroupDiscounts.length > 0 ||
       student.discounts.staffChild ||
       student.discounts.scholarship ||
-      student.discounts.earlyBird
+      student.discounts.earlyBird ||
+      (student.feeWaiver?.eligible && student.feeWaiver?.termsRemaining > 0)
   }
 
   const handleIndividualStudentSelect = (student: any) => {
@@ -821,6 +903,142 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       (selectedRoom === "" || s.room === selectedRoom)
     )
     setSelectedStudents(gradeStudents)
+  }
+
+  // Handle adding a new student (not in system yet)
+  const handleAddNewStudent = () => {
+    if (!newStudentFirstName || !newStudentLastName) {
+      toast.error("Please fill in required fields (First Name, Last Name)")
+      return
+    }
+
+    // Email is required only for new family
+    if (newStudentFamilyType === "new" && !newStudentEmail) {
+      toast.error("Please fill in Email for new family")
+      return
+    }
+
+    // For existing family, must select a family
+    if (newStudentFamilyType === "existing" && !newStudentFamilyId) {
+      toast.error("Please select an existing family")
+      return
+    }
+
+    const newStudentId = `KC${selectedAcademicYear.split('-')[0]}${String(Date.now()).slice(-4)}`
+    const now = new Date()
+
+    let familyId = ""
+    let childOrder = 1
+    let parentInfo = {
+      id: `P-${newStudentId}`,
+      name: newStudentParentName || `${newStudentFirstName}'s Parent`,
+      relationship: newStudentParentRelation,
+      phone: newStudentPhone || "",
+      email: newStudentEmail,
+      isPrimary: true
+    }
+
+    if (newStudentFamilyType === "existing" && newStudentFamilyId) {
+      // Use existing family
+      familyId = newStudentFamilyId
+      const existingFamily = families.find(f => f.id === newStudentFamilyId)
+      if (existingFamily) {
+        childOrder = existingFamily.studentIds.length + 1
+        // Get parent info from existing family
+        const familyStudents = students.filter(s => s.familyId === newStudentFamilyId)
+        if (familyStudents.length > 0 && familyStudents[0].parents.length > 0) {
+          parentInfo = { ...familyStudents[0].parents[0], id: `P-${newStudentId}` }
+        }
+      }
+    } else {
+      // Create new family
+      familyId = `FAM-${newStudentId}`
+      const newFamily = {
+        id: familyId,
+        familyCode: `F${String(Date.now()).slice(-6)}`,
+        familyName: `${newStudentLastName} Family`,
+        studentIds: [newStudentId],
+        primaryContactId: parentInfo.id,
+        address: newStudentAddress || "",
+        email: newStudentEmail,
+        phone: newStudentPhone || "",
+        createdAt: now
+      }
+      addFamily(newFamily)
+    }
+
+    // Create Student object for StudentContext (to save to Student List)
+    const studentForContext = {
+      id: newStudentId,
+      studentId: newStudentId,
+      firstName: newStudentFirstName,
+      lastName: newStudentLastName,
+      nickname: newStudentNickname || "",
+      dateOfBirth: newStudentDob ? new Date(newStudentDob) : null,
+      gender: newStudentGender,
+      gradeLevel: selectedGrade.toLowerCase().replace(/\s+/g, ''), // "Year 3" -> "year3"
+      academicYear: selectedAcademicYear,
+      enrollmentTerm: (selectedTerm || "term1") as "term1" | "term2" | "term3",
+      status: "active" as const,
+      familyId: familyId,
+      childOrder: newStudentFamilyType === "existing" ? childOrder : newStudentChildOrder,
+      parents: [parentInfo],
+      enrollmentDate: now,
+      notes: "New student - added via Invoice Creation",
+      createdBy: "system",
+      createdAt: now,
+      updatedBy: "system",
+      updatedAt: now
+    }
+
+    // Save to Student List
+    addStudent(studentForContext)
+
+    // Calculate sibling discount if joining existing family
+    const siblingDiscount = newStudentFamilyType === "existing" && childOrder >= 2
+      ? getSiblingDiscountPercentage(childOrder, selectedAcademicYear, selectedTerm)
+      : 0
+
+    // Create InvoiceStudent object for invoice creation
+    const newStudent: InvoiceStudent = {
+      id: newStudentId,
+      name: `${newStudentFirstName} ${newStudentLastName}`,
+      grade: selectedGrade,
+      room: selectedRoom || "",
+      parentName: parentInfo.name,
+      email: parentInfo.email,
+      originalStudent: studentForContext,
+      isNewStudent: true, // Mark as new student for Application & Registration Fees
+      enrollmentTerm: selectedTerm,
+      enrollmentYear: selectedAcademicYear,
+      discounts: {
+        siblingDiscount: siblingDiscount,
+        studentGroupDiscounts: [],
+        staffChild: false,
+        scholarship: false,
+        earlyBird: false
+      }
+    }
+
+    setSelectedStudents([...selectedStudents, newStudent])
+
+    // Reset form
+    setNewStudentFirstName("")
+    setNewStudentLastName("")
+    setNewStudentNickname("")
+    setNewStudentGender("other")
+    setNewStudentDob("")
+    setNewStudentFamilyType("new")
+    setNewStudentFamilyId("")
+    setNewStudentChildOrder(1)
+    setNewStudentParentName("")
+    setNewStudentParentRelation("guardian")
+    setNewStudentEmail("")
+    setNewStudentPhone("")
+    setNewStudentAddress("")
+    setIsAddNewStudentOpen(false)
+
+    toast.success(`Added new student: ${newStudent.name} (Saved to Student List)`)
   }
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -937,6 +1155,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const handleFinalConfirmation = () => {
     const totalItems = selectedItems.reduce((sum, item) => sum + item.amount, 0)
     const now = new Date()
+    const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
 
     // Save each student's invoice to localStorage
     selectedStudents.forEach((student) => {
@@ -944,6 +1163,35 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       const subtotal = getTotalAmount()
       const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal)
       const invoiceNumber = generateInvoiceNumber(student.id)
+
+      // Calculate registration fees for new students
+      const registrationFeesList: { name: string, amount: number }[] = []
+      let registrationFeesTotal = 0
+      if (invoiceStudent.isNewStudent) {
+        if (fees.applicationFee > 0) {
+          registrationFeesList.push({ name: 'Application Fee', amount: fees.applicationFee })
+          registrationFeesTotal += fees.applicationFee
+        }
+        if (fees.registrationFee > 0) {
+          registrationFeesList.push({ name: 'Registration Fee', amount: fees.registrationFee })
+          registrationFeesTotal += fees.registrationFee
+        }
+        if (fees.securityDeposit > 0) {
+          registrationFeesList.push({ name: `Security Deposit${fees.securityDepositRefundable ? ' (Refundable)' : ''}`, amount: fees.securityDeposit })
+          registrationFeesTotal += fees.securityDeposit
+        }
+      }
+
+      // Calculate Security Deposit Fee Waiver (for new students eligible for fee waiver)
+      const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
+        invoiceStudent.feeWaiver?.eligible &&
+        fees.securityDeposit > 0
+          ? fees.securityDeposit
+          : 0
+
+      // Calculate ID Charges (3%)
+      const subtotalBeforeIdCharges = discountCalc.netAmount + registrationFeesTotal - securityDepositWaiverAmount
+      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
 
       const savedInvoice: SavedInvoice = {
         id: `inv-${student.id}-${Date.now()}`,
@@ -964,7 +1212,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
         status: "sent",
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
-        createdAt: now.toISOString()
+        createdAt: now.toISOString(),
+        // New student data
+        isNewStudent: invoiceStudent.isNewStudent,
+        registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
+        idCharges: idCharges > 0 ? idCharges : undefined,
+        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined
       }
 
       saveInvoiceToStorage(savedInvoice)
@@ -1012,6 +1265,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   // Save as Draft - saves invoices without sending email
   const handleSaveAsDraft = () => {
     const now = new Date()
+    const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
 
     // Save each student's invoice to localStorage with "pending" status
     selectedStudents.forEach((student) => {
@@ -1019,6 +1273,35 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       const subtotal = getTotalAmount()
       const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal)
       const invoiceNumber = generateInvoiceNumber(student.id)
+
+      // Calculate registration fees for new students
+      const registrationFeesList: { name: string, amount: number }[] = []
+      let registrationFeesTotal = 0
+      if (invoiceStudent.isNewStudent) {
+        if (fees.applicationFee > 0) {
+          registrationFeesList.push({ name: 'Application Fee', amount: fees.applicationFee })
+          registrationFeesTotal += fees.applicationFee
+        }
+        if (fees.registrationFee > 0) {
+          registrationFeesList.push({ name: 'Registration Fee', amount: fees.registrationFee })
+          registrationFeesTotal += fees.registrationFee
+        }
+        if (fees.securityDeposit > 0) {
+          registrationFeesList.push({ name: `Security Deposit${fees.securityDepositRefundable ? ' (Refundable)' : ''}`, amount: fees.securityDeposit })
+          registrationFeesTotal += fees.securityDeposit
+        }
+      }
+
+      // Calculate Security Deposit Fee Waiver (for new students eligible for fee waiver)
+      const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
+        invoiceStudent.feeWaiver?.eligible &&
+        fees.securityDeposit > 0
+          ? fees.securityDeposit
+          : 0
+
+      // Calculate ID Charges (3%)
+      const subtotalBeforeIdCharges = discountCalc.netAmount + registrationFeesTotal - securityDepositWaiverAmount
+      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
 
       const savedInvoice: SavedInvoice = {
         id: `inv-${student.id}-${Date.now()}`,
@@ -1036,16 +1319,21 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
         netAmount: discountCalc.netAmount,
         dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
         issueDate: now.toISOString().split('T')[0],
-        status: "draft", // Draft status
+        status: "pending_approval", // Pending approval status
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
-        createdAt: now.toISOString()
+        createdAt: now.toISOString(),
+        // New student data
+        isNewStudent: invoiceStudent.isNewStudent,
+        registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
+        idCharges: idCharges > 0 ? idCharges : undefined,
+        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined
       }
 
       saveInvoiceToStorage(savedInvoice)
     })
 
-    toast.success(`Saved ${selectedStudents.length} invoices as draft`)
+    toast.success(`Submitted ${selectedStudents.length} invoice(s) for approval`)
     setIsPreviewDialogOpen(false)
 
     // Navigate back to Invoice Management
@@ -1124,7 +1412,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       netAmount: subtotal,
       dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
       issueDate: now.toISOString().split('T')[0],
-      status: "draft",
+      status: "pending_approval",
       term: externalEventName || "External",
       paymentType: "termly",
       createdAt: now.toISOString(),
@@ -1137,7 +1425,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     }
 
     saveInvoiceToStorage(savedInvoice)
-    toast.success("External invoice saved as draft")
+    toast.success("External invoice submitted for approval")
     resetExternalForm()
 
     if (onNavigateBack) {
@@ -1241,18 +1529,18 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create New Invoice</CardTitle>
+          <CardTitle>{t("invoiceCreate.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs value={invoiceTab} onValueChange={(value) => setInvoiceTab(value as "student" | "external")} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="student" className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4" />
-                Student Invoice
+                {t("invoice.studentInvoices")}
               </TabsTrigger>
               <TabsTrigger value="external" className="flex items-center gap-2">
                 <Building className="w-4 h-4" />
-                External Invoice
+                {t("invoice.externalInvoices")}
               </TabsTrigger>
             </TabsList>
 
@@ -1260,7 +1548,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           <div className="space-y-6">
             {/* Step 1: Select Academic Year */}
             <div className="space-y-3">
-              <h3 className="font-medium">1. Select Academic Year</h3>
+              <h3 className="font-medium">1. {t("invoiceCreate.selectAcademicYear")}</h3>
               <Select value={selectedAcademicYear} onValueChange={(value) => {
                 setSelectedAcademicYear(value)
                 setSelectedTerm("") // Reset term when year changes
@@ -1270,7 +1558,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                 setSelectedItems([])
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose academic year" />
+                  <SelectValue placeholder={t("invoiceCreate.selectAcademicYear")} />
                 </SelectTrigger>
                 <SelectContent>
                   {academicYears.map(year => (
@@ -1283,7 +1571,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
             {/* Step 2: Select Term */}
             {selectedAcademicYear && (
               <div className="space-y-3">
-                <h3 className="font-medium">2. Select Term</h3>
+                <h3 className="font-medium">2. {t("invoiceCreate.selectTerm")}</h3>
                 <Select value={selectedTerm} onValueChange={(value) => {
                   setSelectedTerm(value)
                   setSelectedGrade("") // Reset grade when term changes
@@ -1292,7 +1580,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                   setSelectedItems([])
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose term" />
+                    <SelectValue placeholder={t("invoiceCreate.selectTerm")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableTerms.map(term => (
@@ -1306,10 +1594,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
             {/* Step 3: Select Grade */}
             {selectedAcademicYear && selectedTerm && (
               <div className="space-y-3">
-                <h3 className="font-medium">3. Select Grade</h3>
+                <h3 className="font-medium">3. {t("invoiceCreate.selectGrade")}</h3>
                 <Select value={selectedGrade} onValueChange={handleGradeChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose grade level" />
+                    <SelectValue placeholder={t("invoice.chooseGradeLevel")} />
                   </SelectTrigger>
                   <SelectContent>
                     {grades.map(grade => (
@@ -1323,13 +1611,13 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
             {/* Step 4: Select Room */}
             {selectedAcademicYear && selectedTerm && selectedGrade && (
               <div className="space-y-3">
-                <h3 className="font-medium">4. Select Room (Optional)</h3>
+                <h3 className="font-medium">4. {t("invoiceCreate.selectRoom")} ({t("common.optional")})</h3>
                 <Select value={selectedRoom === "" ? "all" : selectedRoom} onValueChange={handleRoomChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose room or leave blank for all rooms" />
+                    <SelectValue placeholder={t("invoiceCreate.selectRoom")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Rooms</SelectItem>
+                    <SelectItem value="all">{t("invoiceCreate.allRooms")}</SelectItem>
                     {rooms[selectedGrade as keyof typeof rooms]?.map(room => (
                       <SelectItem key={room} value={room}>{room}</SelectItem>
                     ))}
@@ -1341,23 +1629,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
             {/* Step 5: Select Items */}
             {selectedAcademicYear && selectedTerm && selectedGrade && (
               <div className="space-y-4">
-                <h3 className="font-medium">5. Select Items</h3>
-                
+                <h3 className="font-medium">5. {t("invoiceCreate.selectItems")}</h3>
+
                 {/* Template Selection */}
                 {availableTemplates.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Bookmark className="w-4 h-4 text-primary" />
-                        <label className="font-medium">Quick Start Templates</label>
+                        <label className="font-medium">{t("invoiceCreate.quickStartTemplates")}</label>
                       </div>
                       {selectedTemplate && (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleTemplateSelect("none")}
                         >
-                          Clear Template
+                          {t("invoiceCreate.clearTemplate")}
                         </Button>
                       )}
                     </div>
@@ -1730,15 +2018,24 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                 {/* Individual Selection */}
                 {studentSelectionType === "individual" && (
                   <div className="space-y-3">
-                    <div className="relative">
-                      <Input
-                        placeholder="Search by Student ID or name"
-                        value={searchStudentTerm}
-                        onChange={(e) => setSearchStudentTerm(e.target.value)}
-                        onFocus={() => setIsStudentSearchFocused(true)}
-                        onBlur={() => setTimeout(() => setIsStudentSearchFocused(false), 200)}
-                        className=""
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          placeholder="Search by Student ID or name"
+                          value={searchStudentTerm}
+                          onChange={(e) => setSearchStudentTerm(e.target.value)}
+                          onFocus={() => setIsStudentSearchFocused(true)}
+                          onBlur={() => setTimeout(() => setIsStudentSearchFocused(false), 200)}
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAddNewStudentOpen(true)}
+                        className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Student
+                      </Button>
                     </div>
 
                     {(isStudentSearchFocused || searchStudentTerm) && (
@@ -1782,6 +2079,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                                         {invoiceStudent.discounts.scholarship && (
                                           <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
                                             Scholarship
+                                          </Badge>
+                                        )}
+                                        {invoiceStudent.discounts.earlyBird && (
+                                          <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                            Early Bird
+                                          </Badge>
+                                        )}
+                                        {invoiceStudent.feeWaiver?.eligible && invoiceStudent.feeWaiver?.termsRemaining > 0 && (
+                                          <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
+                                            Fee Waiver ({invoiceStudent.feeWaiver.termsRemaining} terms)
                                           </Badge>
                                         )}
                                       </div>
@@ -1853,9 +2160,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     <div className="flex justify-between items-center">
                       <div>
                         <label className="font-medium">Selected Students ({selectedStudents.length})</label>
+                        {selectedStudents.some(s => (s as InvoiceStudent).isNewStudent) && (
+                          <span className="text-xs text-amber-600 ml-2">
+                            ({selectedStudents.filter(s => (s as InvoiceStudent).isNewStudent).length} new students)
+                          </span>
+                        )}
                         {selectedStudents.some(s => hasDiscounts(s as InvoiceStudent)) && (
                           <span className="text-xs text-green-600 ml-2">
-                            ({selectedStudents.filter(s => hasDiscounts(s as InvoiceStudent)).length} students with discounts)
+                            ({selectedStudents.filter(s => hasDiscounts(s as InvoiceStudent)).length} with discounts)
                           </span>
                         )}
                       </div>
@@ -1871,14 +2183,20 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                       {selectedStudents.map((student) => {
                         const invoiceStudent = student as InvoiceStudent
                         const studentHasDiscounts = hasDiscounts(invoiceStudent)
+                        const isNew = invoiceStudent.isNewStudent
                         return (
-                          <div key={student.id} className={`flex items-center justify-between p-2 rounded-lg text-sm ${studentHasDiscounts ? 'bg-green-50 border border-green-200' : 'bg-muted'}`}>
+                          <div key={student.id} className={`flex items-center justify-between p-2 rounded-lg text-sm ${isNew ? 'bg-amber-50 border border-amber-200' : studentHasDiscounts ? 'bg-green-50 border border-green-200' : 'bg-muted'}`}>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{student.name}</span>
                                 <span className="text-muted-foreground">({student.id} - {student.room})</span>
+                                {isNew && (
+                                  <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                    New Student
+                                  </Badge>
+                                )}
                               </div>
-                              {studentHasDiscounts && (
+                              {(studentHasDiscounts || isNew) && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {invoiceStudent.discounts.siblingDiscount > 0 && (
                                     <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
@@ -1905,6 +2223,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                                       Early Bird
                                     </Badge>
                                   )}
+                                  {invoiceStudent.feeWaiver?.eligible && invoiceStudent.feeWaiver?.termsRemaining > 0 && (
+                                    <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
+                                      Fee Waiver ({invoiceStudent.feeWaiver.termsRemaining} terms left)
+                                    </Badge>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1921,6 +2244,105 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     </div>
                   </div>
                 )}
+
+                {/* Application & Registration Fees for New Students - Auto included */}
+                {(() => {
+                  const newStudents = selectedStudents.filter(s => (s as InvoiceStudent).isNewStudent)
+                  if (newStudents.length === 0) return null
+
+                  // Get registration fees from context
+                  const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
+                  const totalFees = fees.applicationFee + fees.registrationFee + fees.securityDeposit
+
+                  return (
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-5 h-5 text-amber-600" />
+                        <h4 className="font-medium text-amber-900">Application & Registration Fees</h4>
+                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                          {newStudents.length} New Student{newStudents.length > 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-amber-700 mb-3">
+                        The following fees will be automatically applied to new students:
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {newStudents.map(s => (
+                          <Badge key={s.id} variant="secondary" className="bg-amber-100 text-amber-800">
+                            {s.name}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        {fees.applicationFee > 0 && (
+                          <div className="flex items-center gap-3 p-2 bg-white rounded border">
+                            <CheckCircle className="w-4 h-4 text-amber-600" />
+                            <div className="flex-1">
+                              <span className="font-medium">Application Fee</span>
+                              <span className="text-muted-foreground ml-2">฿{fees.applicationFee.toLocaleString()}</span>
+                            </div>
+                            {fees.applicationFeeRefundable && (
+                              <Badge variant="outline" className="text-xs">Refundable</Badge>
+                            )}
+                          </div>
+                        )}
+                        {fees.registrationFee > 0 && (
+                          <div className="flex items-center gap-3 p-2 bg-white rounded border">
+                            <CheckCircle className="w-4 h-4 text-amber-600" />
+                            <div className="flex-1">
+                              <span className="font-medium">Registration Fee</span>
+                              <span className="text-muted-foreground ml-2">฿{fees.registrationFee.toLocaleString()}</span>
+                            </div>
+                            {fees.registrationFeeRefundable && (
+                              <Badge variant="outline" className="text-xs">Refundable</Badge>
+                            )}
+                          </div>
+                        )}
+                        {fees.securityDeposit > 0 && (
+                          <div className="flex items-center gap-3 p-2 bg-white rounded border">
+                            <CheckCircle className="w-4 h-4 text-amber-600" />
+                            <div className="flex-1">
+                              <span className="font-medium">Security Deposit</span>
+                              <span className="text-muted-foreground ml-2">฿{fees.securityDeposit.toLocaleString()}</span>
+                            </div>
+                            {fees.securityDepositRefundable && (
+                              <Badge variant="outline" className="text-xs">Refundable</Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-amber-200">
+                        <div className="flex justify-between text-sm font-medium text-amber-900">
+                          <span>Registration Fees Total (per new student):</span>
+                          <span>฿{totalFees.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* ID Charges (placeholder) */}
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="w-5 h-5 text-gray-600" />
+                    <h4 className="font-medium text-gray-700">ID Charges</h4>
+                    <Badge variant="outline" className="text-xs text-gray-500">Coming Soon</Badge>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Student ID card charges will be added here in a future update.
+                  </p>
+                </div>
+
+                {/* Late Payment Charges Info */}
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <h4 className="font-medium text-red-800">Late Payment Policy</h4>
+                  </div>
+                  <p className="text-sm text-red-700">
+                    Late payment charges of <strong>1.5% per month</strong> or part thereof will be applied to payments made after the invoice due date.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -2079,15 +2501,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
                 {/* Payment Deadline */}
                 <div className="space-y-3">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    4. Payment Deadline
-                  </h3>
+                  <h3 className="font-medium">4. Set Payment Deadline</h3>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {externalPaymentDeadline ? format(externalPaymentDeadline, "PPP") : "Select deadline"}
+                      <Button
+                        variant="outline"
+                        className="max-w-xs justify-start text-left font-normal"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {externalPaymentDeadline ? format(externalPaymentDeadline, "dd/MM/yyyy") : "Select date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -2099,6 +2521,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                       />
                     </PopoverContent>
                   </Popover>
+                  {externalPaymentDeadline && (
+                    <p className="text-sm text-green-600">
+                      Payment deadline set for {format(externalPaymentDeadline, "dd/MM/yyyy")}
+                    </p>
+                  )}
                 </div>
 
                 {/* Notes */}
@@ -2149,6 +2576,228 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Add New Student Dialog */}
+      <Dialog open={isAddNewStudentOpen} onOpenChange={setIsAddNewStudentOpen}>
+        <DialogContent className="max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-amber-600" />
+              Add New Student
+            </DialogTitle>
+            <DialogDescription>
+              Add a new student who is not yet in the system. Application & Registration Fees will be automatically applied.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-700">
+                <strong>Note:</strong> This student will be marked as a new enrollee. Application Fee, Registration Fee, and Security Deposit will be automatically added to their invoice.
+              </p>
+            </div>
+
+            {/* Student Information */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-sm text-gray-700">Student Information</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>First Name <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="First name"
+                    value={newStudentFirstName}
+                    onChange={(e) => setNewStudentFirstName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Name <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="Last name"
+                    value={newStudentLastName}
+                    onChange={(e) => setNewStudentLastName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nickname</Label>
+                  <Input
+                    placeholder="Nickname"
+                    value={newStudentNickname}
+                    onChange={(e) => setNewStudentNickname(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={newStudentDob}
+                    onChange={(e) => setNewStudentDob(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Grade</Label>
+                  <Input value={selectedGrade} disabled className="bg-muted" />
+                </div>
+              </div>
+            </div>
+
+            {/* Family Selection */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-sm text-gray-700">Family</h4>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="familyType"
+                    checked={newStudentFamilyType === "new"}
+                    onChange={() => setNewStudentFamilyType("new")}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Create New Family</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="familyType"
+                    checked={newStudentFamilyType === "existing"}
+                    onChange={() => setNewStudentFamilyType("existing")}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Join Existing Family (Sibling)</span>
+                </label>
+              </div>
+
+              {newStudentFamilyType === "existing" ? (
+                <div className="space-y-2">
+                  <Label>Select Family</Label>
+                  <Select value={newStudentFamilyId} onValueChange={setNewStudentFamilyId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a family..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {families.map(family => (
+                        <SelectItem key={family.id} value={family.id}>
+                          {family.familyName} ({family.studentIds.length} student{family.studentIds.length > 1 ? 's' : ''})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {newStudentFamilyId && (
+                    <p className="text-xs text-green-600">
+                      This student will be added as child #{families.find(f => f.id === newStudentFamilyId)?.studentIds.length + 1} and may receive sibling discount.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Child Order in Family</Label>
+                  <Select value={String(newStudentChildOrder)} onValueChange={(v) => setNewStudentChildOrder(Number(v))}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1st Child</SelectItem>
+                      <SelectItem value="2">2nd Child</SelectItem>
+                      <SelectItem value="3">3rd Child</SelectItem>
+                      <SelectItem value="4">4th Child</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* Parent/Guardian Information - only show for new family */}
+            {newStudentFamilyType === "new" && (
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-sm text-gray-700">Parent/Guardian Information</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Parent/Guardian Name</Label>
+                    <Input
+                      placeholder="Full name"
+                      value={newStudentParentName}
+                      onChange={(e) => setNewStudentParentName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Relationship</Label>
+                    <Select value={newStudentParentRelation} onValueChange={(v: "father" | "mother" | "guardian" | "other") => setNewStudentParentRelation(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="father">Father</SelectItem>
+                        <SelectItem value="mother">Mother</SelectItem>
+                        <SelectItem value="guardian">Guardian</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Email <span className="text-red-500">*</span></Label>
+                    <Input
+                      type="email"
+                      placeholder="parent@email.com"
+                      value={newStudentEmail}
+                      onChange={(e) => setNewStudentEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input
+                      placeholder="Phone number"
+                      value={newStudentPhone}
+                      onChange={(e) => setNewStudentPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Address</Label>
+                  <Input
+                    placeholder="Home address"
+                    value={newStudentAddress}
+                    onChange={(e) => setNewStudentAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddNewStudentOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddNewStudent}
+              className="flex-1"
+              style={{ backgroundColor: '#d97706', color: 'white' }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
@@ -2201,11 +2850,66 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               {selectedStudents.length > 0 && selectedStudents[previewStudentIndex] ? (
                 (() => {
                   const currentStudent = selectedStudents[previewStudentIndex] as InvoiceStudent
-                  const subtotal = getTotalAmount()
-                  const discountCalc = calculateStudentDiscounts(currentStudent, subtotal)
+                  const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
+
+                  // Calculate registration fees for new students - automatically included
+                  const registrationFeeItems: { id: string; name: string; description: string; amount: number; isRegistrationFee: boolean }[] = []
+                  if (currentStudent.isNewStudent) {
+                    if (fees.applicationFee > 0) {
+                      registrationFeeItems.push({
+                        id: 'app-fee',
+                        name: 'Application Fee',
+                        description: 'One-time application fee for new students',
+                        amount: fees.applicationFee,
+                        isRegistrationFee: true
+                      })
+                    }
+                    if (fees.registrationFee > 0) {
+                      registrationFeeItems.push({
+                        id: 'reg-fee',
+                        name: 'Registration Fee',
+                        description: 'One-time registration fee for new students',
+                        amount: fees.registrationFee,
+                        isRegistrationFee: true
+                      })
+                    }
+                    if (fees.securityDeposit > 0) {
+                      registrationFeeItems.push({
+                        id: 'sec-dep',
+                        name: 'Security Deposit',
+                        description: fees.securityDepositRefundable ? 'Refundable security deposit' : 'Security deposit',
+                        amount: fees.securityDeposit,
+                        isRegistrationFee: true
+                      })
+                    }
+                  }
+
+                  const registrationFeesTotal = registrationFeeItems.reduce((sum, item) => sum + item.amount, 0)
+                  const subtotal = getTotalAmount() + registrationFeesTotal
+                  const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount()) // Discounts apply only to regular items
                   const invoiceNumber = generateInvoiceNumber(currentStudent.id)
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
+
+                  // Fee Waiver credit (only if eligible and terms remaining > 0)
+                  const feeWaiverCredit = currentStudent.feeWaiver?.eligible && currentStudent.feeWaiver?.termsRemaining > 0
+                    ? currentStudent.feeWaiver.creditPerTerm
+                    : 0
+
+                  // Security Deposit Fee Waiver (for new students who are eligible for fee waiver)
+                  const securityDepositWaiver = currentStudent.isNewStudent &&
+                    currentStudent.feeWaiver?.eligible &&
+                    fees.securityDeposit > 0
+                    ? fees.securityDeposit
+                    : 0
+
+                  // Calculate subtotal before ID Charges
+                  const subtotalBeforeIdCharges = discountCalc.netAmount + registrationFeesTotal - feeWaiverCredit - securityDepositWaiver
+
+                  // ID Charges (3% of subtotal)
+                  const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+
+                  const finalTotal = Math.max(0, subtotalBeforeIdCharges + idCharges)
 
                   return (
                     <div className="bg-white border rounded-lg shadow-sm text-sm">
@@ -2231,9 +2935,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                         <div className="flex justify-center" style={{ gap: '120px' }}>
                           {/* Left Column - Student Info */}
                           <div className="space-y-2">
-                            <div>
+                            <div className="flex items-center gap-2">
                               <span className="text-gray-500">Student Name: </span>
                               <span className="font-medium">{currentStudent.name}</span>
+                              {currentStudent.isNewStudent && (
+                                <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                  New Student
+                                </Badge>
+                              )}
                             </div>
                             <div>
                               <span className="text-gray-500">Student ID: </span>
@@ -2286,6 +2995,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                             </tr>
                           </thead>
                           <tbody>
+                            {/* Regular Items */}
                             {selectedItems.map((item, index) => (
                               <tr key={item.id} className="border-b">
                                 <td className="py-2 px-2 align-top">{index + 1}</td>
@@ -2297,29 +3007,78 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                               </tr>
                             ))}
 
-                            {/* Subtotal Row */}
-                            <tr className="border-b">
-                              <td></td>
-                              <td className="py-2 px-2 text-right font-medium">Subtotal</td>
-                              <td className="py-2 px-2 text-right font-medium">{formatCurrency(subtotal)}</td>
-                            </tr>
+                            {/* Other Discounts (NOT Registration Fee Waiver - shown separately below) */}
+                            {discountCalc.discountItems
+                              .filter(d => !d.name.includes('Registration Fee Waiver'))
+                              .map((discount, idx) => (
+                              <tr key={idx} className="border-b text-green-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  {discount.name}{discount.percentage ? ` (${discount.percentage}%)` : ''}
+                                </td>
+                                <td className="py-2 px-2 text-right">-{formatCurrency(discount.amount)}</td>
+                              </tr>
+                            ))}
 
-                            {/* Discount Rows */}
-                            {discountCalc.discountItems.length > 0 ? (
-                              discountCalc.discountItems.map((discount, idx) => (
-                                <tr key={idx} className="border-b text-green-600">
-                                  <td></td>
-                                  <td className="py-2 px-2 text-right">
-                                    {discount.name}{discount.percentage ? ` (${discount.percentage}%)` : ''}
-                                  </td>
-                                  <td className="py-2 px-2 text-right">-{formatCurrency(discount.amount)}</td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr className="border-b">
-                                <td></td>
-                                <td className="py-2 px-2 text-right">Discount</td>
-                                <td className="py-2 px-2 text-right">0.00</td>
+                            {/* For New Students: Fees and Waivers in specific order */}
+                            {/* 1. Application Fee */}
+                            {registrationFeeItems.find(item => item.id === 'app-fee') && (
+                              <tr className="border-b text-orange-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  Application Fee
+                                </td>
+                                <td className="py-2 px-2 text-right">+{formatCurrency(registrationFeeItems.find(item => item.id === 'app-fee')!.amount)}</td>
+                              </tr>
+                            )}
+
+                            {/* 2. Registration Fee */}
+                            {registrationFeeItems.find(item => item.id === 'reg-fee') && (
+                              <tr className="border-b text-orange-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  Registration Fee
+                                </td>
+                                <td className="py-2 px-2 text-right">+{formatCurrency(registrationFeeItems.find(item => item.id === 'reg-fee')!.amount)}</td>
+                              </tr>
+                            )}
+
+                            {/* 3. Registration Fee Waiver (comes after Registration Fee) */}
+                            {discountCalc.discountItems
+                              .filter(d => d.name.includes('Registration Fee Waiver'))
+                              .map((discount, idx) => (
+                              <tr key={`reg-waiver-${idx}`} className="border-b text-green-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  {discount.name}
+                                </td>
+                                <td className="py-2 px-2 text-right">-{formatCurrency(discount.amount)}</td>
+                              </tr>
+                            ))}
+
+                            {/* 4. Security Deposit */}
+                            {registrationFeeItems.find(item => item.id === 'sec-dep') && (
+                              <tr className="border-b text-orange-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  Security Deposit{fees.securityDepositRefundable && <span className="text-xs ml-1">(Refundable)</span>}
+                                </td>
+                                <td className="py-2 px-2 text-right">+{formatCurrency(registrationFeeItems.find(item => item.id === 'sec-dep')!.amount)}</td>
+                              </tr>
+                            )}
+
+                            {/* 5. Security Deposit Fee Waiver (comes after Security Deposit) */}
+                            {securityDepositWaiver > 0 && (
+                              <tr className="border-b text-green-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  Security Deposit Fee Waiver
+                                </td>
+                                <td className="py-2 px-2 text-right">-{formatCurrency(securityDepositWaiver)}</td>
+                              </tr>
+                            )}
+
+                            {/* 6. ID Charges (3% of subtotal) - always last */}
+                            {idCharges > 0 && (
+                              <tr className="border-b text-purple-600">
+                                <td colSpan={2} className="py-2 px-2 text-left">
+                                  ID Charges (3%)
+                                </td>
+                                <td className="py-2 px-2 text-right">+{formatCurrency(idCharges)}</td>
                               </tr>
                             )}
 
@@ -2328,10 +3087,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
                         {/* Amount in Words + Total */}
                         <div className="mt-3 pt-3 border-t">
-                          <div className="text-xs text-gray-600 mb-2">{numberToWords(discountCalc.netAmount)}</div>
+                          <div className="text-xs text-gray-600 mb-2">{numberToWords(finalTotal)}</div>
                           <div className="flex justify-between items-center font-bold">
                             <span>TOTAL</span>
-                            <span>{formatCurrency(discountCalc.netAmount)}</span>
+                            <span>{formatCurrency(finalTotal)}</span>
                           </div>
                         </div>
                       </div>

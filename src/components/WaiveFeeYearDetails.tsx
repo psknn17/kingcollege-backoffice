@@ -70,9 +70,9 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
     const yearIndex = yearNumber - baseYear
 
     const familyCodes = Array.from({ length: 25 }, (_, i) => `FAM${String(i + 1).padStart(3, '0')}`)
-    
+
     const olderNames = ['Alex Johnson', 'Emma Smith', 'James Brown', 'Sophie Davis', 'Michael Wilson', 'Olivia Garcia', 'Daniel Martinez', 'Isabella Rodriguez', 'William Anderson', 'Charlotte Taylor', 'Benjamin Thomas', 'Amelia Jackson', 'Lucas White', 'Mia Harris', 'Henry Martin', 'Grace Lee', 'Samuel Kim', 'Chloe Chen', 'Nathan Park', 'Zoe Liu', 'Oliver Wang', 'Maya Singh', 'Ethan Cooper', 'Lily Johnson', 'Jacob Miller']
-    
+
     const youngerNames = ['Ethan Johnson', 'Ava Smith', 'Liam Brown', 'Grace Davis', 'Noah Wilson', 'Chloe Garcia', 'Mason Martinez', 'Lily Rodriguez', 'Oliver Anderson', 'Zoe Taylor', 'Jacob Thomas', 'Hannah Jackson', 'Alexander White', 'Emily Harris', 'Samuel Martin', 'Sophie Lee', 'William Kim', 'Mia Chen', 'Lucas Park', 'Emma Liu', 'Michael Wang', 'Isabella Singh', 'Daniel Cooper', 'Charlotte Johnson', 'Benjamin Miller']
 
     familyCodes.forEach((familyCode, index) => {
@@ -90,7 +90,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
         currentActiveStudent = 'younger'
         youngerStatus = yearIndex < 2 ? 'completed' : 'active'
         olderStatus = 'waiting'
-        
+
         if (yearIndex === 0) {
           youngerTermsReceived = 3
           youngerAmountReceived = 75000
@@ -108,7 +108,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
         youngerStatus = 'completed'
         youngerTermsReceived = 3
         youngerAmountReceived = 75000
-        
+
         if (yearIndex === 3) {
           olderStatus = 'upcoming'
         } else if (yearIndex === 4) {
@@ -155,12 +155,12 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
 
   // Filter families based on search and status
   const filteredFamilies = familyDetails.filter(family => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       family.familyCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       family.olderSibling.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       family.youngerSibling.name.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = filterStatus === 'all' || 
+
+    const matchesStatus = filterStatus === 'all' ||
       family.olderSibling.discountStatus === filterStatus ||
       family.youngerSibling.discountStatus === filterStatus
 
@@ -260,7 +260,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
 
   // Summary calculations
   const totalFamilies = filteredFamilies.length
-  const activeDiscounts = filteredFamilies.filter(f => 
+  const activeDiscounts = filteredFamilies.filter(f =>
     f.olderSibling.discountStatus === 'active' || f.youngerSibling.discountStatus === 'active'
   ).length
   const totalAmount = filteredFamilies.reduce((sum, f) => sum + f.familyTotalDiscount, 0)
@@ -290,13 +290,13 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Families</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Family</CardTitle>
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalFamilies}</div>
             <p className="text-xs text-muted-foreground">
-              families in waiver program
+              family in waiver program
             </p>
           </CardContent>
         </Card>
@@ -309,7 +309,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeDiscounts}</div>
             <p className="text-xs text-muted-foreground">
-              families with active discounts
+              family with active discounts
             </p>
           </CardContent>
         </Card>
@@ -389,7 +389,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
             Family Waiver Details
           </CardTitle>
           <CardDescription>
-            Complete list of families and their sibling discount status for {academicYear}
+            Complete list of family and their sibling discount status for {academicYear}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -444,7 +444,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                     <TableCell className="font-medium">
                       {family.familyCode}
                     </TableCell>
-                    
+
                     {/* Older Sibling */}
                     <TableCell>
                       <div className="space-y-1">
@@ -461,8 +461,8 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                     </TableCell>
                     <TableCell>
                       <div className="space-y-2 min-w-[120px]">
-                        <Progress 
-                          value={(family.olderSibling.termsReceived / family.olderSibling.totalTerms) * 100} 
+                        <Progress
+                          value={(family.olderSibling.termsReceived / family.olderSibling.totalTerms) * 100}
                           className="h-2"
                         />
                         <div className="text-xs text-muted-foreground">
@@ -490,8 +490,8 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                     </TableCell>
                     <TableCell>
                       <div className="space-y-2 min-w-[120px]">
-                        <Progress 
-                          value={(family.youngerSibling.termsReceived / family.youngerSibling.totalTerms) * 100} 
+                        <Progress
+                          value={(family.youngerSibling.termsReceived / family.youngerSibling.totalTerms) * 100}
                           className="h-2"
                         />
                         <div className="text-xs text-muted-foreground">
@@ -527,7 +527,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
           {filteredFamilies.length === 0 && (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No families found matching your filters</p>
+              <p className="text-muted-foreground">No family found matching your filters</p>
               <Button variant="outline" onClick={resetFilters} className="mt-2">
                 Clear Filters
               </Button>

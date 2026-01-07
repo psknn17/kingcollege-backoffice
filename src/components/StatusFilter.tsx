@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Badge } from "./ui/badge"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export type PaymentStatus = "paid" | "partial" | "unpaid" | "cancelled" | "overdue" | "all"
 
@@ -11,6 +12,7 @@ interface StatusFilterProps {
 }
 
 export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterProps) {
+  const { t } = useLanguage()
   const statusOptions = [
     { value: "all" as PaymentStatus, label: "All Status", color: undefined },
     { value: "paid" as PaymentStatus, label: "Paid", color: "bg-green-100 text-green-800 hover:bg-green-100" },
