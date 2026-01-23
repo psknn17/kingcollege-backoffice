@@ -107,6 +107,7 @@ const menuItems = {
     { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
+    { id: "student-invoices", labelKey: "menu.studentInvoices", icon: FileInvoice },
   ],
   afterSchool: [
     { id: "afterschool-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
@@ -135,8 +136,10 @@ const menuItems = {
     { id: "waive-fee", labelKey: "menu.waiveFees", icon: TrendingDown },
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
   ],
+  externalInvoice: [
+    { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
+  ],
   invoiceManagement: [
-    { id: "invoice-management", labelKey: "menu.invoices", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "email-jobs", labelKey: "menu.emailJobs", icon: Mail },
   ],
@@ -163,6 +166,7 @@ export default function App() {
     eventManagement: false,
     summerActivities: false,
     discountManagement: false,
+    externalInvoice: false,
     invoiceManagement: false,
     studentManagement: false,
     userManagement: false
@@ -264,6 +268,8 @@ export default function App() {
         return <PaymentHistory />
       case "tuition-invoice-management":
         return <TuitionInvoiceManagement />
+      case "student-invoices":
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
       case "afterschool-dashboard":
         return <AfterSchoolDashboard />
       case "afterschool-settings":
@@ -304,12 +310,12 @@ export default function App() {
       case "discount-options":
         return <DiscountOptions />
       case "waive-fee-year-details":
-        return <WaiveFeeYearDetails 
+        return <WaiveFeeYearDetails
           academicYear={subPageParams?.academicYear || '2024-2025'}
           onBack={navigateBack}
         />
-      case "invoice-management":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} showTypeTabs={true} />
+      case "external-invoices":
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="external" showTypeTabs={false} />
       case "invoice-creation":
         return <InvoiceCreation
           defaultCategory={subPageParams?.defaultCategory}
@@ -512,6 +518,35 @@ export default function App() {
               </SidebarGroup>
             </Collapsible>
 
+            {/* External Invoice */}
+            <Collapsible open={openGroups["externalInvoice"]} onOpenChange={() => toggleGroup("externalInvoice")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.externalInvoice")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["externalInvoice"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.externalInvoice.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+
             {/* Invoice Management */}
             <Collapsible open={openGroups["invoiceManagement"]} onOpenChange={() => toggleGroup("invoiceManagement")}>
               <SidebarGroup>
@@ -624,6 +659,7 @@ export default function App() {
                  menuItems.eventManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.summerActivities.find(item => item.id === activeSection)?.label ||
                  menuItems.discountManagement.find(item => item.id === activeSection)?.label ||
+                 menuItems.externalInvoice.find(item => item.id === activeSection)?.label ||
                  menuItems.invoiceManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.userManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.studentManagement.find(item => item.id === activeSection)?.label ||
