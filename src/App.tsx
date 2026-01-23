@@ -107,7 +107,7 @@ const menuItems = {
     { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
-    { id: "student-invoices", labelKey: "menu.studentInvoices", icon: FileInvoice },
+    { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
   ],
   afterSchool: [
     { id: "afterschool-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
