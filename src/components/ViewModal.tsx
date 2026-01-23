@@ -342,49 +342,62 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
   )
 
   const renderItemView = () => (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-2">
+    <div className="space-y-4">
+      {/* Header with Amount */}
+      <div className="flex justify-between items-start border-b pb-4">
         <div className="flex-1">
-          <h3 className="text-2xl font-bold text-gray-900">{data.name}</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-bold text-gray-900">{data.name}</h3>
+            {getStatusBadge(data.isActive ? "active" : "inactive")}
+          </div>
           {data.description && (
-            <p className="text-muted-foreground mt-1">{data.description}</p>
+            <p className="text-sm text-muted-foreground mt-1">{data.description}</p>
           )}
         </div>
-        <div className="text-right ml-4">
-          {getStatusBadge(data.isActive ? "active" : "inactive")}
-          <p className="text-3xl font-bold mt-3 text-gray-900">{formatCurrency(data.amount)}</p>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-primary">{formatCurrency(data.amount)}</p>
         </div>
       </div>
 
-      {/* Item Details - Single Card Full Width */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("viewModal.itemInformation")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.itemName")}</label>
-              <p className="font-medium text-gray-900 mt-1">{data.name}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.category")}</label>
-              <div className="mt-1">
-                <Badge variant="outline">{data.category}</Badge>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.amount")}</label>
-              <p className="font-semibold text-xl text-gray-900 mt-1">{formatCurrency(data.amount)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.status")}</label>
-              <p className="font-medium text-gray-900 mt-1">{data.isActive ? t("common.active") : t("common.inactive")}</p>
-            </div>
+      {/* Item Details Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-2">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Item Code</label>
+          <p className="font-mono text-sm bg-muted px-2 py-1 rounded">{data.itemCode || '-'}</p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("viewModal.category")}</label>
+          <Badge variant="outline" className="mt-0.5">{data.category}</Badge>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("viewModal.status")}</label>
+          <p className="text-sm font-medium">{data.isActive ? t("common.active") : t("common.inactive")}</p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nominal Code</label>
+          <p className="font-mono text-sm">{data.nominalCode || '-'}</p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Document Type</label>
+          <p className="text-sm">{data.documentType || 'SI'}</p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("viewModal.amount")}</label>
+          <p className="text-sm font-semibold">{formatCurrency(data.amount)}</p>
+        </div>
+      </div>
+
+      {/* Applicable Grades */}
+      {data.applicableGrades && data.applicableGrades.length > 0 && (
+        <div className="border-t pt-4">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Applicable Grades</label>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {data.applicableGrades.map((grade: string) => (
+              <Badge key={grade} variant="secondary" className="text-xs">{grade}</Badge>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 
