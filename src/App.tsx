@@ -108,6 +108,8 @@ const menuItems = {
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
+    { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "email-jobs", labelKey: "menu.emailJobs", icon: Mail },
   ],
   afterSchool: [
     { id: "afterschool-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
@@ -139,10 +141,6 @@ const menuItems = {
   externalInvoice: [
     { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
   ],
-  invoiceManagement: [
-    { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "email-jobs", labelKey: "menu.emailJobs", icon: Mail },
-  ],
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
     { id: "role-management", labelKey: "menu.rolesPermissions", icon: Shield },
@@ -167,7 +165,6 @@ export default function App() {
     summerActivities: false,
     discountManagement: false,
     externalInvoice: false,
-    invoiceManagement: false,
     studentManagement: false,
     userManagement: false
   })
@@ -547,35 +544,6 @@ export default function App() {
               </SidebarGroup>
             </Collapsible>
 
-            {/* Invoice Management */}
-            <Collapsible open={openGroups["invoiceManagement"]} onOpenChange={() => toggleGroup("invoiceManagement")}>
-              <SidebarGroup>
-                <CollapsibleTrigger className="w-full">
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    {t("menu.invoiceManagement")}
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["invoiceManagement"] ? "rotate-180" : ""}`} />
-                  </SidebarGroupLabel>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {menuItems.invoiceManagement.map((item) => (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton
-                            onClick={() => handleMenuItemClick(item.id)}
-                            isActive={activeSection === item.id}
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span>{t(item.labelKey)}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
-              </SidebarGroup>
-            </Collapsible>
-
             {/* Student Management */}
             <Collapsible open={openGroups["studentManagement"]} onOpenChange={() => toggleGroup("studentManagement")}>
               <SidebarGroup>
@@ -660,15 +628,13 @@ export default function App() {
                  menuItems.summerActivities.find(item => item.id === activeSection)?.label ||
                  menuItems.discountManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.externalInvoice.find(item => item.id === activeSection)?.label ||
-                 menuItems.invoiceManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.userManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.studentManagement.find(item => item.id === activeSection)?.label ||
-                 (activeSection === "invoice-creation" ? 
+                 (activeSection === "invoice-creation" ?
                    (subPageParams?.invoiceType === "tuition" ? "Create Tuition Invoice" :
                     subPageParams?.invoiceType === "eca" ? "Create ECA Invoice" :
                     subPageParams?.invoiceType === "trip" ? "Create Trip & Activities Invoice" :
                     "Create Invoice") :
-                  activeSection === "email-jobs" ? "Email Jobs" :
                   activeSection === "email-history-view" ? "Email Delivery History" :
                   activeSection === "email-csv-export" ? "Export Email Logs" :
                   activeSection === "view-details" ?
