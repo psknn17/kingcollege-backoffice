@@ -305,7 +305,7 @@ const mockPreCreatedItems: PreCreatedItem[] = [
 ]
 
 interface InvoiceManagementProps {
-  onNavigateToSubPage: (subPage: string) => void
+  onNavigateToSubPage: (subPage: string, params?: any) => void
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
   showTypeTabs?: boolean // Control whether to show Student/External tabs (default: false for sub-pages)
   defaultTab?: "student" | "external" // Which tab to show when tabs are hidden (default: "student")
@@ -1029,7 +1029,7 @@ export function InvoiceManagement({
             <Download className="w-4 h-4" />
             {t("invoice.exportReport")}
           </Button>
-          <Button onClick={() => onNavigateToSubPage('invoice-creation')} className="flex items-center gap-2">
+          <Button onClick={() => onNavigateToSubPage('invoice-creation', { category })} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {t("invoice.createInvoice")}
           </Button>

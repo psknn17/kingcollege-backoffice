@@ -268,6 +268,8 @@ interface SavedInvoice {
   recipientAddress?: string
   eventName?: string
   notes?: string
+  // Category for filtering by menu type
+  category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external"
   // New student fields
   isNewStudent?: boolean
   registrationFees?: { name: string, amount: number }[]
@@ -998,6 +1000,7 @@ const getCardIcon = (invoiceType: string) => {
 interface InvoiceCreationProps {
   defaultCategory?: string
   invoiceType?: string
+  category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external" // Category for filtering invoices by menu type
   onNavigateToEmailSending?: (data: any) => void
   onNavigateBack?: () => void
   editInvoice?: any // Invoice data to edit
@@ -1034,7 +1037,7 @@ interface InvoiceStudent {
   }
 }
 
-export function InvoiceCreation({ defaultCategory, invoiceType = "student", onNavigateToEmailSending, onNavigateBack, editInvoice }: InvoiceCreationProps) {
+export function InvoiceCreation({ defaultCategory, invoiceType = "student", category = "tuition", onNavigateToEmailSending, onNavigateBack, editInvoice }: InvoiceCreationProps) {
   // Language context
   const { t } = useLanguage()
 
@@ -2130,6 +2133,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", onNa
         paymentType: "termly",
         createdAt: now.toISOString(),
         invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+        category: category, // Category for filtering by menu type
         // Event/Trip/Activity name for afterschool/event/summer/eca invoices
         eventName: (invoiceType === "event" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
         // New student data
@@ -2268,6 +2272,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", onNa
         paymentType: "termly",
         createdAt: now.toISOString(),
         invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+        category: category, // Category for filtering by menu type
         // Event/Trip/Activity name for afterschool/event/summer/eca invoices
         eventName: (invoiceType === "event" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
         // New student data

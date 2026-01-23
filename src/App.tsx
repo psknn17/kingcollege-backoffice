@@ -317,6 +317,7 @@ export default function App() {
         return <InvoiceCreation
           defaultCategory={subPageParams?.defaultCategory}
           invoiceType={subPageParams?.invoiceType}
+          category={subPageParams?.category}
           onNavigateBack={navigateBack}
         />
       case "item-management":
