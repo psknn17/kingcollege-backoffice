@@ -1,5 +1,5 @@
 import { ReceiptPage } from "./ReceiptPageUpdated"
 
 export function TuitionInvoiceManagement() {
-  return <ReceiptPage />
+  return <ReceiptPage category="tuition" />
 }

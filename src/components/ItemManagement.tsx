@@ -1137,6 +1137,14 @@ const getItemsStorageKey = (category: string): string => {
       return "externalItems"
     case "eca":
       return "ecaItems"
+    case "trip":
+      return "tripItems"
+    case "exam":
+      return "examItems"
+    case "bus":
+      return "busItems"
+    case "tuition":
+      return "invoiceItems"
     default:
       return "invoiceItems" // student/tuition items
   }
@@ -1154,6 +1162,14 @@ const getTemplatesStorageKey = (category: string): string => {
       return "externalTemplates"
     case "eca":
       return "ecaTemplates"
+    case "trip":
+      return "tripTemplates"
+    case "exam":
+      return "examTemplates"
+    case "bus":
+      return "busTemplates"
+    case "tuition":
+      return "invoiceTemplates"
     default:
       return "invoiceTemplates" // student/tuition templates
   }
@@ -1333,13 +1349,13 @@ const saveTemplatesToStorage = (templates: ItemTemplate[], invoiceCategory: stri
 interface ItemManagementProps {
   onNavigateToSubPage?: (subPage: string, params?: any) => void
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
-  invoiceType?: "student" | "external" | "afterschool" | "event" | "summer"
+  invoiceType?: "student" | "external" | "afterschool" | "event" | "summer" | "tuition" | "eca" | "trip" | "exam" | "bus"
 }
 
 export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceType = "student" }: ItemManagementProps) {
   const { t } = useLanguage()
   const isExternalView = invoiceType === "external"
-  const isCategoryView = ["afterschool", "event", "summer"].includes(invoiceType)
+  const isCategoryView = ["afterschool", "event", "summer", "eca", "trip", "exam", "bus"].includes(invoiceType)
   const isSimplifiedView = isExternalView || isCategoryView
   const currentCategories = invoiceType === "external" ? externalCategories :
     invoiceType === "afterschool" ? afterSchoolCategories :

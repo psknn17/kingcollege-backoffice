@@ -241,9 +241,10 @@ for (let i = 4; i <= 50; i++) {
 
 interface ReceiptPageProps {
   onNavigateToSubPage?: (page: string, params?: any) => void
+  category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external" // Filter receipts by category/menu type
 }
 
-export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps) {
+export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps) {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
 
