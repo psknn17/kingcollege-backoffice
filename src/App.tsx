@@ -87,6 +87,7 @@ import { DiscountReports } from "./components/DiscountReports"
 import { InvoiceManagement } from "./components/InvoiceManagement"
 import { InvoiceCreation } from "./components/InvoiceCreation"
 import { ItemManagement } from "./components/ItemManagement"
+import { ReceiptPage } from "./components/ReceiptPageUpdated"
 import { EmailJobsManagement } from "./components/EmailJobsManagement"
 import { EmailHistoryView } from "./components/EmailHistoryView"
 import { EmailCsvExport } from "./components/EmailCsvExport"
@@ -140,6 +141,8 @@ const menuItems = {
   ],
   externalInvoice: [
     { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
+    { id: "external-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
@@ -313,6 +316,10 @@ export default function App() {
         />
       case "external-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="external" showTypeTabs={false} />
+      case "external-item-management":
+        return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
+      case "external-receipts":
+        return <ReceiptPage />
       case "invoice-creation":
         return <InvoiceCreation
           defaultCategory={subPageParams?.defaultCategory}
