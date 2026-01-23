@@ -132,6 +132,26 @@ const menuItems = {
     { id: "summer-payment-reports", labelKey: "menu.paymentReports", icon: DollarSign },
     { id: "summer-activities-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
+  eca: [
+    { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
+    { id: "eca-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "eca-receipts", labelKey: "menu.receipts", icon: Receipt },
+  ],
+  tripActivity: [
+    { id: "trip-invoices", labelKey: "menu.tripInvoices", icon: FileInvoice },
+    { id: "trip-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "trip-receipts", labelKey: "menu.receipts", icon: Receipt },
+  ],
+  exam: [
+    { id: "exam-invoices", labelKey: "menu.examInvoices", icon: FileInvoice },
+    { id: "exam-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "exam-receipts", labelKey: "menu.receipts", icon: Receipt },
+  ],
+  schoolBus: [
+    { id: "bus-invoices", labelKey: "menu.busInvoices", icon: FileInvoice },
+    { id: "bus-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "bus-receipts", labelKey: "menu.receipts", icon: Receipt },
+  ],
   discountManagement: [
     { id: "discount-options", labelKey: "menu.promotions", icon: Settings2 },
     { id: "student-groups", labelKey: "menu.studentGroups", icon: Users },
@@ -142,11 +162,6 @@ const menuItems = {
     { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
     { id: "external-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
-  ],
-  eca: [
-    { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
-    { id: "eca-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "eca-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
@@ -170,9 +185,12 @@ export default function App() {
     afterSchool: false,
     eventManagement: false,
     summerActivities: false,
+    eca: false,
+    tripActivity: false,
+    exam: false,
+    schoolBus: false,
     discountManagement: false,
     externalInvoice: false,
-    eca: false,
     studentManagement: false,
     userManagement: false
   })
@@ -329,6 +347,24 @@ export default function App() {
       case "eca-item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
       case "eca-receipts":
+        return <ReceiptPage />
+      case "trip-invoices":
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+      case "trip-item-management":
+        return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
+      case "trip-receipts":
+        return <ReceiptPage />
+      case "exam-invoices":
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+      case "exam-item-management":
+        return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
+      case "exam-receipts":
+        return <ReceiptPage />
+      case "bus-invoices":
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+      case "bus-item-management":
+        return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
+      case "bus-receipts":
         return <ReceiptPage />
       case "invoice-creation":
         return <InvoiceCreation
@@ -503,6 +539,122 @@ export default function App() {
               </SidebarGroup>
             </Collapsible>
 
+            {/* ECA */}
+            <Collapsible open={openGroups["eca"]} onOpenChange={() => toggleGroup("eca")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.eca")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["eca"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.eca.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+
+            {/* Trip & Activity */}
+            <Collapsible open={openGroups["tripActivity"]} onOpenChange={() => toggleGroup("tripActivity")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.tripActivity")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["tripActivity"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.tripActivity.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+
+            {/* Exam */}
+            <Collapsible open={openGroups["exam"]} onOpenChange={() => toggleGroup("exam")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.exam")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["exam"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.exam.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+
+            {/* School Bus */}
+            <Collapsible open={openGroups["schoolBus"]} onOpenChange={() => toggleGroup("schoolBus")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.schoolBus")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["schoolBus"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.schoolBus.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+
             {/* Discount Management */}
             <Collapsible open={openGroups["discountManagement"]} onOpenChange={() => toggleGroup("discountManagement")}>
               <SidebarGroup>
@@ -545,35 +697,6 @@ export default function App() {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {menuItems.externalInvoice.map((item) => (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton
-                            onClick={() => handleMenuItemClick(item.id)}
-                            isActive={activeSection === item.id}
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span>{t(item.labelKey)}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
-              </SidebarGroup>
-            </Collapsible>
-
-            {/* ECA */}
-            <Collapsible open={openGroups["eca"]} onOpenChange={() => toggleGroup("eca")}>
-              <SidebarGroup>
-                <CollapsibleTrigger className="w-full">
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    {t("menu.eca")}
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["eca"] ? "rotate-180" : ""}`} />
-                  </SidebarGroupLabel>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {menuItems.eca.map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             onClick={() => handleMenuItemClick(item.id)}
@@ -672,9 +795,12 @@ export default function App() {
                  menuItems.afterSchool.find(item => item.id === activeSection)?.label ||
                  menuItems.eventManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.summerActivities.find(item => item.id === activeSection)?.label ||
+                 menuItems.eca.find(item => item.id === activeSection)?.label ||
+                 menuItems.tripActivity.find(item => item.id === activeSection)?.label ||
+                 menuItems.exam.find(item => item.id === activeSection)?.label ||
+                 menuItems.schoolBus.find(item => item.id === activeSection)?.label ||
                  menuItems.discountManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.externalInvoice.find(item => item.id === activeSection)?.label ||
-                 menuItems.eca.find(item => item.id === activeSection)?.label ||
                  menuItems.userManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.studentManagement.find(item => item.id === activeSection)?.label ||
                  (activeSection === "invoice-creation" ?
