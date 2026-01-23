@@ -342,60 +342,48 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
   )
 
   const renderItemView = () => (
-    <div className="space-y-4">
-      {/* Header with Amount */}
-      <div className="flex justify-between items-start border-b pb-4">
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex justify-between items-start">
         <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-bold text-gray-900">{data.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900">{data.name}</h3>
             {getStatusBadge(data.isActive ? "active" : "inactive")}
           </div>
           {data.description && (
-            <p className="text-sm text-muted-foreground mt-1">{data.description}</p>
+            <p className="text-sm text-muted-foreground">{data.description}</p>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-2xl font-bold text-primary">{formatCurrency(data.amount)}</p>
-        </div>
+        <p className="text-xl font-bold text-primary">{formatCurrency(data.amount)}</p>
       </div>
 
-      {/* Item Details Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-2">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Item Code</label>
-          <p className="font-mono text-sm bg-muted px-2 py-1 rounded">{data.itemCode || '-'}</p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("viewModal.category")}</label>
-          <Badge variant="outline" className="mt-0.5">{data.category}</Badge>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("viewModal.status")}</label>
-          <p className="text-sm font-medium">{data.isActive ? t("common.active") : t("common.inactive")}</p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nominal Code</label>
-          <p className="font-mono text-sm">{data.nominalCode || '-'}</p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Document Type</label>
-          <p className="text-sm">{data.documentType || 'SI'}</p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("viewModal.amount")}</label>
-          <p className="text-sm font-semibold">{formatCurrency(data.amount)}</p>
-        </div>
+      {/* Item Details - Compact Table */}
+      <div className="bg-muted/50 rounded-lg p-3">
+        <table className="w-full text-sm">
+          <tbody>
+            <tr>
+              <td className="text-muted-foreground py-1 w-32">Item Code</td>
+              <td className="font-mono py-1">{data.itemCode || '-'}</td>
+              <td className="text-muted-foreground py-1 w-32">Category</td>
+              <td className="py-1"><Badge variant="outline" className="text-xs">{data.category}</Badge></td>
+            </tr>
+            <tr>
+              <td className="text-muted-foreground py-1">Nominal Code</td>
+              <td className="font-mono py-1">{data.nominalCode || '-'}</td>
+              <td className="text-muted-foreground py-1">Doc Type</td>
+              <td className="py-1">{data.documentType || 'SI'}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      {/* Applicable Grades */}
+      {/* Applicable Grades - Compact */}
       {data.applicableGrades && data.applicableGrades.length > 0 && (
-        <div className="border-t pt-4">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Applicable Grades</label>
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {data.applicableGrades.map((grade: string) => (
-              <Badge key={grade} variant="secondary" className="text-xs">{grade}</Badge>
-            ))}
-          </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Applicable: </label>
+          <span className="text-xs text-gray-700">
+            {data.applicableGrades.length === 16 ? "All Grades" : data.applicableGrades.join(", ")}
+          </span>
         </div>
       )}
     </div>
