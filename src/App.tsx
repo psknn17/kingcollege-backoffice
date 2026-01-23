@@ -269,7 +269,7 @@ export default function App() {
       case "tuition-invoice-management":
         return <TuitionInvoiceManagement />
       case "student-invoices":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="tuition" />
       case "student-groups":
       case "promotional-campaigns":
       case "waive-fee":
@@ -284,31 +284,31 @@ export default function App() {
           onBack={navigateBack}
         />
       case "external-invoices":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="external" showTypeTabs={false} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="external" showTypeTabs={false} category="external" />
       case "external-item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
       case "external-receipts":
         return <ReceiptPage />
       case "eca-invoices":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="eca" />
       case "eca-item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
       case "eca-receipts":
         return <ReceiptPage />
       case "trip-invoices":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="trip" />
       case "trip-item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
       case "trip-receipts":
         return <ReceiptPage />
       case "exam-invoices":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="exam" />
       case "exam-item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
       case "exam-receipts":
         return <ReceiptPage />
       case "bus-invoices":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="bus" />
       case "bus-item-management":
         return <ItemManagement onNavigateToSubPage={navigateToSubPage} />
       case "bus-receipts":

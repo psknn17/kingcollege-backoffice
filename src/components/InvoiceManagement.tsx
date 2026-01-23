@@ -47,6 +47,8 @@ interface Invoice {
   recipientName?: string
   recipientAddress?: string
   eventName?: string
+  // Category for filtering by menu type
+  category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external"
   // Approval fields
   approvedBy?: string
   approvedAt?: Date
@@ -147,6 +149,8 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           recipientName: inv.recipientName,
           recipientAddress: inv.recipientAddress,
           eventName: inv.eventName,
+          // Category for filtering
+          category: inv.category,
           // Academic info
           term: inv.term || "",
           academicYear: inv.academicYear || ""
@@ -305,13 +309,15 @@ interface InvoiceManagementProps {
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
   showTypeTabs?: boolean // Control whether to show Student/External tabs (default: false for sub-pages)
   defaultTab?: "student" | "external" // Which tab to show when tabs are hidden (default: "student")
+  category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external" // Filter invoices by category/menu type
 }
 
 export function InvoiceManagement({
   onNavigateToSubPage,
   onNavigateToView,
   showTypeTabs = false,  // Default to false (no tabs for sub-pages)
-  defaultTab = "student" // Default to student invoices when tabs are hidden
+  defaultTab = "student", // Default to student invoices when tabs are hidden
+  category // Filter invoices by category/menu type
 }: InvoiceManagementProps) {
   const { t } = useLanguage()
   // Discount Options context for late payment calculations
@@ -371,10 +377,10 @@ export function InvoiceManagement({
     }
   }, [])
 
-  // Re-apply filters when tab changes
+  // Re-apply filters when tab or category changes
   useEffect(() => {
     applyFilters(invoiceTypeTab)
-  }, [invoiceTypeTab, invoices])
+  }, [invoiceTypeTab, invoices, category])
 
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -424,6 +430,11 @@ export function InvoiceManagement({
   const applyFilters = (tabType?: "student" | "external") => {
     const currentTab = tabType || invoiceTypeTab
     let filtered = invoices
+
+    // Filter by category first (if provided)
+    if (category) {
+      filtered = filtered.filter(inv => inv.category === category)
+    }
 
     // Filter by invoice type tab
     if (currentTab === "external") {
