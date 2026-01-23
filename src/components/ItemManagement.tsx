@@ -1763,57 +1763,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
   return (
     <div className="space-y-6">
-      {/* Create Invoice Section - Hide for external and category views */}
-      {!isSimplifiedView && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              {t("invoiceCreate.title")}
-            </CardTitle>
-            <p className="text-muted-foreground">
-              {t("item.chooseInvoiceType")}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {invoiceTypes.map((type) => (
-                <Card
-                  key={type.id}
-                  className="cursor-pointer transition-all hover:shadow-md hover:scale-105 group"
-                  onClick={() => handleCreateInvoice(type.id)}
-                >
-                  <CardContent className="p-6 text-center">
-                    <div className="flex flex-col items-center space-y-3">
-                      <div className={`p-3 rounded-full ${type.color === "blue" ? "bg-blue-100 text-blue-600" :
-                        type.color === "green" ? "bg-green-100 text-green-600" :
-                          "bg-orange-100 text-orange-600"
-                        }`}>
-                        <type.icon className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium group-hover:text-primary transition-colors">
-                          {type.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {type.description}
-                        </p>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${type.color === "blue" ? "bg-blue-50 text-blue-700" :
-                        type.color === "green" ? "bg-green-50 text-green-700" :
-                          "bg-orange-50 text-orange-700"
-                        }`}>
-                        {type.defaultCategory}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <Button
