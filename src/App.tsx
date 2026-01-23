@@ -133,7 +133,6 @@ const menuItems = {
     { id: "summer-activities-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   discountManagement: [
-    { id: "discount-overview", labelKey: "menu.overview", icon: Percent },
     { id: "discount-options", labelKey: "menu.promotions", icon: Settings2 },
     { id: "student-groups", labelKey: "menu.studentGroups", icon: Users },
     { id: "waive-fee", labelKey: "menu.waiveFees", icon: TrendingDown },
@@ -306,7 +305,6 @@ export default function App() {
         return <SummerPaymentReports />
       case "summer-activities-receipts":
         return <SummerActivitiesReceipts />
-      case "discount-overview":
       case "student-groups":
       case "promotional-campaigns":
       case "waive-fee":
