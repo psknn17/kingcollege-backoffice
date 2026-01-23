@@ -378,6 +378,427 @@ const mockTemplates: ItemTemplate[] = [
   }
 ]
 
+// Mock data for Trip & Activity items
+const mockTripItems: Item[] = [
+  {
+    id: "trip-item-001",
+    itemCode: "TRP-001",
+    name: "Science Museum Field Trip",
+    description: "Day trip to Science Museum including transportation and entrance fee",
+    amount: 1500,
+    category: "Trip & Other Activity",
+    nominalCode: "4120001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"]
+  },
+  {
+    id: "trip-item-002",
+    itemCode: "TRP-002",
+    name: "Art Museum Field Trip",
+    description: "Day trip to Art Museum with guided tour",
+    amount: 1200,
+    category: "Trip & Other Activity",
+    nominalCode: "4120002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8"]
+  },
+  {
+    id: "trip-item-003",
+    itemCode: "TRP-003",
+    name: "Zoo Field Trip",
+    description: "Educational trip to the zoo with wildlife education program",
+    amount: 1800,
+    category: "Trip & Other Activity",
+    nominalCode: "4120003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3"]
+  },
+  {
+    id: "trip-item-004",
+    itemCode: "TRP-004",
+    name: "Historical Site Visit",
+    description: "Educational trip to historical landmarks",
+    amount: 2000,
+    category: "Trip & Other Activity",
+    nominalCode: "4120004",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"]
+  },
+  {
+    id: "trip-item-005",
+    itemCode: "TRP-005",
+    name: "Overnight Camp - 2 Days",
+    description: "2-day overnight camping trip with activities",
+    amount: 4500,
+    category: "Trip & Other Activity",
+    nominalCode: "4120005",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 4", "Year 5", "Year 6", "Year 7", "Year 8"]
+  },
+  {
+    id: "trip-item-006",
+    itemCode: "TRP-006",
+    name: "Overnight Camp - 3 Days",
+    description: "3-day overnight camping trip with outdoor activities",
+    amount: 6500,
+    category: "Trip & Other Activity",
+    nominalCode: "4120006",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11"]
+  },
+  {
+    id: "trip-item-007",
+    itemCode: "TRP-007",
+    name: "Sports Day Activity",
+    description: "Annual sports day participation fee",
+    amount: 500,
+    category: "Trip & Other Activity",
+    nominalCode: "4120007",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "trip-item-008",
+    itemCode: "TRP-008",
+    name: "Cultural Exchange Program",
+    description: "International cultural exchange program fee",
+    amount: 15000,
+    category: "Trip & Other Activity",
+    nominalCode: "4120008",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  }
+]
+
+const mockTripTemplates: ItemTemplate[] = [
+  {
+    id: "trip-template-001",
+    name: "Primary School Trip Package",
+    description: "Field trips package for primary school students",
+    items: ["trip-item-001", "trip-item-002", "trip-item-003"],
+    applicableGrades: ["Year 1", "Year 2", "Year 3"],
+    isActive: true
+  },
+  {
+    id: "trip-template-002",
+    name: "Secondary School Trip Package",
+    description: "Field trips and activities for secondary students",
+    items: ["trip-item-004", "trip-item-005", "trip-item-007"],
+    applicableGrades: ["Year 7", "Year 8", "Year 9"],
+    isActive: true
+  }
+]
+
+// Mock data for Exam items
+const mockExamItems: Item[] = [
+  {
+    id: "exam-item-001",
+    itemCode: "EXM-001",
+    name: "Cambridge IGCSE Registration",
+    description: "Cambridge IGCSE examination registration fee per subject",
+    amount: 5500,
+    category: "Exam",
+    nominalCode: "4130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 10", "Year 11"]
+  },
+  {
+    id: "exam-item-002",
+    itemCode: "EXM-002",
+    name: "Cambridge A-Level Registration",
+    description: "Cambridge A-Level examination registration fee per subject",
+    amount: 7500,
+    category: "Exam",
+    nominalCode: "4130002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 12", "Year 13"]
+  },
+  {
+    id: "exam-item-003",
+    itemCode: "EXM-003",
+    name: "SAT Examination Fee",
+    description: "SAT standardized test registration fee",
+    amount: 3500,
+    category: "Exam",
+    nominalCode: "4130003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "exam-item-004",
+    itemCode: "EXM-004",
+    name: "IELTS Examination Fee",
+    description: "IELTS English proficiency test fee",
+    amount: 7500,
+    category: "Exam",
+    nominalCode: "4130004",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "exam-item-005",
+    itemCode: "EXM-005",
+    name: "TOEFL Examination Fee",
+    description: "TOEFL English proficiency test fee",
+    amount: 6500,
+    category: "Exam",
+    nominalCode: "4130005",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "exam-item-006",
+    itemCode: "EXM-006",
+    name: "Cambridge Checkpoint",
+    description: "Cambridge Checkpoint assessment fee",
+    amount: 3000,
+    category: "Exam",
+    nominalCode: "4130006",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 6", "Year 9"]
+  },
+  {
+    id: "exam-item-007",
+    itemCode: "EXM-007",
+    name: "Internal Examination Fee",
+    description: "School internal examination administration fee",
+    amount: 1500,
+    category: "Exam",
+    nominalCode: "4130007",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "exam-item-008",
+    itemCode: "EXM-008",
+    name: "Re-examination Fee",
+    description: "Fee for re-sitting examinations",
+    amount: 2000,
+    category: "Exam",
+    nominalCode: "4130008",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  }
+]
+
+const mockExamTemplates: ItemTemplate[] = [
+  {
+    id: "exam-template-001",
+    name: "IGCSE Examination Package (5 subjects)",
+    description: "Standard IGCSE examination package for 5 subjects",
+    items: ["exam-item-001", "exam-item-001", "exam-item-001", "exam-item-001", "exam-item-001"],
+    applicableGrades: ["Year 10", "Year 11"],
+    isActive: true
+  },
+  {
+    id: "exam-template-002",
+    name: "A-Level Examination Package (3 subjects)",
+    description: "Standard A-Level examination package for 3 subjects",
+    items: ["exam-item-002", "exam-item-002", "exam-item-002"],
+    applicableGrades: ["Year 12", "Year 13"],
+    isActive: true
+  },
+  {
+    id: "exam-template-003",
+    name: "University Preparation Package",
+    description: "SAT and IELTS package for university applications",
+    items: ["exam-item-003", "exam-item-004"],
+    applicableGrades: ["Year 12", "Year 13"],
+    isActive: true
+  }
+]
+
+// Mock data for School Bus items
+const mockBusItems: Item[] = [
+  {
+    id: "bus-item-001",
+    itemCode: "BUS-001",
+    name: "School Bus - Term 1 (Zone A)",
+    description: "School bus service for Term 1 - Zone A (0-5 km)",
+    amount: 8000,
+    category: "School Bus",
+    nominalCode: "4140001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-002",
+    itemCode: "BUS-002",
+    name: "School Bus - Term 1 (Zone B)",
+    description: "School bus service for Term 1 - Zone B (5-10 km)",
+    amount: 10000,
+    category: "School Bus",
+    nominalCode: "4140002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-003",
+    itemCode: "BUS-003",
+    name: "School Bus - Term 1 (Zone C)",
+    description: "School bus service for Term 1 - Zone C (10-15 km)",
+    amount: 12000,
+    category: "School Bus",
+    nominalCode: "4140003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-004",
+    itemCode: "BUS-004",
+    name: "School Bus - Term 2 (Zone A)",
+    description: "School bus service for Term 2 - Zone A (0-5 km)",
+    amount: 8000,
+    category: "School Bus",
+    nominalCode: "4140001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-005",
+    itemCode: "BUS-005",
+    name: "School Bus - Term 2 (Zone B)",
+    description: "School bus service for Term 2 - Zone B (5-10 km)",
+    amount: 10000,
+    category: "School Bus",
+    nominalCode: "4140002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-006",
+    itemCode: "BUS-006",
+    name: "School Bus - Term 2 (Zone C)",
+    description: "School bus service for Term 2 - Zone C (10-15 km)",
+    amount: 12000,
+    category: "School Bus",
+    nominalCode: "4140003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-007",
+    itemCode: "BUS-007",
+    name: "School Bus - Term 3 (Zone A)",
+    description: "School bus service for Term 3 - Zone A (0-5 km)",
+    amount: 8000,
+    category: "School Bus",
+    nominalCode: "4140001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-008",
+    itemCode: "BUS-008",
+    name: "School Bus - Term 3 (Zone B)",
+    description: "School bus service for Term 3 - Zone B (5-10 km)",
+    amount: 10000,
+    category: "School Bus",
+    nominalCode: "4140002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-009",
+    itemCode: "BUS-009",
+    name: "School Bus - Term 3 (Zone C)",
+    description: "School bus service for Term 3 - Zone C (10-15 km)",
+    amount: 12000,
+    category: "School Bus",
+    nominalCode: "4140003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-010",
+    itemCode: "BUS-010",
+    name: "School Bus - Annual (Zone A)",
+    description: "Annual school bus service - Zone A (0-5 km) - 10% discount",
+    amount: 21600,
+    category: "School Bus",
+    nominalCode: "4140004",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-011",
+    itemCode: "BUS-011",
+    name: "School Bus - Annual (Zone B)",
+    description: "Annual school bus service - Zone B (5-10 km) - 10% discount",
+    amount: 27000,
+    category: "School Bus",
+    nominalCode: "4140005",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "bus-item-012",
+    itemCode: "BUS-012",
+    name: "School Bus - Annual (Zone C)",
+    description: "Annual school bus service - Zone C (10-15 km) - 10% discount",
+    amount: 32400,
+    category: "School Bus",
+    nominalCode: "4140006",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  }
+]
+
+const mockBusTemplates: ItemTemplate[] = [
+  {
+    id: "bus-template-001",
+    name: "Zone A - Full Year Package",
+    description: "Complete school bus service for Zone A (0-5 km) all terms",
+    items: ["bus-item-001", "bus-item-004", "bus-item-007"],
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    isActive: true
+  },
+  {
+    id: "bus-template-002",
+    name: "Zone B - Full Year Package",
+    description: "Complete school bus service for Zone B (5-10 km) all terms",
+    items: ["bus-item-002", "bus-item-005", "bus-item-008"],
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    isActive: true
+  },
+  {
+    id: "bus-template-003",
+    name: "Zone C - Full Year Package",
+    description: "Complete school bus service for Zone C (10-15 km) all terms",
+    items: ["bus-item-003", "bus-item-006", "bus-item-009"],
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    isActive: true
+  }
+]
+
 // Mock data for External Invoice items
 const mockExternalItems: Item[] = [
   {
@@ -1099,6 +1520,13 @@ const getMockItems = (category: string): Item[] => {
       return mockSummerItems
     case "eca":
       return mockECAItems
+    case "trip":
+      return mockTripItems
+    case "exam":
+      return mockExamItems
+    case "bus":
+      return mockBusItems
+    case "tuition":
     case "student":
     default:
       return mockItems
@@ -1118,6 +1546,13 @@ const getMockTemplates = (category: string): ItemTemplate[] => {
       return mockSummerTemplates
     case "eca":
       return mockECATemplates
+    case "trip":
+      return mockTripTemplates
+    case "exam":
+      return mockExamTemplates
+    case "bus":
+      return mockBusTemplates
+    case "tuition":
     case "student":
     default:
       return mockTemplates
