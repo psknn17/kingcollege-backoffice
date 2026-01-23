@@ -7,6 +7,7 @@ export interface Parent {
   phone: string
   email: string
   isPrimary: boolean
+  nationalId?: string // Parent's national ID / passport number
 }
 
 export interface Student {
@@ -64,6 +65,7 @@ interface StudentContextType {
     reason: string
     completedYears: number
     creditPerTerm?: number
+    startsFromTerm?: string
   }
 }
 
@@ -73,7 +75,7 @@ const STUDENTS_STORAGE_KEY = "students_v3" // เปลี่ยนชื่อ 
 const FAMILIES_STORAGE_KEY = "families_v3"
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const STUDENT_DATA_VERSION_KEY = "student_data_version_v3"
-const CURRENT_DATA_VERSION = "3.0" // เวอร์ชันใหม่ล่าสุด
+const CURRENT_DATA_VERSION = "3.1" // เวอร์ชันใหม่ล่าสุด - Force reload mock data
 
 // Helper to load discount options from localStorage
 const loadDiscountOptions = (academicYear: string, term: string) => {
@@ -250,7 +252,7 @@ const generateMockData = () => {
   ]
   const maleFirstNames = ["James", "Michael", "Oliver", "Lucas", "Ethan", "Alexander", "William", "Benjamin", "Henry", "Sebastian", "Jack", "Daniel", "Matthew", "Joseph", "David", "Andrew", "Christopher", "Joshua", "Nathan", "Ryan", "Samuel", "Thomas", "Gabriel", "Leo"]
   const femaleFirstNames = ["Emily", "Sophia", "Charlotte", "Mia", "Ava", "Isabella", "Amelia", "Harper", "Evelyn", "Abigail", "Emma", "Olivia", "Elizabeth", "Sofia", "Victoria", "Grace", "Chloe", "Camila", "Penelope", "Riley", "Layla", "Zoey"]
-  const gradeLevels = ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  const gradeLevels = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
 
   const families: Family[] = []
   const students: Student[] = []
@@ -357,10 +359,11 @@ export function StudentProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (shouldReset) {
       localStorage.setItem(STUDENT_DATA_VERSION_KEY, CURRENT_DATA_VERSION)
-      saveStudentsToStorage(students)
-      saveFamiliesToStorage(families)
+      saveStudentsToStorage(sampleData.students)
+      saveFamiliesToStorage(sampleData.families)
     }
-  }, [shouldReset, students, families])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -435,17 +438,18 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     student: Student,
     currentYear: string,
     term: string
-  ): { eligible: boolean; reason: string; completedYears: number; creditPerTerm?: number } => {
+  ): { eligible: boolean; reason: string; completedYears: number; creditPerTerm?: number; startsFromTerm?: string } => {
     // Load waiver settings (convert term format if needed)
     const convertedTerm = convertTermFormat(term)
     const options = loadDiscountOptions(currentYear, convertedTerm)
     const waiverSettings = options?.waiverAfter3rdYear || {
       enabled: true,
       minimumGradeLevel: 3,
-      minimumYears: 3,
+      minimumTerms: 3,  // First child waits 3 terms
       creditAmount: 225000,
       termsToCredit: 3,
-      firstChildImmediate: false, // First child must wait 3 years
+      firstChildImmediate: false,  // First child waits 3 terms
+      secondChildImmediate: true,  // Second child+ gets immediately
     }
 
     // Check if waiver is enabled
@@ -477,14 +481,14 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       : []
 
     // Find first child in family (childOrder === 1)
-    const firstChild = familySiblings.find(s => s.childOrder === 1)
+    const firstChild = student.childOrder === 1 ? student : familySiblings.find(s => s.childOrder === 1)
 
-    // Check if first child has withdrawn (affects second child+)
+    // Check if first child has withdrawn (affects second child+ from next term)
     // If first child is "graduated", siblings still keep their privilege
     if (student.childOrder > 1 && firstChild?.status === "withdrawn") {
       return {
         eligible: false,
-        reason: "First child has withdrawn - privilege suspended",
+        reason: "First child has withdrawn - siblings not eligible from next term",
         completedYears: 0
       }
     }
@@ -500,51 +504,94 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       : term === "term2" || term === "2" ? 2
         : term === "term3" || term === "3" ? 3 : 1
 
-    // Get enrollment term number (when they started Year 3)
+    // Get enrollment term number
     const enrollmentTermNum = student.enrollmentTerm === "term1" ? 1
       : student.enrollmentTerm === "term2" ? 2
         : student.enrollmentTerm === "term3" ? 3 : 1
 
-    // Calculate terms completed since entering Year 3
-    // Current position = (gradeLevel - 3) * 3 + currentTerm
-    // Enrollment position = enrollmentTerm
-    // Terms completed = current position - enrollment position
-    const currentPosition = (studentGradeLevel - waiverSettings.minimumGradeLevel) * 3 + currentTermNum
-    const termsCompletedSinceYear3 = currentPosition - enrollmentTermNum
+    // Get enrollment year from enrollmentDate (not academicYear which changes on promotion)
+    // Academic year follows: May-April (Term 1: May-Aug, Term 2: Sep-Dec, Term 3: Jan-Apr)
+    const getAcademicYearFromDate = (date: Date | null): number => {
+      if (!date) return 2025
+      const month = date.getMonth() + 1 // 1-12
+      const year = date.getFullYear()
+      // If month >= 5 (May), academic year starts in current year
+      // If month < 5 (Jan-Apr), academic year started in previous year
+      return month >= 5 ? year : year - 1
+    }
+
+    const enrollmentYearNum = getAcademicYearFromDate(student.enrollmentDate)
+    const currentYearNum = currentYear ? parseInt(currentYear.split("-")[0]) : 2025
+
+    // Calculate total terms completed since enrollment
+    const yearsDiff = currentYearNum - enrollmentYearNum
+    const termsCompleted = (yearsDiff * 3) + (currentTermNum - enrollmentTermNum)
 
     // Default childOrder to 1 if not set
     const childOrder = student.childOrder || 1
 
-    // Fee Waiver is ONLY for 2nd child or later (ลูกคนที่ 2+)
-    // First child is NOT eligible for Fee Waiver
-    if (childOrder === 1) {
-      return {
-        eligible: false,
-        reason: "Fee waiver is for 2nd child or later only",
-        completedYears: 0
-      }
-    }
+    // Minimum terms to wait (for first child)
+    const minimumTerms = waiverSettings.minimumTerms || 3
 
-    // CASE: Second child or later (childOrder >= 2)
-    // Gets credit immediately from Year 3 (no waiting period) for 3 terms
-    // But only if first child is active or graduated (not withdrawn)
-    if (childOrder >= 2) {
-      // Check if first child is still in school (active) or graduated
-      // If no first child found, assume they're eligible (single child with childOrder misconfigured)
-      if (!firstChild || firstChild.status === "active" || firstChild.status === "graduated") {
+    // CASE 1: First child - must wait 3 terms, receives from term 4 onwards
+    if (childOrder === 1) {
+      if (waiverSettings.firstChildImmediate) {
+        // If firstChildImmediate is true, first child gets immediately
         return {
           eligible: true,
-          reason: `Child #${childOrder} - ฿${creditPerTerm.toLocaleString()}/term x ${termsToCredit} terms`,
-          completedYears: termsCompletedSinceYear3,
-          creditPerTerm
+          reason: `Child #1 - ฿${creditPerTerm.toLocaleString()}/term x ${termsToCredit} terms (immediate)`,
+          completedYears: termsCompleted,
+          creditPerTerm,
+          startsFromTerm: "immediate"
         }
       }
 
-      // First child is on_leave or other status
+      // First child must wait minimumTerms (3 terms), eligible from term 4
+      if (termsCompleted >= minimumTerms) {
+        // Calculate when the waiver starts
+        const startTermNum = ((enrollmentTermNum - 1 + minimumTerms) % 3) + 1
+        const startYear = enrollmentYearNum + Math.floor((enrollmentTermNum - 1 + minimumTerms) / 3)
+        const startsFromTerm = `Term ${startTermNum}, ${startYear}-${startYear + 1}`
+
+        return {
+          eligible: true,
+          reason: `Child #1 - ฿${creditPerTerm.toLocaleString()}/term x ${termsToCredit} terms (after ${minimumTerms} terms)`,
+          completedYears: termsCompleted,
+          creditPerTerm,
+          startsFromTerm
+        }
+      }
+
+      // Still waiting
+      const termsRemaining = minimumTerms - termsCompleted
       return {
         eligible: false,
-        reason: "First child status prevents privilege",
-        completedYears: termsCompletedSinceYear3
+        reason: `Child #1 - Need ${termsRemaining} more term(s) (${termsCompleted}/${minimumTerms} completed)`,
+        completedYears: termsCompleted
+      }
+    }
+
+    // CASE 2: Second child or later (childOrder >= 2) - gets immediately
+    if (childOrder >= 2) {
+      // Check secondChildImmediate setting
+      if (waiverSettings.secondChildImmediate !== false) {
+        // Check if first child is still in school (active) or graduated
+        if (!firstChild || firstChild.status === "active" || firstChild.status === "graduated") {
+          return {
+            eligible: true,
+            reason: `Child #${childOrder} - ฿${creditPerTerm.toLocaleString()}/term x ${termsToCredit} terms (immediate)`,
+            completedYears: termsCompleted,
+            creditPerTerm,
+            startsFromTerm: "immediate"
+          }
+        }
+
+        // First child is on_leave or other status
+        return {
+          eligible: false,
+          reason: "First child status prevents privilege",
+          completedYears: termsCompleted
+        }
       }
     }
 

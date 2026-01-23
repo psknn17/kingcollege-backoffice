@@ -8,7 +8,8 @@ import { Badge } from "./ui/badge"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Search, Filter, Download, Users, Calendar, CreditCard, Mail, Phone, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface Course {
   id: string
@@ -53,7 +54,7 @@ const generateStudentRegistrations = (courseId: string, enrolledCount: number): 
   const students: StudentRegistration[] = []
   const firstNames = ["Emma", "Oliver", "Sophia", "James", "Isabella", "William", "Ava", "Benjamin", "Charlotte", "Lucas", "Mia", "Henry", "Amelia", "Alexander", "Harper", "Michael", "Evelyn", "Daniel", "Abigail", "Matthew"]
   const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Wilson", "Martinez", "Anderson", "Taylor", "Thomas", "Hernandez", "Moore", "Martin", "Jackson", "Thompson", "White", "Lopez", "Lee"]
-  const yearGroups = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  const yearGroups = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   const paymentChannels: StudentRegistration["paymentChannel"][] = ["bank_transfer", "credit_card", "online_banking", "cash", "cheque"]
   
   for (let i = 0; i < enrolledCount; i++) {
@@ -76,7 +77,7 @@ const generateStudentRegistrations = (courseId: string, enrolledCount: number): 
       paymentChannel: paymentChannels[Math.floor(Math.random() * paymentChannels.length)],
       paymentStatus: hasPayment ? "paid" : Math.random() > 0.5 ? "pending" : "overdue",
       amount: fee,
-      studentEmail: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@sisb.ac.th`,
+      studentEmail: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@kingcollege.ac.th`,
       parentEmail: `${parentFirstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
       parentPhone: `+66 ${Math.floor(Math.random() * 90) + 10} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}`
     })
@@ -123,6 +124,7 @@ const mockCourses: Course[] = [
 ]
 
 export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps) {
+  const { t } = useLanguage()
   const [studentRegistrations, setStudentRegistrations] = useState<StudentRegistration[]>([])
   const [filteredStudents, setFilteredStudents] = useState<StudentRegistration[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -235,11 +237,11 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("common.paid")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("common.overdue")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -302,7 +304,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   const endIndex = startIndex + itemsPerPage
   const currentPageStudents = filteredStudents.slice(startIndex, endIndex)
 
-  const yearGroups = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  const yearGroups = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
 
   const summaryStats = {
     totalStudents: filteredStudents.length,
@@ -318,7 +320,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
       {/* Course Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-xl font-semibold">{course.name} - Student Report</h2>
+          <h2 className="text-xl font-semibold">{course.name} - {t("course.studentReport")}</h2>
           <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Users className="w-4 h-4" />
@@ -330,7 +332,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
             </div>
             <div className="flex items-center gap-1">
               <CreditCard className="w-4 h-4" />
-              <span>₿{course.fee}/student</span>
+              <span>₿{course.fee}/{t("course.student")}</span>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -339,7 +341,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
         </div>
         <Button onClick={exportStudentReport} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
-          Export CSV
+          {t("common.exportCsv")}
         </Button>
       </div>
 
@@ -347,7 +349,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("course.totalStudents")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.totalStudents}</div>
@@ -356,7 +358,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.paid")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.paidStudents}</div>
@@ -365,7 +367,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.pending")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{summaryStats.pendingStudents}</div>
@@ -374,7 +376,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.overdue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{summaryStats.overdueStudents}</div>
@@ -383,7 +385,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.revenue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
@@ -392,7 +394,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">External Parents</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("course.externalParents")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.externalParents}</div>
@@ -405,16 +407,16 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Search & Filter Students
+            {t("course.searchFilterStudents")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("common.search")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Student, parent, email"
+                  placeholder={t("course.studentSearchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -423,42 +425,42 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Status</label>
+              <label className="text-sm font-medium">{t("common.paymentStatus")}</label>
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                  <SelectItem value="paid">{t("common.paid")}</SelectItem>
+                  <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                  <SelectItem value="overdue">{t("common.overdue")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Parent Type</label>
+              <label className="text-sm font-medium">{t("receipt.parentType")}</label>
               <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="external">External</SelectItem>
+                  <SelectItem value="all">{t("common.allTypes")}</SelectItem>
+                  <SelectItem value="internal">{t("common.internal")}</SelectItem>
+                  <SelectItem value="external">{t("common.external")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Year Group</label>
+              <label className="text-sm font-medium">{t("student.yearGroup")}</label>
               <Select value={yearGroupFilter} onValueChange={setYearGroupFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="all">{t("common.allYears")}</SelectItem>
                   {yearGroups.map(year => (
                     <SelectItem key={year} value={year}>
                       {year}
@@ -469,10 +471,10 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium invisible">Actions</label>
+              <label className="text-sm font-medium invisible">{t("common.actions")}</label>
               <div className="flex gap-2">
-                <Button onClick={applyFilters}>Apply</Button>
-                <Button variant="outline" onClick={clearFilters}>Clear</Button>
+                <Button onClick={applyFilters}>{t("common.apply")}</Button>
+                <Button variant="outline" onClick={clearFilters}>{t("common.clear")}</Button>
               </div>
             </div>
           </div>
@@ -502,35 +504,35 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student Details
+                    {t("course.studentDetails")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                   <div className="flex items-center gap-1">
-                    Parent Information
+                    {t("course.parentInformation")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
                   <div className="flex items-center gap-1">
-                    Year Group
+                    {t("student.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("registrationDate")}>
                   <div className="flex items-center gap-1">
-                    Registration
+                    {t("course.registration")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
                   <div className="flex items-center gap-1">
-                    Payment
+                    {t("common.payment")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Contact</TableHead>
+                <TableHead>{t("common.contact")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -546,11 +548,11 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
                     <div>
                       <div className="font-medium">{student.parentName}</div>
                       <div className="flex items-center gap-1">
-                        <Badge 
+                        <Badge
                           variant={student.parentType === "external" ? "default" : "secondary"}
                           className="text-xs"
                         >
-                          {student.parentType === "external" ? "External" : "Internal"}
+                          {student.parentType === "external" ? t("common.external") : t("common.internal")}
                         </Badge>
                       </div>
                     </div>

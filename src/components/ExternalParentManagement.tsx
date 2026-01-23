@@ -10,7 +10,8 @@ import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ExternalParent {
   id: string
@@ -113,6 +114,7 @@ const mockParents: ExternalParent[] = [
 ]
 
 export function ExternalParentManagement() {
+  const { t } = useLanguage()
   const [parents] = useState<ExternalParent[]>(mockParents)
   const [filteredParents, setFilteredParents] = useState<ExternalParent[]>(mockParents)
   const [searchTerm, setSearchTerm] = useState("")
@@ -273,13 +275,13 @@ export function ExternalParentManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
       case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("common.approved")}</Badge>
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("common.rejected")}</Badge>
       case "waitlist":
-        return <Badge className="bg-blue-100 text-blue-800">Waitlist</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("external.waitlist")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -288,11 +290,11 @@ export function ExternalParentManagement() {
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("common.paid")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
       case "not_paid":
-        return <Badge className="bg-gray-100 text-gray-800">Not Paid</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">{t("external.notPaid")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -311,14 +313,14 @@ export function ExternalParentManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">External Parent Management</h2>
+          <h2 className="text-xl font-semibold">{t("external.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage registrations for non-SISB member parents
+            {t("external.subtitle")}
           </p>
         </div>
         <Button className="flex items-center gap-2">
           <Mail className="w-4 h-4" />
-          Send Bulk Updates
+          {t("external.sendBulkUpdates")}
         </Button>
       </div>
 
@@ -326,7 +328,7 @@ export function ExternalParentManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.totalApplications")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
@@ -335,17 +337,17 @@ export function ExternalParentManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.pendingReview")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</div>
-            <p className="text-xs text-muted-foreground">Require action</p>
+            <p className="text-xs text-muted-foreground">{t("external.requireAction")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.approved")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.approved}</div>
@@ -354,7 +356,7 @@ export function ExternalParentManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">On Waitlist</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.onWaitlist")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.waitlist}</div>
@@ -363,10 +365,10 @@ export function ExternalParentManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Revenue from External</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.revenueFromExternal")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -377,21 +379,21 @@ export function ExternalParentManagement() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("common.searchAndFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("common.search")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Parent name, email, student name"
+                  placeholder={t("external.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -400,32 +402,32 @@ export function ExternalParentManagement() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Application Status</label>
+              <label className="text-sm font-medium">{t("external.applicationStatus")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="waitlist">Waitlist</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                  <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                  <SelectItem value="approved">{t("common.approved")}</SelectItem>
+                  <SelectItem value="rejected">{t("common.rejected")}</SelectItem>
+                  <SelectItem value="waitlist">{t("external.waitlist")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Status</label>
+              <label className="text-sm font-medium">{t("common.paymentStatus")}</label>
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Payment Status</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="not_paid">Not Paid</SelectItem>
+                  <SelectItem value="all">{t("external.allPaymentStatus")}</SelectItem>
+                  <SelectItem value="paid">{t("common.paid")}</SelectItem>
+                  <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                  <SelectItem value="not_paid">{t("external.notPaid")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -436,7 +438,7 @@ export function ExternalParentManagement() {
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredParents.length} of {parents.length} applications
+          {t("external.showingApplications").replace("{showing}", filteredParents.length.toString()).replace("{total}", parents.length.toString())}
         </p>
       </div>
 
@@ -448,42 +450,42 @@ export function ExternalParentManagement() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                   <div className="flex items-center gap-1">
-                    Parent Details
+                    {t("external.parentDetails")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student Info
+                    {t("external.studentInfo")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Activities</TableHead>
+                <TableHead>{t("external.activities")}</TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalAmount")}>
                   <div className="flex items-center gap-1">
-                    Amount
+                    {t("common.amount")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Application Status
+                    {t("external.applicationStatus")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
                   <div className="flex items-center gap-1">
-                    Payment Status
+                    {t("common.paymentStatus")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("applicationDate")}>
                   <div className="flex items-center gap-1">
-                    Applied Date
+                    {t("external.appliedDate")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -506,7 +508,7 @@ export function ExternalParentManagement() {
                     <div>
                       <div className="font-medium">{parent.studentName}</div>
                       <div className="text-sm text-muted-foreground">
-                        Age {parent.studentAge} • {parent.studentGrade}
+                        {t("external.age")} {parent.studentAge} • {parent.studentGrade}
                       </div>
                     </div>
                   </TableCell>
@@ -534,52 +536,52 @@ export function ExternalParentManagement() {
                     <div className="flex gap-1 justify-center">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => setSelectedParent(parent)}
-                            title="View Details"
+                            title={t("external.viewDetails")}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl p-6">
                           <DialogHeader>
-                            <DialogTitle>Application Details - {parent.studentName}</DialogTitle>
+                            <DialogTitle>{t("external.applicationDetails")} - {parent.studentName}</DialogTitle>
                             <DialogDescription>
-                              View and manage the external parent application for after-school activities
+                              {t("external.applicationDialogDescription")}
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <Label>Parent Name</Label>
+                                <Label>{t("external.parentName")}</Label>
                                 <p className="text-sm">{parent.parentName}</p>
                               </div>
                               <div>
-                                <Label>Student Name</Label>
+                                <Label>{t("external.studentName")}</Label>
                                 <p className="text-sm">{parent.studentName}</p>
                               </div>
                               <div>
-                                <Label>Email</Label>
+                                <Label>{t("common.email")}</Label>
                                 <p className="text-sm">{parent.parentEmail}</p>
                               </div>
                               <div>
-                                <Label>Phone</Label>
+                                <Label>{t("common.phone")}</Label>
                                 <p className="text-sm">{parent.parentPhone}</p>
                               </div>
                               <div>
-                                <Label>Student Age</Label>
-                                <p className="text-sm">{parent.studentAge} years old</p>
+                                <Label>{t("external.studentAge")}</Label>
+                                <p className="text-sm">{parent.studentAge} {t("external.yearsOld")}</p>
                               </div>
                               <div>
-                                <Label>Year Group</Label>
+                                <Label>{t("external.yearGroup")}</Label>
                                 <p className="text-sm">{parent.studentGrade}</p>
                               </div>
                             </div>
-                            
+
                             <div>
-                              <Label>Selected Activities</Label>
+                              <Label>{t("external.selectedActivities")}</Label>
                               <div className="flex flex-wrap gap-2 mt-1">
                                 {parent.activities.map((activity, index) => (
                                   <Badge key={index} variant="outline">{activity}</Badge>
@@ -588,7 +590,7 @@ export function ExternalParentManagement() {
                             </div>
 
                             <div>
-                              <Label>Documents Submitted</Label>
+                              <Label>{t("external.documentsSubmitted")}</Label>
                               <div className="flex flex-wrap gap-2 mt-1">
                                 {parent.documents.map((doc, index) => (
                                   <Badge key={index} variant="secondary">{doc}</Badge>
@@ -598,73 +600,73 @@ export function ExternalParentManagement() {
 
                             {parent.notes && (
                               <div>
-                                <Label>Notes</Label>
+                                <Label>{t("common.notes")}</Label>
                                 <p className="text-sm bg-muted p-2 rounded">{parent.notes}</p>
                               </div>
                             )}
 
                             <div className="flex gap-2 pt-4">
-                              <Button 
+                              <Button
                                 onClick={() => updateStatus(parent.id, "approved")}
                                 className="flex items-center gap-1"
                               >
                                 <UserCheck className="w-4 h-4" />
-                                Approve
+                                {t("common.approve")}
                               </Button>
-                              <Button 
-                                variant="destructive" 
+                              <Button
+                                variant="destructive"
                                 onClick={() => updateStatus(parent.id, "rejected")}
                                 className="flex items-center gap-1"
                               >
                                 <UserX className="w-4 h-4" />
-                                Reject
+                                {t("common.reject")}
                               </Button>
-                              <Button 
+                              <Button
                                 variant="outline"
                                 onClick={() => sendEmail(parent.id)}
                                 className="flex items-center gap-1"
                               >
                                 <Mail className="w-4 h-4" />
-                                Send Email
+                                {t("external.sendEmail")}
                               </Button>
                             </div>
                           </div>
                         </DialogContent>
                       </Dialog>
                       
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="ghost"
                         onClick={() => downloadApplication(parent.id)}
-                        title="Download Application"
+                        title={t("external.downloadApplication")}
                       >
                         <Download className="w-4 h-4 text-blue-600" />
                       </Button>
-                      
-                      <Button 
-                        size="sm" 
+
+                      <Button
+                        size="sm"
                         variant="ghost"
                         onClick={() => sendEmail(parent.id)}
-                        title="Send Email"
+                        title={t("external.sendEmail")}
                       >
                         <Mail className="w-4 h-4 text-purple-600" />
                       </Button>
 
                       {parent.status === "pending" && (
                         <>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => updateStatus(parent.id, "approved")}
-                            title="Approve Application"
+                            title={t("external.approveApplication")}
                           >
                             <UserCheck className="w-4 h-4 text-green-600" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => updateStatus(parent.id, "rejected")}
-                            title="Reject Application"
+                            title={t("external.rejectApplication")}
                           >
                             <UserX className="w-4 h-4 text-red-600" />
                           </Button>
@@ -672,11 +674,11 @@ export function ExternalParentManagement() {
                       )}
 
                       {(parent.status === "approved" || parent.status === "waitlist") && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => resendEmail(parent.id)}
-                          title="Resend Email"
+                          title={t("external.resendEmail")}
                         >
                           <RotateCcw className="w-4 h-4 text-orange-600" />
                         </Button>

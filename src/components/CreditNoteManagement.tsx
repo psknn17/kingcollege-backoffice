@@ -10,9 +10,10 @@ import { Separator } from "./ui/separator"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight, Receipt, Printer, Upload } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 
@@ -111,6 +112,17 @@ export function CreditNoteManagement() {
   const [selectedCreditNote, setSelectedCreditNote] = useState<CreditNote | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isCreateReceiptModalOpen, setIsCreateReceiptModalOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<"receipts" | "credit-notes">("receipts")
+
+  // Mock receipts data - using translation keys where applicable
+  const receipts = [
+    { id: "RCP-2025-000001", invoiceNumber: "INV-2025-000123", studentName: "Oliver Brown", studentId: "KC2025001", amount: 450000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-05"), status: "issued" },
+    { id: "RCP-2025-000002", invoiceNumber: "INV-2025-000124", studentName: "Emma Wilson", studentId: "KC2025002", amount: 380000, paymentMethod: t("paymentMethod.creditCard"), issueDate: new Date("2025-01-06"), status: "issued" },
+    { id: "RCP-2025-000003", invoiceNumber: "INV-2025-000125", studentName: "James Chen", studentId: "KC2025003", amount: 520000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-07"), status: "issued" },
+    { id: "RCP-2025-000004", invoiceNumber: "INV-2025-000126", studentName: "Sophia Lee", studentId: "KC2025004", amount: 295000, paymentMethod: "Cheque", issueDate: new Date("2025-01-08"), status: "issued" },
+    { id: "RCP-2025-000005", invoiceNumber: "INV-2025-000127", studentName: "Liam Taylor", studentId: "KC2025005", amount: 410000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-09"), status: "issued" },
+  ]
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -315,13 +327,13 @@ export function CreditNoteManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "draft":
-        return <Badge variant="secondary"><FileText className="w-3 h-3 mr-1" />Draft</Badge>
+        return <Badge variant="secondary"><FileText className="w-3 h-3 mr-1" />{t("creditNote.draft")}</Badge>
       case "issued":
-        return <Badge className="bg-blue-100 text-blue-800"><CheckCircle className="w-3 h-3 mr-1" />Issued</Badge>
+        return <Badge className="bg-blue-100 text-blue-800"><CheckCircle className="w-3 h-3 mr-1" />{t("creditNote.issued")}</Badge>
       case "applied":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Applied</Badge>
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t("creditNote.applied")}</Badge>
       case "cancelled":
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Cancelled</Badge>
+        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />{t("creditNote.cancelled")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -330,13 +342,13 @@ export function CreditNoteManagement() {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case "refund":
-        return <Badge className="bg-purple-100 text-purple-800">Refund</Badge>
+        return <Badge className="bg-purple-100 text-purple-800">{t("creditNote.refund")}</Badge>
       case "adjustment":
-        return <Badge className="bg-orange-100 text-orange-800">Adjustment</Badge>
+        return <Badge className="bg-orange-100 text-orange-800">{t("creditNote.adjustment")}</Badge>
       case "cancellation":
-        return <Badge className="bg-red-100 text-red-800">Cancellation</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("creditNote.cancellation")}</Badge>
       case "discount":
-        return <Badge className="bg-green-100 text-green-800">Discount</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("creditNote.discount")}</Badge>
       default:
         return <Badge variant="secondary">{type}</Badge>
     }
@@ -434,26 +446,113 @@ export function CreditNoteManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold">{t("creditNote.title")}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t("creditNote.subtitle")}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            {t("invoice.exportReport")}
-          </Button>
-          <Button onClick={openCreateModal} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            {t("creditNote.createCreditNote")}
-          </Button>
-        </div>
+      <div className="flex justify-end items-center gap-2">
+        <Button variant="outline" className="flex items-center gap-2">
+          <Download className="w-4 h-4" />
+          {t("invoice.exportReport")}
+        </Button>
+        <Button variant="outline" className="flex items-center gap-2">
+          <Upload className="w-4 h-4" />
+          Import Excel
+        </Button>
+        <Button onClick={openCreateModal} className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          {t("creditNote.createCreditNote")}
+        </Button>
       </div>
 
-      {/* Summary Cards */}
+      {/* Credit Notes Content */}
+      <div className="space-y-6 mt-6">
+        {/* Summary Cards */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Filter className="w-4 h-4" />
+                  Search & Filter
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Input placeholder="Search by receipt number, student name..." />
+                </div>
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={t("paymentMethod.label")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Methods</SelectItem>
+                    <SelectItem value="bank_transfer">{t("paymentMethod.bankTransfer")}</SelectItem>
+                    <SelectItem value="credit_card">{t("paymentMethod.creditCard")}</SelectItem>
+                    <SelectItem value="cash">{t("paymentMethod.cash")}</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Receipts Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Receipt List</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("table.receiptNo")}</TableHead>
+                    <TableHead>{t("table.invoiceNo")}</TableHead>
+                    <TableHead>{t("table.student")}</TableHead>
+                    <TableHead>{t("table.amount")}</TableHead>
+                    <TableHead>{t("table.paymentMethod")}</TableHead>
+                    <TableHead>{t("table.issueDate")}</TableHead>
+                    <TableHead>{t("table.status")}</TableHead>
+                    <TableHead className="text-right">{t("table.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receipts.map((receipt) => (
+                    <TableRow key={receipt.id}>
+                      <TableCell className="font-medium">{receipt.id}</TableCell>
+                      <TableCell>{receipt.invoiceNumber}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{receipt.studentName}</div>
+                          <div className="text-xs text-muted-foreground">{receipt.studentId}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">฿{receipt.amount.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{receipt.paymentMethod}</Badge>
+                      </TableCell>
+                      <TableCell>{format(receipt.issueDate, "dd/MM/yyyy")}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-100 text-green-800">{t("creditNote.issued")}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+        {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -796,6 +895,7 @@ export function CreditNoteManagement() {
           )}
         </CardContent>
       </Card>
+    </div>
 
       {/* Credit Note Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1063,10 +1163,10 @@ export function CreditNoteManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="refund">Refund</SelectItem>
-                    <SelectItem value="adjustment">Billing Adjustment</SelectItem>
-                    <SelectItem value="cancellation">Course Cancellation</SelectItem>
-                    <SelectItem value="discount">Discount Applied</SelectItem>
+                    <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
+                    <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
+                    <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
+                    <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1096,6 +1196,100 @@ export function CreditNoteManagement() {
                 Create Credit Note
               </Button>
               <Button variant="outline" onClick={closeCreateModal}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Receipt Modal */}
+      <Dialog open={isCreateReceiptModalOpen} onOpenChange={setIsCreateReceiptModalOpen}>
+        <DialogContent className="max-w-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Create Receipt
+            </DialogTitle>
+            <DialogDescription>
+              Generate a receipt for a paid invoice
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Invoice Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Paid Invoice</label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an invoice..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {invoices
+                    .filter((inv: any) => inv.status === "paid")
+                    .map((inv: any) => (
+                      <SelectItem key={inv.id} value={inv.id}>
+                        {inv.invoiceNumber} - {inv.studentName} (₿{inv.netAmount?.toLocaleString() || 0})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Receipt Details */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Receipt Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(new Date(), "dd/MM/yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={new Date()} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("paymentMethod.label")}</label>
+                <Select defaultValue="bank_transfer">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bank_transfer">{t("paymentMethod.bankTransfer")}</SelectItem>
+                    <SelectItem value="credit_card">{t("paymentMethod.creditCard")}</SelectItem>
+                    <SelectItem value="cash">{t("paymentMethod.cash")}</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notes (Optional)</label>
+              <Textarea
+                placeholder="Additional notes for the receipt..."
+                className="min-h-20"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={() => {
+                  toast.success("Receipt created successfully")
+                  setIsCreateReceiptModalOpen(false)
+                }}
+                className="flex-1"
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                Create Receipt
+              </Button>
+              <Button variant="outline" onClick={() => setIsCreateReceiptModalOpen(false)}>
                 Cancel
               </Button>
             </div>

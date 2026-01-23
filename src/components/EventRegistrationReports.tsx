@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -37,7 +38,7 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
 
 interface EventRegistration {
@@ -65,7 +66,7 @@ interface EventSummary {
 // Generate more mock data for pagination testing
 const generateMockRegistrations = (): EventRegistration[] => {
   const events = ["Sports Day 2024", "Science Fair", "Music Concert", "Field Trip - Zoo", "Art Exhibition", "Drama Performance"]
-  const yearGroups = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  const yearGroups = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   const firstNames = ["John", "Emma", "Michael", "Sarah", "David", "Lisa", "James", "Sophia", "William", "Olivia", "Benjamin", "Ava", "Lucas", "Isabella", "Henry", "Mia"]
   const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"]
   const statuses: ('paid' | 'partial' | 'unpaid' | 'cancelled' | 'overdue')[] = ["paid", "paid", "partial", "unpaid", "cancelled", "overdue"]
@@ -125,6 +126,7 @@ const paymentStatusData = [
 ]
 
 export function EventRegistrationReports() {
+  const { t } = useLanguage()
   const [selectedEvent, setSelectedEvent] = useState("all")
   const [selectedYearGroup, setSelectedYearGroup] = useState("all")
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<PaymentStatus>("all")
@@ -212,7 +214,7 @@ export function EventRegistrationReports() {
   }
 
   const exportReport = (format: 'csv' | 'excel') => {
-    toast.success(`Report exported as ${format.toUpperCase()}`)
+    toast.success(t("eventReports.exportSuccess").replace("{format}", format.toUpperCase()))
   }
 
   const getTrendIcon = (trend: number) => {
@@ -227,29 +229,29 @@ export function EventRegistrationReports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Event Registration Reports</h2>
+          <h2 className="mb-2">{t("eventReports.title")}</h2>
           <p className="text-muted-foreground">
-            Analyze event registration data and generate detailed reports
+            {t("eventReports.subtitle")}
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => exportReport('csv')}>
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            {t("common.exportCsv")}
           </Button>
           <Button onClick={() => exportReport('excel')}>
             <Download className="w-4 h-4 mr-2" />
-            Export Excel
+            {t("eventReports.exportExcel")}
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="details">Detailed Report</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="overview">{t("eventReports.overview")}</TabsTrigger>
+          <TabsTrigger value="details">{t("eventReports.detailedReport")}</TabsTrigger>
+          <TabsTrigger value="analytics">{t("eventReports.analytics")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -257,52 +259,52 @@ export function EventRegistrationReports() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Registrations</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("eventReports.totalRegistrations")}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">743</div>
                 <p className="text-xs text-muted-foreground">
-                  +12% from last month
+                  {t("eventReports.percentFromLastMonth").replace("{percent}", "+12")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">฿265,800</div>
                 <p className="text-xs text-muted-foreground">
-                  +8% from last month
+                  {t("eventReports.percentFromLastMonth").replace("{percent}", "+8")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Payment Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("eventReports.paymentRate")}</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">76.8%</div>
                 <p className="text-xs text-muted-foreground">
-                  +2.1% from last month
+                  {t("eventReports.percentFromLastMonth").replace("{percent}", "+2.1")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Events</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("eventReports.activeEvents")}</CardTitle>
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">8</div>
                 <p className="text-xs text-muted-foreground">
-                  2 ending this week
+                  {t("eventReports.endingThisWeek").replace("{count}", "2")}
                 </p>
               </CardContent>
             </Card>
@@ -311,19 +313,19 @@ export function EventRegistrationReports() {
           {/* Event Summary Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Event Summary</CardTitle>
-              <CardDescription>Registration and payment status by event</CardDescription>
+              <CardTitle>{t("eventReports.eventSummary")}</CardTitle>
+              <CardDescription>{t("eventReports.eventSummaryDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Event Name</TableHead>
-                    <TableHead>Total Reg.</TableHead>
-                    <TableHead>Paid</TableHead>
-                    <TableHead>Pending</TableHead>
-                    <TableHead>Revenue</TableHead>
-                    <TableHead>Trend</TableHead>
+                    <TableHead>{t("eventReports.eventName")}</TableHead>
+                    <TableHead>{t("eventReports.totalReg")}</TableHead>
+                    <TableHead>{t("common.paid")}</TableHead>
+                    <TableHead>{t("common.pending")}</TableHead>
+                    <TableHead>{t("common.revenue")}</TableHead>
+                    <TableHead>{t("eventReports.trend")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -356,16 +358,16 @@ export function EventRegistrationReports() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="w-4 h-4" />
-                Filters
+                {t("common.filter")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-7">
                 <div className="space-y-2">
-                  <Label>Search</Label>
+                  <Label>{t("common.search")}</Label>
                   <div className="relative">
                     <Input
-                      placeholder="Student name or ID"
+                      placeholder={t("eventReports.studentNameOrId")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className=""
@@ -374,13 +376,13 @@ export function EventRegistrationReports() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Event</Label>
+                  <Label>{t("eventReports.event")}</Label>
                   <Select value={selectedEvent} onValueChange={setSelectedEvent}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Events</SelectItem>
+                      <SelectItem value="all">{t("eventReports.allEvents")}</SelectItem>
                       <SelectItem value="Sports Day 2024">Sports Day 2024</SelectItem>
                       <SelectItem value="Science Fair">Science Fair</SelectItem>
                       <SelectItem value="Music Concert">Music Concert</SelectItem>
@@ -392,13 +394,15 @@ export function EventRegistrationReports() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Year Group</Label>
+                  <Label>{t("eventReports.yearGroup")}</Label>
                   <Select value={selectedYearGroup} onValueChange={setSelectedYearGroup}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Years</SelectItem>
+                      <SelectItem value="all">{t("common.allYears")}</SelectItem>
+                      <SelectItem value="Pre-Nursery">Pre-Nursery</SelectItem>
+                      <SelectItem value="Nursery">Nursery</SelectItem>
                       <SelectItem value="Reception">Reception</SelectItem>
                       <SelectItem value="Year 1">Year 1</SelectItem>
                       <SelectItem value="Year 2">Year 2</SelectItem>
@@ -412,6 +416,7 @@ export function EventRegistrationReports() {
                       <SelectItem value="Year 10">Year 10</SelectItem>
                       <SelectItem value="Year 11">Year 11</SelectItem>
                       <SelectItem value="Year 12">Year 12</SelectItem>
+                      <SelectItem value="Year 13">Year 13</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -427,13 +432,13 @@ export function EventRegistrationReports() {
                 />
 
                 <div className="space-y-2">
-                  <Label>Date Range</Label>
+                  <Label>{t("eventReports.dateRange")}</Label>
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                           <CalendarDays className="w-4 h-4 mr-2" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
+                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("eventReports.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -450,7 +455,7 @@ export function EventRegistrationReports() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                           <CalendarDays className="w-4 h-4 mr-2" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
+                          {dateTo ? format(dateTo, "dd/MM/yy") : t("eventReports.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -472,10 +477,13 @@ export function EventRegistrationReports() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredRegistrations.length)} of {filteredRegistrations.length} registration(s)
+                {t("eventReports.showingRegistrations")
+                  .replace("{from}", String(startIndex + 1))
+                  .replace("{to}", String(Math.min(endIndex, filteredRegistrations.length)))
+                  .replace("{total}", String(filteredRegistrations.length))}
               </p>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Show:</label>
+                <label className="text-sm text-muted-foreground">{t("eventReports.show")}:</label>
                 <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
                   <SelectTrigger className="w-20">
                     <SelectValue />
@@ -486,7 +494,7 @@ export function EventRegistrationReports() {
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground">per page</span>
+                <span className="text-sm text-muted-foreground">{t("eventReports.perPage")}</span>
               </div>
             </div>
           </div>
@@ -494,9 +502,11 @@ export function EventRegistrationReports() {
           {/* Detailed Registration Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Registration Details</CardTitle>
+              <CardTitle>{t("eventReports.registrationDetails")}</CardTitle>
               <CardDescription>
-                Showing {currentPageRegistrations.length} of {filteredRegistrations.length} registration(s)
+                {t("eventReports.showingOfRegistrations")
+                  .replace("{count}", String(currentPageRegistrations.length))
+                  .replace("{total}", String(filteredRegistrations.length))}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -505,42 +515,42 @@ export function EventRegistrationReports() {
                   <TableRow>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
-                        Student
+                        {t("eventReports.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("eventName")}>
                       <div className="flex items-center gap-1">
-                        Event
+                        {t("eventReports.event")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
                       <div className="flex items-center gap-1">
-                        Year Group
+                        {t("eventReports.yearGroup")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("registrationDate")}>
                       <div className="flex items-center gap-1">
-                        Reg. Date
+                        {t("eventReports.regDate")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
-                        Amount
+                        {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Channel</TableHead>
+                    <TableHead>{t("eventReports.channel")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
                       <div className="flex items-center gap-1">
-                        Status
+                        {t("common.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Parent Email</TableHead>
+                    <TableHead>{t("eventReports.parentEmail")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -627,8 +637,8 @@ export function EventRegistrationReports() {
             {/* Registration Trend Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Registration Trend</CardTitle>
-                <CardDescription>Monthly registration numbers</CardDescription>
+                <CardTitle>{t("eventReports.registrationTrend")}</CardTitle>
+                <CardDescription>{t("eventReports.monthlyRegistrations")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -646,8 +656,8 @@ export function EventRegistrationReports() {
             {/* Payment Status Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Payment Status Distribution</CardTitle>
-                <CardDescription>Current payment status breakdown</CardDescription>
+                <CardTitle>{t("eventReports.paymentStatusDistribution")}</CardTitle>
+                <CardDescription>{t("eventReports.paymentStatusBreakdown")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>

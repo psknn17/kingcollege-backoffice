@@ -34,7 +34,7 @@ import {
   GraduationCap,
   Gift
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { Switch } from "./ui/switch"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useStudents } from "@/contexts/StudentContext"

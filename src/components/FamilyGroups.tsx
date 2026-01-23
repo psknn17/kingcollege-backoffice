@@ -26,12 +26,13 @@ import {
   UserPlus,
   ArrowUpDown
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { useStudents, Family, Student } from "@/contexts/StudentContext"
 import { cn } from "./ui/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 
 const gradeLevels: Record<string, string> = {
+  "pre-nursery": "Pre-Nursery",
   "nursery": "Nursery",
   "reception": "Reception",
   "year1": "Year 1",
@@ -409,14 +410,14 @@ export function FamilyGroups() {
                           </div>
                           <div>
                             <CardTitle className="text-lg flex items-center gap-2">
-                              {family.familyName} Family
-                              <Badge variant="outline">{familyStudents.length} children</Badge>
+                              {family.familyName} {t("familyGroups.family")}
+                              <Badge variant="outline">{familyStudents.length} {t("familyGroups.children")}</Badge>
                               {family.familyCode && (
                                 <Badge variant="secondary" className="font-mono">{family.familyCode}</Badge>
                               )}
                             </CardTitle>
                             <CardDescription className="mt-1 space-y-0.5">
-                              <div>{family.address || "No address provided"}</div>
+                              <div>{family.address || t("familyGroups.noAddressProvided")}</div>
                               {family.email && (
                                 <div className="flex items-center gap-1 text-xs">
                                   <Mail className="w-3 h-3" /> {family.email}
@@ -429,7 +430,7 @@ export function FamilyGroups() {
                           {totalDiscount > 0 && (
                             <Badge className="bg-green-100 text-green-800">
                               <Percent className="w-3 h-3 mr-1" />
-                              Total: {totalDiscount}% discount
+                              {t("familyGroups.totalDiscount").replace("{percent}", String(totalDiscount))}
                             </Badge>
                           )}
                           <div className="flex items-center gap-2">
@@ -479,19 +480,19 @@ export function FamilyGroups() {
                     <CardContent className="pt-0">
                       {familyStudents.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">
-                          No students in this family yet. Add students to calculate sibling discounts.
+                          {t("familyGroups.noStudentsInFamily")}
                         </p>
                       ) : (
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-[60px]">Order</TableHead>
-                              <TableHead>Student</TableHead>
-                              <TableHead>Student ID</TableHead>
-                              <TableHead>Year Group</TableHead>
-                              <TableHead>Sibling Discount</TableHead>
-                              <TableHead>Fee Waiver</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
+                              <TableHead className="w-[60px]">{t("familyGroups.order")}</TableHead>
+                              <TableHead>{t("familyGroups.student")}</TableHead>
+                              <TableHead>{t("familyGroups.studentId")}</TableHead>
+                              <TableHead>{t("familyGroups.yearGroup")}</TableHead>
+                              <TableHead>{t("familyGroups.siblingDiscount")}</TableHead>
+                              <TableHead>{t("familyGroups.feeWaiver")}</TableHead>
+                              <TableHead className="text-right">{t("familyGroups.actions")}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -524,10 +525,10 @@ export function FamilyGroups() {
                                 <TableCell>
                                   {getSiblingDiscount(student) > 0 ? (
                                     <Badge className="bg-green-100 text-green-800">
-                                      {getSiblingDiscount(student)}% off
+                                      {getSiblingDiscount(student)}{t("familyGroups.off")}
                                     </Badge>
                                   ) : (
-                                    <span className="text-muted-foreground">No discount</span>
+                                    <span className="text-muted-foreground">{t("familyGroups.noDiscount")}</span>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -541,7 +542,7 @@ export function FamilyGroups() {
                                       return (
                                         <div>
                                           <Badge className="bg-indigo-100 text-indigo-800">
-                                            ฿{eligibility.creditPerTerm?.toLocaleString()}/term
+                                            ฿{eligibility.creditPerTerm?.toLocaleString()}{t("familyGroups.perTerm")}
                                           </Badge>
                                           <p className="text-xs text-indigo-600 mt-1">{eligibility.reason}</p>
                                         </div>
@@ -549,7 +550,7 @@ export function FamilyGroups() {
                                     } else {
                                       return (
                                         <div>
-                                          <Badge variant="outline" className="text-gray-500">Pending</Badge>
+                                          <Badge variant="outline" className="text-gray-500">{t("familyGroups.pending")}</Badge>
                                           <p className="text-xs text-muted-foreground mt-1">{eligibility.reason}</p>
                                         </div>
                                       )
@@ -563,7 +564,7 @@ export function FamilyGroups() {
                                     className="text-destructive"
                                     onClick={() => handleRemoveStudentFromFamily(student)}
                                   >
-                                    Remove
+                                    {t("familyGroups.remove")}
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -578,13 +579,13 @@ export function FamilyGroups() {
                           {/* Sibling Discount Summary */}
                           {familyStudents.some(s => getSiblingDiscount(s) > 0) && (
                             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                              <h4 className="font-medium text-green-800 mb-2">Sibling Discount Summary</h4>
+                              <h4 className="font-medium text-green-800 mb-2">{t("familyGroups.siblingDiscountSummary")}</h4>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                 {familyStudents.map(student => (
                                   <div key={student.id}>
                                     <p className="text-green-700">{student.firstName}</p>
                                     <p className="font-bold text-green-800">
-                                      {getSiblingDiscount(student)}% discount
+                                      {t("familyGroups.discountLabel").replace("{percent}", String(getSiblingDiscount(student)))}
                                     </p>
                                   </div>
                                 ))}
@@ -594,7 +595,7 @@ export function FamilyGroups() {
 
                           {/* Fee Waiver Summary */}
                           <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                            <h4 className="font-medium text-indigo-800 mb-2">Registration Fee Waiver Program</h4>
+                            <h4 className="font-medium text-indigo-800 mb-2">{t("familyGroups.registrationFeeWaiverProgram")}</h4>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               {familyStudents.map(student => {
                                 const eligibility = checkFeePrivilegeEligibility(
@@ -605,18 +606,18 @@ export function FamilyGroups() {
                                 return (
                                   <div key={student.id}>
                                     <p className="text-indigo-700 font-medium">
-                                      {student.firstName} (Child #{student.childOrder})
+                                      {student.firstName} ({t("student.child")} #{student.childOrder})
                                     </p>
                                     {eligibility.eligible ? (
                                       <>
                                         <p className="font-bold text-indigo-800">
-                                          ฿{eligibility.creditPerTerm?.toLocaleString()}/term
+                                          ฿{eligibility.creditPerTerm?.toLocaleString()}{t("familyGroups.perTerm")}
                                         </p>
                                         <p className="text-xs text-indigo-600">{eligibility.reason}</p>
                                       </>
                                     ) : (
                                       <>
-                                        <p className="font-medium text-gray-500">Pending</p>
+                                        <p className="font-medium text-gray-500">{t("familyGroups.pending")}</p>
                                         <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
                                       </>
                                     )}
@@ -640,7 +641,7 @@ export function FamilyGroups() {
       {sortedFamilies.length > 0 && (
         <div className="flex items-center justify-between border rounded-lg p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Show</span>
+            <span>{t("familyGroups.show")}</span>
             <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
               <SelectTrigger className="w-[70px] h-8">
                 <SelectValue />
@@ -716,10 +717,10 @@ export function FamilyGroups() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Students Not Assigned to a Family ({studentsWithoutFamily.length})
+              {t("familyGroups.studentsNotAssigned")} ({studentsWithoutFamily.length})
             </CardTitle>
             <CardDescription>
-              These students are not part of any family group and won't receive sibling discounts
+              {t("familyGroups.notAssignedDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -730,7 +731,7 @@ export function FamilyGroups() {
                 </Badge>
               ))}
               {studentsWithoutFamily.length > 10 && (
-                <Badge variant="secondary">+{studentsWithoutFamily.length - 10} more</Badge>
+                <Badge variant="secondary">{t("familyGroups.more").replace("{count}", String(studentsWithoutFamily.length - 10))}</Badge>
               )}
             </div>
           </CardContent>

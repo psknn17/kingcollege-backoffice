@@ -8,7 +8,8 @@ import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, RefreshCw } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ImportStatus {
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error'
@@ -28,6 +29,7 @@ const mockEvents = [
 ]
 
 export function EventImport() {
+  const { t } = useLanguage()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedTerm, setSelectedTerm] = useState("")
   const [importStatus, setImportStatus] = useState<ImportStatus>({
@@ -46,33 +48,33 @@ export function EventImport() {
 
   const handleImport = async () => {
     if (!selectedFile || !selectedTerm) {
-      toast.error("Please select a file and term before importing")
+      toast.error(t("event.selectFileAndTerm"))
       return
     }
 
-    setImportStatus({ status: 'uploading', progress: 20, message: 'Uploading file...' })
-    
+    setImportStatus({ status: 'uploading', progress: 20, message: t("event.uploadingFile") })
+
     // Simulate upload progress
     setTimeout(() => {
-      setImportStatus({ status: 'processing', progress: 60, message: 'Processing events data...' })
+      setImportStatus({ status: 'processing', progress: 60, message: t("event.processingEventsData") })
     }, 1000)
 
     setTimeout(() => {
-      setImportStatus({ 
-        status: 'completed', 
-        progress: 100, 
-        message: 'Import completed successfully!',
+      setImportStatus({
+        status: 'completed',
+        progress: 100,
+        message: t("event.importCompletedSuccess"),
         totalRecords: 125,
         successRecords: 123,
         errorRecords: 2
       })
-      toast.success("Events imported successfully!")
+      toast.success(t("event.eventsImportedSuccess"))
     }, 3000)
   }
 
   const downloadTemplate = () => {
     // Simulate template download
-    toast.success("Template downloaded successfully")
+    toast.success(t("event.templateDownloadedSuccess"))
   }
 
   const resetImport = () => {
@@ -84,9 +86,9 @@ export function EventImport() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-2">Event Import</h2>
+        <h2 className="mb-2">{t("event.importTitle")}</h2>
         <p className="text-muted-foreground">
-          Import event data from Excel or CSV files. Download the template first to ensure proper formatting.
+          {t("event.importDescription")}
         </p>
       </div>
 
@@ -97,15 +99,15 @@ export function EventImport() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="w-5 h-5" />
-                Import Events
+                {t("event.importEvents")}
               </CardTitle>
               <CardDescription>
-                Upload your event data file and select the appropriate term
+                {t("event.uploadEventDataFile")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="file-upload">Select File</Label>
+                <Label htmlFor="file-upload">{t("event.selectFile")}</Label>
                 <Input
                   id="file-upload"
                   type="file"
@@ -115,22 +117,22 @@ export function EventImport() {
                 />
                 {selectedFile && (
                   <p className="text-sm text-muted-foreground">
-                    Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                    {t("event.selected")}: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="term-select">Academic Term</Label>
+                <Label htmlFor="term-select">{t("event.academicTerm")}</Label>
                 <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select term" />
+                    <SelectValue placeholder={t("event.selectTerm")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2024-term1">Term 1 2024</SelectItem>
-                    <SelectItem value="2024-term2">Term 2 2024</SelectItem>
-                    <SelectItem value="2024-term3">Term 3 2024</SelectItem>
-                    <SelectItem value="2025-term1">Term 1 2025</SelectItem>
+                    <SelectItem value="2024-term1">{t("event.term1")} 2024</SelectItem>
+                    <SelectItem value="2024-term2">{t("event.term2")} 2024</SelectItem>
+                    <SelectItem value="2024-term3">{t("event.term3")} 2024</SelectItem>
+                    <SelectItem value="2025-term1">{t("event.term1")} 2025</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -138,7 +140,7 @@ export function EventImport() {
               {importStatus.status !== 'idle' && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Import Progress</Label>
+                    <Label>{t("event.importProgress")}</Label>
                     <span className="text-sm text-muted-foreground">
                       {importStatus.progress}%
                     </span>
@@ -152,8 +154,8 @@ export function EventImport() {
                 <Alert>
                   <CheckCircle className="w-4 h-4" />
                   <AlertDescription>
-                    Import completed! {importStatus.successRecords} records imported successfully, 
-                    {importStatus.errorRecords} records with errors.
+                    {t("event.importCompleted")} {importStatus.successRecords} {t("event.recordsImportedSuccess")},
+                    {importStatus.errorRecords} {t("event.recordsWithErrors")}.
                   </AlertDescription>
                 </Alert>
               )}
@@ -169,12 +171,12 @@ export function EventImport() {
                   ) : (
                     <Upload className="w-4 h-4" />
                   )}
-                  Import Events
+                  {t("event.importEvents")}
                 </Button>
-                
+
                 {importStatus.status === 'completed' && (
                   <Button variant="outline" onClick={resetImport}>
-                    Import New File
+                    {t("event.importNewFile")}
                   </Button>
                 )}
               </div>
@@ -184,9 +186,9 @@ export function EventImport() {
           {/* Recent Events */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Events</CardTitle>
+              <CardTitle>{t("event.recentEvents")}</CardTitle>
               <CardDescription>
-                Recently imported events in the system
+                {t("event.recentEventsDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -202,7 +204,7 @@ export function EventImport() {
                     <div className="text-right">
                       <p className="font-medium">฿{event.fee}</p>
                       <Badge variant="secondary" className="text-xs">
-                        Active
+                        {t("common.active")}
                       </Badge>
                     </div>
                   </div>
@@ -218,48 +220,48 @@ export function EventImport() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5" />
-                Download Template
+                {t("event.downloadTemplate")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Download the Excel template to ensure your data is formatted correctly before importing.
+                {t("event.downloadTemplateDescription")}
               </p>
               <Button variant="outline" onClick={downloadTemplate} className="w-full">
                 <Download className="w-4 h-4 mr-2" />
-                Download Template
+                {t("event.downloadTemplate")}
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Import Guidelines</CardTitle>
+              <CardTitle>{t("event.importGuidelines")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="space-y-2">
-                <h4 className="font-medium">Required Fields:</h4>
+                <h4 className="font-medium">{t("event.requiredFields")}:</h4>
                 <ul className="space-y-1 text-muted-foreground ml-4">
-                  <li>• Event Name</li>
-                  <li>• Event Date</li>
-                  <li>• Event Type</li>
-                  <li>• Fee Amount</li>
+                  <li>• {t("event.eventName")}</li>
+                  <li>• {t("event.eventDate")}</li>
+                  <li>• {t("event.eventType")}</li>
+                  <li>• {t("event.feeAmount")}</li>
                 </ul>
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-medium">File Requirements:</h4>
+                <h4 className="font-medium">{t("event.fileRequirements")}:</h4>
                 <ul className="space-y-1 text-muted-foreground ml-4">
-                  <li>• Max file size: 10MB</li>
-                  <li>• Formats: .xlsx, .xls, .csv</li>
-                  <li>• Max 1000 records per file</li>
+                  <li>• {t("event.maxFileSize")}: 10MB</li>
+                  <li>• {t("event.formats")}: .xlsx, .xls, .csv</li>
+                  <li>• {t("event.maxRecordsPerFile")}: 1000</li>
                 </ul>
               </div>
 
               <Alert>
                 <AlertCircle className="w-4 h-4" />
                 <AlertDescription className="text-xs">
-                  Always backup your data before importing large datasets.
+                  {t("event.backupDataWarning")}
                 </AlertDescription>
               </Alert>
             </CardContent>

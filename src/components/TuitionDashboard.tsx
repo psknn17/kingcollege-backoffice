@@ -19,8 +19,9 @@ const paymentData = [
   { month: "Jan", yearly: 48, termly: 45 }
 ]
 
-const paymentChannelData = [
-  { name: "Credit Card", value: 45, color: "#8884d8" },
+// Payment channel data will be generated with translations in the component
+const getPaymentChannelData = (t: any) => [
+  { name: t("paymentMethod.creditCard"), value: 45, color: "#8884d8" },
   { name: "PromptPay", value: 30, color: "#82ca9d" },
   { name: "Bank Counter", value: 15, color: "#ffc658" },
   { name: "WeChat Pay", value: 7, color: "#ff7300" },
@@ -50,6 +51,9 @@ const generateAcademicYears = () => {
 
 export function TuitionDashboard() {
   const { t } = useLanguage()
+
+  // Get payment channel data with translations
+  const paymentChannelData = getPaymentChannelData(t)
   // Filter states (for UI selection)
   const [selectedYear, setSelectedYear] = useState<string>("")
   const [selectedTerm, setSelectedTerm] = useState<string>("")
@@ -381,7 +385,7 @@ export function TuitionDashboard() {
       </Card>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("dashboard.studentsPaid")}</CardTitle>
@@ -401,35 +405,9 @@ export function TuitionDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₿7,350,000</div>
+            <div className="text-2xl font-bold">฿7,350,000</div>
             <p className="text-xs text-muted-foreground">
               {(selectedYear || selectedTerm || dateRange.from) ? getFilteredDisplay() : "+8% from last term"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("dashboard.yearlyPayments")}</CardTitle>
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,245</div>
-            <p className="text-xs text-muted-foreground">
-              {(selectedYear || selectedTerm || dateRange.from) ? getFilteredDisplay() : "68% of total payments"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("dashboard.termlyPayments")}</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">582</div>
-            <p className="text-xs text-muted-foreground">
-              {(selectedYear || selectedTerm || dateRange.from) ? getFilteredDisplay() : "32% of total payments"}
             </p>
           </CardContent>
         </Card>
@@ -515,11 +493,11 @@ export function TuitionDashboard() {
         <CardContent>
           <div className="space-y-4">
             {[
-              { student: "John Smith", amount: "₿125,000", type: "Yearly", time: "2 hours ago" },
-              { student: "Sarah Wilson", amount: "₿42,000", type: "Termly", time: "4 hours ago" },
-              { student: "Mike Johnson", amount: "₿125,000", type: "Yearly", time: "6 hours ago" },
-              { student: "Lisa Chen", amount: "₿42,000", type: "Termly", time: "8 hours ago" },
-              { student: "David Brown", amount: "₿125,000", type: "Yearly", time: "1 day ago" }
+              { student: "John Smith", amount: "฿125,000", type: "Yearly", time: "2 hours ago" },
+              { student: "Sarah Wilson", amount: "฿42,000", type: "Termly", time: "4 hours ago" },
+              { student: "Mike Johnson", amount: "฿125,000", type: "Yearly", time: "6 hours ago" },
+              { student: "Lisa Chen", amount: "฿42,000", type: "Termly", time: "8 hours ago" },
+              { student: "David Brown", amount: "฿125,000", type: "Yearly", time: "1 day ago" }
             ].map((payment, index) => (
               <div key={index} className="flex items-center justify-between border-b pb-2">
                 <div>

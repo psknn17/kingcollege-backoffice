@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -29,7 +30,7 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 
 interface EmailDeliveryRecord {
   id: string
@@ -165,11 +166,12 @@ const mockDeliveryRecords: EmailDeliveryRecord[] = [
 ]
 
 const grades = [
-  "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
+  "Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
   "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
 export function EmailDeliveryReport() {
+  const { t } = useLanguage()
   const [records] = useState<EmailDeliveryRecord[]>(mockDeliveryRecords)
   const [filteredRecords, setFilteredRecords] = useState<EmailDeliveryRecord[]>(mockDeliveryRecords)
   const [searchTerm, setSearchTerm] = useState("")
@@ -293,27 +295,27 @@ export function EmailDeliveryReport() {
   }
 
   const retryFailedEmail = (recordId: string) => {
-    toast.success("Email retry initiated")
+    toast.success(t("email.retryInitiated"))
   }
 
   const exportReport = () => {
-    toast.success("Report exported successfully")
+    toast.success(t("email.reportExported"))
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "sent":
-        return <Badge className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />Sent</Badge>
+        return <Badge className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />{t("email.status.sent")}</Badge>
       case "delivered":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Delivered</Badge>
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t("email.status.delivered")}</Badge>
       case "opened":
-        return <Badge className="bg-emerald-100 text-emerald-800"><Eye className="w-3 h-3 mr-1" />Opened</Badge>
+        return <Badge className="bg-emerald-100 text-emerald-800"><Eye className="w-3 h-3 mr-1" />{t("email.status.opened")}</Badge>
       case "failed":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />{t("email.status.failed")}</Badge>
       case "bounced":
-        return <Badge className="bg-orange-100 text-orange-800"><AlertTriangle className="w-3 h-3 mr-1" />Bounced</Badge>
+        return <Badge className="bg-orange-100 text-orange-800"><AlertTriangle className="w-3 h-3 mr-1" />{t("email.status.bounced")}</Badge>
       case "spam":
-        return <Badge className="bg-yellow-100 text-yellow-800"><AlertTriangle className="w-3 h-3 mr-1" />Spam</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800"><AlertTriangle className="w-3 h-3 mr-1" />{t("email.status.spam")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -360,19 +362,19 @@ export function EmailDeliveryReport() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Email Delivery Report</h2>
+          <h2 className="text-xl font-semibold">{t("email.deliveryReport")}</h2>
           <p className="text-sm text-muted-foreground">
-            Track email delivery status, open rates, and troubleshoot failed deliveries
+            {t("email.deliveryReportDesc")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportReport} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export Report
+            {t("email.exportReport")}
           </Button>
           <Button variant="outline" onClick={() => window.location.reload()} className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -383,7 +385,7 @@ export function EmailDeliveryReport() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              Total Emails
+              {t("email.totalEmails")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -395,12 +397,12 @@ export function EmailDeliveryReport() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
-              Delivery Rate
+              {t("email.deliveryRate")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.deliveryRate.toFixed(1)}%</div>
-            <div className="text-sm text-muted-foreground">{stats.delivered} delivered</div>
+            <div className="text-sm text-muted-foreground">{stats.delivered} {t("email.status.delivered").toLowerCase()}</div>
           </CardContent>
         </Card>
 
@@ -408,12 +410,12 @@ export function EmailDeliveryReport() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Eye className="w-4 h-4 text-emerald-600" />
-              Open Rate
+              {t("email.openRate")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">{stats.openRate.toFixed(1)}%</div>
-            <div className="text-sm text-muted-foreground">{stats.opened} opened</div>
+            <div className="text-sm text-muted-foreground">{stats.opened} {t("email.status.opened").toLowerCase()}</div>
           </CardContent>
         </Card>
 
@@ -421,13 +423,13 @@ export function EmailDeliveryReport() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <XCircle className="w-4 h-4 text-red-600" />
-              Failed Emails
+              {t("email.failedEmails")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{stats.failed + stats.bounced + stats.spam}</div>
             <div className="text-sm text-muted-foreground">
-              {stats.failed} failed, {stats.bounced} bounced, {stats.spam} spam
+              {stats.failed} {t("email.status.failed").toLowerCase()}, {stats.bounced} {t("email.status.bounced").toLowerCase()}, {stats.spam} {t("email.status.spam").toLowerCase()}
             </div>
           </CardContent>
         </Card>
@@ -438,16 +440,16 @@ export function EmailDeliveryReport() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Search & Filter
+            {t("common.searchAndFilter")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("common.search")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Student, email, job..."
+                  placeholder={t("email.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -456,31 +458,31 @@ export function EmailDeliveryReport() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="opened">Opened</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="bounced">Bounced</SelectItem>
-                  <SelectItem value="spam">Spam</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                  <SelectItem value="sent">{t("email.status.sent")}</SelectItem>
+                  <SelectItem value="delivered">{t("email.status.delivered")}</SelectItem>
+                  <SelectItem value="opened">{t("email.status.opened")}</SelectItem>
+                  <SelectItem value="failed">{t("email.status.failed")}</SelectItem>
+                  <SelectItem value="bounced">{t("email.status.bounced")}</SelectItem>
+                  <SelectItem value="spam">{t("email.status.spam")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Year Group</label>
+              <label className="text-sm font-medium">{t("student.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Year Groups</SelectItem>
+                  <SelectItem value="all">{t("payment.allYearGroups")}</SelectItem>
                   {grades.map(grade => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -489,28 +491,28 @@ export function EmailDeliveryReport() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Language</label>
+              <label className="text-sm font-medium">{t("email.language")}</label>
               <Select value={languageFilter} onValueChange={setLanguageFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Languages</SelectItem>
-                  <SelectItem value="en">🇺🇸 English</SelectItem>
-                  <SelectItem value="th">🇹🇭 ไทย</SelectItem>
-                  <SelectItem value="zh">🇨🇳 中文</SelectItem>
+                  <SelectItem value="all">{t("email.allLanguages")}</SelectItem>
+                  <SelectItem value="en">{t("email.languageEnglish")}</SelectItem>
+                  <SelectItem value="th">{t("email.languageThai")}</SelectItem>
+                  <SelectItem value="zh">{t("email.languageChinese")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date Range</label>
+              <label className="text-sm font-medium">{t("payment.dateRange")}</label>
               <div className="flex gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateFrom ? format(dateFrom, "MM/dd") : "From"}
+                      {dateFrom ? format(dateFrom, "MM/dd") : t("common.from")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -522,12 +524,12 @@ export function EmailDeliveryReport() {
                     />
                   </PopoverContent>
                 </Popover>
-                
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateTo ? format(dateTo, "MM/dd") : "To"}
+                      {dateTo ? format(dateTo, "MM/dd") : t("common.to")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -543,8 +545,8 @@ export function EmailDeliveryReport() {
             </div>
 
             <div className="flex items-end gap-2">
-              <Button onClick={applyFilters} size="sm">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} size="sm">Clear</Button>
+              <Button onClick={applyFilters} size="sm">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} size="sm">{t("common.clear")}</Button>
             </div>
           </div>
         </CardContent>
@@ -553,7 +555,7 @@ export function EmailDeliveryReport() {
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredRecords.length} of {records.length} email records
+          {t("email.showingRecords", { showing: filteredRecords.length, total: records.length })}
         </p>
       </div>
 
@@ -565,47 +567,47 @@ export function EmailDeliveryReport() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student
+                    {t("email.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentEmail")}>
                   <div className="flex items-center gap-1">
-                    Email
+                    {t("email.email")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("jobName")}>
                   <div className="flex items-center gap-1">
-                    Job
+                    {t("email.job")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("sentAt")}>
                   <div className="flex items-center gap-1">
-                    Sent
+                    {t("email.status.sent")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("language")}>
                   <div className="flex items-center gap-1">
-                    Language
+                    {t("email.language")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("retryCount")}>
                   <div className="flex items-center gap-1">
-                    Retries
+                    {t("email.retries")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -634,7 +636,7 @@ export function EmailDeliveryReport() {
                     </div>
                     {record.openedAt && (
                       <div className="text-xs text-muted-foreground">
-                        Opened: {format(record.openedAt, "MMM dd, HH:mm")}
+                        {t("email.status.opened")}: {format(record.openedAt, "MMM dd, HH:mm")}
                       </div>
                     )}
                   </TableCell>
@@ -643,7 +645,7 @@ export function EmailDeliveryReport() {
                   </TableCell>
                   <TableCell>
                     {record.retryCount > 0 ? (
-                      <Badge variant="outline">{record.retryCount} retries</Badge>
+                      <Badge variant="outline">{record.retryCount} {t("email.retries").toLowerCase()}</Badge>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -681,10 +683,10 @@ export function EmailDeliveryReport() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Email Delivery Details
+              {t("email.deliveryDetails")}
             </DialogTitle>
             <DialogDescription>
-              Detailed information about email delivery and engagement
+              {t("email.deliveryDetailsDesc")}
             </DialogDescription>
           </DialogHeader>
           
@@ -693,14 +695,14 @@ export function EmailDeliveryReport() {
               {/* Status Header */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Delivery Status</p>
+                  <p className="text-sm text-muted-foreground">{t("email.deliveryStatus")}</p>
                   <div className="flex items-center gap-2 mt-1">
                     {getStatusBadge(selectedRecord.status)}
                     <span className="text-lg">{getLanguageFlag(selectedRecord.language)}</span>
                   </div>
                 </div>
                 {selectedRecord.retryCount > 0 && (
-                  <Badge variant="outline">{selectedRecord.retryCount} retries</Badge>
+                  <Badge variant="outline">{selectedRecord.retryCount} {t("email.retries").toLowerCase()}</Badge>
                 )}
               </div>
 
@@ -709,47 +711,47 @@ export function EmailDeliveryReport() {
               {/* Student & Job Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <h3 className="font-medium">Student Information</h3>
+                  <h3 className="font-medium">{t("email.studentInformation")}</h3>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Student Name</p>
+                      <p className="text-sm text-muted-foreground">{t("email.studentName")}</p>
                       <p className="font-medium">{selectedRecord.studentName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Student ID</p>
+                      <p className="text-sm text-muted-foreground">{t("email.studentId")}</p>
                       <p className="font-mono">{selectedRecord.studentId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Year Group</p>
+                      <p className="text-sm text-muted-foreground">{t("student.yearGroup")}</p>
                       <Badge variant="secondary">{selectedRecord.grade}</Badge>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Family Code</p>
+                      <p className="text-sm text-muted-foreground">{t("email.familyCode")}</p>
                       <p className="font-mono">{selectedRecord.familyCode}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="font-medium">Email Information</h3>
+                  <h3 className="font-medium">{t("email.emailInformation")}</h3>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Recipient Email</p>
+                      <p className="text-sm text-muted-foreground">{t("email.recipientEmail")}</p>
                       <p className="font-medium">{selectedRecord.parentEmail}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Email Job</p>
+                      <p className="text-sm text-muted-foreground">{t("email.emailJob")}</p>
                       <p className="font-medium">{selectedRecord.jobName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Template Used</p>
+                      <p className="text-sm text-muted-foreground">{t("email.templateUsed")}</p>
                       <p className="font-medium">{selectedRecord.template}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Language</p>
+                      <p className="text-sm text-muted-foreground">{t("email.language")}</p>
                       <div className="flex items-center gap-2">
                         <span>{getLanguageFlag(selectedRecord.language)}</span>
-                        <span className="capitalize">{selectedRecord.language === "en" ? "English" : selectedRecord.language === "th" ? "Thai" : "Chinese"}</span>
+                        <span className="capitalize">{selectedRecord.language === "en" ? t("email.english") : selectedRecord.language === "th" ? t("email.thai") : t("email.chinese")}</span>
                       </div>
                     </div>
                   </div>
@@ -760,14 +762,14 @@ export function EmailDeliveryReport() {
 
               {/* Timeline */}
               <div className="space-y-3">
-                <h3 className="font-medium">Delivery Timeline</h3>
+                <h3 className="font-medium">{t("email.deliveryTimeline")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                       <Clock className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium">Email Sent</p>
+                      <p className="font-medium">{t("email.emailSent")}</p>
                       <p className="text-sm text-muted-foreground">
                         {format(selectedRecord.sentAt, "MMM dd, yyyy 'at' HH:mm:ss")}
                       </p>
@@ -780,7 +782,7 @@ export function EmailDeliveryReport() {
                         <CheckCircle className="w-4 h-4 text-green-600" />
                       </div>
                       <div>
-                        <p className="font-medium">Email Delivered</p>
+                        <p className="font-medium">{t("email.emailDelivered")}</p>
                         <p className="text-sm text-muted-foreground">
                           {format(selectedRecord.deliveredAt, "MMM dd, yyyy 'at' HH:mm:ss")}
                         </p>
@@ -794,7 +796,7 @@ export function EmailDeliveryReport() {
                         <Eye className="w-4 h-4 text-emerald-600" />
                       </div>
                       <div>
-                        <p className="font-medium">Email Opened</p>
+                        <p className="font-medium">{t("email.emailOpened")}</p>
                         <p className="text-sm text-muted-foreground">
                           {format(selectedRecord.openedAt, "MMM dd, yyyy 'at' HH:mm:ss")}
                         </p>
@@ -808,7 +810,7 @@ export function EmailDeliveryReport() {
                         <XCircle className="w-4 h-4 text-red-600" />
                       </div>
                       <div>
-                        <p className="font-medium">Delivery Failed</p>
+                        <p className="font-medium">{t("email.deliveryFailed")}</p>
                         <p className="text-sm text-muted-foreground">{selectedRecord.failureReason}</p>
                       </div>
                     </div>
@@ -819,19 +821,19 @@ export function EmailDeliveryReport() {
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 {["failed", "bounced"].includes(selectedRecord.status) && (
-                  <Button 
+                  <Button
                     onClick={() => {
                       retryFailedEmail(selectedRecord.id)
                       closeRecordModal()
                     }}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Retry Email
+                    {t("email.retryEmail")}
                   </Button>
                 )}
-                
+
                 <Button variant="outline" onClick={closeRecordModal}>
-                  Close
+                  {t("common.close")}
                 </Button>
               </div>
             </div>

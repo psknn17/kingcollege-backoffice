@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -44,7 +45,7 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
 
 interface PaymentRecord {
@@ -162,10 +163,11 @@ const revenueChartData = [
   { month: "Jun", revenue: 105000, registrations: 30 },
 ]
 
-const paymentMethodData = [
-  { name: "Credit Card", value: 156780, color: "#3b82f6" },
-  { name: "Bank Transfer", value: 89450, color: "#10b981" },  
-  { name: "Cash", value: 34200, color: "#f59e0b" },
+// Payment method data will be generated with translations in the component
+const getPaymentMethodData = (t: any) => [
+  { name: t("paymentMethod.creditCard"), value: 156780, color: "#3b82f6" },
+  { name: t("paymentMethod.bankTransfer"), value: 89450, color: "#10b981" },
+  { name: t("paymentMethod.cash"), value: 34200, color: "#f59e0b" },
   { name: "Cheque", value: 12500, color: "#8b5cf6" },
 ]
 
@@ -178,6 +180,10 @@ const categoryRevenueData = [
 ]
 
 export function SummerPaymentReports() {
+  const { t } = useLanguage()
+
+  // Get payment method data with translations
+  const paymentMethodData = getPaymentMethodData(t)
   const [selectedActivity, setSelectedActivity] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState<PaymentStatus>("all")
@@ -263,16 +269,16 @@ export function SummerPaymentReports() {
 
   const getPaymentMethodLabel = (method: PaymentRecord['paymentMethod']) => {
     const labels = {
-      credit_card: "Credit Card",
-      bank_transfer: "Bank Transfer",
-      cash: "Cash",
-      cheque: "Cheque"
+      credit_card: t("payment.creditCard"),
+      bank_transfer: t("payment.bankTransfer"),
+      cash: t("payment.cash"),
+      cheque: t("payment.cheque")
     }
     return labels[method]
   }
 
   const exportReport = (format: 'csv' | 'excel' | 'pdf') => {
-    toast.success(`Payment report exported as ${format.toUpperCase()}`)
+    toast.success(t("summerPayment.exportSuccess").replace("{format}", format.toUpperCase()))
   }
 
   const calculateTotalRevenue = () => {
@@ -291,34 +297,34 @@ export function SummerPaymentReports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Summer Payment Reports</h2>
+          <h2 className="mb-2">{t("summerPayment.title")}</h2>
           <p className="text-muted-foreground">
-            Comprehensive payment analytics and financial reports for summer activities
+            {t("summerPayment.subtitle")}
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => exportReport('csv')}>
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            {t("common.exportCsv")}
           </Button>
           <Button variant="outline" onClick={() => exportReport('excel')}>
             <Download className="w-4 h-4 mr-2" />
-            Export Excel
+            {t("summerPayment.exportExcel")}
           </Button>
           <Button onClick={() => exportReport('pdf')}>
             <Download className="w-4 h-4 mr-2" />
-            Export PDF
+            {t("summerPayment.exportPdf")}
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="details">Payment Details</TabsTrigger>
-          <TabsTrigger value="analytics">Financial Analytics</TabsTrigger>
-          <TabsTrigger value="activities">By Activity</TabsTrigger>
+          <TabsTrigger value="overview">{t("summerPayment.overview")}</TabsTrigger>
+          <TabsTrigger value="details">{t("summerPayment.paymentDetails")}</TabsTrigger>
+          <TabsTrigger value="analytics">{t("summerPayment.financialAnalytics")}</TabsTrigger>
+          <TabsTrigger value="activities">{t("summerPayment.byActivity")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -326,52 +332,52 @@ export function SummerPaymentReports() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">฿{calculateTotalRevenue().toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  +15% from last month
+                  {t("summerPayment.fromLastMonth")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summerPayment.pendingPayments")}</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">฿{calculatePendingAmount().toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  {filteredPayments.filter(p => p.status === 'unpaid' || p.status === 'partial').length} transactions
+                  {filteredPayments.filter(p => p.status === 'unpaid' || p.status === 'partial').length} {t("summerPayment.transactions")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summerPayment.successRate")}</CardTitle>
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">92.5%</div>
                 <p className="text-xs text-muted-foreground">
-                  Payment success rate
+                  {t("summerPayment.paymentSuccessRate")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Programs</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summerPayment.activePrograms")}</CardTitle>
                 <Sun className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">12</div>
                 <p className="text-xs text-muted-foreground">
-                  Summer activities
+                  {t("summerPayment.summerActivities")}
                 </p>
               </CardContent>
             </Card>
@@ -380,8 +386,8 @@ export function SummerPaymentReports() {
           {/* Revenue Trend Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue Trend</CardTitle>
-              <CardDescription>Monthly revenue and registration trends</CardDescription>
+              <CardTitle>{t("summerPayment.revenueTrend")}</CardTitle>
+              <CardDescription>{t("summerPayment.revenueTrendDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -389,8 +395,8 @@ export function SummerPaymentReports() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip 
-                    formatter={[(value: number) => [`฿${value.toLocaleString()}`, 'Revenue']]}
+                  <Tooltip
+                    formatter={[(value: number) => [`฿${value.toLocaleString()}`, t("common.revenue")]]}
                   />
                   <Area 
                     type="monotone" 
@@ -408,8 +414,8 @@ export function SummerPaymentReports() {
             {/* Payment Methods Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Revenue distribution by payment method</CardDescription>
+                <CardTitle>{t("summerPayment.paymentMethods")}</CardTitle>
+                <CardDescription>{t("summerPayment.paymentMethodsDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
@@ -435,8 +441,8 @@ export function SummerPaymentReports() {
             {/* Category Revenue */}
             <Card>
               <CardHeader>
-                <CardTitle>Revenue by Category</CardTitle>
-                <CardDescription>Summer activity category performance</CardDescription>
+                <CardTitle>{t("summerPayment.revenueByCategory")}</CardTitle>
+                <CardDescription>{t("summerPayment.revenueByCategoryDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -468,16 +474,16 @@ export function SummerPaymentReports() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="w-4 h-4" />
-                Payment Filters
+                {t("summerPayment.paymentFilters")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-7">
                 <div className="space-y-2">
-                  <Label>Search</Label>
+                  <Label>{t("common.search")}</Label>
                   <div className="relative">
                     <Input
-                      placeholder="Student name or ID"
+                      placeholder={t("summerPayment.searchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className=""
@@ -486,13 +492,13 @@ export function SummerPaymentReports() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Activity</Label>
+                  <Label>{t("summerPayment.activity")}</Label>
                   <Select value={selectedActivity} onValueChange={setSelectedActivity}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Activities</SelectItem>
+                      <SelectItem value="all">{t("summerPayment.allActivities")}</SelectItem>
                       <SelectItem value="Swimming Intensive">Swimming Intensive</SelectItem>
                       <SelectItem value="Art & Craft Workshop">Art & Craft Workshop</SelectItem>
                       <SelectItem value="Coding for Kids">Coding for Kids</SelectItem>
@@ -506,51 +512,51 @@ export function SummerPaymentReports() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Category</Label>
+                  <Label>{t("common.category")}</Label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Sports">Sports</SelectItem>
-                      <SelectItem value="Creative">Creative</SelectItem>
-                      <SelectItem value="Technology">Technology</SelectItem>
-                      <SelectItem value="Performance">Performance</SelectItem>
-                      <SelectItem value="Academic">Academic</SelectItem>
+                      <SelectItem value="all">{t("common.allCategories")}</SelectItem>
+                      <SelectItem value="Sports">{t("summerPayment.categorySports")}</SelectItem>
+                      <SelectItem value="Creative">{t("summerPayment.categoryCreative")}</SelectItem>
+                      <SelectItem value="Technology">{t("summerPayment.categoryTechnology")}</SelectItem>
+                      <SelectItem value="Performance">{t("summerPayment.categoryPerformance")}</SelectItem>
+                      <SelectItem value="Academic">{t("summerPayment.categoryAcademic")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <StatusFilter 
-                  selectedStatus={selectedStatus} 
+                <StatusFilter
+                  selectedStatus={selectedStatus}
                   onStatusChange={setSelectedStatus}
                 />
 
                 <div className="space-y-2">
-                  <Label>Payment Method</Label>
+                  <Label>{t("payment.paymentMethod")}</Label>
                   <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Methods</SelectItem>
-                      <SelectItem value="credit_card">Credit Card</SelectItem>
-                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="all">{t("summerPayment.allMethods")}</SelectItem>
+                      <SelectItem value="credit_card">{t("payment.creditCard")}</SelectItem>
+                      <SelectItem value="bank_transfer">{t("payment.bankTransfer")}</SelectItem>
+                      <SelectItem value="cash">{t("payment.cash")}</SelectItem>
+                      <SelectItem value="cheque">{t("payment.cheque")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Date Range</Label>
+                  <Label>{t("payment.dateRange")}</Label>
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                           <CalendarDays className="w-4 h-4 mr-2" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
+                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("summerPayment.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -567,7 +573,7 @@ export function SummerPaymentReports() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                           <CalendarDays className="w-4 h-4 mr-2" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
+                          {dateTo ? format(dateTo, "dd/MM/yy") : t("summerPayment.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -589,10 +595,10 @@ export function SummerPaymentReports() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length} payment record(s)
+                {t("summerPayment.showingRecords").replace("{from}", String(startIndex + 1)).replace("{to}", String(Math.min(endIndex, filteredPayments.length))).replace("{total}", String(filteredPayments.length))}
               </p>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Show:</label>
+                <label className="text-sm text-muted-foreground">{t("payment.show")}:</label>
                 <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
                   <SelectTrigger className="w-20">
                     <SelectValue />
@@ -603,7 +609,7 @@ export function SummerPaymentReports() {
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground">per page</span>
+                <span className="text-sm text-muted-foreground">{t("payment.perPage")}</span>
               </div>
             </div>
           </div>
@@ -611,9 +617,9 @@ export function SummerPaymentReports() {
           {/* Payment Details Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Payment Details</CardTitle>
+              <CardTitle>{t("summerPayment.paymentDetails")}</CardTitle>
               <CardDescription>
-                Showing {currentPagePayments.length} of {filteredPayments.length} payment record(s)
+                {t("summerPayment.showingOfRecords").replace("{count}", String(currentPagePayments.length)).replace("{total}", String(filteredPayments.length))}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -622,36 +628,36 @@ export function SummerPaymentReports() {
                   <TableRow>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
-                        Student
+                        {t("payment.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("activityName")}>
                       <div className="flex items-center gap-1">
-                        Activity
+                        {t("summerPayment.activity")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
-                        Amount
+                        {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentDate")}>
                       <div className="flex items-center gap-1">
-                        Payment Date
+                        {t("summerPayment.paymentDate")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Method</TableHead>
+                    <TableHead>{t("summerPayment.method")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                       <div className="flex items-center gap-1">
-                        Status
+                        {t("common.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Transaction ID</TableHead>
+                    <TableHead>{t("summerPayment.transactionId")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -739,15 +745,15 @@ export function SummerPaymentReports() {
 
         <TabsContent value="analytics" className="space-y-6">
           <div className="text-center py-12">
-            <h3>Financial Analytics</h3>
-            <p className="text-muted-foreground">Advanced analytics charts would go here</p>
+            <h3>{t("summerPayment.financialAnalytics")}</h3>
+            <p className="text-muted-foreground">{t("summerPayment.analyticsPlaceholder")}</p>
           </div>
         </TabsContent>
 
         <TabsContent value="activities" className="space-y-6">
           <div className="text-center py-12">
-            <h3>By Activity</h3>
-            <p className="text-muted-foreground">Activity-specific reports would go here</p>
+            <h3>{t("summerPayment.byActivity")}</h3>
+            <p className="text-muted-foreground">{t("summerPayment.activityPlaceholder")}</p>
           </div>
         </TabsContent>
       </Tabs>

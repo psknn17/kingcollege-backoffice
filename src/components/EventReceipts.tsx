@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { CalendarIcon, Search, Download, Filter, Eye, Mail, Receipt, Users, Calendar as CalendarEmoji, MapPin, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { InternalEmailManagement } from "./InternalEmailManagement"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Student data matching StudentContext (for internal SISB students)
 const studentData = [
@@ -139,6 +140,7 @@ const mockReceipts: EventReceipt[] = [
 ]
 
 export function EventReceipts() {
+  const { t } = useLanguage()
   const [receipts] = useState<EventReceipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<EventReceipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
@@ -274,11 +276,11 @@ export function EventReceipts() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "issued":
-        return <Badge className="bg-green-100 text-green-800">Issued</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge>
       case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">Resent</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.resent")}</Badge>
       case "failed":
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("receipt.failed")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -287,13 +289,13 @@ export function EventReceipts() {
   const getEventTypeBadge = (eventType: string) => {
     switch (eventType) {
       case "educational":
-        return <Badge variant="default" className="bg-blue-500">Educational</Badge>
+        return <Badge variant="default" className="bg-blue-500">{t("eventReceipt.educational")}</Badge>
       case "sports":
-        return <Badge variant="default" className="bg-green-500">Sports</Badge>
+        return <Badge variant="default" className="bg-green-500">{t("eventReceipt.sports")}</Badge>
       case "cultural":
-        return <Badge variant="default" className="bg-purple-500">Cultural</Badge>
+        return <Badge variant="default" className="bg-purple-500">{t("eventReceipt.cultural")}</Badge>
       case "trip":
-        return <Badge variant="default" className="bg-orange-500">Trip</Badge>
+        return <Badge variant="default" className="bg-orange-500">{t("eventReceipt.trip")}</Badge>
       default:
         return <Badge variant="secondary">{eventType}</Badge>
     }
@@ -314,9 +316,9 @@ export function EventReceipts() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Event Receipt Management</h2>
+          <h2 className="text-xl font-semibold">{t("eventReceipt.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage receipts and internal email notifications
+            {t("eventReceipt.subtitle")}
           </p>
         </div>
       </div>
@@ -325,30 +327,30 @@ export function EventReceipts() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="receipts" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
-            Receipt Management
+            {t("receipt.management")}
           </TabsTrigger>
           <TabsTrigger value="whitelist" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Internal Email Whitelist
+            {t("receipt.internalEmailWhitelist")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="receipts" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h3 className="text-lg font-medium">Receipt Management</h3>
+              <h3 className="text-lg font-medium">{t("receipt.management")}</h3>
               <p className="text-sm text-muted-foreground">
-                View and download event participation payment receipts
+                {t("eventReceipt.viewAndDownload")}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                Bulk Resend
+                {t("receipt.bulkResend")}
               </Button>
               <Button className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                Export All
+                {t("receipt.exportAll")}
               </Button>
             </div>
           </div>
@@ -357,48 +359,48 @@ export function EventReceipts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Receipts</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.totalReceipts")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.total}</div>
                 <p className="text-xs text-muted-foreground">
-                  {summaryStats.externalParticipants} external participants
+                  {summaryStats.externalParticipants} {t("eventReceipt.externalParticipants")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Successfully Issued</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.successfullyIssued")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{summaryStats.issued}</div>
                 <p className="text-xs text-muted-foreground">
-                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% success rate
+                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% {t("receipt.successRate")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("eventReceipt.totalRevenue")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  Avg ₿{summaryStats.avgAmount.toLocaleString()} per event
+                  {t("eventReceipt.avgPerEvent", { avg: summaryStats.avgAmount.toLocaleString() })}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.totalDownloads")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.totalDownloads}</div>
                 <p className="text-xs text-muted-foreground">
-                  Avg {(summaryStats.totalDownloads / summaryStats.total).toFixed(1)} per receipt
+                  {t("receipt.avgPerReceipt", { avg: (summaryStats.totalDownloads / summaryStats.total).toFixed(1) })}
                 </p>
               </CardContent>
             </Card>
@@ -410,21 +412,21 @@ export function EventReceipts() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Filter className="w-4 h-4" />
-                  Search & Filter
+                  {t("eventReceipt.searchAndFilter")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={applyFilters} className="h-9">Apply</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+                  <Button onClick={applyFilters} className="h-9">{t("eventReceipt.apply")}</Button>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Search</label>
+                  <label className="text-sm font-medium">{t("common.search")}</label>
                   <div className="relative">
                     <Input
-                      placeholder="Receipt, event, participant"
+                      placeholder={t("eventReceipt.searchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className=""
@@ -433,58 +435,58 @@ export function EventReceipts() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
+                  <label className="text-sm font-medium">{t("common.status")}</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="issued">Issued</SelectItem>
-                      <SelectItem value="resent">Resent</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="all">{t("eventReceipt.allStatus")}</SelectItem>
+                      <SelectItem value="issued">{t("receipt.issued")}</SelectItem>
+                      <SelectItem value="resent">{t("receipt.resent")}</SelectItem>
+                      <SelectItem value="failed">{t("receipt.failed")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Event Type</label>
+                  <label className="text-sm font-medium">{t("eventReceipt.eventType")}</label>
                   <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="educational">Educational</SelectItem>
-                      <SelectItem value="sports">Sports</SelectItem>
-                      <SelectItem value="cultural">Cultural</SelectItem>
-                      <SelectItem value="trip">Trip</SelectItem>
+                      <SelectItem value="all">{t("receipt.allTypes")}</SelectItem>
+                      <SelectItem value="educational">{t("eventReceipt.educational")}</SelectItem>
+                      <SelectItem value="sports">{t("eventReceipt.sports")}</SelectItem>
+                      <SelectItem value="cultural">{t("eventReceipt.cultural")}</SelectItem>
+                      <SelectItem value="trip">{t("eventReceipt.trip")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Participant Type</label>
+                  <label className="text-sm font-medium">{t("eventReceipt.participantType")}</label>
                   <Select value={participantTypeFilter} onValueChange={setParticipantTypeFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Participants</SelectItem>
-                      <SelectItem value="internal">SISB Students</SelectItem>
-                      <SelectItem value="external">External Participants</SelectItem>
+                      <SelectItem value="all">{t("eventReceipt.allParticipants")}</SelectItem>
+                      <SelectItem value="internal">{t("eventReceipt.sisbStudents")}</SelectItem>
+                      <SelectItem value="external">{t("eventReceipt.externalParticipantsFilter")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
+                  <label className="text-sm font-medium">{t("eventReceipt.dateRange")}</label>
                   <div className="flex gap-1">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateFrom ? format(dateFrom, "MM/dd") : "From"}
+                          {dateFrom ? format(dateFrom, "MM/dd") : t("eventReceipt.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -496,12 +498,12 @@ export function EventReceipts() {
                         />
                       </PopoverContent>
                     </Popover>
-                    
+
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateTo ? format(dateTo, "MM/dd") : "To"}
+                          {dateTo ? format(dateTo, "MM/dd") : t("eventReceipt.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -522,7 +524,7 @@ export function EventReceipts() {
           {/* Results Summary */}
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredReceipts.length} of {receipts.length} receipts
+              {t("eventReceipt.showingReceipts", { count: filteredReceipts.length, total: receipts.length })}
             </p>
           </div>
 
@@ -534,49 +536,49 @@ export function EventReceipts() {
                   <TableRow>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                       <div className="flex items-center gap-1">
-                        Receipt Number
+                        {t("receipt.receiptNumber")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("eventName")}>
                       <div className="flex items-center gap-1">
-                        Event Details
+                        {t("eventReceipt.eventDetails")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("participantName")}>
                       <div className="flex items-center gap-1">
-                        Participant
+                        {t("eventReceipt.participant")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                       <div className="flex items-center gap-1">
-                        Parent
+                        {t("eventReceipt.parent")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
-                        Amount
+                        {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Payment Method</TableHead>
+                    <TableHead>{t("receipt.paymentMethod")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                       <div className="flex items-center gap-1">
-                        Date
+                        {t("common.date")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                       <div className="flex items-center gap-1">
-                        Downloads
+                        {t("receipt.downloads")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -584,7 +586,7 @@ export function EventReceipts() {
                     <TableRow key={receipt.id}>
                       <TableCell className="font-mono text-sm">
                         {receipt.receiptNumber}
-                        {receipt.isExternal && <Badge variant="secondary" className="ml-2 text-xs">External</Badge>}
+                        {receipt.isExternal && <Badge variant="secondary" className="ml-2 text-xs">{t("eventReceipt.external")}</Badge>}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
@@ -619,7 +621,7 @@ export function EventReceipts() {
                       <TableCell>{getStatusBadge(receipt.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {receipt.downloadCount} times
+                          {receipt.downloadCount} {t("receipt.times")}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -658,23 +660,23 @@ export function EventReceipts() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Popular Event Types</CardTitle>
-                <p className="text-sm text-muted-foreground">Based on revenue and participation</p>
+                <CardTitle>{t("eventReceipt.popularEventTypes")}</CardTitle>
+                <p className="text-sm text-muted-foreground">{t("eventReceipt.basedOnRevenue")}</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { type: "Trip", count: 2, revenue: 1200, color: "bg-orange-500" },
-                    { type: "Educational", count: 3, revenue: 800, color: "bg-blue-500" },
-                    { type: "Cultural", count: 4, revenue: 650, color: "bg-purple-500" },
-                    { type: "Sports", count: 2, revenue: 450, color: "bg-green-500" }
+                    { type: t("eventReceipt.trip"), count: 2, revenue: 1200, color: "bg-orange-500" },
+                    { type: t("eventReceipt.educational"), count: 3, revenue: 800, color: "bg-blue-500" },
+                    { type: t("eventReceipt.cultural"), count: 4, revenue: 650, color: "bg-purple-500" },
+                    { type: t("eventReceipt.sports"), count: 2, revenue: 450, color: "bg-green-500" }
                   ].map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
                         <div>
                           <div className="font-medium">{item.type}</div>
-                          <div className="text-sm text-muted-foreground">{item.count} events</div>
+                          <div className="text-sm text-muted-foreground">{item.count} {t("eventReceipt.events")}</div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -688,16 +690,16 @@ export function EventReceipts() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Participation Analysis</CardTitle>
-                <p className="text-sm text-muted-foreground">SISB vs External participants</p>
+                <CardTitle>{t("eventReceipt.participationAnalysis")}</CardTitle>
+                <p className="text-sm text-muted-foreground">{t("eventReceipt.sisbVsExternal")}</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">SISB Students</div>
+                      <div className="font-medium">{t("eventReceipt.sisbStudents")}</div>
                       <div className="text-sm text-muted-foreground">
-                        {receipts.filter(r => !r.isExternal).length} participants
+                        {receipts.filter(r => !r.isExternal).length} {t("eventReceipt.participants")}
                       </div>
                     </div>
                     <div className="text-right">
@@ -712,9 +714,9 @@ export function EventReceipts() {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">External Participants</div>
+                      <div className="font-medium">{t("eventReceipt.externalParticipantsLabel")}</div>
                       <div className="text-sm text-muted-foreground">
-                        {receipts.filter(r => r.isExternal).length} participants
+                        {receipts.filter(r => r.isExternal).length} {t("eventReceipt.participants")}
                       </div>
                     </div>
                     <div className="text-right">
@@ -729,7 +731,7 @@ export function EventReceipts() {
 
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm">
-                      <strong>Insight:</strong> External participants represent {Math.round((summaryStats.externalParticipants / summaryStats.total) * 100)}% of event receipts and contribute significantly to event revenue.
+                      <strong>{t("receipt.insight")}:</strong> {t("eventReceipt.externalInsight", { percent: Math.round((summaryStats.externalParticipants / summaryStats.total) * 100) })}
                     </p>
                   </div>
                 </div>
@@ -739,9 +741,9 @@ export function EventReceipts() {
         </TabsContent>
 
         <TabsContent value="whitelist">
-          <InternalEmailManagement 
-            title="Event Receipt Email Whitelist"
-            description="Manage internal staff emails who receive event receipt notifications"
+          <InternalEmailManagement
+            title={t("eventReceipt.whitelistTitle")}
+            description={t("eventReceipt.whitelistDesc")}
           />
         </TabsContent>
       </Tabs>

@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -7,6 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Separator } from "./ui/separator"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog"
 import {
   Mail,
   Search,
@@ -22,8 +29,17 @@ import {
   Calendar,
   MessageSquare,
   Send,
-  ArrowUpDown
+  ArrowUpDown,
+  Eye,
+  History
 } from "lucide-react"
+
+interface AttemptRecord {
+  attemptNumber: number
+  timestamp: string
+  status: "pending" | "delivered" | "failed" | "bounced"
+  errorMessage?: string
+}
 
 interface EmailRecord {
   id: string
@@ -31,78 +47,171 @@ interface EmailRecord {
   recipientName: string
   studentName: string
   yearGroup: string
-  status: "sent" | "delivered" | "opened" | "failed" | "bounced"
+  status: "pending" | "delivered" | "opened" | "failed" | "bounced"
   sentAt: string
   deliveredAt?: string
   openedAt?: string
   failureReason?: string
   attempts: number
   lastAttemptAt: string
+  attemptHistory?: AttemptRecord[]
 }
 
-// Mock data for email history
-const mockEmailHistory: EmailRecord[] = [
-  {
-    id: "ER001",
-    recipientEmail: "sarah.thompson@email.com",
-    recipientName: "Sarah Thompson",
-    studentName: "Emma Thompson",
-    yearGroup: "Year 7",
-    status: "opened",
-    sentAt: "2024-01-15T10:30:00Z",
-    deliveredAt: "2024-01-15T10:31:00Z",
-    openedAt: "2024-01-15T14:20:00Z",
-    attempts: 1,
-    lastAttemptAt: "2024-01-15T10:30:00Z"
-  },
-  {
-    id: "ER002",
-    recipientEmail: "michael.wilson@email.com",
-    recipientName: "Michael Wilson",
-    studentName: "James Wilson",
-    yearGroup: "Year 8",
-    status: "delivered",
-    sentAt: "2024-01-15T10:30:00Z",
-    deliveredAt: "2024-01-15T10:32:00Z",
-    attempts: 1,
-    lastAttemptAt: "2024-01-15T10:30:00Z"
-  },
-  {
-    id: "ER003",
-    recipientEmail: "invalid@nonexistent.com",
-    recipientName: "Lisa Chen",
-    studentName: "Olivia Chen",
-    yearGroup: "Year 10",
-    status: "bounced",
-    sentAt: "2024-01-15T10:30:00Z",
-    failureReason: "Recipient address rejected: User unknown",
-    attempts: 3,
-    lastAttemptAt: "2024-01-15T11:15:00Z"
-  },
-  {
-    id: "ER004",
-    recipientEmail: "david.brown@email.com",
-    recipientName: "David Brown",
-    studentName: "Alexander Brown",
-    yearGroup: "Reception",
-    status: "failed",
-    sentAt: "2024-01-15T10:30:00Z",
-    failureReason: "Connection timeout",
-    attempts: 2,
-    lastAttemptAt: "2024-01-15T10:45:00Z"
-  },
-  {
-    id: "ER005",
-    recipientEmail: "jane.smith@email.com",
-    recipientName: "Jane Smith",
-    studentName: "Sophie Smith",
-    yearGroup: "Year 5",
-    status: "sent",
-    sentAt: "2024-01-15T10:30:00Z",
-    attempts: 1,
-    lastAttemptAt: "2024-01-15T10:30:00Z"
+// Thai names for mock data generation
+const thaiFirstNames = ["Somchai", "Pranee", "Wichai", "Supachai", "Narin", "Sompong", "Malai", "Prasert", "Siriporn", "Thanyarat", "Kittisak", "Napaporn", "Chaiwat", "Suwanna", "Pichit"]
+const thaiLastNames = ["Wongsakul", "Srisawat", "Tanaka", "Kittisak", "Prasert", "Suksamran", "Kaewmanee", "Jaidee", "Thanakit", "Wongsiri", "Rattanakul", "Boonsong", "Charoen", "Siriwan", "Phromma"]
+const emailDomains = ["gmail.com", "hotmail.com", "yahoo.com", "outlook.com"]
+
+// Generate mock email history based on job data
+const generateMockEmailHistory = (jobData: any): EmailRecord[] => {
+  if (!jobData) return []
+
+  const { yearGroup, totalEmails, sentCount, failedCount, status: jobStatus, createdAt } = jobData
+  const baseDate = createdAt ? new Date(createdAt) : new Date("2024-01-15T10:30:00Z")
+
+  const records: EmailRecord[] = []
+
+  // Calculate distribution based on job status
+  let openedCount = 0
+  let deliveredCount = 0
+  let pendingCount = 0
+  let failedRecords = failedCount || 0
+  let bouncedCount = 0
+
+  if (jobStatus === "completed") {
+    // 96% success: mostly opened/delivered
+    openedCount = Math.floor(totalEmails * 0.4)
+    deliveredCount = Math.floor(totalEmails * 0.5)
+    failedRecords = Math.max(1, totalEmails - openedCount - deliveredCount - 1)
+    bouncedCount = 1
+  } else if (jobStatus === "in-progress") {
+    // 92% success: some pending
+    openedCount = Math.floor(totalEmails * 0.3)
+    deliveredCount = Math.floor(totalEmails * 0.5)
+    pendingCount = Math.floor(totalEmails * 0.1)
+    failedRecords = totalEmails - openedCount - deliveredCount - pendingCount
+  } else if (jobStatus === "failed") {
+    // 0% success: all failed/bounced
+    failedRecords = Math.floor(totalEmails * 0.6)
+    bouncedCount = totalEmails - failedRecords
+  } else if (jobStatus === "pending") {
+    // All pending
+    pendingCount = totalEmails
   }
-]
+
+  let idCounter = 1
+
+  // Generate opened records
+  for (let i = 0; i < openedCount && idCounter <= totalEmails; i++, idCounter++) {
+    const firstName = thaiFirstNames[idCounter % thaiFirstNames.length]
+    const lastName = thaiLastNames[idCounter % thaiLastNames.length]
+    const parentFirst = thaiFirstNames[(idCounter + 5) % thaiFirstNames.length]
+    records.push({
+      id: `ER${String(idCounter).padStart(3, '0')}`,
+      recipientEmail: `${parentFirst.toLowerCase()}.${lastName.toLowerCase().charAt(0)}@${emailDomains[idCounter % emailDomains.length]}`,
+      recipientName: `${parentFirst} ${lastName}`,
+      studentName: `${firstName} ${lastName}`,
+      yearGroup,
+      status: "opened",
+      sentAt: baseDate.toISOString(),
+      deliveredAt: new Date(baseDate.getTime() + 60000).toISOString(),
+      openedAt: new Date(baseDate.getTime() + 3600000 * (1 + Math.random() * 5)).toISOString(),
+      attempts: 1,
+      lastAttemptAt: baseDate.toISOString()
+    })
+  }
+
+  // Generate delivered records
+  for (let i = 0; i < deliveredCount && idCounter <= totalEmails; i++, idCounter++) {
+    const firstName = thaiFirstNames[idCounter % thaiFirstNames.length]
+    const lastName = thaiLastNames[idCounter % thaiLastNames.length]
+    const parentFirst = thaiFirstNames[(idCounter + 5) % thaiFirstNames.length]
+    records.push({
+      id: `ER${String(idCounter).padStart(3, '0')}`,
+      recipientEmail: `${parentFirst.toLowerCase()}.${lastName.toLowerCase().charAt(0)}@${emailDomains[idCounter % emailDomains.length]}`,
+      recipientName: `${parentFirst} ${lastName}`,
+      studentName: `${firstName} ${lastName}`,
+      yearGroup,
+      status: "delivered",
+      sentAt: baseDate.toISOString(),
+      deliveredAt: new Date(baseDate.getTime() + 60000 + Math.random() * 60000).toISOString(),
+      attempts: 1,
+      lastAttemptAt: baseDate.toISOString()
+    })
+  }
+
+  // Generate pending records
+  for (let i = 0; i < pendingCount && idCounter <= totalEmails; i++, idCounter++) {
+    const firstName = thaiFirstNames[idCounter % thaiFirstNames.length]
+    const lastName = thaiLastNames[idCounter % thaiLastNames.length]
+    const parentFirst = thaiFirstNames[(idCounter + 5) % thaiFirstNames.length]
+    records.push({
+      id: `ER${String(idCounter).padStart(3, '0')}`,
+      recipientEmail: `${parentFirst.toLowerCase()}.${lastName.toLowerCase().charAt(0)}@${emailDomains[idCounter % emailDomains.length]}`,
+      recipientName: `${parentFirst} ${lastName}`,
+      studentName: `${firstName} ${lastName}`,
+      yearGroup,
+      status: "pending",
+      sentAt: baseDate.toISOString(),
+      attempts: 1,
+      lastAttemptAt: baseDate.toISOString()
+    })
+  }
+
+  // Generate failed records
+  const failureReasons = ["Connection timeout", "SMTP server error", "Mailbox full", "Server rejected"]
+  for (let i = 0; i < failedRecords && idCounter <= totalEmails; i++, idCounter++) {
+    const firstName = thaiFirstNames[idCounter % thaiFirstNames.length]
+    const lastName = thaiLastNames[idCounter % thaiLastNames.length]
+    const parentFirst = thaiFirstNames[(idCounter + 5) % thaiFirstNames.length]
+    const attempts = 2 + Math.floor(Math.random() * 2)
+    records.push({
+      id: `ER${String(idCounter).padStart(3, '0')}`,
+      recipientEmail: `${parentFirst.toLowerCase()}.${lastName.toLowerCase().charAt(0)}@${emailDomains[idCounter % emailDomains.length]}`,
+      recipientName: `${parentFirst} ${lastName}`,
+      studentName: `${firstName} ${lastName}`,
+      yearGroup,
+      status: "failed",
+      sentAt: baseDate.toISOString(),
+      failureReason: failureReasons[i % failureReasons.length],
+      attempts,
+      lastAttemptAt: new Date(baseDate.getTime() + 900000 * attempts).toISOString(),
+      attemptHistory: Array.from({ length: attempts }, (_, j) => ({
+        attemptNumber: j + 1,
+        timestamp: new Date(baseDate.getTime() + 900000 * j).toISOString(),
+        status: "failed" as const,
+        errorMessage: failureReasons[i % failureReasons.length]
+      }))
+    })
+  }
+
+  // Generate bounced records
+  const bounceReasons = ["Recipient address rejected: User unknown", "Mailbox not found", "Domain does not exist"]
+  for (let i = 0; i < bouncedCount && idCounter <= totalEmails; i++, idCounter++) {
+    const firstName = thaiFirstNames[idCounter % thaiFirstNames.length]
+    const lastName = thaiLastNames[idCounter % thaiLastNames.length]
+    const parentFirst = thaiFirstNames[(idCounter + 5) % thaiFirstNames.length]
+    records.push({
+      id: `ER${String(idCounter).padStart(3, '0')}`,
+      recipientEmail: `invalid${idCounter}@nonexistent.com`,
+      recipientName: `${parentFirst} ${lastName}`,
+      studentName: `${firstName} ${lastName}`,
+      yearGroup,
+      status: "bounced",
+      sentAt: baseDate.toISOString(),
+      failureReason: bounceReasons[i % bounceReasons.length],
+      attempts: 3,
+      lastAttemptAt: new Date(baseDate.getTime() + 2700000).toISOString(),
+      attemptHistory: [
+        { attemptNumber: 1, timestamp: baseDate.toISOString(), status: "failed" as const, errorMessage: "Connection refused" },
+        { attemptNumber: 2, timestamp: new Date(baseDate.getTime() + 900000).toISOString(), status: "failed" as const, errorMessage: "SMTP server not responding" },
+        { attemptNumber: 3, timestamp: new Date(baseDate.getTime() + 2700000).toISOString(), status: "bounced" as const, errorMessage: bounceReasons[i % bounceReasons.length] }
+      ]
+    })
+  }
+
+  return records
+}
 
 interface EmailHistoryViewProps {
   jobData?: any
@@ -110,12 +219,18 @@ interface EmailHistoryViewProps {
 }
 
 export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
+  const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 15
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [selectedRecord, setSelectedRecord] = useState<EmailRecord | null>(null)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
+
+  // Generate mock data based on job data
+  const emailHistory = useMemo(() => generateMockEmailHistory(jobData), [jobData])
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -176,8 +291,8 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "sent":
-        return "secondary"
+      case "pending":
+        return "outline"
       case "delivered":
         return "default"
       case "opened":
@@ -193,8 +308,8 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "sent":
-        return <Mail className="w-4 h-4" />
+      case "pending":
+        return <Clock className="w-4 h-4" />
       case "delivered":
         return <CheckCircle className="w-4 h-4" />
       case "opened":
@@ -208,7 +323,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
     }
   }
 
-  const filteredHistory = mockEmailHistory.filter(record => {
+  const filteredHistory = emailHistory.filter(record => {
     const matchesSearch = record.recipientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          record.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          record.studentName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -235,12 +350,12 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
   const getStatusCounts = () => {
     return {
-      total: mockEmailHistory.length,
-      sent: mockEmailHistory.filter(r => r.status === "sent").length,
-      delivered: mockEmailHistory.filter(r => r.status === "delivered").length,
-      opened: mockEmailHistory.filter(r => r.status === "opened").length,
-      failed: mockEmailHistory.filter(r => r.status === "failed").length,
-      bounced: mockEmailHistory.filter(r => r.status === "bounced").length
+      total: emailHistory.length,
+      pending: emailHistory.filter(r => r.status === "pending").length,
+      delivered: emailHistory.filter(r => r.status === "delivered").length,
+      opened: emailHistory.filter(r => r.status === "opened").length,
+      failed: emailHistory.filter(r => r.status === "failed").length,
+      bounced: emailHistory.filter(r => r.status === "bounced").length
     }
   }
 
@@ -256,23 +371,23 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2>Email Delivery History</h2>
+          <h2>{t("emailHistory.title")}</h2>
           <p className="text-muted-foreground">
-            Detailed delivery status for {jobData?.batchId || "Email Job"}
+            {t("emailHistory.subtitle")} {jobData?.batchId || t("emailHistory.emailJob")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleResend}>
             <Send className="w-4 h-4 mr-2" />
-            Resend Failed
+            {t("emailHistory.resendFailed")}
           </Button>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
-            Export History
+            {t("emailHistory.exportHistory")}
           </Button>
           <Button variant="outline">
             <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -283,32 +398,32 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Job Information
+              {t("emailHistory.jobInformation")}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground">Batch ID</label>
+              <label className="text-sm text-muted-foreground">{t("emailHistory.batchId")}</label>
               <p className="font-mono">{jobData.batchId}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Invoice Type</label>
+              <label className="text-sm text-muted-foreground">{t("emailHistory.invoiceType")}</label>
               <p className="capitalize">{jobData.invoiceType}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Year Group</label>
+              <label className="text-sm text-muted-foreground">{t("emailHistory.yearGroup")}</label>
               <p>{jobData.yearGroup}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Total Recipients</label>
+              <label className="text-sm text-muted-foreground">{t("emailHistory.totalRecipients")}</label>
               <p>{jobData.totalEmails}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Created At</label>
+              <label className="text-sm text-muted-foreground">{t("emailHistory.createdAt")}</label>
               <p>{formatDate(jobData.createdAt)}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Created By</label>
+              <label className="text-sm text-muted-foreground">{t("emailHistory.createdBy")}</label>
               <p>{jobData.createdBy}</p>
             </div>
           </CardContent>
@@ -319,27 +434,27 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.total")}</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sent</CardTitle>
-            <Mail className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">{t("common.pending")}</CardTitle>
+            <Clock className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.sent}</div>
+            <div className="text-2xl font-bold">{stats.pending}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailHistory.delivered")}</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -349,7 +464,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Opened</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailHistory.opened")}</CardTitle>
             <MessageSquare className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
@@ -359,7 +474,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailHistory.failed")}</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -369,7 +484,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bounced</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailHistory.bounced")}</CardTitle>
             <AlertCircle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
@@ -385,25 +500,25 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
             <div className="flex-1">
               <div className="relative">
                 <Input
-                  placeholder="Search by recipient email, name, or student name..."
+                  placeholder={t("emailHistory.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
                 />
               </div>
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t("common.status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="opened">Opened</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="bounced">Bounced</SelectItem>
+                <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                <SelectItem value="delivered">{t("emailHistory.delivered")}</SelectItem>
+                <SelectItem value="opened">{t("emailHistory.opened")}</SelectItem>
+                <SelectItem value="failed">{t("emailHistory.failed")}</SelectItem>
+                <SelectItem value="bounced">{t("emailHistory.bounced")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -418,47 +533,48 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("recipientName")}>
                   <div className="flex items-center gap-1">
-                    Recipient
+                    {t("emailHistory.recipient")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student
+                    {t("emailHistory.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("sentAt")}>
                   <div className="flex items-center gap-1">
-                    Sent At
+                    {t("emailHistory.sentAt")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("deliveredAt")}>
                   <div className="flex items-center gap-1">
-                    Delivered At
+                    {t("emailHistory.deliveredAt")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("openedAt")}>
                   <div className="flex items-center gap-1">
-                    Opened At
+                    {t("emailHistory.openedAt")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("attempts")}>
                   <div className="flex items-center gap-1">
-                    Attempts
+                    {t("emailHistory.attempts")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Failure Reason</TableHead>
+                <TableHead>{t("emailHistory.failureReason")}</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -507,6 +623,21 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                       {record.failureReason || "-"}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    {(record.status === "failed" || record.status === "bounced") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRecord(record)
+                          setIsDetailDialogOpen(true)
+                        }}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        {t("emailHistory.viewDetails")}
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -515,9 +646,9 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
           {filteredHistory.length === 0 && (
             <div className="text-center py-8">
               <Mail className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3>No email records found</h3>
+              <h3>{t("emailHistory.noRecordsFound")}</h3>
               <p className="text-muted-foreground">
-                No email records match your current filters.
+                {t("emailHistory.noRecordsMatchFilter")}
               </p>
             </div>
           )}
@@ -556,6 +687,118 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
           </PaginationContent>
         </Pagination>
       )}
+
+      {/* Failure Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-6">
+          <DialogHeader className="flex-shrink-0 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              {t("emailHistory.failureDetails")}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedRecord && (
+            <div className="flex-1 overflow-y-auto py-4 space-y-6">
+              {/* Recipient & Student Info */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("emailHistory.recipient")}</label>
+                  <p className="text-base font-semibold">{selectedRecord.recipientName}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRecord.recipientEmail}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("emailHistory.student")}</label>
+                  <p className="text-base font-semibold">{selectedRecord.studentName}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRecord.yearGroup}</p>
+                </div>
+              </div>
+
+              {/* Current Status Banner */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("emailHistory.currentStatus")}</label>
+                      <Badge variant="destructive" className="flex items-center gap-1.5 px-2.5 py-0.5">
+                        {selectedRecord.status === "bounced" ? <AlertCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                        <span className="capitalize font-medium">{selectedRecord.status}</span>
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-red-700 leading-relaxed">{selectedRecord.failureReason}</p>
+                  </div>
+                  <div className="flex-shrink-0 text-center px-4 py-2 bg-white rounded-md border border-red-200">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">{t("emailHistory.attempts")}</label>
+                    <p className="text-2xl font-bold text-red-600 mt-1">{selectedRecord.attempts}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attempt History */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <History className="w-4 h-4 text-muted-foreground" />
+                  <label className="text-sm font-semibold">{t("emailHistory.attemptHistory")}</label>
+                </div>
+
+                {selectedRecord.attemptHistory && selectedRecord.attemptHistory.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-16 text-center">#</TableHead>
+                          <TableHead className="w-24">{t("common.status")}</TableHead>
+                          <TableHead className="w-44">{t("common.timestamp")}</TableHead>
+                          <TableHead>{t("common.errorMessage")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedRecord.attemptHistory.map((attempt, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-center font-medium">{attempt.attemptNumber}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={attempt.status === "bounced" || attempt.status === "failed" ? "destructive" : "default"}
+                                className="capitalize"
+                              >
+                                {attempt.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(attempt.timestamp)}
+                            </TableCell>
+                            <TableCell className="text-sm text-red-600">
+                              {attempt.errorMessage || "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-lg bg-muted/20">
+                    <p className="text-sm text-muted-foreground">{t("emailHistory.noAttemptHistory")}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+              {t("common.close")}
+            </Button>
+            <Button onClick={() => {
+              console.log("Resend to:", selectedRecord?.recipientEmail)
+              setIsDetailDialogOpen(false)
+            }}>
+              <Send className="w-4 h-4 mr-2" />
+              {t("emailHistory.resendEmail")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

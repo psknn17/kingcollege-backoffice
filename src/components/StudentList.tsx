@@ -42,13 +42,14 @@ import {
   RotateCcw
 } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { useStudents, Student, Parent, Family, convertTermFormat } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { cn } from "./ui/utils"
 
 const gradeLevels = [
+  { id: "pre-nursery", label: "Pre-Nursery" },
   { id: "nursery", label: "Nursery" },
   { id: "reception", label: "Reception" },
   { id: "year1", label: "Year 1" },
@@ -66,17 +67,17 @@ const gradeLevels = [
   { id: "year13", label: "Year 13" },
 ]
 
-const statusOptions = [
-  { id: "active", label: "Active", color: "bg-green-100 text-green-800" },
-  { id: "graduated", label: "Graduated", color: "bg-blue-100 text-blue-800" },
-  { id: "withdrawn", label: "Withdrawn", color: "bg-red-100 text-red-800" },
-  { id: "on_leave", label: "On Leave", color: "bg-amber-100 text-amber-800" },
+const getStatusOptions = (t: (key: string) => string) => [
+  { id: "active", label: t("studentStatus.active"), color: "bg-green-100 text-green-800" },
+  { id: "graduated", label: t("studentStatus.graduated"), color: "bg-blue-100 text-blue-800" },
+  { id: "withdrawn", label: t("studentStatus.withdrawn"), color: "bg-red-100 text-red-800" },
+  { id: "on_leave", label: t("studentStatus.onLeave"), color: "bg-amber-100 text-amber-800" },
 ]
 
-const termOptions = [
-  { id: "term1", label: "Term 1" },
-  { id: "term2", label: "Term 2" },
-  { id: "term3", label: "Term 3" },
+const getTermOptions = (t: (key: string) => string) => [
+  { id: "term1", label: t("term.term1") },
+  { id: "term2", label: t("term.term2") },
+  { id: "term3", label: t("term.term3") },
 ]
 
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
@@ -373,11 +374,11 @@ export function StudentList() {
   }
 
   const getTermLabel = (termId: string) => {
-    return termOptions.find(t => t.id === termId)?.label || termId
+    return getTermOptions(t).find(term => term.id === termId)?.label || termId
   }
 
   const getStatusBadge = (status: string) => {
-    const statusOption = statusOptions.find(s => s.id === status)
+    const statusOption = getStatusOptions(t).find(s => s.id === status)
     return statusOption ? (
       <Badge className={cn("font-normal", statusOption.color)}>
         {statusOption.label}
@@ -1175,7 +1176,7 @@ export function StudentList() {
                 <SelectValue placeholder="Select term" />
               </SelectTrigger>
               <SelectContent>
-                {termOptions.map(term => (
+                {getTermOptions(t).map(term => (
                   <SelectItem key={term.id} value={term.id}>
                     {term.label}
                   </SelectItem>
@@ -1193,7 +1194,7 @@ export function StudentList() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {statusOptions.map(status => (
+                {getStatusOptions(t).map(status => (
                   <SelectItem key={status.id} value={status.id}>
                     {status.label}
                   </SelectItem>
@@ -1498,7 +1499,7 @@ export function StudentList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                {statusOptions.map(status => (
+                {getStatusOptions(t).map(status => (
                   <SelectItem key={status.id} value={status.id}>
                     {status.label}
                   </SelectItem>
@@ -1565,41 +1566,41 @@ export function StudentList() {
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")}>
                   <div className="flex items-center gap-1">
-                    Academic Year
+                    {t("common.academicYear")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("enrollmentTerm")}>
                   <div className="flex items-center gap-1">
-                    Term
+                    {t("student.term")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyCode")}>
                   <div className="flex items-center gap-1">
-                    Family Code
+                    {t("student.familyCode")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("childOrder")}>
                   <div className="flex items-center gap-1">
-                    Discounts & Benefits
+                    {t("student.discountsBenefits")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("updatedAt")}>
                   <div className="flex items-center gap-1">
-                    Updated
+                    {t("student.updated")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1657,7 +1658,7 @@ export function StudentList() {
                         if (siblingDiscount > 0) {
                           discounts.push(
                             <Badge key="sibling" className="bg-green-100 text-green-800 text-xs">
-                              Sibling {siblingDiscount}%
+                              {t("student.sibling")} {siblingDiscount}%
                             </Badge>
                           )
                         }
@@ -1666,7 +1667,7 @@ export function StudentList() {
                         if (feeWaiver.eligible) {
                           discounts.push(
                             <Badge key="waiver" className="bg-indigo-100 text-indigo-800 text-xs">
-                              Waiver ฿{(feeWaiver.creditPerTerm || 0).toLocaleString()}
+                              {t("student.waiver")} ฿{(feeWaiver.creditPerTerm || 0).toLocaleString()}
                             </Badge>
                           )
                         }
@@ -1675,7 +1676,7 @@ export function StudentList() {
                         if (isStaff) {
                           discounts.push(
                             <Badge key="staff" className="bg-blue-100 text-blue-800 text-xs">
-                              Staff 50%
+                              {t("student.staff")} 50%
                             </Badge>
                           )
                         }
@@ -1684,7 +1685,7 @@ export function StudentList() {
                         if (hasScholarship) {
                           discounts.push(
                             <Badge key="scholarship" className="bg-purple-100 text-purple-800 text-xs">
-                              Scholarship
+                              {t("student.scholarship")}
                             </Badge>
                           )
                         }
@@ -1693,7 +1694,7 @@ export function StudentList() {
                         if (hasEarlyBird) {
                           discounts.push(
                             <Badge key="earlybird" className="bg-amber-100 text-amber-800 text-xs">
-                              Early Bird 5%
+                              {t("student.earlyBird")} 5%
                             </Badge>
                           )
                         }
@@ -1857,7 +1858,7 @@ export function StudentList() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>Student Details</DialogTitle>
+            <DialogTitle>{t("student.studentDetails")}</DialogTitle>
           </DialogHeader>
           {selectedStudent && (
             <div className="space-y-6">
@@ -1883,20 +1884,20 @@ export function StudentList() {
               {/* Academic Info */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-sm text-muted-foreground">Year Group</p>
+                  <p className="text-sm text-muted-foreground">{t("student.yearGroup")}</p>
                   <p className="font-medium">{getGradeLabel(selectedStudent.gradeLevel)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Academic Year</p>
+                  <p className="text-sm text-muted-foreground">{t("common.academicYear")}</p>
                   <p className="font-medium">{selectedStudent.academicYear}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Enrollment Term</p>
+                  <p className="text-sm text-muted-foreground">{t("student.enrollmentTerm")}</p>
                   <p className="font-medium">{getTermLabel(selectedStudent.enrollmentTerm)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Family Code</p>
-                  <p className="font-medium">{getFamilyCode(selectedStudent.familyId, selectedStudent.familyCode)} (Child #{selectedStudent.childOrder})</p>
+                  <p className="text-sm text-muted-foreground">{t("student.familyCode")}</p>
+                  <p className="font-medium">{getFamilyCode(selectedStudent.familyId, selectedStudent.familyCode)} ({t("student.child")} #{selectedStudent.childOrder})</p>
                 </div>
               </div>
 
@@ -1906,13 +1907,13 @@ export function StudentList() {
                 <div className="border rounded-lg p-4 bg-green-50/50">
                   <h4 className="font-medium mb-3 flex items-center gap-2 text-green-800">
                     <Percent className="w-4 h-4" />
-                    Discounts & Benefits
+                    {t("student.discountsBenefits")}
                   </h4>
                   <div className="space-y-2">
                     {/* Sibling Discount */}
                     {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span>Sibling Discount</span>
+                        <span>{t("student.siblingDiscount")}</span>
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                           {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm)}%
                         </Badge>
@@ -1932,7 +1933,7 @@ export function StudentList() {
                     {/* Staff Child Discount */}
                     {(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) && (
                       <div className="flex justify-between text-sm">
-                        <span>Staff Child</span>
+                        <span>{t("student.staffChild")}</span>
                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">50%</Badge>
                       </div>
                     )}
@@ -1940,15 +1941,15 @@ export function StudentList() {
                     {/* Scholarship */}
                     {(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) && (
                       <div className="flex justify-between text-sm">
-                        <span>Scholarship</span>
-                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Yes</Badge>
+                        <span>{t("student.scholarship")}</span>
+                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("student.yes")}</Badge>
                       </div>
                     )}
 
                     {/* Early Bird */}
                     {(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
                       <div className="flex justify-between text-sm">
-                        <span>Early Bird</span>
+                        <span>{t("student.earlyBird")}</span>
                         <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">5%</Badge>
                       </div>
                     )}
@@ -1964,9 +1965,9 @@ export function StudentList() {
                         return (
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span>Registration Fee Waiver</span>
+                              <span>{t("student.registrationFeeWaiver")}</span>
                               <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">
-                                ฿{eligibility.creditPerTerm?.toLocaleString()}/term
+                                ฿{eligibility.creditPerTerm?.toLocaleString()}/{t("student.term")}
                               </Badge>
                             </div>
                             <p className="text-xs text-indigo-600">{eligibility.reason}</p>
@@ -1977,8 +1978,8 @@ export function StudentList() {
                         return (
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Registration Fee Waiver</span>
-                              <Badge variant="outline" className="text-gray-500">Pending</Badge>
+                              <span className="text-muted-foreground">{t("student.registrationFeeWaiver")}</span>
+                              <Badge variant="outline" className="text-gray-500">{t("student.pending")}</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
                           </div>
@@ -1994,7 +1995,7 @@ export function StudentList() {
                       !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
                       !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) &&
                       !checkFeePrivilegeEligibility(selectedStudent, selectedStudent.academicYear, selectedStudent.enrollmentTerm).eligible && (
-                        <span className="text-sm text-muted-foreground">No discounts applied</span>
+                        <span className="text-sm text-muted-foreground">{t("student.noDiscountsApplied")}</span>
                       )}
                   </div>
                 </div>
@@ -2007,23 +2008,23 @@ export function StudentList() {
                     <div className="border rounded-lg p-4 bg-blue-50/50">
                       <h4 className="font-medium mb-3 flex items-center gap-2 text-blue-800">
                         <CreditCard className="w-4 h-4" />
-                        Registration Fees
+                        {t("student.registrationFees")}
                       </h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Application Fee</span>
+                          <span className="text-muted-foreground">{t("student.applicationFee")}</span>
                           <span className="font-medium">฿{fees.applicationFee.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Registration Fee</span>
+                          <span className="text-muted-foreground">{t("student.registrationFee")}</span>
                           <span className="font-medium">฿{fees.registrationFee.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Security Deposit</span>
+                          <span className="text-muted-foreground">{t("student.securityDeposit")}</span>
                           <span className="font-medium">฿{fees.securityDeposit.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between border-t pt-2 mt-2">
-                          <span className="font-semibold">Total Initial Fees</span>
+                          <span className="font-semibold">{t("student.totalInitialFees")}</span>
                           <span className="font-bold text-blue-700">
                             ฿{(fees.applicationFee + fees.registrationFee + fees.securityDeposit).toLocaleString()}
                           </span>
@@ -2037,13 +2038,13 @@ export function StudentList() {
               {/* Parents */}
               {selectedStudent.parents.length > 0 && (
                 <div>
-                  <h4 className="font-medium mb-3">Parents/Guardians</h4>
+                  <h4 className="font-medium mb-3">{t("student.parentsGuardians")}</h4>
                   <div className="space-y-2">
                     {selectedStudent.parents.map((parent: Parent) => (
                       <div key={parent.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                           <p className="font-medium">{parent.name}</p>
-                          <p className="text-sm text-muted-foreground capitalize">{parent.relationship}</p>
+                          <p className="text-sm text-muted-foreground capitalize">{t(`student.${parent.relationship}`)}</p>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1">
@@ -2062,24 +2063,24 @@ export function StudentList() {
               {/* Notes */}
               {selectedStudent.notes && (
                 <div>
-                  <h4 className="font-medium mb-2">Notes</h4>
+                  <h4 className="font-medium mb-2">{t("common.notes")}</h4>
                   <p className="text-muted-foreground">{selectedStudent.notes}</p>
                 </div>
               )}
 
               {/* Audit Info */}
               <div className="border-t pt-4 mt-4">
-                <h4 className="font-medium mb-3 text-sm text-muted-foreground">Record Information</h4>
+                <h4 className="font-medium mb-3 text-sm text-muted-foreground">{t("student.recordInformation")}</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Created By</p>
+                    <p className="text-muted-foreground">{t("student.createdBy")}</p>
                     <p className="font-medium">{selectedStudent.createdBy || "System"}</p>
                     <p className="text-xs text-muted-foreground">
                       {selectedStudent.createdAt ? format(selectedStudent.createdAt, "PPP 'at' p") : "-"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Last Updated By</p>
+                    <p className="text-muted-foreground">{t("student.lastUpdatedBy")}</p>
                     <p className="font-medium">{selectedStudent.updatedBy || "System"}</p>
                     <p className="text-xs text-muted-foreground">
                       {selectedStudent.updatedAt ? format(selectedStudent.updatedAt, "PPP 'at' p") : "-"}
@@ -2091,14 +2092,14 @@ export function StudentList() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-              Close
+              {t("common.close")}
             </Button>
             <Button onClick={() => {
               setIsViewDialogOpen(false)
               if (selectedStudent) handleEditStudent(selectedStudent)
             }}>
               <Edit className="w-4 h-4 mr-2" />
-              Edit
+              {t("common.edit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2178,11 +2179,11 @@ export function StudentList() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Student ID</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Year Group</TableHead>
-                          <TableHead>Year</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead>{t("table.studentId")}</TableHead>
+                          <TableHead>{t("table.name")}</TableHead>
+                          <TableHead>{t("table.yearGroup")}</TableHead>
+                          <TableHead>{t("table.year")}</TableHead>
+                          <TableHead>{t("table.status")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

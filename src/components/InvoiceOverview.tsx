@@ -13,7 +13,8 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { th, enUS } from "date-fns/locale"
+import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -32,18 +33,19 @@ interface Invoice {
   paymentType: "yearly" | "termly"
   paymentChannel?: "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank"
   remindersSent: number
+  invoiceType?: "student" | "external"
 }
 
 // localStorage key for created invoices (same as InvoiceCreation)
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
 // Load created invoices from localStorage
-const loadCreatedInvoicesFromStorage = (): Invoice[] => {
+const loadCreatedInvoicesFromStorage = (onlyInternal: boolean = false): Invoice[] => {
   try {
     const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
     if (stored) {
       const savedInvoices = JSON.parse(stored)
-      return savedInvoices.map((inv: any) => ({
+      let invoices = savedInvoices.map((inv: any) => ({
         id: inv.id,
         invoiceNumber: inv.invoiceNumber,
         studentName: inv.studentName,
@@ -56,8 +58,18 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
         term: inv.term,
         paymentType: inv.paymentType || "termly",
         paymentChannel: inv.paymentChannel,
-        remindersSent: inv.remindersSent || 0
+        remindersSent: inv.remindersSent || 0,
+        invoiceType: inv.invoiceType || (inv.studentId === "EXTERNAL" ? "external" : "student")
       }))
+
+      // Filter out external invoices if onlyInternal is true
+      if (onlyInternal) {
+        invoices = invoices.filter((inv: Invoice) =>
+          inv.invoiceType !== "external" && inv.studentId !== "EXTERNAL"
+        )
+      }
+
+      return invoices
     }
   } catch (error) {
     console.error("Failed to load created invoices:", error)
@@ -65,25 +77,30 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
   return []
 }
 
-export function InvoiceOverview() {
-  const { t } = useLanguage()
+interface InvoiceOverviewProps {
+  showOnlyInternal?: boolean // If true, only show internal student invoices
+}
+
+export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewProps) {
+  const { t, language } = useLanguage()
+  const locale = language === "th" ? th : enUS
   const { students } = useStudents()
   const { academicYears = [] } = useAcademicYears()
 
   // Load invoices from localStorage immediately (not waiting for useEffect)
-  const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
+  const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage(showOnlyInternal))
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Reload invoices when refreshTrigger changes or on mount
   useEffect(() => {
-    const storedInvoices = loadCreatedInvoicesFromStorage()
+    const storedInvoices = loadCreatedInvoicesFromStorage(showOnlyInternal)
     setInvoices(storedInvoices)
-  }, [refreshTrigger])
+  }, [refreshTrigger, showOnlyInternal])
 
   // Listen for storage changes and custom events
   useEffect(() => {
     const loadInvoices = () => {
-      const storedInvoices = loadCreatedInvoicesFromStorage()
+      const storedInvoices = loadCreatedInvoicesFromStorage(showOnlyInternal)
       setInvoices(storedInvoices)
     }
 
@@ -143,7 +160,7 @@ export function InvoiceOverview() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Grade options for filter
-  const gradeOptions = ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  const gradeOptions = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
 
   // Initialize filteredInvoices when invoices change
   useEffect(() => {
@@ -558,7 +575,7 @@ export function InvoiceOverview() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
+                      {dueDateFrom ? format(dueDateFrom, "dd/MM/yy", { locale }) : t("date.from")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -575,7 +592,7 @@ export function InvoiceOverview() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
+                      {dueDateTo ? format(dueDateTo, "dd/MM/yy", { locale }) : t("date.to")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -705,7 +722,7 @@ export function InvoiceOverview() {
                     <TableCell>₿{invoice.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <div>
-                        <div>{format(invoice.dueDate, "MMM dd, yyyy")}</div>
+                        <div>{format(invoice.dueDate, "MMM dd, yyyy", { locale })}</div>
                         {invoice.status === "unpaid" && (
                           <div className={`text-sm ${daysUntilDue < 0 ? "text-red-600" : daysUntilDue <= 7 ? "text-orange-600" : "text-muted-foreground"}`}>
                             {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} ${t("invoiceOverview.daysOverdue")}` : `${daysUntilDue} ${t("invoiceOverview.daysLeft")}`}
@@ -970,12 +987,12 @@ export function InvoiceOverview() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoice.issueDate")}</p>
-                    <p className="font-medium">{format(selectedInvoice.issueDate, "MMM dd, yyyy")}</p>
+                    <p className="font-medium">{format(selectedInvoice.issueDate, "MMM dd, yyyy", { locale })}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoice.dueDate")}</p>
                     <div>
-                      <p className="font-medium">{format(selectedInvoice.dueDate, "MMM dd, yyyy")}</p>
+                      <p className="font-medium">{format(selectedInvoice.dueDate, "MMM dd, yyyy", { locale })}</p>
                       {selectedInvoice.status === "unpaid" && (
                         <div className="flex items-center gap-1 mt-1">
                           <Clock className="w-3 h-3" />

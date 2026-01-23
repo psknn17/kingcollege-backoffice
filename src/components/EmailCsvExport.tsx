@@ -8,9 +8,9 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Separator } from "./ui/separator"
 import { Label } from "./ui/label"
-import { 
-  FileSpreadsheet, 
-  Download, 
+import {
+  FileSpreadsheet,
+  Download,
   Calendar as CalendarIcon,
   Filter,
   Settings,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "./ui/utils"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ExportSettings {
   includeColumns: {
@@ -47,6 +48,7 @@ interface EmailCsvExportProps {
 }
 
 export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
+  const { t } = useLanguage()
   const [exportSettings, setExportSettings] = useState<ExportSettings>({
     includeColumns: {
       recipientInfo: true,
@@ -164,11 +166,11 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
   }
 
   const statusOptions = [
-    { value: "sent", label: "Sent", icon: Mail, color: "text-blue-600" },
-    { value: "delivered", label: "Delivered", icon: CheckCircle, color: "text-green-600" },
-    { value: "opened", label: "Opened", icon: MessageSquare, color: "text-purple-600" },
-    { value: "failed", label: "Failed", icon: XCircle, color: "text-red-600" },
-    { value: "bounced", label: "Bounced", icon: AlertCircle, color: "text-orange-600" }
+    { value: "sent", label: t("email.status.sent"), icon: Mail, color: "text-blue-600" },
+    { value: "delivered", label: t("email.status.delivered"), icon: CheckCircle, color: "text-green-600" },
+    { value: "opened", label: t("email.status.opened"), icon: MessageSquare, color: "text-purple-600" },
+    { value: "failed", label: t("email.status.failed"), icon: XCircle, color: "text-red-600" },
+    { value: "bounced", label: t("email.status.bounced"), icon: AlertCircle, color: "text-orange-600" }
   ]
 
   return (
@@ -176,9 +178,9 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2>Export Email Logs</h2>
+          <h2>{t("email.exportEmailLogs")}</h2>
           <p className="text-muted-foreground">
-            Export detailed email delivery logs for {jobData?.batchId || "Email Job"}
+            {t("email.exportDescription")} {jobData?.batchId || t("email.emailJob")}
           </p>
         </div>
       </div>
@@ -192,24 +194,24 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="w-5 h-5" />
-                  Job Information
+                  {t("email.jobInformation")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-muted-foreground">Batch ID</Label>
+                  <Label className="text-sm text-muted-foreground">{t("email.batchId")}</Label>
                   <p className="font-mono">{jobData.batchId}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Invoice Type</Label>
+                  <Label className="text-sm text-muted-foreground">{t("email.invoiceType")}</Label>
                   <p className="capitalize">{jobData.invoiceType}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Year Group</Label>
+                  <Label className="text-sm text-muted-foreground">{t("email.yearGroup")}</Label>
                   <p>{jobData.yearGroup}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Total Emails</Label>
+                  <Label className="text-sm text-muted-foreground">{t("email.totalEmails")}</Label>
                   <p>{jobData.totalEmails}</p>
                 </div>
               </CardContent>
@@ -221,7 +223,7 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Column Selection
+                {t("email.columnSelection")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -232,52 +234,52 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
                     checked={exportSettings.includeColumns.recipientInfo}
                     onCheckedChange={() => handleColumnToggle('recipientInfo')}
                   />
-                  <Label htmlFor="recipientInfo">Recipient Information</Label>
+                  <Label htmlFor="recipientInfo">{t("email.recipientInformation")}</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="studentInfo"
                     checked={exportSettings.includeColumns.studentInfo}
                     onCheckedChange={() => handleColumnToggle('studentInfo')}
                   />
-                  <Label htmlFor="studentInfo">Student Information</Label>
+                  <Label htmlFor="studentInfo">{t("email.studentInformation")}</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="deliveryStatus"
                     checked={exportSettings.includeColumns.deliveryStatus}
                     onCheckedChange={() => handleColumnToggle('deliveryStatus')}
                   />
-                  <Label htmlFor="deliveryStatus">Delivery Status</Label>
+                  <Label htmlFor="deliveryStatus">{t("email.deliveryStatus")}</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="timestamps"
                     checked={exportSettings.includeColumns.timestamps}
                     onCheckedChange={() => handleColumnToggle('timestamps')}
                   />
-                  <Label htmlFor="timestamps">Timestamps</Label>
+                  <Label htmlFor="timestamps">{t("email.timestamps")}</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="attempts"
                     checked={exportSettings.includeColumns.attempts}
                     onCheckedChange={() => handleColumnToggle('attempts')}
                   />
-                  <Label htmlFor="attempts">Attempt Information</Label>
+                  <Label htmlFor="attempts">{t("email.attemptInformation")}</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="failureReasons"
                     checked={exportSettings.includeColumns.failureReasons}
                     onCheckedChange={() => handleColumnToggle('failureReasons')}
                   />
-                  <Label htmlFor="failureReasons">Failure Reasons</Label>
+                  <Label htmlFor="failureReasons">{t("email.failureReasons")}</Label>
                 </div>
               </div>
             </CardContent>
@@ -288,13 +290,13 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="w-5 h-5" />
-                Export Filters
+                {t("email.exportFilters")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Status Filter */}
               <div>
-                <Label className="text-sm font-medium mb-3 block">Status Filter</Label>
+                <Label className="text-sm font-medium mb-3 block">{t("email.statusFilter")}</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {statusOptions.map((status) => (
                     <div key={status.value} className="flex items-center space-x-2">
@@ -316,13 +318,13 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
 
               {/* Date Range */}
               <div>
-                <Label className="text-sm font-medium mb-3 block">Date Range</Label>
+                <Label className="text-sm font-medium mb-3 block">{t("invoice.dateRange")}</Label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full sm:w-[200px] justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {exportSettings.dateRange.from ? format(exportSettings.dateRange.from, "dd/MM/yyyy") : "From Date"}
+                        {exportSettings.dateRange.from ? format(exportSettings.dateRange.from, "dd/MM/yyyy") : t("invoice.fromDate")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -339,7 +341,7 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full sm:w-[200px] justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {exportSettings.dateRange.to ? format(exportSettings.dateRange.to, "dd/MM/yyyy") : "To Date"}
+                        {exportSettings.dateRange.to ? format(exportSettings.dateRange.to, "dd/MM/yyyy") : t("invoice.toDate")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -358,14 +360,14 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
 
               {/* Export Format */}
               <div>
-                <Label className="text-sm font-medium mb-3 block">Export Format</Label>
+                <Label className="text-sm font-medium mb-3 block">{t("email.exportFormat")}</Label>
                 <Select value={exportSettings.format} onValueChange={(value: "csv" | "xlsx") => setExportSettings(prev => ({ ...prev, format: value }))}>
                   <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Format" />
+                    <SelectValue placeholder={t("email.format")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="csv">CSV (.csv)</SelectItem>
-                    <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+                    <SelectItem value="csv">{t("email.formatCsv")}</SelectItem>
+                    <SelectItem value="xlsx">{t("email.formatExcel")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -380,7 +382,7 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5" />
-                Export Preview
+                {t("email.exportPreview")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -388,21 +390,21 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
                 <FileSpreadsheet className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <div className="text-2xl font-bold mb-2">{getPreviewCount()}</div>
                 <p className="text-sm text-muted-foreground">
-                  Records will be exported
+                  {t("email.recordsWillBeExported")}
                 </p>
               </div>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Columns:</span>
+                  <span className="text-muted-foreground">{t("email.columns")}:</span>
                   <span>{Object.values(exportSettings.includeColumns).filter(Boolean).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status Filter:</span>
+                  <span className="text-muted-foreground">{t("email.statusFilter")}:</span>
                   <span>{exportSettings.statusFilter.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Format:</span>
+                  <span className="text-muted-foreground">{t("email.format")}:</span>
                   <span className="uppercase">{exportSettings.format}</span>
                 </div>
               </div>
@@ -410,11 +412,11 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
               {isExporting && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Exporting...</span>
+                    <span>{t("email.exporting")}</span>
                     <span>{exportProgress}%</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-primary h-2 rounded-full transition-all duration-300"
                       style={{ width: `${exportProgress}%` }}
                     />
@@ -422,13 +424,13 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
                 </div>
               )}
 
-              <Button 
-                onClick={handleExport} 
+              <Button
+                onClick={handleExport}
                 disabled={isExporting}
                 className="w-full"
               >
                 <Download className="w-4 h-4 mr-2" />
-                {isExporting ? "Exporting..." : "Export Email Logs"}
+                {isExporting ? t("email.exporting") : t("email.exportEmailLogs")}
               </Button>
             </CardContent>
           </Card>
@@ -436,20 +438,20 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Export Templates</CardTitle>
+              <CardTitle>{t("email.quickExportTemplates")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start">
                 <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                Successful Deliveries Only
+                {t("email.successfulDeliveriesOnly")}
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                Failed & Bounced Only
+                {t("email.failedBouncedOnly")}
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                Complete Log (All Data)
+                {t("email.completeLog")}
               </Button>
             </CardContent>
           </Card>

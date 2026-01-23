@@ -8,6 +8,7 @@ import { Textarea } from "./ui/textarea"
 import { Switch } from "./ui/switch"
 import { Save, Bell, Plus, Trash2, Mail, CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ReminderConfig {
   id: string
@@ -60,6 +61,7 @@ const initialReminders: ReminderConfig[] = [
 ]
 
 export function DebtReminderSettings() {
+  const { t } = useLanguage()
   const [reminders, setReminders] = useState<ReminderConfig[]>(initialReminders)
   const [globalSettings, setGlobalSettings] = useState({
     enableReminders: true,
@@ -98,14 +100,14 @@ export function DebtReminderSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Debt Reminder Settings</h2>
+          <h2 className="text-xl font-semibold">{t("debt.reminderSettings")}</h2>
           <p className="text-sm text-muted-foreground">
-            Configure up to 3 reminder periods for unpaid tuition
+            {t("debt.reminderSettingsDesc")}
           </p>
         </div>
         <Button onClick={addReminder} disabled={reminders.length >= 3} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          Add Reminder
+          {t("debt.addReminder")}
         </Button>
       </div>
 
@@ -114,25 +116,25 @@ export function DebtReminderSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
-            Global Reminder Settings
+            {t("debt.globalReminderSettings")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label>Enable Automatic Reminders</Label>
-              <p className="text-sm text-muted-foreground">Turn on/off all reminder notifications</p>
+              <Label>{t("debt.enableAutoReminders")}</Label>
+              <p className="text-sm text-muted-foreground">{t("debt.enableAutoRemindersDesc")}</p>
             </div>
             <Switch
               checked={globalSettings.enableReminders}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setGlobalSettings({...globalSettings, enableReminders: checked})
               }
             />
           </div>
 
           <div className="space-y-2">
-            <Label>From Email Address</Label>
+            <Label>{t("debt.fromEmailAddress")}</Label>
             <Input
               value={globalSettings.fromEmail}
               onChange={(e) =>
@@ -176,18 +178,18 @@ export function DebtReminderSettings() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Email Subject</Label>
+                  <Label>{t("debt.emailSubject")}</Label>
                   <Input
                     value={reminder.subject}
                     onChange={(e) => updateReminder(reminder.id, "subject", e.target.value)}
-                    placeholder="Enter email subject line"
+                    placeholder={t("debt.emailSubjectPlaceholder")}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <CalendarIcon className="w-4 h-4" />
-                    Send Date
+                    {t("debt.sendDate")}
                   </Label>
                   <Input
                     type="date"
@@ -198,26 +200,26 @@ export function DebtReminderSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label>Message Template</Label>
+                <Label>{t("debt.messageTemplate")}</Label>
                 <Textarea
                   value={reminder.message}
                   onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
-                  placeholder="Enter reminder message template"
+                  placeholder={t("debt.messageTemplatePlaceholder")}
                   rows={4}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Available variables: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
+                  {t("debt.availableVariables")}: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
                 </p>
               </div>
 
               {/* Preview */}
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Reminder Preview</h4>
+                <h4 className="font-medium mb-2">{t("debt.reminderPreview")}</h4>
                 <div className="text-sm space-y-1">
-                  <p><strong>Send Date:</strong> {formatDisplayDate(reminder.sendDate)}</p>
-                  <p><strong>Status:</strong>
+                  <p><strong>{t("debt.sendDate")}:</strong> {formatDisplayDate(reminder.sendDate)}</p>
+                  <p><strong>{t("common.status")}:</strong>
                     <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-                      {reminder.enabled ? "Active" : "Disabled"}
+                      {reminder.enabled ? t("common.active") : t("common.disabled")}
                     </span>
                   </p>
                 </div>
@@ -231,7 +233,7 @@ export function DebtReminderSettings() {
       <div className="flex justify-end">
         <Button onClick={saveSettings} size="lg" className="px-8">
           <Save className="w-4 h-4 mr-2" />
-          Save All Reminder Settings
+          {t("debt.saveAllSettings")}
         </Button>
       </div>
     </div>

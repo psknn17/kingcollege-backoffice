@@ -12,7 +12,8 @@ import { Textarea } from "./ui/textarea"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Search, Filter, Users, DollarSign, AlertTriangle, CheckCircle, Clock, Edit, Eye, Upload, Plus, Minus, Save, X, FileText, ChevronLeft, ChevronRight, Download, UserCheck, Calendar, CreditCard, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface Course {
   id: string
@@ -158,7 +159,7 @@ const generateStudentRegistrations = (courseId: string, enrolledCount: number): 
   const students: StudentRegistration[] = []
   const firstNames = ["Emma", "Oliver", "Sophia", "James", "Isabella", "William", "Ava", "Benjamin", "Charlotte", "Lucas", "Mia", "Henry", "Amelia", "Alexander", "Harper", "Michael", "Evelyn", "Daniel", "Abigail", "Matthew"]
   const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Wilson", "Martinez", "Anderson", "Taylor", "Thomas", "Hernandez", "Moore", "Martin", "Jackson", "Thompson", "White", "Lopez", "Lee"]
-  const yearGroups = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  const yearGroups = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   const paymentChannels: StudentRegistration["paymentChannel"][] = ["bank_transfer", "credit_card", "online_banking", "cash", "cheque"]
   
   for (let i = 0; i < enrolledCount; i++) {
@@ -180,7 +181,7 @@ const generateStudentRegistrations = (courseId: string, enrolledCount: number): 
       paymentChannel: paymentChannels[Math.floor(Math.random() * paymentChannels.length)],
       paymentStatus: hasPayment ? "paid" : Math.random() > 0.5 ? "pending" : "overdue",
       amount: mockCourses.find(c => c.id === courseId)?.fee || 0,
-      studentEmail: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@sisb.ac.th`,
+      studentEmail: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@kingcollege.ac.th`,
       parentEmail: `${parentFirstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
       parentPhone: `+66 ${Math.floor(Math.random() * 90) + 10} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}`
     })
@@ -194,6 +195,7 @@ interface CourseQuotaOverviewProps {
 }
 
 export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverviewProps) {
+  const { t } = useLanguage()
   const [courses, setCourses] = useState<Course[]>(mockCourses)
   const [filteredCourses, setFilteredCourses] = useState<Course[]>(mockCourses)
   const [searchTerm, setSearchTerm] = useState("")
@@ -333,13 +335,13 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("common.active")}</Badge>
       case "full":
-        return <Badge className="bg-red-100 text-red-800">Full</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("course.full")}</Badge>
       case "cancelled":
-        return <Badge className="bg-gray-100 text-gray-800">Cancelled</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">{t("common.cancelled")}</Badge>
       case "upcoming":
-        return <Badge className="bg-blue-100 text-blue-800">Upcoming</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("settings.upcoming")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -348,11 +350,11 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("common.paid")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("common.overdue")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -553,14 +555,14 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Course & Quota Overview</h2>
+          <h2 className="text-xl font-semibold">{t("course.quotaOverview")}</h2>
           <p className="text-sm text-muted-foreground">
-            Monitor course capacity, enrollment, and revenue performance
+            {t("course.quotaOverviewDesc")}
           </p>
         </div>
         <Button onClick={openManageModal} className="flex items-center gap-2">
           <Edit className="w-4 h-4" />
-          Manage Courses
+          {t("course.manageCourses")}
         </Button>
       </div>
 
@@ -568,48 +570,48 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("course.totalCourses")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.totalCourses}</div>
             <p className="text-xs text-muted-foreground">
-              {summaryStats.fullCourses} at full capacity
+              {summaryStats.fullCourses} {t("course.atFullCapacity")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Enrollment</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("course.totalEnrollment")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.totalEnrolled}</div>
             <p className="text-xs text-muted-foreground">
-              of {summaryStats.totalCapacity} capacity ({Math.round((summaryStats.totalEnrolled / summaryStats.totalCapacity) * 100)}%)
+              {t("course.ofCapacity", { capacity: summaryStats.totalCapacity, percent: Math.round((summaryStats.totalEnrolled / summaryStats.totalCapacity) * 100) })}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              Avg ₿{Math.round(summaryStats.totalRevenue / summaryStats.totalEnrolled)} per student
+              {t("course.avgPerStudent", { amount: Math.round(summaryStats.totalRevenue / summaryStats.totalEnrolled) })}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Performance Alerts</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("course.performanceAlerts")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{summaryStats.lowEnrollment}</div>
             <p className="text-xs text-muted-foreground">
-              courses with low enrollment
+              {t("course.lowEnrollmentCourses")}
             </p>
           </CardContent>
         </Card>
@@ -621,21 +623,21 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("common.searchAndFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("common.search")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Course name, instructor, location"
+                  placeholder={t("course.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -644,13 +646,13 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Category</label>
+              <label className="text-sm font-medium">{t("common.category")}</label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t("common.allCategories")}</SelectItem>
                   {categories.map(category => (
                     <SelectItem key={category} value={category.toLowerCase()}>
                       {category}
@@ -661,32 +663,32 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="full">Full</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                  <SelectItem value="active">{t("common.active")}</SelectItem>
+                  <SelectItem value="full">{t("course.full")}</SelectItem>
+                  <SelectItem value="upcoming">{t("settings.upcoming")}</SelectItem>
+                  <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Sort By</label>
+              <label className="text-sm font-medium">{t("common.sortBy")}</label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Course Name</SelectItem>
-                  <SelectItem value="enrollment">Enrollment</SelectItem>
-                  <SelectItem value="revenue">Revenue</SelectItem>
-                  <SelectItem value="capacity">Capacity Utilization</SelectItem>
+                  <SelectItem value="name">{t("course.courseName")}</SelectItem>
+                  <SelectItem value="enrollment">{t("course.enrollment")}</SelectItem>
+                  <SelectItem value="revenue">{t("common.revenue")}</SelectItem>
+                  <SelectItem value="capacity">{t("course.capacityUtilization")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -717,48 +719,48 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("name")}>
                   <div className="flex items-center gap-1">
-                    Course Details
+                    {t("course.courseDetails")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("instructor")}>
                   <div className="flex items-center gap-1">
-                    Instructor
+                    {t("course.instructor")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("capacity")}>
                   <div className="flex items-center gap-1">
-                    Capacity
+                    {t("course.capacity")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("enrolled")}>
                   <div className="flex items-center gap-1">
-                    Enrollment
+                    {t("course.enrollment")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("waitlist")}>
                   <div className="flex items-center gap-1">
-                    Waitlist
+                    {t("course.waitlist")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("totalRevenue")}>
                   <div className="flex items-center gap-1">
-                    Revenue
+                    {t("common.revenue")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("course.schedule")}</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -802,7 +804,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                     </TableCell>
                     <TableCell>
                       {course.waitlist > 0 ? (
-                        <Badge variant="outline">{course.waitlist} waiting</Badge>
+                        <Badge variant="outline">{course.waitlist} {t("course.waiting")}</Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
@@ -908,8 +910,8 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>High Demand Courses</CardTitle>
-            <p className="text-sm text-muted-foreground">Courses with 85%+ enrollment</p>
+            <CardTitle>{t("course.highDemandCourses")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("course.highDemandDesc")}</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -939,8 +941,8 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
         <Card>
           <CardHeader>
-            <CardTitle>Revenue Leaders</CardTitle>
-            <p className="text-sm text-muted-foreground">Top revenue generating courses</p>
+            <CardTitle>{t("course.revenueLeaders")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("course.revenueLeadersDesc")}</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -952,7 +954,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                     <div>
                       <div className="font-medium">{course.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {course.enrolled} students
+                        {course.enrolled} {t("course.students")}
                       </div>
                     </div>
                     <div className="text-right">
@@ -974,10 +976,10 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Course Details & Management
+              {t("course.detailsManagement")}
             </DialogTitle>
             <DialogDescription>
-              View course information and manage capacity, pricing, and settings
+              {t("course.detailsManagementDesc")}
             </DialogDescription>
           </DialogHeader>
           
@@ -1001,22 +1003,22 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <h4 className="font-medium">Course Information</h4>
+                  <h4 className="font-medium">{t("course.courseInformation")}</h4>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Instructor</p>
+                      <p className="text-sm text-muted-foreground">{t("course.instructor")}</p>
                       <p className="font-medium">{selectedCourse.instructor}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Location</p>
+                      <p className="text-sm text-muted-foreground">{t("course.location")}</p>
                       <p className="font-medium">{selectedCourse.location}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Schedule</p>
+                      <p className="text-sm text-muted-foreground">{t("course.schedule")}</p>
                       <p className="font-medium">{selectedCourse.schedule}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Duration</p>
+                      <p className="text-sm text-muted-foreground">{t("settings.duration")}</p>
                       <p className="font-medium">
                         {format(selectedCourse.startDate, "MMM dd")} - {format(selectedCourse.endDate, "MMM dd, yyyy")}
                       </p>
@@ -1025,26 +1027,26 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-medium">Enrollment & Revenue</h4>
+                  <h4 className="font-medium">{t("course.enrollmentRevenue")}</h4>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Current Capacity</p>
-                      <p className="font-medium">{selectedCourse.capacity} students</p>
+                      <p className="text-sm text-muted-foreground">{t("course.currentCapacity")}</p>
+                      <p className="font-medium">{selectedCourse.capacity} {t("course.students")}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Enrolled</p>
-                      <p className="font-medium">{selectedCourse.enrolled} students</p>
+                      <p className="text-sm text-muted-foreground">{t("course.enrolled")}</p>
+                      <p className="font-medium">{selectedCourse.enrolled} {t("course.students")}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Waitlist</p>
-                      <p className="font-medium">{selectedCourse.waitlist} students</p>
+                      <p className="text-sm text-muted-foreground">{t("course.waitlist")}</p>
+                      <p className="font-medium">{selectedCourse.waitlist} {t("course.students")}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Fee per Student</p>
+                      <p className="text-sm text-muted-foreground">{t("course.feePerStudent")}</p>
                       <p className="font-medium">₿{selectedCourse.fee}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Revenue</p>
+                      <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
                       <p className="font-medium">₿{selectedCourse.totalRevenue.toLocaleString()}</p>
                     </div>
                   </div>
@@ -1055,11 +1057,11 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
               {/* Management Section */}
               <div className="space-y-4">
-                <h4 className="font-medium">Course Management</h4>
-                
+                <h4 className="font-medium">{t("course.courseManagement")}</h4>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Seat Capacity</label>
+                    <label className="text-sm font-medium">{t("course.seatCapacity")}</label>
                     <div className="flex items-center gap-2">
                       <Button 
                         size="sm" 
@@ -1085,12 +1087,12 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Minimum: {selectedCourse.enrolled} (current enrollment)
+                      {t("course.minimumCapacity", { count: selectedCourse.enrolled })}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Fee per Student (₿)</label>
+                    <label className="text-sm font-medium">{t("course.feePerStudent")} (₿)</label>
                     <Input
                       type="number"
                       value={editingFee}
@@ -1101,9 +1103,9 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Notes</label>
+                  <label className="text-sm font-medium">{t("course.notes")}</label>
                   <Textarea
-                    placeholder="Add any notes about changes..."
+                    placeholder={t("course.notesPlaceholder")}
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
                     rows={3}
@@ -1114,11 +1116,11 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               {/* Action Buttons */}
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={closeCourseDetail}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={updateCourse}>
                   <Save className="w-4 h-4 mr-2" />
-                  Save Changes
+                  {t("common.saveChanges")}
                 </Button>
               </div>
             </div>
@@ -1132,10 +1134,10 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCheck className="w-5 h-5" />
-              Student Registration Details
+              {t("course.studentRegDetails")}
             </DialogTitle>
             <DialogDescription>
-              {selectedCourse && `Detailed registration and payment information for ${selectedCourse.name}`}
+              {selectedCourse && t("course.studentRegDetailsDesc", { name: selectedCourse.name })}
             </DialogDescription>
           </DialogHeader>
           
@@ -1145,19 +1147,19 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               <div className="bg-muted/30 p-4 rounded-lg">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Course</p>
+                    <p className="text-sm text-muted-foreground">{t("course.course")}</p>
                     <p className="font-medium">{selectedCourse.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Students</p>
+                    <p className="text-sm text-muted-foreground">{t("course.totalStudents")}</p>
                     <p className="font-medium">{studentRegistrations.length}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
                     <p className="font-medium">₿{selectedCourse.totalRevenue.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Payment Status</p>
+                    <p className="text-sm text-muted-foreground">{t("common.paymentStatus")}</p>
                     <div className="flex gap-1">
                       {getPaymentStatusBadge("paid")} {studentRegistrations.filter(s => s.paymentStatus === "paid").length}
                       {studentRegistrations.filter(s => s.paymentStatus === "pending").length > 0 && (
@@ -1177,12 +1179,12 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                   Showing {studentStartIndex + 1}-{Math.min(studentEndIndex, studentRegistrations.length)} of {studentRegistrations.length} students
                   (Page {studentReportPage} of {totalStudentPages})
                 </p>
-                <Button 
+                <Button
                   onClick={() => exportCourseReport(selectedCourse)}
                   className="flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Export CSV
+                  {t("common.exportCsv")}
                 </Button>
               </div>
 
@@ -1191,11 +1193,11 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Student Info</TableHead>
-                      <TableHead>Parent Info</TableHead>
-                      <TableHead>Registration</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Contact</TableHead>
+                      <TableHead>{t("course.studentInfo")}</TableHead>
+                      <TableHead>{t("course.parentInfo")}</TableHead>
+                      <TableHead>{t("course.registration")}</TableHead>
+                      <TableHead>{t("common.payment")}</TableHead>
+                      <TableHead>{t("common.contact")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1315,7 +1317,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               {/* Close Button */}
               <div className="flex justify-end pt-4">
                 <Button variant="outline" onClick={closeStudentReport}>
-                  Close
+                  {t("common.close")}
                 </Button>
               </div>
             </div>
@@ -1329,16 +1331,16 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5" />
-              Course Management
+              {t("course.courseManagement")}
             </DialogTitle>
             <DialogDescription>
-              Import courses from CSV or manage existing courses
+              {t("course.importOrManage")}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div className="space-y-4">
-              <h4 className="font-medium">Import Courses</h4>
+              <h4 className="font-medium">{t("course.importCourses")}</h4>
               
               <div className="space-y-3">
                 <div>
@@ -1356,7 +1358,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     onClick={processCsvImport}
                     disabled={!csvFile || isImporting}
                     className="flex-1"
@@ -1364,22 +1366,22 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                     {isImporting ? (
                       <>
                         <Upload className="w-4 h-4 mr-2 animate-spin" />
-                        Importing...
+                        {t("common.importing")}
                       </>
                     ) : (
                       <>
                         <Upload className="w-4 h-4 mr-2" />
-                        Import CSV
+                        {t("common.importCsv")}
                       </>
                     )}
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     variant="outline"
                     onClick={downloadCsvTemplate}
                   >
                     <FileText className="w-4 h-4 mr-2" />
-                    Template
+                    {t("common.template")}
                   </Button>
                 </div>
               </div>
@@ -1387,7 +1389,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={closeManageModal}>
-                Close
+                {t("common.close")}
               </Button>
             </div>
           </div>

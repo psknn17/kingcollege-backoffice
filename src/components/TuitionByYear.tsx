@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Save, GraduationCap } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface GradeLevelTuition {
   id: string
@@ -35,6 +36,7 @@ const gradeLevels = [
   { id: "year10", label: "Year 10", order: 13 },
   { id: "year11", label: "Year 11", order: 14 },
   { id: "year12", label: "Year 12", order: 15 },
+  { id: "year13", label: "Year 13", order: 16 },
 ]
 
 const TUITION_STORAGE_KEY = "tuitionByYearData"
@@ -89,10 +91,22 @@ const createDefaultGrades = (): GradeLevelTuition[] => {
   }))
 }
 
+// Create empty grades for new academic year (all amounts = 0)
+const createEmptyGrades = (): GradeLevelTuition[] => {
+  return gradeLevels.map(grade => ({
+    id: grade.id,
+    gradeLevel: grade.label,
+    gradeLevelOrder: grade.order,
+    term1Amount: 0,
+    term2Amount: 0,
+    term3Amount: 0
+  }))
+}
+
 // Migrate old grade data to new format while preserving tuition amounts
 const migrateGradeData = (oldGrades: GradeLevelTuition[]): GradeLevelTuition[] => {
-  // Create new grades with default values
-  const newGrades = createDefaultGrades()
+  // Create new grades with EMPTY values (not default values)
+  const newGrades = createEmptyGrades()
 
   // Check if data needs migration (look for old IDs like k1, g1, etc.)
   const hasOldFormat = oldGrades.some(g =>
@@ -166,6 +180,7 @@ const saveTuitionToStorage = (data: Record<string, GradeLevelTuition[]>) => {
 
 export function TuitionByYear() {
   const { academicYears } = useAcademicYears()
+  const { t } = useLanguage()
 
   // Initialize tuition data from localStorage or empty object
   const [tuitionData, setTuitionData] = useState<Record<string, GradeLevelTuition[]>>(() => {
@@ -213,8 +228,9 @@ export function TuitionByYear() {
       let hasChanges = false
       for (const year of availableYears) {
         if (!updated[year]) {
-          updated[year] = createDefaultGrades()
+          updated[year] = createEmptyGrades() // Use empty grades (all 0) for new years
           hasChanges = true
+          console.log(`[TuitionByYear] Created empty grades for new year: ${year}`)
         }
       }
       // Remove years that no longer exist in Term Settings
@@ -227,13 +243,6 @@ export function TuitionByYear() {
       return hasChanges ? updated : prev
     })
   }, [availableYears])
-
-  // Save tuition data to localStorage whenever it changes
-  useEffect(() => {
-    if (Object.keys(tuitionData).length > 0) {
-      saveTuitionToStorage(tuitionData)
-    }
-  }, [tuitionData])
 
   const currentYearGrades = tuitionData[selectedYear] || []
   const [isSaveConfirmDialogOpen, setIsSaveConfirmDialogOpen] = useState(false)
@@ -249,7 +258,8 @@ export function TuitionByYear() {
 
   const handleSaveAll = () => {
     console.log("Saving tuition data:", tuitionData)
-    toast.success("Tuition data saved successfully")
+    saveTuitionToStorage(tuitionData)
+    toast.success(t("tuition.savedSuccess"))
     setIsSaveConfirmDialogOpen(false)
   }
 
@@ -278,17 +288,17 @@ export function TuitionByYear() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Tuition by Year</h2>
+          <h2 className="text-xl font-semibold">{t("tuition.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Configure tuition fees for each grade level by academic year (3 terms)
+            {t("tuition.description")}
           </p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Label htmlFor="academic-year" className="text-sm whitespace-nowrap">Academic Year:</Label>
+            <Label htmlFor="academic-year" className="text-sm whitespace-nowrap">{t("common.academicYear")}:</Label>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Select year" />
+                <SelectValue placeholder={t("tuition.selectYear")} />
               </SelectTrigger>
               <SelectContent>
                 {availableYears.map(year => (
@@ -301,7 +311,7 @@ export function TuitionByYear() {
           </div>
           <Button onClick={() => setIsSaveConfirmDialogOpen(true)} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
-            Save All Changes
+            {t("tuition.saveAllChanges")}
           </Button>
         </div>
       </div>
@@ -311,19 +321,19 @@ export function TuitionByYear() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GraduationCap className="w-5 h-5" />
-            Tuition Fees - Academic Year {selectedYear}
+            {t("tuition.feesAcademicYear")} {selectedYear}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60px]">No.</TableHead>
-                <TableHead className="w-[140px]">Year Group</TableHead>
-                <TableHead className="text-center">Term 1 (THB)</TableHead>
-                <TableHead className="text-center">Term 2 (THB)</TableHead>
-                <TableHead className="text-center">Term 3 (THB)</TableHead>
-                <TableHead className="text-right w-[140px]">Total (THB)</TableHead>
+                <TableHead className="w-[60px]">{t("tuition.no")}</TableHead>
+                <TableHead className="w-[140px]">{t("tuition.yearGroup")}</TableHead>
+                <TableHead className="text-center">{t("tuition.term1")} (THB)</TableHead>
+                <TableHead className="text-center">{t("tuition.term2")} (THB)</TableHead>
+                <TableHead className="text-center">{t("tuition.term3")} (THB)</TableHead>
+                <TableHead className="text-right w-[140px]">{t("common.total")} (THB)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -338,7 +348,7 @@ export function TuitionByYear() {
                         type="number"
                         value={grade.term1Amount || ""}
                         onChange={(e) => updateTuitionAmount(grade.id, 'term1Amount', parseFloat(e.target.value) || 0)}
-                        placeholder="Term 1"
+                        placeholder={t("tuition.term1")}
                         className="w-full text-center"
                         min={0}
                       />
@@ -348,7 +358,7 @@ export function TuitionByYear() {
                         type="number"
                         value={grade.term2Amount || ""}
                         onChange={(e) => updateTuitionAmount(grade.id, 'term2Amount', parseFloat(e.target.value) || 0)}
-                        placeholder="Term 2"
+                        placeholder={t("tuition.term2")}
                         className="w-full text-center"
                         min={0}
                       />
@@ -358,7 +368,7 @@ export function TuitionByYear() {
                         type="number"
                         value={grade.term3Amount || ""}
                         onChange={(e) => updateTuitionAmount(grade.id, 'term3Amount', parseFloat(e.target.value) || 0)}
-                        placeholder="Term 3"
+                        placeholder={t("tuition.term3")}
                         className="w-full text-center"
                         min={0}
                       />
@@ -371,7 +381,7 @@ export function TuitionByYear() {
               {/* Total Row */}
               <TableRow className="bg-muted/50 font-bold border-t-2">
                 <TableCell></TableCell>
-                <TableCell className="font-bold">Total</TableCell>
+                <TableCell className="font-bold">{t("common.total")}</TableCell>
                 <TableCell className="text-center font-bold text-primary">
                   {formatCurrency(getTerm1Total())}
                 </TableCell>
@@ -394,35 +404,35 @@ export function TuitionByYear() {
       <Dialog open={isSaveConfirmDialogOpen} onOpenChange={setIsSaveConfirmDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Confirm Save Changes</DialogTitle>
+            <DialogTitle>{t("tuition.confirmSaveTitle")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to save all tuition fee changes for academic year {selectedYear}?
+              {t("tuition.confirmSaveMessage")} {selectedYear}?
             </p>
             <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
               <p className="text-sm">
-                <span className="font-medium">Term 1 Total:</span> {formatCurrency(getTerm1Total())}
+                <span className="font-medium">{t("tuition.term1Total")}:</span> {formatCurrency(getTerm1Total())}
               </p>
               <p className="text-sm">
-                <span className="font-medium">Term 2 Total:</span> {formatCurrency(getTerm2Total())}
+                <span className="font-medium">{t("tuition.term2Total")}:</span> {formatCurrency(getTerm2Total())}
               </p>
               <p className="text-sm">
-                <span className="font-medium">Term 3 Total:</span> {formatCurrency(getTerm3Total())}
+                <span className="font-medium">{t("tuition.term3Total")}:</span> {formatCurrency(getTerm3Total())}
               </p>
               <div className="border-t pt-2 mt-2">
                 <p className="text-sm font-bold text-primary">
-                  <span>Grand Total:</span> {formatCurrency(getGrandTotal())}
+                  <span>{t("tuition.grandTotal")}:</span> {formatCurrency(getGrandTotal())}
                 </p>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSaveConfirmDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveAll}>
-              Confirm Save
+              {t("tuition.confirmSave")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,7 +9,8 @@ import { Badge } from "./ui/badge"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, RefreshCw, Sun, Calendar } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ImportStatus {
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error'
@@ -97,6 +98,7 @@ const importTemplates = [
 ]
 
 export function SummerActivitiesImport() {
+  const { t } = useLanguage()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedSeason, setSelectedSeason] = useState("")
   const [importType, setImportType] = useState("activities")
@@ -116,15 +118,15 @@ export function SummerActivitiesImport() {
 
   const handleImport = async () => {
     if (!selectedFile || !selectedSeason) {
-      toast.error("Please select a file and season before importing")
+      toast.error(t("summer.selectFileAndSeason"))
       return
     }
 
-    setImportStatus({ status: 'uploading', progress: 20, message: 'Uploading file...' })
+    setImportStatus({ status: 'uploading', progress: 20, message: t("summer.uploadingFile") })
     
     // Simulate upload progress
     setTimeout(() => {
-      setImportStatus({ status: 'processing', progress: 60, message: 'Processing summer activities data...' })
+      setImportStatus({ status: 'processing', progress: 60, message: t("summer.processingData") })
     }, 1000)
 
     setTimeout(() => {
@@ -132,20 +134,20 @@ export function SummerActivitiesImport() {
       const errorRecords = Math.floor(Math.random() * 5)
       const successRecords = totalRecords - errorRecords
       
-      setImportStatus({ 
-        status: 'completed', 
-        progress: 100, 
-        message: 'Import completed successfully!',
+      setImportStatus({
+        status: 'completed',
+        progress: 100,
+        message: t("summer.importCompletedSuccess"),
         totalRecords,
         successRecords,
         errorRecords
       })
-      toast.success("Summer activities imported successfully!")
+      toast.success(t("summer.activitiesImportedSuccess"))
     }, 3000)
   }
 
   const downloadTemplate = (templateType: string) => {
-    toast.success(`${templateType} template downloaded successfully`)
+    toast.success(t("summer.templateDownloadedSuccess").replace("{template}", templateType))
   }
 
   const resetImport = () => {
@@ -173,17 +175,17 @@ export function SummerActivitiesImport() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-2">Summer Activities Import</h2>
+        <h2 className="mb-2">{t("summer.importTitle")}</h2>
         <p className="text-muted-foreground">
-          Import summer activity programs, schedules, and instructor information from Excel or CSV files.
+          {t("summer.importDescription")}
         </p>
       </div>
 
       <Tabs defaultValue="import" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="import">Import Data</TabsTrigger>
-          <TabsTrigger value="activities">Current Activities</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="import">{t("summer.importData")}</TabsTrigger>
+          <TabsTrigger value="activities">{t("summer.currentActivities")}</TabsTrigger>
+          <TabsTrigger value="templates">{t("summer.templates")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="import" className="space-y-6">
@@ -194,29 +196,29 @@ export function SummerActivitiesImport() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Upload className="w-5 h-5" />
-                    Import Summer Activities
+                    {t("summer.importSummerActivities")}
                   </CardTitle>
                   <CardDescription>
-                    Upload your summer activity data file and configure import settings
+                    {t("summer.uploadConfigureSettings")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="import-type">Import Type</Label>
+                    <Label htmlFor="import-type">{t("summer.importType")}</Label>
                     <Select value={importType} onValueChange={setImportType}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="activities">Summer Activities</SelectItem>
-                        <SelectItem value="schedules">Activity Schedules</SelectItem>
-                        <SelectItem value="instructors">Instructor Information</SelectItem>
+                        <SelectItem value="activities">{t("summer.summerActivities")}</SelectItem>
+                        <SelectItem value="schedules">{t("summer.activitySchedules")}</SelectItem>
+                        <SelectItem value="instructors">{t("summer.instructorInformation")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="file-upload">Select File</Label>
+                    <Label htmlFor="file-upload">{t("summer.selectFile")}</Label>
                     <Input
                       id="file-upload"
                       type="file"
@@ -226,22 +228,22 @@ export function SummerActivitiesImport() {
                     />
                     {selectedFile && (
                       <p className="text-sm text-muted-foreground">
-                        Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                        {t("summer.selected")}: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="season-select">Summer Season</Label>
+                    <Label htmlFor="season-select">{t("summer.summerSeason")}</Label>
                     <Select value={selectedSeason} onValueChange={setSelectedSeason}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select season" />
+                        <SelectValue placeholder={t("summer.selectSeason")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="2024-summer">Summer 2024</SelectItem>
-                        <SelectItem value="2025-summer">Summer 2025</SelectItem>
-                        <SelectItem value="2024-winter">Winter Break 2024</SelectItem>
-                        <SelectItem value="2025-winter">Winter Break 2025</SelectItem>
+                        <SelectItem value="2024-summer">{t("summer.summer2024")}</SelectItem>
+                        <SelectItem value="2025-summer">{t("summer.summer2025")}</SelectItem>
+                        <SelectItem value="2024-winter">{t("summer.winterBreak2024")}</SelectItem>
+                        <SelectItem value="2025-winter">{t("summer.winterBreak2025")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -249,7 +251,7 @@ export function SummerActivitiesImport() {
                   {importStatus.status !== 'idle' && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Import Progress</Label>
+                        <Label>{t("summer.importProgress")}</Label>
                         <span className="text-sm text-muted-foreground">
                           {importStatus.progress}%
                         </span>
@@ -263,14 +265,14 @@ export function SummerActivitiesImport() {
                     <Alert>
                       <CheckCircle className="w-4 h-4" />
                       <AlertDescription>
-                        Import completed! {importStatus.successRecords} records imported successfully, 
-                        {importStatus.errorRecords} records with errors.
+                        {t("summer.importCompleted")} {importStatus.successRecords} {t("summer.recordsImportedSuccessfully")},
+                        {importStatus.errorRecords} {t("summer.recordsWithErrors")}.
                       </AlertDescription>
                     </Alert>
                   )}
 
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       onClick={handleImport}
                       disabled={!selectedFile || !selectedSeason || importStatus.status === 'uploading' || importStatus.status === 'processing'}
                       className="flex items-center gap-2"
@@ -280,12 +282,12 @@ export function SummerActivitiesImport() {
                       ) : (
                         <Upload className="w-4 h-4" />
                       )}
-                      Import Data
+                      {t("summer.importData")}
                     </Button>
-                    
+
                     {importStatus.status === 'completed' && (
                       <Button variant="outline" onClick={resetImport}>
-                        Import New File
+                        {t("summer.importNewFile")}
                       </Button>
                     )}
                   </div>
@@ -299,7 +301,7 @@ export function SummerActivitiesImport() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileSpreadsheet className="w-5 h-5" />
-                    Quick Templates
+                    {t("summer.quickTemplates")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -320,20 +322,20 @@ export function SummerActivitiesImport() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Import Statistics</CardTitle>
+                  <CardTitle>{t("summer.importStatistics")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">This Month</span>
-                    <span className="font-medium">45 activities</span>
+                    <span className="text-sm text-muted-foreground">{t("summer.thisMonth")}</span>
+                    <span className="font-medium">45 {t("summer.activities")}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Total Capacity</span>
-                    <span className="font-medium">780 students</span>
+                    <span className="text-sm text-muted-foreground">{t("summer.totalCapacity")}</span>
+                    <span className="font-medium">780 {t("summer.students")}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Active Programs</span>
-                    <span className="font-medium">12 categories</span>
+                    <span className="text-sm text-muted-foreground">{t("summer.activePrograms")}</span>
+                    <span className="font-medium">12 {t("summer.categories")}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -346,10 +348,10 @@ export function SummerActivitiesImport() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sun className="w-5 h-5" />
-                Current Summer Activities
+                {t("summer.currentSummerActivities")}
               </CardTitle>
               <CardDescription>
-                Recently imported summer activity programs
+                {t("summer.recentlyImportedPrograms")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -362,19 +364,19 @@ export function SummerActivitiesImport() {
                         {getCategoryBadge(activity.category)}
                       </div>
                       <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground">
-                        <span>Age: {activity.ageGroup}</span>
-                        <span>Duration: {activity.duration}</span>
-                        <span>Capacity: {activity.capacity} students</span>
-                        <span>Starts: {activity.startDate}</span>
+                        <span>{t("summer.age")}: {activity.ageGroup}</span>
+                        <span>{t("summer.duration")}: {activity.duration}</span>
+                        <span>{t("summer.capacity")}: {activity.capacity} {t("summer.students")}</span>
+                        <span>{t("summer.starts")}: {activity.startDate}</span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Instructor: {activity.instructor}
+                        {t("summer.instructor")}: {activity.instructor}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">฿{activity.fee.toLocaleString()}</p>
                       <Badge variant="secondary" className="text-xs">
-                        Available
+                        {t("summer.available")}
                       </Badge>
                     </div>
                   </div>
@@ -397,20 +399,20 @@ export function SummerActivitiesImport() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Required Fields:</Label>
+                    <Label className="text-sm font-medium">{t("summer.requiredFields")}:</Label>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       {template.fields.map((field, fieldIndex) => (
                         <li key={fieldIndex}>• {field}</li>
                       ))}
                     </ul>
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => downloadTemplate(template.name)}
                     className="w-full"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Download Template
+                    {t("summer.downloadTemplate")}
                   </Button>
                 </CardContent>
               </Card>
@@ -419,28 +421,28 @@ export function SummerActivitiesImport() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Import Guidelines</CardTitle>
-              <CardDescription>Important information for successful data import</CardDescription>
+              <CardTitle>{t("summer.importGuidelines")}</CardTitle>
+              <CardDescription>{t("summer.importGuidelinesDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-3">
-                  <h4 className="font-medium">File Requirements:</h4>
+                  <h4 className="font-medium">{t("summer.fileRequirements")}:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground ml-4">
-                    <li>• Maximum file size: 15MB</li>
-                    <li>• Supported formats: .xlsx, .xls, .csv</li>
-                    <li>• Maximum 500 records per file</li>
-                    <li>• Use UTF-8 encoding for special characters</li>
+                    <li>• {t("summer.maxFileSize")}</li>
+                    <li>• {t("summer.supportedFormats")}</li>
+                    <li>• {t("summer.maxRecords")}</li>
+                    <li>• {t("summer.useUtf8")}</li>
                   </ul>
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-medium">Data Validation:</h4>
+                  <h4 className="font-medium">{t("summer.dataValidation")}:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground ml-4">
-                    <li>• Dates must be in YYYY-MM-DD format</li>
-                    <li>• Fees must be numeric values</li>
-                    <li>• Age groups should specify ranges (e.g., "7-12 years")</li>
-                    <li>• Capacity must be positive integers</li>
+                    <li>• {t("summer.dateFormat")}</li>
+                    <li>• {t("summer.feesNumeric")}</li>
+                    <li>• {t("summer.ageGroupsFormat")}</li>
+                    <li>• {t("summer.capacityPositive")}</li>
                   </ul>
                 </div>
               </div>
@@ -448,8 +450,7 @@ export function SummerActivitiesImport() {
               <Alert>
                 <AlertCircle className="w-4 h-4" />
                 <AlertDescription>
-                  <strong>Important:</strong> Always backup existing data before performing bulk imports. 
-                  Review the imported data carefully before making activities available for registration.
+                  <strong>{t("summer.important")}:</strong> {t("summer.importWarning")}
                 </AlertDescription>
               </Alert>
             </CardContent>

@@ -32,6 +32,8 @@ import {
   RotateCcw
 } from "lucide-react"
 import { format } from "date-fns"
+import { th, enUS } from "date-fns/locale"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Types
 export interface FilterOption {
@@ -101,6 +103,8 @@ export function AdvancedFilter({
   className
 }: AdvancedFilterProps) {
   const [isOpen, setIsOpen] = React.useState(false)
+  const { language } = useLanguage()
+  const locale = language === "th" ? th : enUS
 
   const activeFilterCount = Object.values(values).filter(v => {
     if (Array.isArray(v)) return v.length > 0
@@ -157,7 +161,7 @@ export function AdvancedFilter({
             {filters.map((filter) => (
               <div key={filter.id} className="space-y-1.5">
                 <Label className="text-xs font-medium">{filter.label}</Label>
-                {renderFilterInput(filter, values[filter.id], (value) => handleFilterChange(filter.id, value))}
+                {renderFilterInput(filter, values[filter.id], (value) => handleFilterChange(filter.id, value), locale)}
               </div>
             ))}
           </div>
@@ -189,7 +193,7 @@ export function AdvancedFilter({
                 className="gap-1 pr-1"
               >
                 <span className="text-muted-foreground">{filter.label}:</span>
-                <span>{formatFilterValue(filter, value)}</span>
+                <span>{formatFilterValue(filter, value, locale)}</span>
                 <button
                   onClick={() => handleFilterChange(filter.id, filter.type === "multiselect" ? [] : undefined)}
                   className="ml-1 hover:bg-muted rounded-full p-0.5"
@@ -208,7 +212,8 @@ export function AdvancedFilter({
 function renderFilterInput(
   filter: FilterConfig,
   value: any,
-  onChange: (value: any) => void
+  onChange: (value: any) => void,
+  locale: typeof th | typeof enUS = enUS
 ) {
   switch (filter.type) {
     case "select":
@@ -279,7 +284,7 @@ function renderFilterInput(
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(value, "PP") : filter.placeholder || "Pick a date"}
+              {value ? format(value, "PP", { locale }) : filter.placeholder || "Pick a date"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -309,10 +314,10 @@ function renderFilterInput(
               {dateRange.from ? (
                 dateRange.to ? (
                   <>
-                    {format(dateRange.from, "LLL dd")} - {format(dateRange.to, "LLL dd")}
+                    {format(dateRange.from, "LLL dd", { locale })} - {format(dateRange.to, "LLL dd", { locale })}
                   </>
                 ) : (
-                  format(dateRange.from, "LLL dd, y")
+                  format(dateRange.from, "LLL dd, y", { locale })
                 )
               ) : (
                 filter.placeholder || "Pick dates"
@@ -357,19 +362,19 @@ function renderFilterInput(
   }
 }
 
-function formatFilterValue(filter: FilterConfig, value: any): string {
+function formatFilterValue(filter: FilterConfig, value: any, locale: typeof th | typeof enUS = enUS): string {
   if (Array.isArray(value)) {
     return value.map(v => filter.options?.find(o => o.value === v)?.label || v).join(", ")
   }
   if (filter.type === "date" && value instanceof Date) {
-    return format(value, "PP")
+    return format(value, "PP", { locale })
   }
   if (filter.type === "daterange" && typeof value === "object") {
     const range = value as { from?: Date; to?: Date }
     if (range.from && range.to) {
-      return `${format(range.from, "MM/dd")} - ${format(range.to, "MM/dd")}`
+      return `${format(range.from, "MM/dd", { locale })} - ${format(range.to, "MM/dd", { locale })}`
     }
-    if (range.from) return format(range.from, "PP")
+    if (range.from) return format(range.from, "PP", { locale })
   }
   if (filter.type === "select") {
     return filter.options?.find(o => o.value === value)?.label || value

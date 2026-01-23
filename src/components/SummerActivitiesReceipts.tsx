@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -139,6 +140,7 @@ const mockReceipts: SummerActivityReceipt[] = [
 ]
 
 export function SummerActivitiesReceipts() {
+  const { t } = useLanguage()
   const [receipts] = useState<SummerActivityReceipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<SummerActivityReceipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
@@ -272,11 +274,11 @@ export function SummerActivitiesReceipts() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "issued":
-        return <Badge className="bg-green-100 text-green-800">Issued</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("receipt.status.issued")}</Badge>
       case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">Resent</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.status.resent")}</Badge>
       case "failed":
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("receipt.status.failed")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -285,17 +287,17 @@ export function SummerActivitiesReceipts() {
   const getActivityTypeBadge = (activityType: string) => {
     switch (activityType) {
       case "camp":
-        return <Badge variant="default" className="bg-green-500">Camp</Badge>
+        return <Badge variant="default" className="bg-green-500">{t("summer.activityType.camp")}</Badge>
       case "workshop":
-        return <Badge variant="default" className="bg-blue-500">Workshop</Badge>
+        return <Badge variant="default" className="bg-blue-500">{t("summer.activityType.workshop")}</Badge>
       case "sports":
-        return <Badge variant="default" className="bg-orange-500">Sports</Badge>
+        return <Badge variant="default" className="bg-orange-500">{t("summer.activityType.sports")}</Badge>
       case "art":
-        return <Badge variant="default" className="bg-purple-500">Art</Badge>
+        return <Badge variant="default" className="bg-purple-500">{t("summer.activityType.art")}</Badge>
       case "language":
-        return <Badge variant="default" className="bg-pink-500">Language</Badge>
+        return <Badge variant="default" className="bg-pink-500">{t("summer.activityType.language")}</Badge>
       case "stem":
-        return <Badge variant="default" className="bg-teal-500">STEM</Badge>
+        return <Badge variant="default" className="bg-teal-500">{t("summer.activityType.stem")}</Badge>
       default:
         return <Badge variant="secondary">{activityType}</Badge>
     }
@@ -317,9 +319,9 @@ export function SummerActivitiesReceipts() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Summer Activities Receipt Management</h2>
+          <h2 className="text-xl font-semibold">{t("summer.receipts.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage receipts and internal email notifications
+            {t("summer.receipts.description")}
           </p>
         </div>
       </div>
@@ -328,30 +330,30 @@ export function SummerActivitiesReceipts() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="receipts" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
-            Receipt Management
+            {t("receipt.management")}
           </TabsTrigger>
           <TabsTrigger value="whitelist" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Internal Email Whitelist
+            {t("common.internalEmailWhitelist")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="receipts" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h3 className="text-lg font-medium">Receipt Management</h3>
+              <h3 className="text-lg font-medium">{t("receipt.management")}</h3>
               <p className="text-sm text-muted-foreground">
-                View and download summer activities payment receipts
+                {t("summer.receipts.viewDownload")}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                Bulk Resend
+                {t("receipt.bulkResend")}
               </Button>
               <Button className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                Export All
+                {t("common.exportAll")}
               </Button>
             </div>
           </div>
@@ -360,60 +362,60 @@ export function SummerActivitiesReceipts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Receipts</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.totalReceipts")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.total}</div>
                 <p className="text-xs text-muted-foreground">
-                  {summaryStats.earlyBird} early bird discounts
+                  {summaryStats.earlyBird} {t("summer.earlyBirdDiscounts")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Successfully Issued</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.successfullyIssued")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{summaryStats.issued}</div>
                 <p className="text-xs text-muted-foreground">
-                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% success rate
+                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% {t("common.successRate")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  Avg ₿{Math.round(summaryStats.avgAmount).toLocaleString()} per activity
+                  {t("common.avg")} ₿{Math.round(summaryStats.avgAmount).toLocaleString()} {t("summer.perActivity")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Average Age</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summer.averageAge")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{Math.round(summaryStats.avgAge)} years</div>
+                <div className="text-2xl font-bold">{Math.round(summaryStats.avgAge)} {t("common.years")}</div>
                 <p className="text-xs text-muted-foreground">
-                  Participant average
+                  {t("summer.participantAverage")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.totalDownloads")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.totalDownloads}</div>
                 <p className="text-xs text-muted-foreground">
-                  Avg {(summaryStats.totalDownloads / summaryStats.total).toFixed(1)} per receipt
+                  {t("common.avg")} {(summaryStats.totalDownloads / summaryStats.total).toFixed(1)} {t("receipt.perReceipt")}
                 </p>
               </CardContent>
             </Card>
@@ -425,21 +427,21 @@ export function SummerActivitiesReceipts() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Filter className="w-4 h-4" />
-                  Search & Filter
+                  {t("common.searchAndFilter")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={applyFilters} className="h-9">Apply</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+                  <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Search</label>
+                  <label className="text-sm font-medium">{t("common.search")}</label>
                   <div className="relative">
                     <Input
-                      placeholder="Receipt, activity, participant"
+                      placeholder={t("summer.receipts.searchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className=""
@@ -448,60 +450,60 @@ export function SummerActivitiesReceipts() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
+                  <label className="text-sm font-medium">{t("common.status")}</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="issued">Issued</SelectItem>
-                      <SelectItem value="resent">Resent</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                      <SelectItem value="issued">{t("receipt.status.issued")}</SelectItem>
+                      <SelectItem value="resent">{t("receipt.status.resent")}</SelectItem>
+                      <SelectItem value="failed">{t("receipt.status.failed")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Activity Type</label>
+                  <label className="text-sm font-medium">{t("summer.activityType.label")}</label>
                   <Select value={activityTypeFilter} onValueChange={setActivityTypeFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="camp">Camp</SelectItem>
-                      <SelectItem value="workshop">Workshop</SelectItem>
-                      <SelectItem value="sports">Sports</SelectItem>
-                      <SelectItem value="art">Art</SelectItem>
-                      <SelectItem value="language">Language</SelectItem>
-                      <SelectItem value="stem">STEM</SelectItem>
+                      <SelectItem value="all">{t("common.allTypes")}</SelectItem>
+                      <SelectItem value="camp">{t("summer.activityType.camp")}</SelectItem>
+                      <SelectItem value="workshop">{t("summer.activityType.workshop")}</SelectItem>
+                      <SelectItem value="sports">{t("summer.activityType.sports")}</SelectItem>
+                      <SelectItem value="art">{t("summer.activityType.art")}</SelectItem>
+                      <SelectItem value="language">{t("summer.activityType.language")}</SelectItem>
+                      <SelectItem value="stem">{t("summer.activityType.stem")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Early Bird</label>
+                  <label className="text-sm font-medium">{t("summer.earlyBird")}</label>
                   <Select value={earlyBirdFilter} onValueChange={setEarlyBirdFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Bookings</SelectItem>
-                      <SelectItem value="yes">Early Bird</SelectItem>
-                      <SelectItem value="no">Regular Price</SelectItem>
+                      <SelectItem value="all">{t("summer.allBookings")}</SelectItem>
+                      <SelectItem value="yes">{t("summer.earlyBird")}</SelectItem>
+                      <SelectItem value="no">{t("summer.regularPrice")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
+                  <label className="text-sm font-medium">{t("common.dateRange")}</label>
                   <div className="flex gap-1">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateFrom ? format(dateFrom, "MM/dd") : "From"}
+                          {dateFrom ? format(dateFrom, "MM/dd") : t("common.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -513,12 +515,12 @@ export function SummerActivitiesReceipts() {
                         />
                       </PopoverContent>
                     </Popover>
-                    
+
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateTo ? format(dateTo, "MM/dd") : "To"}
+                          {dateTo ? format(dateTo, "MM/dd") : t("common.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -539,7 +541,7 @@ export function SummerActivitiesReceipts() {
           {/* Results Summary */}
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredReceipts.length} of {receipts.length} receipts
+              {t("common.showing")} {filteredReceipts.length} {t("common.of")} {receipts.length} {t("common.receipts")}
             </p>
           </div>
 
@@ -551,49 +553,49 @@ export function SummerActivitiesReceipts() {
                   <TableRow>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                       <div className="flex items-center gap-1">
-                        Receipt Number
+                        {t("receipt.receiptNumber")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("activityName")}>
                       <div className="flex items-center gap-1">
-                        Activity Details
+                        {t("summer.activityDetails")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("participantName")}>
                       <div className="flex items-center gap-1">
-                        Participant
+                        {t("summer.participant")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                       <div className="flex items-center gap-1">
-                        Parent
+                        {t("common.parent")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
-                        Amount
+                        {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Payment Method</TableHead>
+                    <TableHead>{t("common.paymentMethod")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                       <div className="flex items-center gap-1">
-                        Date
+                        {t("common.date")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                       <div className="flex items-center gap-1">
-                        Downloads
+                        {t("common.downloads")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -603,7 +605,7 @@ export function SummerActivitiesReceipts() {
                         {receipt.receiptNumber}
                         {receipt.isEarlyBird && (
                           <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-800">
-                            Early Bird
+                            {t("summer.earlyBird")}
                           </Badge>
                         )}
                       </TableCell>
@@ -619,7 +621,7 @@ export function SummerActivitiesReceipts() {
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <UsersIcon className="w-3 h-3" />
-                            Age: {receipt.ageGroup}
+                            {t("summer.age")}: {receipt.ageGroup}
                           </div>
                         </div>
                       </TableCell>
@@ -627,7 +629,7 @@ export function SummerActivitiesReceipts() {
                         <div>
                           <div className="font-medium">{receipt.participantName}</div>
                           <div className="text-sm text-muted-foreground">
-                            {receipt.participantAge} years old
+                            {receipt.participantAge} {t("summer.yearsOld")}
                           </div>
                         </div>
                       </TableCell>
@@ -640,7 +642,7 @@ export function SummerActivitiesReceipts() {
                       <TableCell>{getStatusBadge(receipt.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {receipt.downloadCount} times
+                          {receipt.downloadCount} {t("common.times")}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -681,24 +683,24 @@ export function SummerActivitiesReceipts() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sun className="w-5 h-5 text-yellow-500" />
-                  Popular Activity Types
+                  {t("summer.popularActivityTypes")}
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Revenue by activity category</p>
+                <p className="text-sm text-muted-foreground">{t("summer.revenueByCategory")}</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { type: "STEM", count: 2, revenue: 4000, color: "bg-teal-500" },
-                    { type: "Language", count: 1, revenue: 3200, color: "bg-pink-500" },
-                    { type: "Art", count: 1, revenue: 2500, color: "bg-purple-500" },
-                    { type: "Sports", count: 1, revenue: 1800, color: "bg-orange-500" }
+                    { type: t("summer.activityType.stem"), count: 2, revenue: 4000, color: "bg-teal-500" },
+                    { type: t("summer.activityType.language"), count: 1, revenue: 3200, color: "bg-pink-500" },
+                    { type: t("summer.activityType.art"), count: 1, revenue: 2500, color: "bg-purple-500" },
+                    { type: t("summer.activityType.sports"), count: 1, revenue: 1800, color: "bg-orange-500" }
                   ].map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
                         <div>
                           <div className="font-medium">{item.type}</div>
-                          <div className="text-sm text-muted-foreground">{item.count} activities</div>
+                          <div className="text-sm text-muted-foreground">{item.count} {t("summer.activities")}</div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -712,16 +714,16 @@ export function SummerActivitiesReceipts() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Booking Analysis</CardTitle>
-                <p className="text-sm text-muted-foreground">Early bird vs regular bookings</p>
+                <CardTitle>{t("summer.bookingAnalysis")}</CardTitle>
+                <p className="text-sm text-muted-foreground">{t("summer.earlyBirdVsRegular")}</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">Early Bird Bookings</div>
+                      <div className="font-medium">{t("summer.earlyBirdBookings")}</div>
                       <div className="text-sm text-muted-foreground">
-                        {receipts.filter(r => r.isEarlyBird).length} participants
+                        {receipts.filter(r => r.isEarlyBird).length} {t("summer.participants")}
                       </div>
                     </div>
                     <div className="text-right">
@@ -736,9 +738,9 @@ export function SummerActivitiesReceipts() {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">Regular Bookings</div>
+                      <div className="font-medium">{t("summer.regularBookings")}</div>
                       <div className="text-sm text-muted-foreground">
-                        {receipts.filter(r => !r.isEarlyBird).length} participants
+                        {receipts.filter(r => !r.isEarlyBird).length} {t("summer.participants")}
                       </div>
                     </div>
                     <div className="text-right">
@@ -753,7 +755,7 @@ export function SummerActivitiesReceipts() {
 
                   <div className="mt-4 p-3 bg-green-50 rounded-lg">
                     <p className="text-sm">
-                      <strong>Insight:</strong> Early bird bookings represent {Math.round((summaryStats.earlyBird / summaryStats.total) * 100)}% of total registrations, encouraging advance planning and commitment.
+                      <strong>{t("summer.insight")}:</strong> {t("summer.insightText", { percentage: Math.round((summaryStats.earlyBird / summaryStats.total) * 100) })}
                     </p>
                   </div>
                 </div>
@@ -763,9 +765,9 @@ export function SummerActivitiesReceipts() {
         </TabsContent>
 
         <TabsContent value="whitelist">
-          <InternalEmailManagement 
-            title="Summer Activities Receipt Email Whitelist"
-            description="Manage internal staff emails who receive summer activities receipt notifications"
+          <InternalEmailManagement
+            title={t("summer.receipts.emailWhitelistTitle")}
+            description={t("summer.receipts.emailWhitelistDescription")}
           />
         </TabsContent>
       </Tabs>

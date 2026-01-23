@@ -8,14 +8,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { CalendarIcon, Save, Plus, Trash2, GraduationCap, ChevronDown, CheckCircle2 } from "lucide-react"
 import { format } from "date-fns"
+import { th, enUS } from "date-fns/locale"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 import { cn } from "./ui/utils"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { Badge } from "./ui/badge"
 import { useAcademicYears, Term, AcademicYear } from "@/contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export function TuitionTermSettings() {
   const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear } = useAcademicYears()
+  const { t, language } = useLanguage()
+  const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = useState<string[]>(["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
   const [isSaveConfirmDialogOpen, setIsSaveConfirmDialogOpen] = useState(false)
@@ -50,14 +54,14 @@ export function TuitionTermSettings() {
 
     // Check if year already exists
     if (academicYears.find(y => y.id === yearId)) {
-      toast.error("Academic year already exists")
+      toast.error(t("termSettings.yearAlreadyExists"))
       return
     }
 
     // Validate consecutive year
     const nextValidYear = getNextValidYear()
     if (startYear !== nextValidYear) {
-      toast.error(`Must create consecutive year. Next valid year is ${nextValidYear}-${nextValidYear + 1}`)
+      toast.error(`${t("termSettings.mustCreateConsecutive")} ${nextValidYear}-${nextValidYear + 1}`)
       return
     }
 
@@ -94,14 +98,14 @@ export function TuitionTermSettings() {
     setExpandedYears(prev => [...prev, yearId])
     setIsAddYearDialogOpen(false)
     setNewYearStart("")
-    toast.success(`Academic Year ${yearId} created`)
+    toast.success(`${t("termSettings.academicYear")} ${yearId} ${t("termSettings.yearCreated")}`)
   }
 
   const deleteAcademicYear = (yearId: string) => {
     if (academicYears.length <= 1) return
     deleteYear(yearId)
     setExpandedYears(prev => prev.filter(id => id !== yearId))
-    toast.success("Academic year deleted")
+    toast.success(t("termSettings.yearDeleted"))
   }
 
   const updateTermsForYear = (yearId: string, newTerms: Term[]) => {
@@ -160,16 +164,16 @@ export function TuitionTermSettings() {
 
       if (newStart && newEnd) {
         if (newStart > newEnd) {
-          toast.error("Invalid date range", {
-            description: "Start date must be before end date"
+          toast.error(t("termSettings.invalidDateRange"), {
+            description: t("termSettings.startBeforeEnd")
           })
           return
         }
 
         const overlappingTerms = getOverlappingTerms(year.terms, termId, newStart, newEnd)
         if (overlappingTerms.length > 0) {
-          toast.error("Date overlap detected", {
-            description: `This date range overlaps with: ${overlappingTerms.join(", ")}`
+          toast.error(t("termSettings.dateOverlap"), {
+            description: `${t("termSettings.overlapsWith")} ${overlappingTerms.join(", ")}`
           })
           return
         }
@@ -186,13 +190,13 @@ export function TuitionTermSettings() {
     const year = academicYears.find(y => y.id === yearId)
     if (!year) return
     updateTermsForYear(yearId, year.terms.filter(term => term.id !== termId))
-    toast.success("Term deleted")
+    toast.success(t("termSettings.termDeleted"))
   }
 
   const handleSaveAllChanges = () => {
     console.log("Saving all changes", academicYears)
     setIsSaveConfirmDialogOpen(false)
-    toast.success("All changes saved successfully")
+    toast.success(t("termSettings.changesSaved"))
   }
 
   const getYearStatus = (year: AcademicYear) => {
@@ -211,14 +215,14 @@ export function TuitionTermSettings() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-black">Term Settings</h2>
+          <h2 className="text-2xl font-bold text-black">{t("termSettings.title")}</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Configure semester start and end dates for each academic year
+            {t("termSettings.subtitle")}
           </p>
         </div>
         <Button onClick={() => setIsAddYearDialogOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Academic Year
+          {t("termSettings.addAcademicYear")}
         </Button>
       </div>
 
@@ -243,14 +247,14 @@ export function TuitionTermSettings() {
                           <GraduationCap className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg text-black">Academic Year {year.name}</CardTitle>
+                          <CardTitle className="text-lg text-black">{t("termSettings.academicYear")} {year.name}</CardTitle>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-gray-500">{termCount} terms</span>
+                            <span className="text-sm text-gray-500">{termCount} {t("termSettings.terms")}</span>
                             <Badge variant={allComplete ? "default" : "secondary"} className={cn(
                               "text-xs",
                               allComplete ? "bg-green-100 text-green-700 hover:bg-green-100" : "bg-amber-100 text-amber-700"
                             )}>
-                              {allComplete ? "Complete" : "Incomplete"}
+                              {allComplete ? t("termSettings.complete") : t("termSettings.incomplete")}
                             </Badge>
                           </div>
                         </div>
@@ -285,11 +289,11 @@ export function TuitionTermSettings() {
                       <table className="w-full">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[200px]">Term Name</th>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">Start Date</th>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">End Date</th>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">Duration</th>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">Status</th>
+                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[200px]">{t("termSettings.termName")}</th>
+                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">{t("termSettings.startDate")}</th>
+                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">{t("termSettings.endDate")}</th>
+                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">{t("termSettings.duration")}</th>
+                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">{t("termSettings.status")}</th>
                             <th className="text-right text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[60px]"></th>
                           </tr>
                         </thead>
@@ -316,7 +320,7 @@ export function TuitionTermSettings() {
                                       >
                                         <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                                         <span className="text-black">
-                                          {term.startDate ? format(term.startDate, "MMM d, yyyy") : "Select date"}
+                                          {term.startDate ? format(term.startDate, "MMM d, yyyy", { locale }) : t("termSettings.selectDate")}
                                         </span>
                                       </Button>
                                     </PopoverTrigger>
@@ -339,7 +343,7 @@ export function TuitionTermSettings() {
                                       >
                                         <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                                         <span className="text-black">
-                                          {term.endDate ? format(term.endDate, "MMM d, yyyy") : "Select date"}
+                                          {term.endDate ? format(term.endDate, "MMM d, yyyy", { locale }) : t("termSettings.selectDate")}
                                         </span>
                                       </Button>
                                     </PopoverTrigger>
@@ -355,17 +359,17 @@ export function TuitionTermSettings() {
                                 </td>
                                 <td className="px-4 py-3">
                                   <span className="text-sm text-gray-600">
-                                    {duration ? `${duration} days` : "-"}
+                                    {duration ? `${duration} ${t("termSettings.days")}` : "-"}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
                                   {isComplete ? (
                                     <div className="flex items-center gap-1 text-green-600">
                                       <CheckCircle2 className="w-4 h-4" />
-                                      <span className="text-xs font-medium">Done</span>
+                                      <span className="text-xs font-medium">{t("termSettings.done")}</span>
                                     </div>
                                   ) : (
-                                    <span className="text-xs text-amber-600 font-medium">Pending</span>
+                                    <span className="text-xs text-amber-600 font-medium">{t("termSettings.pending")}</span>
                                   )}
                                 </td>
                                 <td className="px-4 py-3 text-right">
@@ -393,7 +397,7 @@ export function TuitionTermSettings() {
                         onClick={() => addNewTerm(year.id)}
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Term
+                        {t("termSettings.addTerm")}
                       </Button>
                     )}
                   </CardContent>
@@ -408,7 +412,7 @@ export function TuitionTermSettings() {
       <div className="flex justify-end">
         <Button size="lg" onClick={() => setIsSaveConfirmDialogOpen(true)}>
           <Save className="w-4 h-4 mr-2" />
-          Save All Changes
+          {t("termSettings.saveAllChanges")}
         </Button>
       </div>
 
@@ -419,10 +423,10 @@ export function TuitionTermSettings() {
       }}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Add New Academic Year</DialogTitle>
+            <DialogTitle>{t("termSettings.addNewAcademicYear")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="startYear">Starting Year</Label>
+            <Label htmlFor="startYear">{t("termSettings.startingYear")}</Label>
             <Input
               id="startYear"
               type="number"
@@ -435,24 +439,24 @@ export function TuitionTermSettings() {
             />
             {newYearStart && parseInt(newYearStart) !== getNextValidYear() && (
               <p className="text-sm text-red-500 mt-2">
-                Must create consecutive year. Next valid year is {getNextValidYear()}-{getNextValidYear() + 1}
+                {t("termSettings.mustCreateConsecutive")} {getNextValidYear()}-{getNextValidYear() + 1}
               </p>
             )}
             {(!newYearStart || parseInt(newYearStart) === getNextValidYear()) && (
               <p className="text-sm text-gray-500 mt-2">
-                This will create academic year {newYearStart ? `${newYearStart}-${parseInt(newYearStart) + 1}` : "YYYY-YYYY"} with 3 default terms.
+                {t("termSettings.willCreateYear")} {newYearStart ? `${newYearStart}-${parseInt(newYearStart) + 1}` : "YYYY-YYYY"} {t("termSettings.withDefaultTerms")}
               </p>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddYearDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={addNewAcademicYear}
               disabled={!newYearStart || parseInt(newYearStart) !== getNextValidYear()}
             >
-              Create Year
+              {t("termSettings.createYear")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -462,19 +466,19 @@ export function TuitionTermSettings() {
       <Dialog open={isSaveConfirmDialogOpen} onOpenChange={setIsSaveConfirmDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Confirm Save Changes</DialogTitle>
+            <DialogTitle>{t("termSettings.confirmSaveChanges")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-500">
-              Are you sure you want to save all changes to the term settings? This will update {academicYears.length} academic year(s).
+              {t("termSettings.confirmSaveMessage")} {academicYears.length} {t("termSettings.academicYears")}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSaveConfirmDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveAllChanges}>
-              Confirm Save
+              {t("termSettings.confirmSave")}
             </Button>
           </DialogFooter>
         </DialogContent>

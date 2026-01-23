@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -10,7 +11,7 @@ import { Separator } from "./ui/separator"
 import { Search, Filter, Eye, CheckCircle, XCircle, Clock, Mail, Phone, User, Calendar, AlertTriangle, FileText, MessageSquare, ArrowUpDown } from "lucide-react"
 import { Textarea } from "./ui/textarea"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 
 interface ExternalParentApplication {
   id: string
@@ -117,6 +118,7 @@ const mockApplications: ExternalParentApplication[] = [
 ]
 
 export function ExternalParentsApproval() {
+  const { t } = useLanguage()
   const [applications] = useState<ExternalParentApplication[]>(mockApplications)
   const [filteredApplications, setFilteredApplications] = useState<ExternalParentApplication[]>(mockApplications)
   const [searchTerm, setSearchTerm] = useState("")
@@ -231,13 +233,13 @@ export function ExternalParentsApproval() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />{t("common.pending")}</Badge>
       case "approved":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t("common.approved")}</Badge>
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />{t("common.rejected")}</Badge>
       case "under_review":
-        return <Badge className="bg-blue-100 text-blue-800"><Eye className="w-3 h-3 mr-1" />Under Review</Badge>
+        return <Badge className="bg-blue-100 text-blue-800"><Eye className="w-3 h-3 mr-1" />{t("external.underReview")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -246,13 +248,13 @@ export function ExternalParentsApproval() {
   const getDocumentStatus = (documents: ExternalParentApplication["documents"]) => {
     const total = Object.keys(documents).length
     const complete = Object.values(documents).filter(Boolean).length
-    
+
     if (complete === total) {
-      return <Badge className="bg-green-100 text-green-800">Complete ({complete}/{total})</Badge>
+      return <Badge className="bg-green-100 text-green-800">{t("external.complete")} ({complete}/{total})</Badge>
     } else if (complete > 0) {
-      return <Badge className="bg-yellow-100 text-yellow-800">Partial ({complete}/{total})</Badge>
+      return <Badge className="bg-yellow-100 text-yellow-800">{t("external.partial")} ({complete}/{total})</Badge>
     } else {
-      return <Badge className="bg-red-100 text-red-800">Incomplete ({complete}/{total})</Badge>
+      return <Badge className="bg-red-100 text-red-800">{t("external.incomplete")} ({complete}/{total})</Badge>
     }
   }
 
@@ -268,19 +270,19 @@ export function ExternalParentsApproval() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">External Parents Approval</h2>
+          <h2 className="text-xl font-semibold">{t("external.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Review and approve external parent applications for after-school programs
+            {t("external.description")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="flex items-center gap-2">
             <Mail className="w-4 h-4" />
-            Send Bulk Notifications
+            {t("external.sendBulkNotifications")}
           </Button>
           <Button className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Export Report
+            {t("external.exportReport")}
           </Button>
         </div>
       </div>
@@ -289,7 +291,7 @@ export function ExternalParentsApproval() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.totalApplications")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
@@ -298,19 +300,19 @@ export function ExternalParentsApproval() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.pendingReview")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</div>
             <p className="text-xs text-muted-foreground">
-              Awaiting action
+              {t("external.awaitingAction")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Under Review</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("external.underReview")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.underReview}</div>
@@ -319,19 +321,19 @@ export function ExternalParentsApproval() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.approved")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.approved}</div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((summaryStats.approved / summaryStats.total) * 100)}% success rate
+              {Math.round((summaryStats.approved / summaryStats.total) * 100)}% {t("external.successRate")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.rejected")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{summaryStats.rejected}</div>
@@ -345,21 +347,21 @@ export function ExternalParentsApproval() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("common.searchAndFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("common.search")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Parent name, student name, email, phone"
+                  placeholder={t("external.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -368,17 +370,17 @@ export function ExternalParentsApproval() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                  <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                  <SelectItem value="under_review">{t("external.underReview")}</SelectItem>
+                  <SelectItem value="approved">{t("common.approved")}</SelectItem>
+                  <SelectItem value="rejected">{t("common.rejected")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -389,7 +391,7 @@ export function ExternalParentsApproval() {
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredApplications.length} of {applications.length} applications
+          {t("external.showingApplications").replace("{shown}", String(filteredApplications.length)).replace("{total}", String(applications.length))}
         </p>
       </div>
 
@@ -401,31 +403,31 @@ export function ExternalParentsApproval() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                   <div className="flex items-center gap-1">
-                    Parent Information
+                    {t("external.parentInformation")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student Details
+                    {t("external.studentDetails")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Preferred Courses</TableHead>
-                <TableHead>Documents</TableHead>
+                <TableHead>{t("external.preferredCourses")}</TableHead>
+                <TableHead>{t("external.documents")}</TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("applicationDate")}>
                   <div className="flex items-center gap-1">
-                    Application Date
+                    {t("external.applicationDate")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -441,7 +443,7 @@ export function ExternalParentsApproval() {
                   <TableCell>
                     <div>
                       <div className="font-medium">{application.studentName}</div>
-                      <div className="text-sm text-muted-foreground">Age {application.studentAge}</div>
+                      <div className="text-sm text-muted-foreground">{t("external.age")} {application.studentAge}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -453,7 +455,7 @@ export function ExternalParentsApproval() {
                       ))}
                       {application.preferredCourses.length > 2 && (
                         <Badge variant="outline" className="text-xs">
-                          +{application.preferredCourses.length - 2} more
+                          +{application.preferredCourses.length - 2} {t("external.more")}
                         </Badge>
                       )}
                     </div>
@@ -487,10 +489,10 @@ export function ExternalParentsApproval() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              External Parent Application
+              {t("external.applicationTitle")}
             </DialogTitle>
             <DialogDescription>
-              Review and manage external parent application details
+              {t("external.applicationDescription")}
             </DialogDescription>
           </DialogHeader>
           
@@ -501,7 +503,7 @@ export function ExternalParentsApproval() {
                 <div>
                   <h3 className="text-lg font-medium">{selectedApplication.studentName}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Applied by {selectedApplication.parentName} on {format(selectedApplication.applicationDate, "MMM dd, yyyy")}
+                    {t("external.appliedBy")} {selectedApplication.parentName} {t("external.on")} {format(selectedApplication.applicationDate, "MMM dd, yyyy")}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -515,19 +517,19 @@ export function ExternalParentsApproval() {
               <div className="space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  Parent Information
+                  {t("external.parentInformation")}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Full Name</p>
+                    <p className="text-sm text-muted-foreground">{t("external.fullName")}</p>
                     <p className="font-medium">{selectedApplication.parentName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Email Address</p>
+                    <p className="text-sm text-muted-foreground">{t("external.emailAddress")}</p>
                     <p className="font-medium">{selectedApplication.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Phone Number</p>
+                    <p className="text-sm text-muted-foreground">{t("external.phoneNumber")}</p>
                     <p className="font-medium">{selectedApplication.phone}</p>
                   </div>
                 </div>
@@ -539,16 +541,16 @@ export function ExternalParentsApproval() {
               <div className="space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  Student Information
+                  {t("external.studentInformation")}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Student Name</p>
+                    <p className="text-sm text-muted-foreground">{t("external.studentName")}</p>
                     <p className="font-medium">{selectedApplication.studentName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Age</p>
-                    <p className="font-medium">{selectedApplication.studentAge} years old</p>
+                    <p className="text-sm text-muted-foreground">{t("external.age")}</p>
+                    <p className="font-medium">{selectedApplication.studentAge} {t("external.yearsOld")}</p>
                   </div>
                 </div>
               </div>
@@ -557,7 +559,7 @@ export function ExternalParentsApproval() {
 
               {/* Preferred Courses */}
               <div className="space-y-3">
-                <h4 className="font-medium">Preferred Courses</h4>
+                <h4 className="font-medium">{t("external.preferredCourses")}</h4>
                 <div className="flex flex-wrap gap-2">
                   {selectedApplication.preferredCourses.map((course, index) => (
                     <Badge key={index} variant="secondary">
@@ -573,11 +575,11 @@ export function ExternalParentsApproval() {
               <div className="space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  Required Documents
+                  {t("external.requiredDocuments")}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">ID Card/Passport</span>
+                    <span className="text-sm">{t("external.idCardPassport")}</span>
                     {selectedApplication.documents.idCard ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
@@ -585,7 +587,7 @@ export function ExternalParentsApproval() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Proof of Address</span>
+                    <span className="text-sm">{t("external.proofOfAddress")}</span>
                     {selectedApplication.documents.proofOfAddress ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
@@ -593,7 +595,7 @@ export function ExternalParentsApproval() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Student Birth Certificate</span>
+                    <span className="text-sm">{t("external.studentBirthCertificate")}</span>
                     {selectedApplication.documents.studentBirthCertificate ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
@@ -601,7 +603,7 @@ export function ExternalParentsApproval() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Medical Certificate</span>
+                    <span className="text-sm">{t("external.medicalCertificate")}</span>
                     {selectedApplication.documents.medicalCertificate ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
@@ -617,7 +619,7 @@ export function ExternalParentsApproval() {
               <div className="space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <MessageSquare className="w-4 h-4" />
-                  Application Notes
+                  {t("external.applicationNotes")}
                 </h4>
                 <div className="bg-muted/50 rounded-lg p-4">
                   <p className="text-sm">{selectedApplication.notes}</p>
@@ -629,14 +631,14 @@ export function ExternalParentsApproval() {
                 <>
                   <Separator />
                   <div className="space-y-3">
-                    <h4 className="font-medium">Review Information</h4>
+                    <h4 className="font-medium">{t("external.reviewInformation")}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Reviewed By</p>
+                        <p className="text-sm text-muted-foreground">{t("external.reviewedBy")}</p>
                         <p className="font-medium">{selectedApplication.reviewedBy}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Review Date</p>
+                        <p className="text-sm text-muted-foreground">{t("external.reviewDate")}</p>
                         <p className="font-medium">
                           {selectedApplication.reviewDate ? format(selectedApplication.reviewDate, "MMM dd, yyyy") : "N/A"}
                         </p>
@@ -644,7 +646,7 @@ export function ExternalParentsApproval() {
                     </div>
                     {selectedApplication.reason && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Reason</p>
+                        <p className="text-sm text-muted-foreground">{t("external.reason")}</p>
                         <p className="font-medium">{selectedApplication.reason}</p>
                       </div>
                     )}
@@ -655,30 +657,30 @@ export function ExternalParentsApproval() {
               {/* Action Buttons */}
               {!actionType && selectedApplication.status === "pending" && (
                 <div className="flex gap-3 pt-4">
-                  <Button 
+                  <Button
                     className="flex-1 bg-green-600 hover:bg-green-700"
                     onClick={() => handleAction("approve")}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Approve Application
+                    {t("external.approveApplication")}
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
+
+                  <Button
+                    variant="outline"
                     className="flex-1"
                     onClick={() => handleAction("review")}
                   >
                     <Eye className="w-4 h-4 mr-2" />
-                    Move to Review
+                    {t("external.moveToReview")}
                   </Button>
-                  
-                  <Button 
-                    variant="destructive" 
+
+                  <Button
+                    variant="destructive"
                     className="flex-1"
                     onClick={() => handleAction("reject")}
                   >
                     <XCircle className="w-4 h-4 mr-2" />
-                    Reject Application
+                    {t("external.rejectApplication")}
                   </Button>
                 </div>
               )}
@@ -687,17 +689,17 @@ export function ExternalParentsApproval() {
               {actionType && (
                 <div className="space-y-4 pt-4 border-t">
                   <h4 className="font-medium">
-                    {actionType === "approve" ? "Approve Application" : 
-                     actionType === "reject" ? "Reject Application" : "Move to Review"}
+                    {actionType === "approve" ? t("external.approveApplication") :
+                     actionType === "reject" ? t("external.rejectApplication") : t("external.moveToReview")}
                   </h4>
-                  
+
                   <div>
                     <label className="text-sm font-medium">
-                      {actionType === "approve" ? "Approval Notes (Optional)" : 
-                       actionType === "reject" ? "Rejection Reason" : "Review Notes"}
+                      {actionType === "approve" ? t("external.approvalNotesOptional") :
+                       actionType === "reject" ? t("external.rejectionReason") : t("external.reviewNotes")}
                     </label>
                     <Textarea
-                      placeholder={`Enter ${actionType} reason/notes...`}
+                      placeholder={t("external.enterReasonNotes")}
                       value={actionReason}
                       onChange={(e) => setActionReason(e.target.value)}
                       className="min-h-20"
@@ -705,16 +707,16 @@ export function ExternalParentsApproval() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       onClick={confirmAction}
-                      className={actionType === "approve" ? "bg-green-600 hover:bg-green-700" : 
+                      className={actionType === "approve" ? "bg-green-600 hover:bg-green-700" :
                                 actionType === "reject" ? "bg-red-600 hover:bg-red-700" : ""}
                     >
-                      Confirm {actionType === "approve" ? "Approval" : 
-                               actionType === "reject" ? "Rejection" : "Review"}
+                      {actionType === "approve" ? t("external.confirmApproval") :
+                       actionType === "reject" ? t("external.confirmRejection") : t("external.confirmReview")}
                     </Button>
                     <Button variant="outline" onClick={() => setActionType(null)}>
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                   </div>
                 </div>
@@ -723,7 +725,7 @@ export function ExternalParentsApproval() {
               {selectedApplication.status !== "pending" && !actionType && (
                 <div className="flex justify-center pt-4">
                   <Button variant="outline" onClick={closeModal}>
-                    Close
+                    {t("common.close")}
                   </Button>
                 </div>
               )}

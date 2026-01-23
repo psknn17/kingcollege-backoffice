@@ -41,10 +41,11 @@ export interface DiscountOptionsData {
   waiverAfter3rdYear: {
     enabled: boolean
     minimumGradeLevel: number
-    minimumYears: number
+    minimumTerms: number  // First child waits this many terms before receiving
     creditAmount: number
     termsToCredit: number
-    firstChildImmediate: boolean
+    firstChildImmediate: boolean  // false = first child waits, true = first child gets immediately
+    secondChildImmediate: boolean // true = second child+ gets immediately
   }
   waiverImmediate: {
     enabled: boolean
@@ -96,20 +97,20 @@ const defaultRegistrationFees: RegistrationFeeSettings = {
 const defaultRegistrationPrivileges: RegistrationPrivilege[] = [
   {
     id: "1",
-    condition: "First child enrolled in academic year 2025-2026 or 2026-2027",
-    privilege: "Registration fee waiver after the 3rd year",
+    condition: "First child enrolled in Year 3+",
+    privilege: "Registration fee waiver after 3 terms (receives from term 4 onwards)",
     enabled: true,
   },
   {
     id: "2",
-    condition: "Any subsequent child or children enrolled at the same time",
-    privilege: "Registration fee waiver (limited to first 100 family)",
+    condition: "Second child or subsequent children",
+    privilege: "Registration fee waiver immediately (75,000 × 3 terms)",
     enabled: true,
   },
   {
     id: "3",
-    condition: "Child enrolled for Year 3-12 for the academic year",
-    privilege: "Registration fee waiver after the 3rd year",
+    condition: "If first child withdraws",
+    privilege: "Siblings will not receive waiver from the following term",
     enabled: true,
   },
 ]
@@ -123,10 +124,11 @@ const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   waiverAfter3rdYear: {
     enabled: true,
     minimumGradeLevel: 3,
-    minimumYears: 3,
+    minimumTerms: 3,  // First child waits 3 terms, receives from 4th term
     creditAmount: 225000,
     termsToCredit: 3,
-    firstChildImmediate: true,
+    firstChildImmediate: false,  // First child waits 3 terms
+    secondChildImmediate: true,  // Second child+ gets immediately
   },
   waiverImmediate: {
     enabled: true,
@@ -258,21 +260,19 @@ export function checkFeePrivilegeEligibility(
   enrollmentTerm: "term1" | "term2" | "term3",
   enrollmentYear: string,
   currentYear: string,
+  currentTerm: "term1" | "term2" | "term3",
   hasWithdrawnSibling: boolean,
+  firstChildWithdrawn: boolean,  // If first child has withdrawn
   waiverSettings: DiscountOptionsData["waiverAfter3rdYear"]
 ): {
   eligible: boolean
   reason: string
-  completedYears: number
+  completedTerms: number
+  startsFromTerm: string | null
 } {
   // Check if waiver is enabled
   if (!waiverSettings.enabled) {
-    return { eligible: false, reason: "Fee waiver privilege is disabled", completedYears: 0 }
-  }
-
-  // Check if student has withdrawn sibling (no privilege for family with withdrawn student)
-  if (hasWithdrawnSibling) {
-    return { eligible: false, reason: "Family has withdrawn student - not eligible", completedYears: 0 }
+    return { eligible: false, reason: "Fee waiver privilege is disabled", completedTerms: 0, startsFromTerm: null }
   }
 
   // Check minimum grade level requirement
@@ -280,39 +280,72 @@ export function checkFeePrivilegeEligibility(
     return {
       eligible: false,
       reason: `Must enroll in Year ${waiverSettings.minimumGradeLevel}+ (currently Year ${studentGradeLevel})`,
-      completedYears: 0
+      completedTerms: 0,
+      startsFromTerm: null
     }
   }
 
-  // First child gets privilege immediately (if enabled)
-  if (childOrder === 1 && waiverSettings.firstChildImmediate) {
-    return { eligible: true, reason: "First child - immediate privilege", completedYears: 0 }
-  }
-
-  // For 2nd child+, calculate completed academic years
-  const enrollmentYearNum = parseInt(enrollmentYear.split("-")[0])
-  const currentYearNum = parseInt(currentYear.split("-")[0])
-
-  let completedYears = currentYearNum - enrollmentYearNum
-
-  // If enrolled in Term 2 or Term 3, first year is half-term (doesn't count)
-  if (enrollmentTerm !== "term1") {
-    completedYears = Math.max(0, completedYears - 1)
-  }
-
-  // Check if completed minimum years
-  if (completedYears >= waiverSettings.minimumYears) {
+  // If first child has withdrawn, subsequent children lose discount in the following term
+  if (firstChildWithdrawn && childOrder > 1) {
     return {
-      eligible: true,
-      reason: `Completed ${completedYears} academic years`,
-      completedYears
+      eligible: false,
+      reason: "First child has withdrawn - siblings not eligible from next term",
+      completedTerms: 0,
+      startsFromTerm: null
     }
   }
 
-  const yearsRemaining = waiverSettings.minimumYears - completedYears
-  return {
-    eligible: false,
-    reason: `Need ${yearsRemaining} more year(s) (completed ${completedYears}/${waiverSettings.minimumYears})`,
-    completedYears
+  // Check if student has any withdrawn sibling (family with withdrawn student)
+  if (hasWithdrawnSibling) {
+    return { eligible: false, reason: "Family has withdrawn student - not eligible", completedTerms: 0, startsFromTerm: null }
   }
+
+  // Second child+ gets privilege immediately (if enabled)
+  if (childOrder >= 2 && waiverSettings.secondChildImmediate) {
+    return { eligible: true, reason: "Second child or later - immediate privilege", completedTerms: 0, startsFromTerm: "immediate" }
+  }
+
+  // First child logic: must wait minimumTerms before receiving
+  if (childOrder === 1) {
+    // Calculate completed terms
+    const enrollmentYearNum = parseInt(enrollmentYear.split("-")[0])
+    const currentYearNum = parseInt(currentYear.split("-")[0])
+    const termToNumber = (term: string) => {
+      if (term === "term1") return 1
+      if (term === "term2") return 2
+      return 3
+    }
+
+    const enrollmentTermNum = termToNumber(enrollmentTerm)
+    const currentTermNum = termToNumber(currentTerm)
+
+    // Calculate total terms completed
+    const yearsDiff = currentYearNum - enrollmentYearNum
+    let completedTerms = (yearsDiff * 3) + (currentTermNum - enrollmentTermNum)
+
+    // Check if completed minimum terms
+    if (completedTerms >= waiverSettings.minimumTerms) {
+      // Calculate when the waiver starts (term after completing minimumTerms)
+      const startTermNum = ((enrollmentTermNum - 1 + waiverSettings.minimumTerms) % 3) + 1
+      const startYear = enrollmentYearNum + Math.floor((enrollmentTermNum - 1 + waiverSettings.minimumTerms) / 3)
+      const startsFromTerm = `Term ${startTermNum}, ${startYear}-${startYear + 1}`
+
+      return {
+        eligible: true,
+        reason: `Completed ${completedTerms} terms - eligible from term ${waiverSettings.minimumTerms + 1}`,
+        completedTerms,
+        startsFromTerm
+      }
+    }
+
+    const termsRemaining = waiverSettings.minimumTerms - completedTerms
+    return {
+      eligible: false,
+      reason: `Need ${termsRemaining} more term(s) (completed ${completedTerms}/${waiverSettings.minimumTerms})`,
+      completedTerms,
+      startsFromTerm: null
+    }
+  }
+
+  return { eligible: false, reason: "Not eligible", completedTerms: 0, startsFromTerm: null }
 }

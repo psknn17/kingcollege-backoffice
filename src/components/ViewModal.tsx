@@ -23,7 +23,9 @@ import {
   Eye,
   Edit
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency as formatCurrencyUtil } from "@/lib/invoiceUtils"
+import SchoolLogo from "@/assets/Logo.png"
 
 interface ViewModalProps {
   isOpen: boolean
@@ -73,114 +75,173 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
 
   if (!data) return null
 
-  const renderInvoiceView = () => (
-    <div className="space-y-6">
-      {/* Header Info */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-xl font-semibold">Invoice #{data.invoiceNumber || data.id}</h3>
-          <p className="text-muted-foreground">{data.description || "Invoice Details"}</p>
+  const renderInvoiceView = () => {
+    const total = data.total || data.amount || data.items?.reduce((sum: number, item: any) => sum + (item.discountedAmount || item.amount || 0), 0) || 0
+    const issueDate = data.issueDate ? new Date(data.issueDate) : new Date()
+    const dueDate = data.dueDate ? new Date(data.dueDate) : null
+
+    return (
+      <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
+        {/* School Header */}
+        <div className="text-center py-4 border-b border-gray-300 mb-3">
+          <img
+            src={SchoolLogo}
+            alt="King's College International School Bangkok"
+            style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
+          />
+          <p className="text-xs text-gray-600">
+            {SCHOOL_INFO.address}
+          </p>
+          <p className="text-xs text-gray-600">
+            {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
+          </p>
+          <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
         </div>
-        <div className="text-right">
-          {getStatusBadge(data.status)}
-          <p className="text-2xl font-bold mt-2">{formatCurrency(data.amount || data.total || 0)}</p>
+
+        {/* Student & Invoice Info - Two Column Layout */}
+        <div className="px-4 py-3">
+          <div className="border border-black p-4" style={{ fontSize: '11px' }}>
+            <div className="flex justify-between">
+              {/* Left Column - Student Info */}
+              <div style={{ width: '45%' }}>
+                <div className="flex py-1">
+                  <span style={{ width: '110px' }}>Student name</span>
+                  <span>{data.studentName || "N/A"}</span>
+                </div>
+                <div className="flex py-1">
+                  <span style={{ width: '110px' }}>Student ID</span>
+                  <span>{data.studentId || "N/A"}</span>
+                </div>
+                <div className="flex py-1">
+                  <span style={{ width: '110px' }}>Year group</span>
+                  <span>{data.grade || data.studentGrade || "N/A"}</span>
+                </div>
+                <div className="flex py-1">
+                  <span style={{ width: '110px' }}>Parent name</span>
+                  <span>{data.parentName || "N/A"}</span>
+                </div>
+                <div className="flex py-1">
+                  <span style={{ width: '110px' }}>Email</span>
+                  <span>{data.parentEmail || "N/A"}</span>
+                </div>
+              </div>
+              {/* Right Column - Invoice Info */}
+              <div style={{ width: '45%' }}>
+                <div className="flex py-1">
+                  <span style={{ width: '90px' }}>Invoice no.</span>
+                  <span className="flex-1 text-right">{data.invoiceNumber || data.id}</span>
+                </div>
+                <div className="flex py-1">
+                  <span style={{ width: '90px' }}>Invoice date</span>
+                  <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+                <div className="flex py-1">
+                  <span style={{ width: '90px' }}>Due date</span>
+                  <span className="flex-1 text-right">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>
+                </div>
+                {data.term && (
+                  <div className="flex py-1">
+                    <span style={{ width: '90px' }}>Term</span>
+                    <span className="flex-1 text-right">{data.term}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Items Table */}
+        <div className="px-4 py-2">
+          <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
+            <thead>
+              <tr className="border-b border-black bg-gray-50">
+                <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
+                <th className="py-1.5 px-2 text-left font-semibold">Description</th>
+                <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items && data.items.map((item: any, index: number) => (
+                <tr key={index} className="border-b border-gray-200">
+                  <td className="py-1.5 px-2 align-top">{index + 1}</td>
+                  <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                    <div>{item.name || item.description}</div>
+                  </td>
+                  <td className="py-1.5 px-2 text-right align-top">{formatCurrencyUtil(item.discountedAmount || item.amount || 0)}</td>
+                </tr>
+              ))}
+              {/* Total Row */}
+              <tr className="border-t border-black bg-gray-100">
+                <td colSpan={2} className="py-2 px-2">
+                  <div className="flex justify-between items-center">
+                    <span style={{ fontSize: '10px' }}>{numberToWords(total)}</span>
+                    <span className="font-bold ml-4">TOTAL</span>
+                  </div>
+                </td>
+                <td className="py-2 px-2 text-right font-bold">{formatCurrencyUtil(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Late Payment Notice */}
+        <div className="px-4 py-2" style={{ fontSize: '11px' }}>
+          <p className="text-gray-500 italic text-xs">
+            Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
+          </p>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="px-4 py-2" style={{ fontSize: '11px' }}>
+          <h3 className="font-bold mb-3">Payment methods</h3>
+          <div className="space-y-3">
+            {/* Bank Transfer */}
+            <div>
+              <span>- </span>
+              <span className="font-medium">Bank Transfer:</span>
+              <span> Please transfer to the account below and email proof of payment to finance@kingsbangkok.ac.th</span>
+              <table className="mt-3 ml-8">
+                <tbody>
+                  <tr>
+                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account name</td>
+                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountName}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account number</td>
+                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Bank name</td>
+                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.bankName}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Branch</td>
+                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.branch}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Signature Section */}
+        <div className="px-4 py-4">
+          <div className="flex justify-between px-6">
+            <div className="text-center">
+              <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
+              <div className="w-40 border-t border-black mb-1"></div>
+              <p style={{ fontSize: '10px' }}>Prepared by</p>
+            </div>
+            <div className="text-center">
+              <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+              <div className="w-40 border-t border-black mb-1"></div>
+              <p style={{ fontSize: '10px' }}>Authorised officer</p>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Student & Invoice Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Student Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <label className="text-sm text-muted-foreground">Student Name</label>
-              <p className="font-medium">{data.studentName || data.student?.name || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Student ID</label>
-              <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Year Group</label>
-              <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Parent Email</label>
-              <p className="font-medium">{data.parentEmail || data.student?.parentEmail || "N/A"}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Invoice Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <label className="text-sm text-muted-foreground">Issue Date</label>
-              <p className="font-medium">{formatDate(data.issueDate || data.createdAt || new Date().toISOString())}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Due Date</label>
-              <p className="font-medium">{formatDate(data.dueDate || new Date().toISOString())}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Category</label>
-              <Badge variant="outline">{data.category || "General"}</Badge>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Academic Year</label>
-              <p className="font-medium">{data.academicYear || "2024-2025"}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Invoice Items */}
-      {data.items && data.items.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.items.map((item: any, index: number) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.description}</TableCell>
-                    <TableCell>{item.quantity || 1}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Separator className="my-4" />
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold">Total Amount:</span>
-              <span className="text-2xl font-bold">{formatCurrency(data.total || data.amount || 0)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
+    )
+  }
 
   const renderStudentView = () => (
     <div className="space-y-6">
@@ -188,7 +249,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-xl font-semibold">{data.name}</h3>
-          <p className="text-muted-foreground">Student ID: {data.id}</p>
+          <p className="text-muted-foreground">{t("viewModal.studentId")}: {data.id}</p>
         </div>
         <div className="text-right">
           {getStatusBadge(data.status || "active")}
@@ -202,24 +263,24 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-4 h-4" />
-              Personal Information
+              {t("viewModal.personalInformation")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground">Full Name</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.fullName")}</label>
               <p className="font-medium">{data.name}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Student ID</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.studentId")}</label>
               <p className="font-medium">{data.id}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Year Group</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.yearGroup")}</label>
               <p className="font-medium">{data.grade}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Date of Birth</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.dateOfBirth")}</label>
               <p className="font-medium">{data.dateOfBirth || "N/A"}</p>
             </div>
           </CardContent>
@@ -229,24 +290,24 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              Contact Information
+              {t("viewModal.contactInformation")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground">Parent Name</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.parentName")}</label>
               <p className="font-medium">{data.parentName}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Parent Email</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.parentEmail")}</label>
               <p className="font-medium">{data.email || data.parentEmail}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Phone Number</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.phoneNumber")}</label>
               <p className="font-medium">{data.phone || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Address</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.address")}</label>
               <p className="font-medium">{data.address || "N/A"}</p>
             </div>
           </CardContent>
@@ -259,7 +320,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <GraduationCap className="w-4 h-4" />
-              Enrolled Courses
+              {t("viewModal.enrolledCourses")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -270,7 +331,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
                     <p className="font-medium">{course.name}</p>
                     <p className="text-sm text-muted-foreground">{course.description}</p>
                   </div>
-                  <Badge variant="outline">{course.status || "Active"}</Badge>
+                  <Badge variant="outline">{course.status || t("common.active")}</Badge>
                 </div>
               ))}
             </div>
@@ -283,72 +344,47 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
   const renderItemView = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-xl font-semibold">{data.name}</h3>
-          <p className="text-muted-foreground">{data.description}</p>
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex-1">
+          <h3 className="text-2xl font-bold text-gray-900">{data.name}</h3>
+          {data.description && (
+            <p className="text-muted-foreground mt-1">{data.description}</p>
+          )}
         </div>
-        <div className="text-right">
+        <div className="text-right ml-4">
           {getStatusBadge(data.isActive ? "active" : "inactive")}
-          <p className="text-2xl font-bold mt-2">{formatCurrency(data.amount)}</p>
+          <p className="text-3xl font-bold mt-3 text-gray-900">{formatCurrency(data.amount)}</p>
         </div>
       </div>
 
-      {/* Item Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Item Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+      {/* Item Details - Single Card Full Width */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("viewModal.itemInformation")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-sm text-muted-foreground">Item Name</label>
-              <p className="font-medium">{data.name}</p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Category</label>
-              <Badge variant="outline">{data.category}</Badge>
+              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.itemName")}</label>
+              <p className="font-medium text-gray-900 mt-1">{data.name}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Amount</label>
-              <p className="font-medium text-lg">{formatCurrency(data.amount)}</p>
+              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.category")}</label>
+              <div className="mt-1">
+                <Badge variant="outline">{data.category}</Badge>
+              </div>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Status</label>
-              <p className="font-medium">{data.isActive ? "Active" : "Inactive"}</p>
+              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.amount")}</label>
+              <p className="font-semibold text-xl text-gray-900 mt-1">{formatCurrency(data.amount)}</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Applicable Year Groups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {data.applicableGrades?.map((grade: string, index: number) => (
-                <Badge key={index} variant="secondary">{grade}</Badge>
-              ))}
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">{t("viewModal.status")}</label>
+              <p className="font-medium text-gray-900 mt-1">{data.isActive ? t("common.active") : t("common.inactive")}</p>
             </div>
-            <div className="mt-4">
-              <label className="text-sm text-muted-foreground">Total Year Groups</label>
-              <p className="font-medium">{data.applicableGrades?.length || 0} year groups</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Description */}
-      {data.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{data.description}</p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 
@@ -356,14 +392,14 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
     <div className="px-4">
       {/* Document Header */}
       <div className="text-center py-6 border-b border-gray-200 mb-6">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Invoice Template</h2>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">{t("viewModal.invoiceTemplate")}</h2>
       </div>
 
       {/* Template Info */}
       <div className="px-4 space-y-4 mb-8">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Template Name</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">{t("viewModal.templateName")}</p>
             <p className="text-lg font-semibold text-gray-900">{data.name}</p>
           </div>
           {getStatusBadge(data.isActive ? "active" : "inactive")}
@@ -372,18 +408,13 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
         {data.description && (
           <p className="text-sm text-gray-600">{data.description}</p>
         )}
-
-        <div className="space-y-1">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Applicable Grades</p>
-          <p className="text-gray-900">{data.applicableGrades?.join(", ") || "All grades"}</p>
-        </div>
       </div>
 
       {/* Items Section */}
       {data.itemsList && data.itemsList.length > 0 && (
         <div className="px-4">
           <div className="border-t border-gray-200 pt-6 mb-4">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Items</h3>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">{t("viewModal.items")}</h3>
           </div>
 
           <div className="space-y-4 mb-6">
@@ -402,7 +433,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
           {/* Total */}
           <div className="border-t-2 border-gray-300 pt-6 pb-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Total</span>
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">{t("viewModal.total")}</span>
               <span className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalAmount || 0)}</span>
             </div>
           </div>
@@ -418,7 +449,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-xl font-semibold">Receipt #{data.receiptNumber || data.id}</h3>
-          <p className="text-muted-foreground">Payment Receipt</p>
+          <p className="text-muted-foreground">{t("viewModal.paymentReceipt")}</p>
         </div>
         <div className="text-right">
           {getStatusBadge(data.status || "paid")}
@@ -432,24 +463,24 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
-              Payment Details
+              {t("viewModal.paymentDetails")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground">Payment Date</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.paymentDate")}</label>
               <p className="font-medium">{formatDate(data.paymentDate || data.createdAt || new Date().toISOString())}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Payment Method</label>
-              <p className="font-medium">{data.paymentMethod || "Bank Transfer"}</p>
+              <label className="text-sm text-muted-foreground">{t("viewModal.paymentMethod")}</label>
+              <p className="font-medium">{data.paymentMethod || t("paymentMethod.bankTransfer")}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Reference Number</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.referenceNumber")}</label>
               <p className="font-medium">{data.referenceNumber || data.transactionId || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Amount Paid</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.amountPaid")}</label>
               <p className="font-medium text-lg">{formatCurrency(data.amount || data.total || 0)}</p>
             </div>
           </CardContent>
@@ -459,24 +490,24 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-4 h-4" />
-              Student Information
+              {t("viewModal.studentInformation")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground">Student Name</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.studentName")}</label>
               <p className="font-medium">{data.studentName || data.student?.name || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Student ID</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.studentId")}</label>
               <p className="font-medium">{data.studentId || data.student?.id || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Year Group</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.yearGroup")}</label>
               <p className="font-medium">{data.grade || data.student?.grade || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Academic Term</label>
+              <label className="text-sm text-muted-foreground">{t("viewModal.academicTerm")}</label>
               <p className="font-medium">{data.academicTerm || "Term 1 2024"}</p>
             </div>
           </CardContent>
@@ -502,28 +533,28 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
       case "template":
         return renderTemplateView()
       default:
-        return <div>Content not available</div>
+        return <div>{t("viewModal.contentNotAvailable")}</div>
     }
   }
 
   const getModalTitle = () => {
     switch (type) {
       case "invoice":
-        return "Invoice Details"
+        return t("viewModal.invoiceDetails")
       case "student":
-        return "Student Profile"
+        return t("viewModal.studentProfile")
       case "item":
-        return "Item Details"
+        return t("viewModal.itemDetails")
       case "receipt":
-        return "Receipt Details"
+        return t("viewModal.receiptDetails")
       case "payment":
-        return "Payment Details"
+        return t("viewModal.paymentDetails")
       case "course":
-        return "Course Details"
+        return t("viewModal.courseDetails")
       case "template":
-        return "Template Details"
+        return t("viewModal.templateDetails")
       default:
-        return "Details"
+        return t("viewModal.details")
     }
   }
 
@@ -531,19 +562,42 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
     switch (action) {
       case "edit":
         onEdit?.(data)
-        toast.success("Opening edit mode...")
+        toast.success(t("viewModal.openingEditMode"))
         break
       case "download":
         onDownload?.(data)
-        toast.success("Downloading...")
+        toast.success(t("viewModal.downloading"))
         break
       case "print":
         onPrint?.(data)
-        toast.success("Preparing for print...")
+        toast.success(t("viewModal.preparingPrint"))
         break
       default:
         break
     }
+  }
+
+  // Special layout for invoice type
+  if (type === "invoice") {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Invoice Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col">
+            <div className="flex-1 p-6">
+              {renderInvoiceView()}
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+              <Button variant="outline" onClick={onClose}>
+                {t("common.close")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (
@@ -554,21 +608,10 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
             <div>
               <DialogTitle>{getModalTitle()}</DialogTitle>
               <DialogDescription>
-                View detailed information and perform actions
+                {t("viewModal.viewDetailedInfo")}
               </DialogDescription>
             </div>
             <div className="flex gap-2">
-              {onEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAction("edit")}
-                  className="flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </Button>
-              )}
               {onDownload && (
                 <Button
                   variant="outline"
@@ -577,7 +620,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
                   className="flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Download
+                  {t("common.download")}
                 </Button>
               )}
               {onPrint && (
@@ -588,7 +631,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
                   className="flex items-center gap-2"
                 >
                   <Printer className="w-4 h-4" />
-                  Print
+                  {t("common.print")}
                 </Button>
               )}
             </div>
@@ -601,7 +644,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
 
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t("common.close")}
           </Button>
         </div>
       </DialogContent>

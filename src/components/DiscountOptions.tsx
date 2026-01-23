@@ -13,19 +13,12 @@ import {
   Users,
   Info
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 // Storage key for discount options
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
-
-interface SiblingDiscount {
-  childOrder: string
-  label: string
-  percentage: number
-  enabled: boolean
-}
 
 interface LatePaymentSettings {
   chargePercentage: number
@@ -38,7 +31,6 @@ interface RegistrationFeeSettings {
   applicationFee: number
   registrationFee: number
   securityDeposit: number
-  waitListFee: number
   applicationFeeRefundable: boolean
   registrationFeeRefundable: boolean
   securityDepositRefundable: boolean
@@ -53,7 +45,6 @@ interface RegistrationPrivilege {
 
 interface DiscountOptionsData {
   academicYear: string
-  siblingDiscounts: SiblingDiscount[]
   latePayment: LatePaymentSettings
   registrationFees: RegistrationFeeSettings
   registrationPrivileges: RegistrationPrivilege[]
@@ -73,14 +64,6 @@ interface DiscountOptionsData {
   }
 }
 
-const defaultSiblingDiscounts: SiblingDiscount[] = [
-  { childOrder: "first", label: "First Child", percentage: 0, enabled: true },
-  { childOrder: "second", label: "Second Child", percentage: 0, enabled: true },
-  { childOrder: "third", label: "Third Child", percentage: 5, enabled: true },
-  { childOrder: "fourth", label: "Fourth Child", percentage: 10, enabled: true },
-  { childOrder: "fifth", label: "Fifth Child and subsequent", percentage: 20, enabled: true },
-]
-
 const defaultLatePayment: LatePaymentSettings = {
   chargePercentage: 1.5,
   chargeFrequency: "monthly",
@@ -92,7 +75,6 @@ const defaultRegistrationFees: RegistrationFeeSettings = {
   applicationFee: 5000,
   registrationFee: 225000,
   securityDeposit: 200000,
-  waitListFee: 225000,
   applicationFeeRefundable: false,
   registrationFeeRefundable: false,
   securityDepositRefundable: true,
@@ -121,7 +103,6 @@ const defaultRegistrationPrivileges: RegistrationPrivilege[] = [
 
 const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   academicYear,
-  siblingDiscounts: defaultSiblingDiscounts,
   latePayment: defaultLatePayment,
   registrationFees: defaultRegistrationFees,
   registrationPrivileges: defaultRegistrationPrivileges,
@@ -269,12 +250,6 @@ export function DiscountOptions() {
     }))
   }
 
-  const updateSiblingDiscount = (index: number, updates: Partial<SiblingDiscount>) => {
-    const newDiscounts = [...currentData.siblingDiscounts]
-    newDiscounts[index] = { ...newDiscounts[index], ...updates }
-    updateCurrentData({ siblingDiscounts: newDiscounts })
-  }
-
   const updateLatePayment = (updates: Partial<LatePaymentSettings>) => {
     updateCurrentData({ latePayment: { ...currentData.latePayment, ...updates } })
   }
@@ -352,66 +327,6 @@ export function DiscountOptions() {
         </CardContent>
       </Card>
 
-      {/* Sibling Discounts */}
-      <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                {t("discountOptions.siblingDiscounts")}
-              </CardTitle>
-              <CardDescription>
-                {t("discountOptions.siblingDiscountsDesc")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">{t("discountOptions.enabled")}</TableHead>
-                    <TableHead>{t("discountOptions.childOrder")}</TableHead>
-                    <TableHead className="w-[200px]">{t("discountOptions.discountPercentage")}</TableHead>
-                    <TableHead className="w-[150px] text-right">{t("discountOptions.preview")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentData.siblingDiscounts.map((discount, index) => (
-                    <TableRow key={discount.childOrder}>
-                      <TableCell>
-                        <Switch
-                          checked={discount.enabled}
-                          onCheckedChange={(checked) => updateSiblingDiscount(index, { enabled: checked })}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{t(`discountOptions.${discount.childOrder}Child`)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={discount.percentage}
-                            onChange={(e) => updateSiblingDiscount(index, { percentage: parseFloat(e.target.value) || 0 })}
-                            className="w-24"
-                            min={0}
-                            max={100}
-                            disabled={!discount.enabled}
-                          />
-                          <span className="text-muted-foreground">%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {discount.percentage > 0 ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {t("discountOptions.percentOff").replace("{percent}", String(discount.percentage))}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">{t("discountOptions.noDiscount")}</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-      </Card>
 
       {/* Save Confirmation Dialog */}
       <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
@@ -424,10 +339,6 @@ export function DiscountOptions() {
               {t("discountOptions.confirmSaveMessage").replace("{year}", selectedYear)}
             </p>
             <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">{t("discountOptions.siblingDiscounts")}:</span>{" "}
-                {currentData.siblingDiscounts.filter(d => d.enabled && d.percentage > 0).length} {t("discountOptions.configured")}
-              </p>
               <p className="text-sm">
                 <span className="font-medium">{t("discountOptions.latePayment")}:</span>{" "}
                 {currentData.latePayment.enabled ? `${currentData.latePayment.chargePercentage}% ${t("discountOptions.per")} ${currentData.latePayment.chargeFrequency === "monthly" ? t("discountOptions.month") : t("discountOptions.week")}` : t("discountOptions.disabled")}

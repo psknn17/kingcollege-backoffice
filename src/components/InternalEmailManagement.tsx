@@ -10,7 +10,8 @@ import { Badge } from "./ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Users, Edit, Search, UserPlus, Trash2, Mail, Upload, Download, FileSpreadsheet, ArrowUpDown } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface InternalEmail {
   id: string
@@ -31,7 +32,7 @@ const initialInternalEmails: InternalEmail[] = [
     id: "1",
     name: "Somchai",
     surname: "Jaidee",
-    email: "somchai.j@sisb.ac.th",
+    email: "somchai.j@kingcollege.ac.th",
     remark: "Finance Department Head",
     createdAt: new Date("2024-01-15")
   },
@@ -39,7 +40,7 @@ const initialInternalEmails: InternalEmail[] = [
     id: "2",
     name: "Malee",
     surname: "Kaewmanee",
-    email: "malee.k@sisb.ac.th",
+    email: "malee.k@kingcollege.ac.th",
     remark: "Accounting Manager",
     createdAt: new Date("2024-02-10")
   },
@@ -47,7 +48,7 @@ const initialInternalEmails: InternalEmail[] = [
     id: "3",
     name: "Prasert",
     surname: "Suksamran",
-    email: "prasert.s@sisb.ac.th",
+    email: "prasert.s@kingcollege.ac.th",
     remark: "IT Support",
     createdAt: new Date("2024-01-20")
   },
@@ -55,7 +56,7 @@ const initialInternalEmails: InternalEmail[] = [
     id: "4",
     name: "Niran",
     surname: "Thanakit",
-    email: "niran.t@sisb.ac.th",
+    email: "niran.t@kingcollege.ac.th",
     remark: "Academic Director",
     createdAt: new Date("2024-03-05")
   },
@@ -63,16 +64,17 @@ const initialInternalEmails: InternalEmail[] = [
     id: "5",
     name: "Siriporn",
     surname: "Wongsiri",
-    email: "siriporn.w@sisb.ac.th",
+    email: "siriporn.w@kingcollege.ac.th",
     remark: "Operations Manager",
     createdAt: new Date("2024-02-28")
   }
 ]
 
-export function InternalEmailManagement({ 
-  title = "Internal Email Whitelist",
-  description = "Manage internal staff emails who receive receipt notifications"
+export function InternalEmailManagement({
+  title,
+  description
 }: InternalEmailManagementProps) {
+  const { t } = useLanguage()
   const [internalEmails, setInternalEmails] = useState<InternalEmail[]>(initialInternalEmails)
   const [isAddEmailOpen, setIsAddEmailOpen] = useState(false)
   const [isCsvUploadOpen, setIsCsvUploadOpen] = useState(false)
@@ -97,30 +99,30 @@ export function InternalEmailManagement({
   // Internal Email Management Functions
   const handleAddEmail = () => {
     if (!emailForm.name || !emailForm.surname || !emailForm.email) {
-      toast.error("Please fill in all required fields")
+      toast.error(t("internalEmail.fillRequiredFields"))
       return
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(emailForm.email)) {
-      toast.error("Please enter a valid email address")
+      toast.error(t("internalEmail.invalidEmailFormat"))
       return
     }
 
     // Check for duplicate email
     if (internalEmails.some(e => e.email === emailForm.email && e.id !== editingEmail?.id)) {
-      toast.error("This email address already exists")
+      toast.error(t("internalEmail.emailAlreadyExists"))
       return
     }
 
     if (editingEmail) {
       // Update existing email
-      setInternalEmails(internalEmails.map(email => 
-        email.id === editingEmail.id 
+      setInternalEmails(internalEmails.map(email =>
+        email.id === editingEmail.id
           ? { ...email, ...emailForm }
           : email
       ))
-      toast.success("Internal email updated successfully!")
+      toast.success(t("internalEmail.emailUpdatedSuccess"))
     } else {
       // Add new email
       const newEmail: InternalEmail = {
@@ -129,7 +131,7 @@ export function InternalEmailManagement({
         createdAt: new Date()
       }
       setInternalEmails([...internalEmails, newEmail])
-      toast.success("Internal email added successfully!")
+      toast.success(t("internalEmail.emailAddedSuccess"))
     }
 
     // Reset form
@@ -151,7 +153,7 @@ export function InternalEmailManagement({
 
   const handleDeleteEmail = (id: string) => {
     setInternalEmails(internalEmails.filter(email => email.id !== id))
-    toast.success("Internal email removed successfully!")
+    toast.success(t("internalEmail.emailRemovedSuccess"))
   }
 
   // CSV Upload Functions
@@ -166,7 +168,7 @@ export function InternalEmailManagement({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    toast.success("CSV template downloaded successfully!")
+    toast.success(t("internalEmail.templateDownloadSuccess"))
   }
 
   const processCsvFile = (file: File) => {
@@ -176,7 +178,7 @@ export function InternalEmailManagement({
       const lines = csv.split('\n').filter(line => line.trim() !== '')
       
       if (lines.length === 0) {
-        toast.error("CSV file is empty")
+        toast.error(t("internalEmail.csvFileEmpty"))
         return
       }
 
@@ -187,7 +189,7 @@ export function InternalEmailManagement({
       // Check if headers match expected format
       const hasValidHeaders = expectedHeaders.every(h => header.includes(h))
       if (!hasValidHeaders) {
-        toast.error("Invalid CSV format. Expected headers: name, surname, email, remark")
+        toast.error(t("internalEmail.invalidCsvFormat"))
         return
       }
 
@@ -242,16 +244,16 @@ export function InternalEmailManagement({
 
       setCsvData(validEmails)
       setCsvErrors(errors)
-      
+
       if (validEmails.length === 0 && errors.length > 0) {
-        toast.error("No valid records found in CSV file")
+        toast.error(t("internalEmail.noValidRecords"))
       } else {
-        toast.success(`${validEmails.length} valid records found${errors.length > 0 ? `, ${errors.length} errors` : ''}`)
+        toast.success(`${validEmails.length} ${t("internalEmail.validRecordsFound")}${errors.length > 0 ? `, ${errors.length} ${t("internalEmail.errors")}` : ''}`)
       }
     }
-    
+
     reader.onerror = () => {
-      toast.error("Error reading CSV file")
+      toast.error(t("internalEmail.errorReadingCsv"))
     }
     
     reader.readAsText(file)
@@ -261,7 +263,7 @@ export function InternalEmailManagement({
     const file = event.target.files?.[0]
     if (file) {
       if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-        toast.error("Please select a CSV file")
+        toast.error(t("internalEmail.pleaseSelectCsv"))
         return
       }
       setCsvFile(file)
@@ -271,7 +273,7 @@ export function InternalEmailManagement({
 
   const importCsvData = async () => {
     if (csvData.length === 0) {
-      toast.error("No valid data to import")
+      toast.error(t("internalEmail.noValidDataToImport"))
       return
     }
 
@@ -288,7 +290,7 @@ export function InternalEmailManagement({
       }))
       
       setInternalEmails([...internalEmails, ...newEmails])
-      toast.success(`Successfully imported ${newEmails.length} email(s)`)
+      toast.success(`${t("internalEmail.successfullyImported")} ${newEmails.length} ${t("internalEmail.emails")}`)
       
       // Reset CSV upload state
       setIsCsvUploadOpen(false)
@@ -299,7 +301,7 @@ export function InternalEmailManagement({
         fileInputRef.current.value = ''
       }
     } catch (error) {
-      toast.error("Error importing CSV data")
+      toast.error(t("internalEmail.errorImportingCsv"))
     } finally {
       setIsProcessingCsv(false)
     }
@@ -347,9 +349,9 @@ export function InternalEmailManagement({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h3 className="text-lg font-medium">{title}</h3>
+          <h3 className="text-lg font-medium">{title || t("internalEmail.title")}</h3>
           <p className="text-sm text-muted-foreground">
-            {description}
+            {description || t("internalEmail.description")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -360,65 +362,65 @@ export function InternalEmailManagement({
                 setEmailForm({ name: "", surname: "", email: "", remark: "" })
               }}>
                 <UserPlus className="w-4 h-4" />
-                Add Internal Email
+                {t("internalEmail.addInternalEmail")}
               </Button>
             </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
-                {editingEmail ? "Edit Internal Email" : "Add Internal Email"}
+                {editingEmail ? t("internalEmail.editInternalEmail") : t("internalEmail.addInternalEmail")}
               </DialogTitle>
               <DialogDescription>
-                {editingEmail ? "Update the internal email information below." : "Add a new internal email to the notification whitelist."}
+                {editingEmail ? t("internalEmail.editDialogDescription") : t("internalEmail.addDialogDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="name">{t("common.name")} *</Label>
                   <Input
                     id="name"
                     value={emailForm.name}
                     onChange={(e) => setEmailForm({ ...emailForm, name: e.target.value })}
-                    placeholder="Enter first name"
+                    placeholder={t("internalEmail.enterFirstName")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="surname">Surname *</Label>
+                  <Label htmlFor="surname">{t("internalEmail.surname")} *</Label>
                   <Input
                     id="surname"
                     value={emailForm.surname}
                     onChange={(e) => setEmailForm({ ...emailForm, surname: e.target.value })}
-                    placeholder="Enter last name"
+                    placeholder={t("internalEmail.enterLastName")}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email">{t("internalEmail.emailAddress")} *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={emailForm.email}
                   onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
-                  placeholder="Enter email address"
+                  placeholder={t("internalEmail.enterEmailAddress")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="remark">Remark</Label>
+                <Label htmlFor="remark">{t("internalEmail.remark")}</Label>
                 <Textarea
                   id="remark"
                   value={emailForm.remark}
                   onChange={(e) => setEmailForm({ ...emailForm, remark: e.target.value })}
-                  placeholder="Enter position or department"
+                  placeholder={t("internalEmail.enterPositionOrDepartment")}
                   rows={3}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddEmailOpen(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={handleAddEmail}>
-                  {editingEmail ? "Update" : "Add"} Email
+                  {editingEmail ? t("internalEmail.updateEmail") : t("internalEmail.addEmail")}
                 </Button>
               </div>
             </div>
@@ -429,21 +431,21 @@ export function InternalEmailManagement({
           <DialogTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2">
               <Upload className="w-4 h-4" />
-              Batch CSV Upload
+              {t("internalEmail.batchCsvUpload")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Batch CSV Upload</DialogTitle>
+              <DialogTitle>{t("internalEmail.batchCsvUpload")}</DialogTitle>
               <DialogDescription>
-                Upload a CSV file to add multiple internal emails at once.
+                {t("internalEmail.batchCsvUploadDescription")}
               </DialogDescription>
             </DialogHeader>
             
             <Tabs defaultValue="upload" className="pt-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="upload">Upload CSV</TabsTrigger>
-                <TabsTrigger value="preview" disabled={csvData.length === 0}>Preview ({csvData.length})</TabsTrigger>
+                <TabsTrigger value="upload">{t("internalEmail.uploadCsv")}</TabsTrigger>
+                <TabsTrigger value="preview" disabled={csvData.length === 0}>{t("internalEmail.preview")} ({csvData.length})</TabsTrigger>
               </TabsList>
               
               <TabsContent value="upload" className="space-y-4">
@@ -451,9 +453,9 @@ export function InternalEmailManagement({
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <FileSpreadsheet className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <div className="space-y-2">
-                      <h4 className="text-lg font-medium">Upload CSV File</h4>
+                      <h4 className="text-lg font-medium">{t("internalEmail.uploadCsvFile")}</h4>
                       <p className="text-sm text-muted-foreground">
-                        Select a CSV file with the following columns: name, surname, email, remark
+                        {t("internalEmail.csvColumnsDescription")}
                       </p>
                       <input
                         ref={fileInputRef}
@@ -464,20 +466,20 @@ export function InternalEmailManagement({
                         id="csv-upload"
                       />
                       <div className="flex gap-2 justify-center mt-4">
-                        <Button 
+                        <Button
                           onClick={() => fileInputRef.current?.click()}
                           className="flex items-center gap-2"
                         >
                           <Upload className="w-4 h-4" />
-                          Choose CSV File
+                          {t("internalEmail.chooseCsvFile")}
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={downloadCsvTemplate}
                           className="flex items-center gap-2"
                         >
                           <Download className="w-4 h-4" />
-                          Download Template
+                          {t("internalEmail.downloadTemplate")}
                         </Button>
                       </div>
                     </div>
@@ -487,18 +489,18 @@ export function InternalEmailManagement({
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-center gap-2">
                         <FileSpreadsheet className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium">Selected File:</span>
+                        <span className="font-medium">{t("internalEmail.selectedFile")}:</span>
                         <span>{csvFile.name}</span>
                       </div>
                       <div className="mt-2 text-sm text-muted-foreground">
-                        Size: {(csvFile.size / 1024).toFixed(2)} KB
+                        {t("internalEmail.size")}: {(csvFile.size / 1024).toFixed(2)} KB
                       </div>
                     </div>
                   )}
 
                   {csvErrors.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <h5 className="font-medium text-red-800 mb-2">Validation Errors:</h5>
+                      <h5 className="font-medium text-red-800 mb-2">{t("internalEmail.validationErrors")}:</h5>
                       <ul className="text-sm text-red-700 space-y-1">
                         {csvErrors.map((error, index) => (
                           <li key={index}>• {error}</li>
@@ -511,15 +513,15 @@ export function InternalEmailManagement({
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h5 className="font-medium text-green-800">Ready to Import</h5>
-                          <p className="text-sm text-green-700">{csvData.length} valid email(s) found</p>
+                          <h5 className="font-medium text-green-800">{t("internalEmail.readyToImport")}</h5>
+                          <p className="text-sm text-green-700">{csvData.length} {t("internalEmail.validEmailsFound")}</p>
                         </div>
-                        <Button 
+                        <Button
                           onClick={importCsvData}
                           disabled={isProcessingCsv}
                           className="flex items-center gap-2"
                         >
-                          {isProcessingCsv ? "Processing..." : "Import Now"}
+                          {isProcessingCsv ? t("internalEmail.processing") : t("internalEmail.importNow")}
                         </Button>
                       </div>
                     </div>
@@ -530,15 +532,15 @@ export function InternalEmailManagement({
               <TabsContent value="preview" className="space-y-4">
                 {csvData.length > 0 && (
                   <div>
-                    <h5 className="font-medium mb-3">Preview Import Data</h5>
+                    <h5 className="font-medium mb-3">{t("internalEmail.previewImportData")}</h5>
                     <div className="border rounded-lg max-h-96 overflow-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Surname</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Remark</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead>{t("internalEmail.surname")}</TableHead>
+                            <TableHead>{t("common.email")}</TableHead>
+                            <TableHead>{t("internalEmail.remark")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -555,14 +557,14 @@ export function InternalEmailManagement({
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
                       <Button variant="outline" onClick={() => setIsCsvUploadOpen(false)}>
-                        Cancel
+                        {t("common.cancel")}
                       </Button>
-                      <Button 
+                      <Button
                         onClick={importCsvData}
                         disabled={isProcessingCsv}
                         className="flex items-center gap-2"
                       >
-                        {isProcessingCsv ? "Processing..." : "Import All"}
+                        {isProcessingCsv ? t("internalEmail.processing") : t("internalEmail.importAll")}
                       </Button>
                     </div>
                   </div>
@@ -580,7 +582,7 @@ export function InternalEmailManagement({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Emails</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("internalEmail.totalEmails")}</p>
                 <p className="text-2xl font-bold">{totalEmails}</p>
               </div>
               <Users className="w-8 h-8 text-muted-foreground" />
@@ -591,9 +593,9 @@ export function InternalEmailManagement({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Email Domains</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("internalEmail.emailDomains")}</p>
                 <p className="text-2xl font-bold">{new Set(internalEmails.map(email => email.email.split('@')[1])).size}</p>
-                <p className="text-xs text-muted-foreground mt-1">Unique domains</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("internalEmail.uniqueDomains")}</p>
               </div>
               <Mail className="w-8 h-8 text-muted-foreground" />
             </div>
@@ -607,14 +609,14 @@ export function InternalEmailManagement({
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
               <Input
-                placeholder="Search by name, email, or remark..."
+                placeholder={t("internalEmail.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className=""
               />
             </div>
             <div className="text-sm text-muted-foreground">
-              {filteredInternalEmails.length} of {internalEmails.length} emails
+              {filteredInternalEmails.length} {t("internalEmail.of")} {internalEmails.length} {t("internalEmail.emails")}
             </div>
           </div>
         </CardContent>
@@ -625,21 +627,21 @@ export function InternalEmailManagement({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="w-5 h-5" />
-            Internal Email List
+            {t("internalEmail.internalEmailList")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {filteredInternalEmails.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No emails found</h3>
+              <h3 className="text-lg font-medium mb-2">{t("internalEmail.noEmailsFound")}</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm ? "No emails match your search criteria" : "No internal emails have been added yet"}
+                {searchTerm ? t("internalEmail.noEmailsMatchSearch") : t("internalEmail.noEmailsAddedYet")}
               </p>
               {!searchTerm && (
                 <Button onClick={() => setIsAddEmailOpen(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Add First Email
+                  {t("internalEmail.addFirstEmail")}
                 </Button>
               )}
             </div>
@@ -649,29 +651,29 @@ export function InternalEmailManagement({
                 <TableRow>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                     <div className="flex items-center gap-1">
-                      Name
+                      {t("common.name")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("email")}>
                     <div className="flex items-center gap-1">
-                      Email
+                      {t("common.email")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("remark")}>
                     <div className="flex items-center gap-1">
-                      Remark
+                      {t("internalEmail.remark")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
                     <div className="flex items-center gap-1">
-                      Added
+                      {t("internalEmail.added")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -712,19 +714,18 @@ export function InternalEmailManagement({
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Internal Email</AlertDialogTitle>
+                              <AlertDialogTitle>{t("internalEmail.deleteInternalEmail")}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to remove "{email.name} {email.surname}" from the internal email whitelist?
-                                This action cannot be undone.
+                                {t("internalEmail.deleteConfirmation", { name: `${email.name} ${email.surname}` })}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeleteEmail(email.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
-                                Delete
+                                {t("common.delete")}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

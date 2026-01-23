@@ -309,7 +309,7 @@ export default function App() {
           onBack={navigateBack}
         />
       case "invoice-management":
-        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} />
+        return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} showTypeTabs={true} />
       case "invoice-creation":
         return <InvoiceCreation
           defaultCategory={subPageParams?.defaultCategory}

@@ -36,7 +36,7 @@ import {
   Zap,
   ArrowUpDown
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 
@@ -112,7 +112,7 @@ const mockTemplates: EmailTemplate[] = [
     id: "1",
     name: "Standard Invoice Email (English)",
     language: "en",
-    subject: "Invoice for {studentName} - Grade {grade} | SISB School",
+    subject: "Invoice for {studentName} - Grade {grade} | King's College",
     body: `Dear {parentName},
 
 We hope this email finds you well. Please find attached the invoice for {studentName} (Student ID: {studentId}) for the current term.
@@ -125,15 +125,15 @@ Invoice Details:
 
 Please ensure payment is made by the due date specified in the invoice. If you have any questions or concerns regarding this invoice, please don't hesitate to contact our finance office.
 
-Thank you for your continued trust in SISB School.`,
-    footerText: "Best regards,\nSISB School Finance Department\nEmail: finance@sisb.ac.th\nPhone: +66 2 xxx xxxx",
+Thank you for your continued trust in King's College.`,
+    footerText: "Best regards,\nKing's College Finance Department\nEmail: finance@kingcollege.ac.th\nPhone: +66 2 xxx xxxx",
     isDefault: true
   },
   {
     id: "2",
     name: "Standard Invoice Email (Thai)",
     language: "th",
-    subject: "ใบแจ้งหนี้สำหรับ {studentName} - ชั้น {grade} | โรงเรียน SISB",
+    subject: "ใบแจ้งหนี้สำหรับ {studentName} - ชั้น {grade} | King's College",
     body: `เรียน ท่าน{parentName}
 
 ทางโรงเรียนหวังว่าท่านจะมีสุขภาพที่แข็งแรง กรุณาดูใบแจ้งหนี้ที่แนบมาสำหรับนักเรียน {studentName} (รหัสนักเรียน: {studentId}) สำหรับภาคเรียนนี้
@@ -146,15 +146,15 @@ Thank you for your continued trust in SISB School.`,
 
 กรุณาชำระเงินภายในกำหนดที่ระบุในใบแจ้งหนี้ หากท่านมีคำถามหรือข้อสงสัยเกี่ยวกับใบแจ้งหนี้นี้ กรุณาติดต่อแผนกการเงินของโรงเรียน
 
-ขอขอบคุณที่ไว้วางใจในโรงเรียน SISB`,
-    footerText: "ด้วยความเคารพ,\nแผนกการเงิน โรงเรียน SISB\nอีเมล: finance@sisb.ac.th\nโทรศัพท์: +66 2 xxx xxxx",
+ขอขอบคุณที่ไว้วางใจในKing's College`,
+    footerText: "ด้วยความเคารพ,\nแผนกการเงิน King's College\nอีเมล: finance@kingcollege.ac.th\nโทรศัพท์: +66 2 xxx xxxx",
     isDefault: true
   },
   {
     id: "3",
     name: "Standard Invoice Email (Chinese)",
     language: "zh",
-    subject: "{studentName} - {grade}年级账单 | SISB学校",
+    subject: "{studentName} - {grade}年级账单 | King's College",
     body: `亲爱的{parentName}，
 
 希望您身体健康。请查看附件中{studentName}（学生编号：{studentId}）本学期的账单。
@@ -167,8 +167,8 @@ Thank you for your continued trust in SISB School.`,
 
 请在账单上指定的截止日期前付款。如果您对此账单有任何疑问，请随时联系我们的财务办公室。
 
-感谢您对SISB学校的持续信任。`,
-    footerText: "此致\n敬礼\nSISB学校财务部\n邮箱：finance@sisb.ac.th\n电话：+66 2 xxx xxxx",
+感谢您对King's College的持续信任。`,
+    footerText: "此致\n敬礼\nKing's College财务部\n邮箱：finance@kingcollege.ac.th\n电话：+66 2 xxx xxxx",
     isDefault: true
   }
 ]
@@ -197,7 +197,7 @@ const mockEmailJobs: EmailJob[] = [
     createdAt: new Date("2025-08-25T14:30:00"),
     createdBy: "Academic Office",
     criteria: {
-      grades: ["Year 10", "Year 11", "Year 12"]
+      grades: ["Year 10", "Year 11", "Year 12", "Year 13"]
     }
   },
   {
@@ -215,7 +215,7 @@ const mockEmailJobs: EmailJob[] = [
 ]
 
 const grades = [
-  "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
+  "Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
   "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 

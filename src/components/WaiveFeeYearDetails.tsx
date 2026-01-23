@@ -22,6 +22,7 @@ import {
   XCircle,
   ArrowUpDown
 } from "lucide-react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface FamilyDetail {
   familyCode: string
@@ -55,6 +56,7 @@ interface WaiveFeeYearDetailsProps {
 }
 
 export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetailsProps) {
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
 
@@ -230,13 +232,13 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
   const getStatusBadge = (status: 'active' | 'completed' | 'waiting' | 'upcoming') => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("waiveFee.active")}</Badge>
       case 'completed':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Completed</Badge>
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t("waiveFee.completed")}</Badge>
       case 'waiting':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-300">Waiting</Badge>
+        return <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-300">{t("waiveFee.waiting")}</Badge>
       case 'upcoming':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">Upcoming</Badge>
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">{t("waiveFee.upcoming")}</Badge>
     }
   }
 
@@ -276,13 +278,13 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Waiver Details - {academicYear}</h2>
+          <h2 className="mb-2">{t("waiveFee.waiverDetails")} - {academicYear}</h2>
           <p className="text-muted-foreground">
-            Detailed family and student waiver information for academic year {academicYear}
+            {t("waiveFee.waiverDetailsDescription").replace("{year}", academicYear)}
           </p>
         </div>
         <Button onClick={onBack} variant="outline">
-          Back to Dashboard
+          {t("waiveFee.backToDashboard")}
         </Button>
       </div>
 
@@ -290,52 +292,52 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Family</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.totalFamilies")}</CardTitle>
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalFamilies}</div>
             <p className="text-xs text-muted-foreground">
-              family in waiver program
+              {t("waiveFee.familyInWaiverProgram")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Discounts</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.activeDiscounts")}</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeDiscounts}</div>
             <p className="text-xs text-muted-foreground">
-              family with active discounts
+              {t("waiveFee.familyWithActiveDiscounts")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Students Benefiting</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.studentsBenefiting")}</CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalStudentsReceiving}</div>
             <p className="text-xs text-muted-foreground">
-              students receiving waivers
+              {t("waiveFee.studentsReceivingWaivers")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("waiveFee.totalAmount")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
             <p className="text-xs text-muted-foreground">
-              total waiver amount
+              {t("waiveFee.totalWaiverAmountDesc")}
             </p>
           </CardContent>
         </Card>
@@ -346,26 +348,26 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-2 min-w-[150px]">
-              <Label>Status Filter</Label>
+              <Label>{t("waiveFee.statusFilter")}</Label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="waiting">Waiting</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                  <SelectItem value="active">{t("waiveFee.active")}</SelectItem>
+                  <SelectItem value="completed">{t("waiveFee.completed")}</SelectItem>
+                  <SelectItem value="waiting">{t("waiveFee.waiting")}</SelectItem>
+                  <SelectItem value="upcoming">{t("waiveFee.upcoming")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2 flex-1 min-w-[300px]">
-              <Label>Search</Label>
+              <Label>{t("common.search")}</Label>
               <div className="relative">
                 <Input
-                  placeholder="Search by family code or student name..."
+                  placeholder={t("waiveFee.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className=""
@@ -375,7 +377,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
 
             <Button variant="outline" onClick={resetFilters} className="flex items-center gap-2">
               <RotateCcw className="w-4 h-4" />
-              Reset
+              {t("common.reset")}
             </Button>
           </div>
         </CardContent>
@@ -386,10 +388,10 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Family Waiver Details
+            {t("waiveFee.familyWaiverDetails")}
           </CardTitle>
           <CardDescription>
-            Complete list of family and their sibling discount status for {academicYear}
+            {t("waiveFee.familyWaiverDetailsDescription").replace("{year}", academicYear)}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -399,43 +401,43 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                 <TableRow>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyCode")}>
                     <div className="flex items-center gap-1">
-                      Family Code
+                      {t("waiveFee.familyCode")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("olderSiblingName")}>
                     <div className="flex items-center gap-1">
-                      Older Sibling
+                      {t("waiveFee.olderSiblingColumn")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("olderSiblingStatus")}>
                     <div className="flex items-center gap-1">
-                      Status
+                      {t("common.status")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead>{t("waiveFee.progress")}</TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("youngerSiblingName")}>
                     <div className="flex items-center gap-1">
-                      Younger Sibling
+                      {t("waiveFee.youngerSiblingColumn")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("youngerSiblingStatus")}>
                     <div className="flex items-center gap-1">
-                      Status
+                      {t("common.status")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead>{t("waiveFee.progress")}</TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyTotalDiscount")}>
                     <div className="flex items-center gap-1">
-                      Family Total
+                      {t("waiveFee.familyTotal")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -450,7 +452,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                       <div className="space-y-1">
                         <div className="font-medium">{family.olderSibling.name}</div>
                         <div className="text-sm text-muted-foreground">{family.olderSibling.grade}</div>
-                        <div className="text-xs text-muted-foreground">Period: {family.olderSibling.discountPeriod}</div>
+                        <div className="text-xs text-muted-foreground">{t("waiveFee.period")}: {family.olderSibling.discountPeriod}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -466,7 +468,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                           className="h-2"
                         />
                         <div className="text-xs text-muted-foreground">
-                          {family.olderSibling.termsReceived}/{family.olderSibling.totalTerms} terms
+                          {family.olderSibling.termsReceived}/{family.olderSibling.totalTerms} {t("waiveFee.terms")}
                         </div>
                         <div className="text-xs font-medium">
                           {formatCurrency(family.olderSibling.amountReceived)}/{formatCurrency(family.olderSibling.totalAmount)}
@@ -479,7 +481,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                       <div className="space-y-1">
                         <div className="font-medium">{family.youngerSibling.name}</div>
                         <div className="text-sm text-muted-foreground">{family.youngerSibling.grade}</div>
-                        <div className="text-xs text-muted-foreground">Period: {family.youngerSibling.discountPeriod}</div>
+                        <div className="text-xs text-muted-foreground">{t("waiveFee.period")}: {family.youngerSibling.discountPeriod}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -495,7 +497,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                           className="h-2"
                         />
                         <div className="text-xs text-muted-foreground">
-                          {family.youngerSibling.termsReceived}/{family.youngerSibling.totalTerms} terms
+                          {family.youngerSibling.termsReceived}/{family.youngerSibling.totalTerms} {t("waiveFee.terms")}
                         </div>
                         <div className="text-xs font-medium">
                           {formatCurrency(family.youngerSibling.amountReceived)}/{formatCurrency(family.youngerSibling.totalAmount)}
@@ -509,7 +511,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                         {formatCurrency(family.familyTotalDiscount)}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        of ฿150,000 total
+                        {t("waiveFee.ofTotalAmount")}
                       </div>
                     </TableCell>
 
@@ -527,9 +529,9 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
           {filteredFamilies.length === 0 && (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No family found matching your filters</p>
+              <p className="text-muted-foreground">{t("waiveFee.noFamilyFound")}</p>
               <Button variant="outline" onClick={resetFilters} className="mt-2">
-                Clear Filters
+                {t("common.clearFilters")}
               </Button>
             </div>
           )}

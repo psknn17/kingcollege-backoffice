@@ -41,7 +41,7 @@ import {
   Search
 } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { WaiveFeeManagement } from "./WaiveFeeManagement"
 import { useStudents } from "@/contexts/StudentContext"
 
@@ -218,6 +218,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
     const year10Students = allStudents.filter(s => s.yearGroup === "Year 10").slice(0, 3)
     const year11Students = allStudents.filter(s => s.yearGroup === "Year 11").slice(0, 2)
     const year12Students = allStudents.filter(s => s.yearGroup === "Year 12").slice(0, 3)
+    const year13Students = allStudents.filter(s => s.yearGroup === "Year 13").slice(0, 4)
     const year3Students = allStudents.filter(s => s.yearGroup === "Year 3").slice(0, 4)
     const year4Students = allStudents.filter(s => s.yearGroup === "Year 4").slice(0, 3)
     const year5Students = allStudents.filter(s => s.yearGroup === "Year 5").slice(0, 2)
@@ -246,7 +247,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
       {
         id: "GRP003",
         name: "Senior School Merit",
-        students: [...year11Students, ...year12Students],
+        students: [...year11Students, ...year12Students, ...year13Students],
         discountType: "fixed" as "percentage" | "fixed",
         discountPercentage: 0,
         fixedAmount: 25000,
@@ -328,6 +329,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
   const [studentSearchResults, setStudentSearchResults] = useState<Student[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const [currentStudentsSearch, setCurrentStudentsSearch] = useState("")
 
   
   const getUsageProgress = (used: number, limit: number) => {
@@ -503,6 +505,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
       isActive: true
     })
     setStudentInput("")
+    setCurrentStudentsSearch("")
     setUploadedFile(null)
     setFileParseErrors([])
     setIsProcessingFile(false)
@@ -665,7 +668,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
       ? groupForm.discountPercentage > 0
       : groupForm.fixedAmount > 0
 
-    if (!groupForm.name || !hasValidDiscount || groupForm.departments.length === 0) {
+    if (!groupForm.name || !hasValidDiscount) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -679,7 +682,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
         fixedAmount: groupForm.fixedAmount,
-        departments: groupForm.departments,
+        departments: ["Tuition"], // Always set to Tuition for Tuition Discount Groups
         isActive: groupForm.isActive
       }
 
@@ -695,7 +698,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
         fixedAmount: groupForm.fixedAmount,
-        departments: groupForm.departments,
+        departments: ["Tuition"], // Always set to Tuition for Tuition Discount Groups
         isActive: groupForm.isActive
       }
 
@@ -734,8 +737,6 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
       setDeleteConfirmDialog({isOpen: false, group: null})
     }
   }
-
-
 
   const handleSaveDiscount = () => {
     if (!formData.code || !formData.startDate || !formData.endDate) {
@@ -842,15 +843,6 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="mb-2">{t("discount.title")}</h2>
-          <p className="text-muted-foreground">
-            {t("discount.subtitle")}
-          </p>
-        </div>
-      </div>
-
       <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="space-y-6">
         <TabsContent value="overview" className="space-y-6">
           {/* Overview Dashboard */}
@@ -1003,12 +995,9 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         <TabsContent value="groups" className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium">Student Groups & Whitelist</h3>
-              <p className="text-sm text-muted-foreground">
-                Create student groups with specific discount rates and manage discount whitelist
-              </p>
+              <h3 className="font-medium">{t("menu.studentGroups")}</h3>
             </div>
-            
+
             <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => resetGroupForm()}>
@@ -1075,36 +1064,6 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
                         />
                       </div>
                     )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Applicable Departments</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {["Tuition", "School Bus"].map(dept => (
-                        <div key={dept} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`group-${dept}`}
-                            checked={groupForm.departments.includes(dept)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setGroupForm(prev => ({
-                                  ...prev,
-                                  departments: [...prev.departments, dept]
-                                }))
-                              } else {
-                                setGroupForm(prev => ({
-                                  ...prev,
-                                  departments: prev.departments.filter(d => d !== dept)
-                                }))
-                              }
-                            }}
-                            className="rounded border-gray-300"
-                          />
-                          <Label htmlFor={`group-${dept}`} className="text-sm">{dept}</Label>
-                        </div>
-                      ))}
-                    </div>
                   </div>
 
                   {/* Student ID Input Section */}
@@ -1288,9 +1247,6 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                             {groupForm.selectedStudents.map(student => (
                               <div key={student.id} className={`flex items-center justify-between p-2 rounded text-sm ${student.isActive === false ? 'bg-muted/30 opacity-60' : 'bg-muted/50'}`}>
                                 <div className="flex items-center gap-2">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${student.isActive === false ? 'bg-gray-200' : 'bg-primary/10'}`}>
-                                    {student.name.charAt(0)}
-                                  </div>
                                   <div>
                                     <span className="font-medium">{student.name}</span>
                                     <span className="text-muted-foreground ml-2">({student.id})</span>
@@ -1569,36 +1525,6 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Applicable Departments</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {["Tuition", "School Bus"].map(dept => (
-                      <div key={dept} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`edit-group-${dept}`}
-                          checked={groupForm.departments.includes(dept)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setGroupForm(prev => ({
-                                ...prev,
-                                departments: [...prev.departments, dept]
-                              }))
-                            } else {
-                              setGroupForm(prev => ({
-                                ...prev,
-                                departments: prev.departments.filter(d => d !== dept)
-                              }))
-                            }
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                        <Label htmlFor={`edit-group-${dept}`} className="text-sm">{dept}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Student Management Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -1769,14 +1695,29 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
                     <TabsContent value="current-students" className="space-y-3">
                       {groupForm.selectedStudents.length > 0 ? (
-                        <div className="border rounded-lg p-3 max-h-60 overflow-y-auto">
-                          <div className="grid gap-2">
-                            {groupForm.selectedStudents.map(student => (
+                        <div className="space-y-3">
+                          {/* Search Input */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              value={currentStudentsSearch}
+                              onChange={(e) => setCurrentStudentsSearch(e.target.value)}
+                              placeholder="Search students by name or ID..."
+                              className="pl-10"
+                            />
+                          </div>
+
+                          {/* Student List */}
+                          <div className="border rounded-lg p-3 max-h-60 overflow-y-auto">
+                            <div className="grid gap-2">
+                              {groupForm.selectedStudents
+                                .filter(student =>
+                                  student.name.toLowerCase().includes(currentStudentsSearch.toLowerCase()) ||
+                                  student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
+                                )
+                                .map(student => (
                               <div key={student.id} className={`flex items-center justify-between p-2 rounded text-sm ${student.isActive === false ? 'bg-muted/30 opacity-60' : 'bg-muted/50'}`}>
                                 <div className="flex items-center gap-2">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${student.isActive === false ? 'bg-gray-200' : 'bg-primary/10'}`}>
-                                    {student.name.charAt(0)}
-                                  </div>
                                   <div>
                                     <span className="font-medium">{student.name}</span>
                                     <span className="text-muted-foreground ml-2">({student.id})</span>
@@ -1802,7 +1743,16 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                   </button>
                                 </div>
                               </div>
-                            ))}
+                                ))}
+                                {groupForm.selectedStudents.filter(student =>
+                                  student.name.toLowerCase().includes(currentStudentsSearch.toLowerCase()) ||
+                                  student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
+                                ).length === 0 && currentStudentsSearch && (
+                                  <div className="text-center py-4 text-muted-foreground text-sm">
+                                    No students found matching "{currentStudentsSearch}"
+                                  </div>
+                                )}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -2086,16 +2036,18 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year-group">Year Group</Label>
-                <Select 
-                  value={individualStudentForm.yearGroup} 
+                <Select
+                  value={individualStudentForm.yearGroup}
                   onValueChange={(value) => setIndividualStudentForm({...individualStudentForm, yearGroup: value})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select year group" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Pre-Nursery">Pre-Nursery</SelectItem>
+                    <SelectItem value="Nursery">Nursery</SelectItem>
                     <SelectItem value="Reception">Reception</SelectItem>
-                    {Array.from({length: 12}, (_, i) => (
+                    {Array.from({length: 13}, (_, i) => (
                       <SelectItem key={i + 1} value={`Year ${i + 1}`}>Year {i + 1}</SelectItem>
                     ))}
                   </SelectContent>

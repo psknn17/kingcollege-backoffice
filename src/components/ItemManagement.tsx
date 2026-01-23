@@ -10,9 +10,7 @@ import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
 import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard } from "lucide-react"
 import { ViewModal } from "./ViewModal"
-import { toast } from "sonner"
-import { useDiscountOptions } from "../contexts/DiscountOptionsContext"
-import { useAcademicYears } from "../contexts/AcademicYearContext"
+import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 interface Item {
@@ -21,9 +19,13 @@ interface Item {
   name: string
   description: string
   amount: number
-  category: string
+  category?: string
+  nominalCode?: string // Account/Nominal Code for accounting
+  documentType?: string // SI (Sales Invoice) or CI (Credit Invoice)
   isActive: boolean
   applicableGrades: string[]
+  appointmentDate?: string
+  invoiceType?: "student" | "external" | "eca"
 }
 
 interface ItemTemplate {
@@ -33,155 +35,327 @@ interface ItemTemplate {
   items: string[] // Item IDs
   applicableGrades: string[]
   isActive: boolean
+  invoiceType?: "student" | "external"
 }
 
-const grades = ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+const grades = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
 const categories = ["Tuition", "School Bus", "ECA", "Trip & Other Activity"]
+const externalCategories = ["Rental", "Catering", "Service", "Event", "Other"]
+const afterSchoolCategories = ["Field Trip", "Camp", "Sports Event", "Cultural Event", "Workshop"]
+const eventCategories = ["International Exam", "English Proficiency", "Competition", "School Exam", "Certification"]
+const summerCategories = ["Annual Service", "Term Service", "Monthly Service", "Special Service"]
 
 const mockItems: Item[] = [
   // Tuition items
   {
     id: "item-001",
     itemCode: "TUI-001",
-    name: "Term 1 Tuition Fee",
-    description: "First term tuition payment for academic year",
-    amount: 150000,
+    name: "Application Fee",
+    description: "Non-refundable application fee for new students",
+    amount: 5000,
     category: "Tuition",
+    nominalCode: "4110001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-002",
     itemCode: "TUI-002",
-    name: "Term 2 Tuition Fee",
-    description: "Second term tuition payment for academic year",
-    amount: 150000,
+    name: "Registration Fee",
+    description: "Non-refundable registration fee for enrolled students",
+    amount: 225000,
     category: "Tuition",
+    nominalCode: "4110002",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "item-030",
+    itemCode: "TUI-006",
+    name: "Security Deposit",
+    description: "Refundable security deposit upon graduation or withdrawal",
+    amount: 200000,
+    category: "Tuition",
+    nominalCode: "2130006",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-003",
     itemCode: "TUI-003",
-    name: "Registration Fee",
-    description: "Annual registration and administrative fee",
-    amount: 25000,
+    name: "Term 1 Tuition Fee",
+    description: "First term tuition payment for academic year",
+    amount: 150000,
     category: "Tuition",
+    nominalCode: "4110003",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-004",
     itemCode: "TUI-004",
+    name: "Term 2 Tuition Fee",
+    description: "Second term tuition payment for academic year",
+    amount: 150000,
+    category: "Tuition",
+    nominalCode: "4110004",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "item-031",
+    itemCode: "TUI-007",
+    name: "Term 3 Tuition Fee",
+    description: "Third term tuition payment for academic year",
+    amount: 150000,
+    category: "Tuition",
+    nominalCode: "4110007",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "item-029",
+    itemCode: "TUI-005",
     name: "Uniform & Textbooks",
     description: "School uniform and required textbooks",
     amount: 15000,
     category: "Tuition",
+    nominalCode: "4110005",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
-  },
-  // ECA items
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  }
+]
+
+// ECA items - Music Programs
+const mockECAItems: Item[] = [
+  // Piano
   {
     id: "item-005",
     itemCode: "ECA-001",
-    name: "Swimming Program",
-    description: "Swimming lessons and pool maintenance fee",
-    amount: 80000,
+    name: "Piano - Term 1",
+    description: "Piano lessons for Term 1 including practice materials",
+    amount: 8000,
     category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
     id: "item-006",
     itemCode: "ECA-002",
-    name: "Football Training",
-    description: "Professional football coaching and equipment",
-    amount: 60000,
+    name: "Piano - Term 2",
+    description: "Piano lessons for Term 2 including practice materials",
+    amount: 8000,
     category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
     id: "item-007",
     itemCode: "ECA-003",
-    name: "Music Lessons",
-    description: "Individual and group music instruction",
-    amount: 35000,
+    name: "Piano - Term 3",
+    description: "Piano lessons for Term 3 including practice materials",
+    amount: 8000,
     category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
+  // Guitar
   {
     id: "item-008",
     itemCode: "ECA-004",
-    name: "Art & Craft Program",
-    description: "Art supplies and creative activities",
-    amount: 42000,
+    name: "Guitar - Term 1",
+    description: "Guitar lessons for Term 1 including practice materials",
+    amount: 6000,
     category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
-  // Trip & Other Activity items
   {
     id: "item-009",
-    itemCode: "TRP-001",
-    name: "Bangkok City Tour",
-    description: "Educational city tour and cultural experience",
-    amount: 80000,
-    category: "Trip & Other Activity",
+    itemCode: "ECA-005",
+    name: "Guitar - Term 2",
+    description: "Guitar lessons for Term 2 including practice materials",
+    amount: 6000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
     id: "item-010",
-    itemCode: "TRP-002",
-    name: "Science Museum Trip",
-    description: "Interactive science learning experience",
-    amount: 45000,
-    category: "Trip & Other Activity",
+    itemCode: "ECA-006",
+    name: "Guitar - Term 3",
+    description: "Guitar lessons for Term 3 including practice materials",
+    amount: 6000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
+  // Violin
   {
     id: "item-011",
-    itemCode: "TRP-003",
-    name: "Annual Sports Day",
-    description: "School sports competition and activities",
-    amount: 15000,
-    category: "Trip & Other Activity",
+    itemCode: "ECA-007",
+    name: "Violin - Term 1",
+    description: "Violin lessons for Term 1 including practice materials",
+    amount: 7500,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
-  // School Bus items
   {
     id: "item-012",
-    itemCode: "BUS-001",
-    name: "Annual school bus service fee - zone 1 (one-way afternoon)",
-    description: "School bus service for zone 1, one-way afternoon route",
-    amount: 65000,
-    category: "School Bus",
+    itemCode: "ECA-008",
+    name: "Violin - Term 2",
+    description: "Violin lessons for Term 2 including practice materials",
+    amount: 7500,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
     id: "item-013",
-    itemCode: "BUS-002",
-    name: "Annual school bus service fee - zone 1 (round-trip)",
-    description: "School bus service for zone 1, round-trip",
-    amount: 55000,
-    category: "School Bus",
+    itemCode: "ECA-009",
+    name: "Violin - Term 3",
+    description: "Violin lessons for Term 3 including practice materials",
+    amount: 7500,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
+  // Drums
   {
     id: "item-014",
-    itemCode: "BUS-003",
-    name: "Annual school bus service fee - zone 2 (one-way morning)",
-    description: "School bus service for zone 2, one-way morning route",
-    amount: 90000,
-    category: "School Bus",
+    itemCode: "ECA-010",
+    name: "Drums - Term 1",
+    description: "Drum lessons for Term 1 including practice materials",
+    amount: 7000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
     isActive: true,
-    applicableGrades: ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  {
+    id: "item-015",
+    itemCode: "ECA-011",
+    name: "Drums - Term 2",
+    description: "Drum lessons for Term 2 including practice materials",
+    amount: 7000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  {
+    id: "item-016",
+    itemCode: "ECA-012",
+    name: "Drums - Term 3",
+    description: "Drum lessons for Term 3 including practice materials",
+    amount: 7000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  // Voice/Singing
+  {
+    id: "item-017",
+    itemCode: "ECA-013",
+    name: "Voice - Term 1",
+    description: "Voice and singing lessons for Term 1",
+    amount: 5000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  {
+    id: "item-018",
+    itemCode: "ECA-014",
+    name: "Voice - Term 2",
+    description: "Voice and singing lessons for Term 2",
+    amount: 5000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  {
+    id: "item-019",
+    itemCode: "ECA-015",
+    name: "Voice - Term 3",
+    description: "Voice and singing lessons for Term 3",
+    amount: 5000,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  // Music Theory
+  {
+    id: "item-020",
+    itemCode: "ECA-016",
+    name: "Music Theory - Term 1",
+    description: "Music theory and composition lessons for Term 1",
+    amount: 4500,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  {
+    id: "item-021",
+    itemCode: "ECA-017",
+    name: "Music Theory - Term 2",
+    description: "Music theory and composition lessons for Term 2",
+    amount: 4500,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  },
+  {
+    id: "item-022",
+    itemCode: "ECA-018",
+    name: "Music Theory - Term 3",
+    description: "Music theory and composition lessons for Term 3",
+    amount: 4500,
+    category: "ECA",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   }
 ]
 
@@ -201,28 +375,789 @@ const mockTemplates: ItemTemplate[] = [
     items: ["item-001", "item-002", "item-003"],
     applicableGrades: ["Year 1"],
     isActive: true
+  }
+]
+
+// Mock data for External Invoice items
+const mockExternalItems: Item[] = [
+  {
+    id: "ext-item-001",
+    itemCode: "EXT-001",
+    name: "Conference Room Rental",
+    description: "Full day conference room rental with AV equipment",
+    amount: 15000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
   },
   {
-    id: "template-003",
-    name: "Primary ECA Bundle",
-    description: "Popular ECA activities for primary students",
-    items: ["item-005", "item-007", "item-008"],
-    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    id: "ext-item-002",
+    itemCode: "EXT-002",
+    name: "Event Catering - Standard",
+    description: "Standard catering package per person",
+    amount: 350,
+    category: "Catering",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-003",
+    itemCode: "EXT-003",
+    name: "Event Catering - Premium",
+    description: "Premium catering package per person",
+    amount: 550,
+    category: "Catering",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-004",
+    itemCode: "EXT-004",
+    name: "Auditorium Rental - Half Day",
+    description: "Auditorium rental for 4 hours with basic setup",
+    amount: 25000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-005",
+    itemCode: "EXT-005",
+    name: "Auditorium Rental - Full Day",
+    description: "Auditorium rental for 8 hours with full setup",
+    amount: 45000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-006",
+    itemCode: "EXT-006",
+    name: "Sports Field Rental",
+    description: "Sports field rental per hour",
+    amount: 5000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-007",
+    itemCode: "EXT-007",
+    name: "Swimming Pool Rental",
+    description: "Swimming pool rental per hour",
+    amount: 8000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-008",
+    itemCode: "EXT-008",
+    name: "Parking Fee",
+    description: "Event parking fee per vehicle",
+    amount: 200,
+    category: "Service",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-009",
+    itemCode: "EXT-009",
+    name: "Technical Support",
+    description: "On-site technical support per hour",
+    amount: 1500,
+    category: "Service",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-010",
+    itemCode: "EXT-010",
+    name: "Event Coordination Fee",
+    description: "Event coordination and management fee",
+    amount: 10000,
+    category: "Service",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-011",
+    itemCode: "EXT-011",
+    name: "Holiday Camp - Full Program",
+    description: "Complete holiday camp program including activities, meals, and materials",
+    amount: 15000,
+    category: "Event",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-012",
+    itemCode: "EXT-012",
+    name: "Holiday Camp - Half Day",
+    description: "Half day holiday camp program (morning or afternoon session)",
+    amount: 8000,
+    category: "Event",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-013",
+    itemCode: "EXT-013",
+    name: "Training Course - Professional Development",
+    description: "Professional development training course for educators and staff",
+    amount: 12000,
+    category: "Service",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-014",
+    itemCode: "EXT-014",
+    name: "Training Workshop - Specialized Skills",
+    description: "Specialized skills training workshop (per participant)",
+    amount: 5000,
+    category: "Service",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-015",
+    itemCode: "EXT-015",
+    name: "Gap Year Exam - SAT",
+    description: "SAT examination fee for gap year students",
+    amount: 18000,
+    category: "Event",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-016",
+    itemCode: "EXT-016",
+    name: "Gap Year Exam - IELTS",
+    description: "IELTS examination fee for gap year students",
+    amount: 7500,
+    category: "Event",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  },
+  {
+    id: "ext-item-017",
+    itemCode: "EXT-017",
+    name: "Gap Year Exam - TOEFL",
+    description: "TOEFL examination fee for gap year students",
+    amount: 6500,
+    category: "Event",
+    isActive: true,
+    applicableGrades: [],
+    invoiceType: "external"
+  }
+]
+
+// Mock templates for External Invoice
+const mockExternalTemplates: ItemTemplate[] = [
+  {
+    id: "ext-template-001",
+    name: "Conference Package - Standard",
+    description: "Standard conference room with basic catering",
+    items: ["ext-item-001", "ext-item-002", "ext-item-008"],
+    applicableGrades: [],
+    isActive: true,
+    invoiceType: "external"
+  },
+  {
+    id: "ext-template-002",
+    name: "Conference Package - Premium",
+    description: "Conference room with premium catering and tech support",
+    items: ["ext-item-001", "ext-item-003", "ext-item-008", "ext-item-009"],
+    applicableGrades: [],
+    isActive: true,
+    invoiceType: "external"
+  },
+  {
+    id: "ext-template-003",
+    name: "Large Event Package",
+    description: "Auditorium with full services",
+    items: ["ext-item-005", "ext-item-003", "ext-item-008", "ext-item-009", "ext-item-010"],
+    applicableGrades: [],
+    isActive: true,
+    invoiceType: "external"
+  },
+  {
+    id: "ext-template-004",
+    name: "Holiday Camp - Complete Package",
+    description: "Full day holiday camp with meals and coordination",
+    items: ["ext-item-011", "ext-item-002", "ext-item-010"],
+    applicableGrades: [],
+    isActive: true,
+    invoiceType: "external"
+  },
+  {
+    id: "ext-template-005",
+    name: "Professional Training Package",
+    description: "Training course with technical support and coordination",
+    items: ["ext-item-013", "ext-item-009", "ext-item-010"],
+    applicableGrades: [],
+    isActive: true,
+    invoiceType: "external"
+  }
+]
+
+// Mock data for Trip & Activity (afterschool) items
+const mockAfterSchoolItems: Item[] = [
+  {
+    id: "trip-item-001",
+    itemCode: "TRP-001",
+    name: "Bangkok City Tour",
+    description: "Full day educational tour to historical sites in Bangkok",
+    amount: 2500,
+    category: "Field Trip",
+    nominalCode: "2130001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-002",
+    itemCode: "TRP-002",
+    name: "Science Museum Visit",
+    description: "Interactive science learning experience at the museum",
+    amount: 1800,
+    category: "Field Trip",
+    nominalCode: "2130002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-003",
+    itemCode: "TRP-003",
+    name: "Beach Camp - 3 Days",
+    description: "Three-day beach camping trip with outdoor activities",
+    amount: 8500,
+    category: "Camp",
+    nominalCode: "2130003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-004",
+    itemCode: "TRP-004",
+    name: "Mountain Adventure Camp",
+    description: "Adventure camp with hiking and nature exploration",
+    amount: 9500,
+    category: "Camp",
+    nominalCode: "2130004",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-005",
+    itemCode: "ACT-001",
+    name: "Swimming Competition",
+    description: "Inter-school swimming competition registration",
+    amount: 500,
+    category: "Sports Event",
+    nominalCode: "2220001",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-006",
+    itemCode: "ACT-002",
+    name: "Football Tournament",
+    description: "Annual football tournament participation fee",
+    amount: 800,
+    category: "Sports Event",
+    nominalCode: "2220002",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-007",
+    itemCode: "ACT-003",
+    name: "Annual Sports Day",
+    description: "Sports day event participation and uniform",
+    amount: 350,
+    category: "Sports Event",
+    nominalCode: "2220003",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-008",
+    itemCode: "ACT-004",
+    name: "Music Concert",
+    description: "Annual music concert participation fee",
+    amount: 1200,
+    category: "Cultural Event",
+    nominalCode: "2220004",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-009",
+    itemCode: "ACT-005",
+    name: "Art Exhibition",
+    description: "Student art exhibition entry and materials",
+    amount: 600,
+    category: "Cultural Event",
+    nominalCode: "2220005",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "trip-item-010",
+    itemCode: "ACT-006",
+    name: "Drama Performance",
+    description: "School drama show participation and costume",
+    amount: 1500,
+    category: "Cultural Event",
+    nominalCode: "2220006",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  }
+]
+
+// Mock templates for Trip & Activity
+const mockAfterSchoolTemplates: ItemTemplate[] = [
+  {
+    id: "trip-template-001",
+    name: "Primary Field Trip Package",
+    description: "Educational field trips for primary students",
+    items: ["trip-item-001", "trip-item-002"],
+    applicableGrades: [],
     isActive: true
   },
   {
-    id: "template-004",
-    name: "Annual Bus Service Package",
-    description: "Transportation package for all zones",
-    items: ["item-012", "item-013", "item-014"],
-    applicableGrades: grades,
+    id: "trip-template-002",
+    name: "Adventure Camp Package",
+    description: "Outdoor camping and adventure activities",
+    items: ["trip-item-003", "trip-item-004"],
+    applicableGrades: [],
+    isActive: true
+  },
+  {
+    id: "trip-template-003",
+    name: "Sports Event Bundle",
+    description: "All sports events and competitions",
+    items: ["trip-item-005", "trip-item-006", "trip-item-007"],
+    applicableGrades: [],
     isActive: true
   }
 ]
 
-// localStorage keys
-const ITEMS_STORAGE_KEY = "invoiceItems"
-const TEMPLATES_STORAGE_KEY = "invoiceTemplates"
+// Mock data for Exam (event) items
+const mockEventItems: Item[] = [
+  {
+    id: "exam-item-001",
+    itemCode: "EXM-001",
+    name: "Cambridge IGCSE Registration",
+    description: "Cambridge IGCSE examination registration fee",
+    amount: 8500,
+    category: "International Exam",
+    nominalCode: "2130005",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-002",
+    itemCode: "EXM-002",
+    name: "Cambridge A-Level Registration",
+    description: "Cambridge A-Level examination registration fee",
+    amount: 9500,
+    category: "International Exam",
+    nominalCode: "2130006",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-003",
+    itemCode: "EXM-003",
+    name: "IELTS Preparation Test",
+    description: "IELTS mock examination and preparation",
+    amount: 3500,
+    category: "English Proficiency",
+    nominalCode: "2130007",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-004",
+    itemCode: "EXM-004",
+    name: "TOEFL Junior Test",
+    description: "TOEFL Junior examination fee",
+    amount: 2800,
+    category: "English Proficiency",
+    nominalCode: "2130008",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-005",
+    itemCode: "EXM-005",
+    name: "SAT Registration",
+    description: "SAT examination registration fee",
+    amount: 4500,
+    category: "International Exam",
+    nominalCode: "2130009",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-006",
+    itemCode: "EXM-006",
+    name: "Math Olympiad Entry",
+    description: "Mathematics Olympiad competition entry fee",
+    amount: 1200,
+    category: "Competition",
+    nominalCode: "2220007",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-007",
+    itemCode: "EXM-007",
+    name: "Science Olympiad Entry",
+    description: "Science Olympiad competition entry fee",
+    amount: 1200,
+    category: "Competition",
+    nominalCode: "2220008",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-008",
+    itemCode: "EXM-008",
+    name: "Spelling Bee Registration",
+    description: "National Spelling Bee competition registration",
+    amount: 800,
+    category: "Competition",
+    nominalCode: "2220009",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-009",
+    itemCode: "EXM-009",
+    name: "Mid-Term Exam Materials",
+    description: "Mid-term examination answer sheets and materials",
+    amount: 150,
+    category: "School Exam",
+    nominalCode: "2130010",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "exam-item-010",
+    itemCode: "EXM-010",
+    name: "Final Exam Materials",
+    description: "Final examination answer sheets and materials",
+    amount: 150,
+    category: "School Exam",
+    nominalCode: "2130011",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  }
+]
+
+// Mock templates for Exam
+const mockEventTemplates: ItemTemplate[] = [
+  {
+    id: "exam-template-001",
+    name: "Cambridge Full Package",
+    description: "IGCSE and A-Level examination bundle",
+    items: ["exam-item-001", "exam-item-002"],
+    applicableGrades: [],
+    isActive: true
+  },
+  {
+    id: "exam-template-002",
+    name: "English Proficiency Bundle",
+    description: "All English proficiency tests",
+    items: ["exam-item-003", "exam-item-004"],
+    applicableGrades: [],
+    isActive: true
+  },
+  {
+    id: "exam-template-003",
+    name: "Academic Competition Package",
+    description: "Math and Science Olympiad entries",
+    items: ["exam-item-006", "exam-item-007", "exam-item-008"],
+    applicableGrades: [],
+    isActive: true
+  }
+]
+
+// Mock data for School Bus (summer) items
+const mockSummerItems: Item[] = [
+  {
+    id: "bus-item-001",
+    itemCode: "BUS-001",
+    name: "Zone 1 - Round Trip (Annual)",
+    description: "Annual school bus service for Zone 1, morning and afternoon",
+    amount: 45000,
+    category: "Annual Service",
+    nominalCode: "2220010",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-002",
+    itemCode: "BUS-002",
+    name: "Zone 1 - One Way Morning (Annual)",
+    description: "Annual school bus service for Zone 1, morning only",
+    amount: 28000,
+    category: "Annual Service",
+    nominalCode: "2220011",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-003",
+    itemCode: "BUS-003",
+    name: "Zone 1 - One Way Afternoon (Annual)",
+    description: "Annual school bus service for Zone 1, afternoon only",
+    amount: 28000,
+    category: "Annual Service",
+    nominalCode: "2220012",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-004",
+    itemCode: "BUS-004",
+    name: "Zone 2 - Round Trip (Annual)",
+    description: "Annual school bus service for Zone 2, morning and afternoon",
+    amount: 55000,
+    category: "Annual Service",
+    nominalCode: "2220013",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-005",
+    itemCode: "BUS-005",
+    name: "Zone 2 - One Way Morning (Annual)",
+    description: "Annual school bus service for Zone 2, morning only",
+    amount: 35000,
+    category: "Annual Service",
+    nominalCode: "2220014",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-006",
+    itemCode: "BUS-006",
+    name: "Zone 3 - Round Trip (Annual)",
+    description: "Annual school bus service for Zone 3, morning and afternoon",
+    amount: 65000,
+    category: "Annual Service",
+    nominalCode: "2220015",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-007",
+    itemCode: "BUS-007",
+    name: "Monthly Bus Pass - Zone 1",
+    description: "Monthly school bus service for Zone 1",
+    amount: 4500,
+    category: "Monthly Service",
+    nominalCode: "2220016",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-008",
+    itemCode: "BUS-008",
+    name: "Monthly Bus Pass - Zone 2",
+    description: "Monthly school bus service for Zone 2",
+    amount: 5500,
+    category: "Monthly Service",
+    nominalCode: "2220017",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-009",
+    itemCode: "BUS-009",
+    name: "Term 1 Bus Service - Zone 1",
+    description: "Term 1 school bus service for Zone 1",
+    amount: 15000,
+    category: "Term Service",
+    nominalCode: "2220018",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "bus-item-010",
+    itemCode: "BUS-010",
+    name: "Special Trip Transportation",
+    description: "Transportation for special school events and field trips",
+    amount: 500,
+    category: "Special Service",
+    nominalCode: "2220019",
+    documentType: "SI",
+    isActive: true,
+    applicableGrades: []
+  }
+]
+
+// Mock templates for ECA
+const mockECATemplates: ItemTemplate[] = [
+  {
+    id: "eca-template-001",
+    name: "Primary ECA Music Bundle - Term 1",
+    description: "Popular music courses for primary students - Term 1",
+    items: ["item-005", "item-008", "item-011"],
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    isActive: true
+  }
+]
+
+// Mock templates for School Bus
+const mockSummerTemplates: ItemTemplate[] = [
+  {
+    id: "bus-template-001",
+    name: "Zone 1 Complete Package",
+    description: "All Zone 1 transportation options",
+    items: ["bus-item-001", "bus-item-002", "bus-item-003"],
+    applicableGrades: [],
+    isActive: true
+  },
+  {
+    id: "bus-template-002",
+    name: "Annual Service Bundle",
+    description: "Annual round-trip services for all zones",
+    items: ["bus-item-001", "bus-item-004", "bus-item-006"],
+    applicableGrades: [],
+    isActive: true
+  },
+  {
+    id: "bus-template-003",
+    name: "Monthly Pass Package",
+    description: "Monthly bus passes for Zone 1 and 2",
+    items: ["bus-item-007", "bus-item-008"],
+    applicableGrades: [],
+    isActive: true
+  }
+]
+
+// Get mock items based on category
+const getMockItems = (category: string): Item[] => {
+  switch (category) {
+    case "external":
+      return mockExternalItems
+    case "afterschool":
+      return mockAfterSchoolItems
+    case "event":
+      return mockEventItems
+    case "summer":
+      return mockSummerItems
+    case "eca":
+      return mockECAItems
+    case "student":
+    default:
+      return mockItems
+  }
+}
+
+// Get mock templates based on category
+const getMockTemplates = (category: string): ItemTemplate[] => {
+  switch (category) {
+    case "external":
+      return mockExternalTemplates
+    case "afterschool":
+      return mockAfterSchoolTemplates
+    case "event":
+      return mockEventTemplates
+    case "summer":
+      return mockSummerTemplates
+    case "eca":
+      return mockECATemplates
+    case "student":
+    default:
+      return mockTemplates
+  }
+}
+
+// Get storage key based on invoice category
+const getItemsStorageKey = (category: string): string => {
+  switch (category) {
+    case "afterschool":
+      return "afterschoolItems"
+    case "event":
+      return "eventItems"
+    case "summer":
+      return "summerItems"
+    case "external":
+      return "externalItems"
+    case "eca":
+      return "ecaItems"
+    default:
+      return "invoiceItems" // student/tuition items
+  }
+}
+
+const getTemplatesStorageKey = (category: string): string => {
+  switch (category) {
+    case "afterschool":
+      return "afterschoolTemplates"
+    case "event":
+      return "eventTemplates"
+    case "summer":
+      return "summerTemplates"
+    case "external":
+      return "externalTemplates"
+    case "eca":
+      return "ecaTemplates"
+    default:
+      return "invoiceTemplates" // student/tuition templates
+  }
+}
 
 // Generate item code based on category
 const generateItemCode = (category: string, index: number): string => {
@@ -242,21 +1177,70 @@ const generateItemCode = (category: string, index: number): string => {
   return `${prefix}-${String(index).padStart(3, '0')}`
 }
 
-// Load items from localStorage and merge with mockItems
-const loadItemsFromStorage = (): Item[] => {
+// Check if stored items belong to the correct category
+const isValidStoredData = (storedItems: Item[], invoiceCategory: string): boolean => {
+  if (storedItems.length === 0) return false
+
+  // Check if items have correct invoiceType or correct ID prefix
+  if (invoiceCategory === "external") {
+    // External items should have IDs starting with "ext-" or invoiceType="external"
+    return storedItems.some(item => item.id.startsWith("ext-") || item.invoiceType === "external")
+  }
+
+  // For afterschool/Trip & Activity, check for "trip-" prefix
+  if (invoiceCategory === "afterschool") {
+    return storedItems.some(item => item.id.startsWith("trip-"))
+  }
+
+  // For event/Exam, check for "exam-" prefix
+  if (invoiceCategory === "event") {
+    return storedItems.some(item => item.id.startsWith("exam-"))
+  }
+
+  // For summer/School Bus, check for "bus-" prefix
+  if (invoiceCategory === "summer") {
+    return storedItems.some(item => item.id.startsWith("bus-"))
+  }
+
+  // For student, check if items have standard item IDs (not ext-, trip-, exam-, bus-)
+  if (invoiceCategory === "student") {
+    return storedItems.some(item =>
+      !item.id.startsWith("ext-") &&
+      !item.id.startsWith("trip-") &&
+      !item.id.startsWith("exam-") &&
+      !item.id.startsWith("bus-")
+    )
+  }
+
+  return true
+}
+
+// Load items from localStorage and merge with category-specific mock items
+const loadItemsFromStorage = (invoiceCategory: string = "student"): Item[] => {
+  const categoryMockItems = getMockItems(invoiceCategory)
+
   try {
-    const stored = localStorage.getItem(ITEMS_STORAGE_KEY)
+    const stored = localStorage.getItem(getItemsStorageKey(invoiceCategory))
     if (stored) {
       const storedItems = JSON.parse(stored)
+
+      // Validate stored data belongs to correct category
+      if (!isValidStoredData(storedItems, invoiceCategory)) {
+        // Invalid data - clear and return mock items
+        localStorage.removeItem(getItemsStorageKey(invoiceCategory))
+        return categoryMockItems
+      }
+
       // Ensure all items have itemCode
       const itemsWithCode = storedItems.map((item: any, index: number) => ({
         ...item,
         itemCode: item.itemCode || generateItemCode(item.category || "Other", index + 1)
       }))
 
+      // For all categories: sync amounts, names, descriptions from mock data and merge new items
       // Map through stored items and update properties for standard mock items if they match
       const updatedItems = itemsWithCode.map((item: Item) => {
-        const mockMatch = mockItems.find(m => m.id === item.id);
+        const mockMatch = categoryMockItems.find(m => m.id === item.id);
         if (mockMatch) {
           return {
             ...item,
@@ -264,7 +1248,9 @@ const loadItemsFromStorage = (): Item[] => {
             name: mockMatch.name,
             description: mockMatch.description,
             category: mockMatch.category,
-            itemCode: mockMatch.itemCode || item.itemCode
+            itemCode: mockMatch.itemCode || item.itemCode,
+            nominalCode: mockMatch.nominalCode || item.nominalCode,
+            documentType: mockMatch.documentType || item.documentType || "SI"
           };
         }
         return item;
@@ -272,7 +1258,7 @@ const loadItemsFromStorage = (): Item[] => {
 
       // Merge: add any mockItems that don't exist in stored items
       const updatedIds = new Set(updatedItems.map((item: Item) => item.id))
-      const newMockItems = mockItems.filter(mockItem => !updatedIds.has(mockItem.id))
+      const newMockItems = categoryMockItems.filter(mockItem => !updatedIds.has(mockItem.id))
 
       if (newMockItems.length > 0) {
         return [...updatedItems, ...newMockItems]
@@ -282,43 +1268,63 @@ const loadItemsFromStorage = (): Item[] => {
   } catch (error) {
     console.error("Failed to load items from localStorage:", error)
   }
-  return mockItems
+  return categoryMockItems
 }
 
 // Save items to localStorage
-const saveItemsToStorage = (items: Item[]) => {
+const saveItemsToStorage = (items: Item[], invoiceCategory: string = "student") => {
   try {
-    localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(items))
+    localStorage.setItem(getItemsStorageKey(invoiceCategory), JSON.stringify(items))
   } catch (error) {
     console.error("Failed to save items to localStorage:", error)
   }
 }
 
 // Load templates from localStorage
-const loadTemplatesFromStorage = (): ItemTemplate[] | null => {
+const loadTemplatesFromStorage = (invoiceCategory: string = "student", currentItems: Item[]): ItemTemplate[] | null => {
+  const categoryMockTemplates = getMockTemplates(invoiceCategory)
+
   try {
-    const stored = localStorage.getItem(TEMPLATES_STORAGE_KEY)
+    const stored = localStorage.getItem(getTemplatesStorageKey(invoiceCategory))
     if (stored) {
       const storedTemplates = JSON.parse(stored)
-      // Merge: add any mockTemplates that don't exist in stored templates
-      const storedIds = new Set(storedTemplates.map((t: ItemTemplate) => t.id))
-      const newMockTemplates = mockTemplates.filter(mockT => !storedIds.has(mockT.id))
 
-      if (newMockTemplates.length > 0) {
-        return [...storedTemplates, ...newMockTemplates]
+      // Validate: check if all template items exist in current items array
+      const itemIds = new Set(currentItems.map(item => item.id))
+      const isValid = storedTemplates.every((template: ItemTemplate) =>
+        template.items.every(itemId => itemIds.has(itemId))
+      )
+
+      // If validation fails, clear localStorage and return null to use mock templates
+      if (!isValid) {
+        console.warn("Stored templates reference non-existent items. Clearing and using mock templates.")
+        localStorage.removeItem(getTemplatesStorageKey(invoiceCategory))
+        return null
       }
+
+      // For student category only: merge with mock templates
+      if (invoiceCategory === "student") {
+        const storedIds = new Set(storedTemplates.map((t: ItemTemplate) => t.id))
+        const newMockTemplates = categoryMockTemplates.filter(mockT => !storedIds.has(mockT.id))
+
+        if (newMockTemplates.length > 0) {
+          return [...storedTemplates, ...newMockTemplates]
+        }
+      }
+
       return storedTemplates
     }
   } catch (error) {
     console.error("Failed to load templates from localStorage:", error)
   }
-  return null
+  // Return category-specific mock templates or null
+  return categoryMockTemplates.length > 0 ? null : []
 }
 
 // Save templates to localStorage
-const saveTemplatesToStorage = (templates: ItemTemplate[]) => {
+const saveTemplatesToStorage = (templates: ItemTemplate[], invoiceCategory: string = "student") => {
   try {
-    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates))
+    localStorage.setItem(getTemplatesStorageKey(invoiceCategory), JSON.stringify(templates))
   } catch (error) {
     console.error("Failed to save templates to localStorage:", error)
   }
@@ -327,49 +1333,37 @@ const saveTemplatesToStorage = (templates: ItemTemplate[]) => {
 interface ItemManagementProps {
   onNavigateToSubPage?: (subPage: string, params?: any) => void
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
+  invoiceType?: "student" | "external" | "afterschool" | "event" | "summer"
 }
 
-export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemManagementProps) {
+export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceType = "student" }: ItemManagementProps) {
   const { t } = useLanguage()
+  const isExternalView = invoiceType === "external"
+  const isCategoryView = ["afterschool", "event", "summer"].includes(invoiceType)
+  const isSimplifiedView = isExternalView || isCategoryView
+  const currentCategories = invoiceType === "external" ? externalCategories :
+    invoiceType === "afterschool" ? afterSchoolCategories :
+      invoiceType === "event" ? eventCategories :
+        invoiceType === "summer" ? summerCategories :
+          categories
   const [activeTab, setActiveTab] = useState<"items" | "templates">("items")
-  const [items, setItems] = useState<Item[]>(() => loadItemsFromStorage())
-  const [templates, setTemplates] = useState<ItemTemplate[]>(() => loadTemplatesFromStorage() || mockTemplates)
 
-  // Discount options context for Registration Fees
-  const { getRegistrationFees, updateRegistrationFees } = useDiscountOptions()
-  const { academicYears } = useAcademicYears()
-
-  // Get current academic year
-  const getCurrentAcademicYear = () => {
-    const now = new Date()
-    const month = now.getMonth() + 1
-    const year = now.getFullYear()
-    if (month >= 5) {
-      return `${year}-${year + 1}`
-    } else {
-      return `${year - 1}-${year}`
-    }
-  }
-
-  const currentAcademicYear = academicYears[0]?.id || getCurrentAcademicYear()
-  const registrationFees = getRegistrationFees(currentAcademicYear, "1")
-
-  // Update registration fee
-  const handleRegistrationFeeChange = (feeType: string, value: number) => {
-    updateRegistrationFees(currentAcademicYear, "1", {
-      [feeType]: value
-    })
-  }
+  // Load items and templates for this specific category
+  const [items, setItems] = useState<Item[]>(() => loadItemsFromStorage(invoiceType))
+  const [templates, setTemplates] = useState<ItemTemplate[]>(() => {
+    const loadedItems = loadItemsFromStorage(invoiceType)
+    return loadTemplatesFromStorage(invoiceType, loadedItems) || getMockTemplates(invoiceType)
+  })
 
   // Save items to localStorage when changed
   useEffect(() => {
-    saveItemsToStorage(items)
-  }, [items])
+    saveItemsToStorage(items, invoiceType)
+  }, [items, invoiceType])
 
   // Save templates to localStorage when changed
   useEffect(() => {
-    saveTemplatesToStorage(templates)
-  }, [templates])
+    saveTemplatesToStorage(templates, invoiceType)
+  }, [templates, invoiceType])
 
   // Items state
   const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false)
@@ -380,11 +1374,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-
   // Templates state
   const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<ItemTemplate | null>(null)
   const [searchTemplateTerm, setSearchTemplateTerm] = useState("")
+  const [itemSearchTerm, setItemSearchTerm] = useState("") // New state for searching items in template modal
   const [selectedItemsForTemplate, setSelectedItemsForTemplate] = useState<string[]>([])
 
   // View Modal state
@@ -399,6 +1393,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
     description: "",
     amount: "",
     category: "",
+    nominalCode: "",
+    documentType: "SI",
     applicableGrades: [] as string[]
   })
 
@@ -451,6 +1447,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   }
 
   // Item functions
+  const generateRandomNominalCode = () => {
+    return Math.floor(1000000 + Math.random() * 9000000).toString()
+  }
+
   const openCreateItemModal = () => {
     setNewItem({
       itemCode: "",
@@ -458,11 +1458,20 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
       description: "",
       amount: "",
       category: "",
+      nominalCode: (invoiceType === "external" || invoiceType === "eca") ? generateRandomNominalCode() : "",
+      documentType: "SI",
       applicableGrades: []
     })
     setEditingItem(null)
     setIsCreateItemModalOpen(true)
   }
+
+  // Ensure random code is generated when modal opens for external or eca items
+  useEffect(() => {
+    if (isCreateItemModalOpen && !editingItem && (invoiceType === "external" || invoiceType === "eca") && !newItem.nominalCode) {
+      setNewItem(prev => ({ ...prev, nominalCode: generateRandomNominalCode() }))
+    }
+  }, [isCreateItemModalOpen, editingItem, invoiceType])
 
   const openEditItemModal = (item: Item) => {
     setNewItem({
@@ -471,6 +1480,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
       description: item.description,
       amount: item.amount.toString(),
       category: item.category,
+      nominalCode: item.nominalCode || "",
+      documentType: item.documentType || "SI",
       applicableGrades: item.applicableGrades
     })
     setEditingItem(item)
@@ -483,7 +1494,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
   }
 
   const handleSaveItem = () => {
-    if (!newItem.itemCode || !newItem.name || !newItem.amount || !newItem.category || newItem.applicableGrades.length === 0) {
+    // Applicable grades are now optional
+    if (!newItem.itemCode || !newItem.name || !newItem.amount) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -501,8 +1513,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
       description: newItem.description,
       amount: amount,
       category: newItem.category,
+      nominalCode: newItem.nominalCode || undefined,
+      documentType: newItem.documentType || "SI",
       applicableGrades: newItem.applicableGrades,
-      isActive: true
+      isActive: true,
+      invoiceType: editingItem?.invoiceType || invoiceType
     }
 
     if (editingItem) {
@@ -560,12 +1575,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
 
   const closeTemplateModal = () => {
     setIsCreateTemplateModalOpen(false)
+    setNewTemplate({ name: "", description: "", applicableGrades: [] })
     setEditingTemplate(null)
+    setSelectedItemsForTemplate([])
+    setItemSearchTerm("") // Reset search term
   }
 
   const handleSaveTemplate = () => {
-    if (!newTemplate.name || selectedItemsForTemplate.length === 0 || newTemplate.applicableGrades.length === 0) {
-      toast.error("Please provide template name, select at least one item, and select applicable grades")
+    // Applicable grades are now optional
+    if (!newTemplate.name || selectedItemsForTemplate.length === 0) {
+      toast.error("Please provide template name and select at least one item")
       return
     }
 
@@ -575,7 +1594,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
       description: newTemplate.description,
       items: selectedItemsForTemplate,
       applicableGrades: newTemplate.applicableGrades,
-      isActive: true
+      isActive: true,
+      invoiceType: editingTemplate?.invoiceType || invoiceType
     }
 
     if (editingTemplate) {
@@ -674,7 +1694,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
       item.itemCode.toLowerCase().includes(searchLower) ||
       item.name.toLowerCase().includes(searchLower) ||
       item.description.toLowerCase().includes(searchLower) ||
-      item.category.toLowerCase().includes(searchLower) ||
+      (item.category || "").toLowerCase().includes(searchLower) ||
       item.applicableGrades.some(grade => grade.toLowerCase() === searchLower) ||
       item.applicableGrades.some(grade => grade.toLowerCase().startsWith(searchLower))
     const matchesCategory = !selectedCategory || selectedCategory === "all" || item.category === selectedCategory
@@ -697,8 +1717,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
         bValue = b.name
         break
       case "category":
-        aValue = a.category
-        bValue = b.category
+        aValue = a.category || ""
+        bValue = b.category || ""
         break
       case "amount":
         aValue = a.amount
@@ -727,163 +1747,56 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
 
   return (
     <div className="space-y-6">
-      {/* Create Invoice Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            {t("invoiceCreate.title")}
-          </CardTitle>
-          <p className="text-muted-foreground">
-            {t("item.chooseInvoiceType")}
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {invoiceTypes.map((type) => (
-              <Card
-                key={type.id}
-                className="cursor-pointer transition-all hover:shadow-md hover:scale-105 group"
-                onClick={() => handleCreateInvoice(type.id)}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className={`p-3 rounded-full ${type.color === "blue" ? "bg-blue-100 text-blue-600" :
-                      type.color === "green" ? "bg-green-100 text-green-600" :
-                        "bg-orange-100 text-orange-600"
-                      }`}>
-                      <type.icon className="w-8 h-8" />
+      {/* Create Invoice Section - Hide for external and category views */}
+      {!isSimplifiedView && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {t("invoiceCreate.title")}
+            </CardTitle>
+            <p className="text-muted-foreground">
+              {t("item.chooseInvoiceType")}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {invoiceTypes.map((type) => (
+                <Card
+                  key={type.id}
+                  className="cursor-pointer transition-all hover:shadow-md hover:scale-105 group"
+                  onClick={() => handleCreateInvoice(type.id)}
+                >
+                  <CardContent className="p-6 text-center">
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className={`p-3 rounded-full ${type.color === "blue" ? "bg-blue-100 text-blue-600" :
+                        type.color === "green" ? "bg-green-100 text-green-600" :
+                          "bg-orange-100 text-orange-600"
+                        }`}>
+                        <type.icon className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium group-hover:text-primary transition-colors">
+                          {type.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {type.description}
+                        </p>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${type.color === "blue" ? "bg-blue-50 text-blue-700" :
+                        type.color === "green" ? "bg-green-50 text-green-700" :
+                          "bg-orange-50 text-orange-700"
+                        }`}>
+                        {type.defaultCategory}
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium group-hover:text-primary transition-colors">
-                        {type.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {type.description}
-                      </p>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${type.color === "blue" ? "bg-blue-50 text-blue-700" :
-                      type.color === "green" ? "bg-green-50 text-green-700" :
-                        "bg-orange-50 text-orange-700"
-                      }`}>
-                      {type.defaultCategory}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Application & Registration Fees */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <CreditCard className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <CardTitle className="text-base">Application & Registration Fees</CardTitle>
-              <p className="text-sm text-muted-foreground">Configure initial charges for new applicants</p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Fee Type</TableHead>
-                <TableHead className="w-[200px]">Amount (THB)</TableHead>
-                <TableHead className="w-[150px]">Refundable</TableHead>
-                <TableHead>Notes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Application Fee</TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={registrationFees.applicationFee}
-                    onChange={(e) => handleRegistrationFeeChange('applicationFee', Number(e.target.value))}
-                    className="w-[150px]"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">No</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">Non-refundable/non-transferable</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Registration Fee</TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={registrationFees.registrationFee}
-                    onChange={(e) => handleRegistrationFeeChange('registrationFee', Number(e.target.value))}
-                    className="w-[150px]"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">No</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">Non-refundable/non-transferable</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Security Deposit</TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={registrationFees.securityDeposit}
-                    onChange={(e) => handleRegistrationFeeChange('securityDeposit', Number(e.target.value))}
-                    className="w-[150px]"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Yes</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">Refundable upon graduation and withdrawal</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Wait List Fee</TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={registrationFees.waitListFee}
-                    onChange={(e) => handleRegistrationFeeChange('waitListFee', Number(e.target.value))}
-                    className="w-[150px]"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Conditional</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">Acts as registration fee when place becomes available</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-
-          {/* Security Deposit Refund Conditions */}
-          <div className="mt-6 p-4 border border-green-200 rounded-lg bg-green-50/50">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span className="font-medium text-green-900">Security Deposit Refund Conditions</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-start gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium flex-shrink-0">1</span>
-                <p className="text-green-800">Upon the student's graduation (completion of Year 13) from the school</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-800 text-xs font-medium flex-shrink-0">2</span>
-                <p className="text-green-800">When advance written notice is received at least one full term's notice before the child leaves</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-800 text-xs font-medium flex-shrink-0">3</span>
-                <p className="text-green-800">When the school requires the applicant's departure for reasons other than disciplinary</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
@@ -894,7 +1807,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
           className="flex items-center gap-2"
         >
           <Package className="w-4 h-4" />
-          Items
+          {t("tabs.items")}
         </Button>
         <Button
           variant={activeTab === "templates" ? "default" : "ghost"}
@@ -903,7 +1816,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
           className="flex items-center gap-2"
         >
           <Bookmark className="w-4 h-4" />
-          Templates
+          {t("tabs.templates")}
         </Button>
       </div>
 
@@ -913,8 +1826,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle>Manage Items</CardTitle>
-                <p className="text-muted-foreground">Create and manage invoice items</p>
+                <CardTitle>{isExternalView ? "External Items" : isSimplifiedView ? "Activity Items" : "Manage Items"}</CardTitle>
+                <p className="text-muted-foreground">{isSimplifiedView ? "Create and manage items for activities and events" : "Create and manage invoice items"}</p>
               </div>
               <Button onClick={openCreateItemModal}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -927,7 +1840,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
             <div className="flex gap-4 mb-6">
               <div className="flex-1 relative">
                 <Input
-                  placeholder="Search by code, name, category, grade..."
+                  placeholder={isSimplifiedView ? "Search by code, name, category..." : "Search by code, name, category, grade..."}
                   value={searchItemTerm}
                   onChange={(e) => setSearchItemTerm(e.target.value)}
                   className=""
@@ -939,7 +1852,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All categories</SelectItem>
-                  {categories.map(category => (
+                  {currentCategories.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
                 </SelectContent>
@@ -953,36 +1866,32 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                   <TableRow>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itemCode")}>
                       <div className="flex items-center gap-1">
-                        Item Code
+                        {t("table.itemCode")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                       <div className="flex items-center gap-1">
-                        Item Name
+                        {t("table.itemName")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("category")}>
-                      <div className="flex items-center gap-1">
-                        Category
-                        <ArrowUpDown className="h-4 w-4" />
-                      </div>
-                    </TableHead>
+
+                    <TableHead>Nominal Code</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
-                        Amount (THB)
+                        {t("table.amountTHB")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Applicable Year Groups</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("isActive")}>
                       <div className="flex items-center gap-1">
-                        Status
+                        {t("table.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("table.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -999,34 +1908,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                           <p className="text-sm text-muted-foreground">{item.description}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                            item.category === "ECA" ? "border-green-300 text-green-700" :
-                              item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
-                                ""
-                            }`}
-                        >
-                          {item.category}
+
+                      <TableCell className="text-muted-foreground font-mono text-sm">
+                        {item.nominalCode || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <Badge variant="outline" className="font-mono">
+                          {item.documentType || "SI"}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(item.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {item.applicableGrades.slice(0, 3).map(grade => (
-                            <Badge key={grade} variant="secondary" className="text-xs">
-                              {grade}
-                            </Badge>
-                          ))}
-                          {item.applicableGrades.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{item.applicableGrades.length - 3}
-                            </Badge>
-                          )}
-                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={item.isActive ? "default" : "secondary"}>
@@ -1076,8 +1968,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle>Manage Templates</CardTitle>
-                <p className="text-muted-foreground">Create shortcuts for commonly used item combinations</p>
+                <CardTitle>{isExternalView ? "External Templates" : isSimplifiedView ? "Activity Templates" : "Manage Templates"}</CardTitle>
+                <p className="text-muted-foreground">{isSimplifiedView ? "Create shortcuts for commonly used activity item combinations" : "Create shortcuts for commonly used item combinations"}</p>
               </div>
               <Button onClick={openCreateTemplateModal}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -1138,19 +2030,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
 
                     <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
 
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {template.applicableGrades.slice(0, 3).map(grade => (
-                        <Badge key={grade} variant="secondary" className="text-xs">
-                          {grade}
-                        </Badge>
-                      ))}
-                      {template.applicableGrades.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{template.applicableGrades.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-
                     <div className="space-y-2">
                       <p className="text-sm font-medium">{template.items.length} items:</p>
                       <div className="space-y-1">
@@ -1161,7 +2040,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                               <span>{item.name}</span>
                               <span className="font-medium">{formatCurrency(item.amount)}</span>
                             </div>
-                          ) : null
+                          ) : (
+                            <div key={itemId} className="flex justify-between text-sm text-red-500">
+                              <span>Item not found (ID: {itemId})</span>
+                              <span className="font-medium">฿0</span>
+                            </div>
+                          )
                         })}
                       </div>
                       <Separator />
@@ -1215,21 +2099,23 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="font-medium">Category *</label>
-              <Select
-                value={newItem.category}
-                onValueChange={(value) => setNewItem({ ...newItem, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="font-medium">Nominal Code</label>
+                <Input
+                  placeholder="2130001"
+                  value={newItem.nominalCode}
+                  onChange={(e) => setNewItem({ ...newItem, nominalCode: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="font-medium">Type</label>
+                <Input
+                  value="SI"
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -1258,26 +2144,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
                   Amount: {formatCurrency(parseFloat(newItem.amount))}
                 </p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="font-medium">Applicable Year Groups *</label>
-              <div className="grid grid-cols-4 gap-2">
-                {grades.map(grade => (
-                  <Button
-                    key={grade}
-                    variant={newItem.applicableGrades.includes(grade) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleToggleGrade(grade)}
-                    className="justify-start"
-                  >
-                    {newItem.applicableGrades.includes(grade) && (
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                    )}
-                    {grade}
-                  </Button>
-                ))}
-              </div>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -1323,61 +2189,59 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView }: ItemMa
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">Applicable Year Groups *</label>
-              <div className="grid grid-cols-4 gap-2">
-                {grades.map(grade => (
-                  <Button
-                    key={grade}
-                    variant={newTemplate.applicableGrades.includes(grade) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleToggleGradeForTemplate(grade)}
-                    className="justify-start"
-                  >
-                    {newTemplate.applicableGrades.includes(grade) && (
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                    )}
-                    {grade}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
               <label className="font-medium">Select Items *</label>
+
+              {/* Search Items Input */}
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search items..."
+                  value={itemSearchTerm}
+                  onChange={(e) => setItemSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+
               <div className="border rounded-lg max-h-64 overflow-y-auto">
-                {items.map(item => (
-                  <div
-                    key={item.id}
-                    className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${selectedItemsForTemplate.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
-                      }`}
-                    onClick={() => handleToggleItemForTemplate(item.id)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        {selectedItemsForTemplate.includes(item.id) && (
-                          <CheckCircle className="w-4 h-4 text-primary" />
-                        )}
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                {items
+                  .filter(item =>
+                    item.name.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
+                    item.itemCode.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
+                    (item.category && item.category.toLowerCase().includes(itemSearchTerm.toLowerCase()))
+                  )
+                  .map(item => (
+                    <div
+                      key={item.id}
+                      className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${selectedItemsForTemplate.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
+                        }`}
+                      onClick={() => handleToggleItemForTemplate(item.id)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          {selectedItemsForTemplate.includes(item.id) && (
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                          )}
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">{item.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(item.amount)}</p>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                              item.category === "ECA" ? "border-green-300 text-green-700" :
+                                item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                                  ""
+                              }`}
+                          >
+                            {item.category}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(item.amount)}</p>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                            item.category === "ECA" ? "border-green-300 text-green-700" :
-                              item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
-                                ""
-                            }`}
-                        >
-                          {item.category}
-                        </Badge>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
               {selectedItemsForTemplate.length > 0 && (
                 <div className="text-sm text-muted-foreground">

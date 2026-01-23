@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
 import { CalendarIcon, Save, Plus, Trash2, Settings, Clock } from "lucide-react"
 import { format } from "date-fns"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface RegistrationPeriod {
   id: string
@@ -52,6 +53,7 @@ const initialPeriods: RegistrationPeriod[] = [
 ]
 
 export function AfterSchoolSettings() {
+  const { t } = useLanguage()
   const [periods, setPeriods] = useState<RegistrationPeriod[]>(initialPeriods)
   const [globalSettings, setGlobalSettings] = useState({
     autoCloseRegistration: true,
@@ -105,13 +107,13 @@ export function AfterSchoolSettings() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Active</span>
+        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">{t("common.active")}</span>
       case "upcoming":
-        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">Upcoming</span>
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">{t("settings.upcoming")}</span>
       case "closed":
-        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">Closed</span>
+        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">{t("settings.closed")}</span>
       case "incomplete":
-        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">Incomplete</span>
+        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">{t("settings.incomplete")}</span>
       default:
         return null
     }
@@ -121,14 +123,14 @@ export function AfterSchoolSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">After School Registration Settings</h2>
+          <h2 className="text-xl font-semibold">{t("settings.afterSchoolTitle")}</h2>
           <p className="text-sm text-muted-foreground">
-            Configure registration periods and global settings for after school activities
+            {t("settings.afterSchoolDesc")}
           </p>
         </div>
         <Button onClick={addPeriod} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          Add Period
+          {t("settings.addPeriod")}
         </Button>
       </div>
 
@@ -137,7 +139,7 @@ export function AfterSchoolSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
-            Global Registration Settings
+            {t("settings.globalSettings")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -145,8 +147,8 @@ export function AfterSchoolSettings() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Auto-close Registration</Label>
-                  <p className="text-sm text-muted-foreground">Automatically close when deadline reached</p>
+                  <Label>{t("settings.autoClose")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("settings.autoCloseDesc")}</p>
                 </div>
                 <Switch
                   checked={globalSettings.autoCloseRegistration}
@@ -158,12 +160,12 @@ export function AfterSchoolSettings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Send Confirmation Emails</Label>
-                  <p className="text-sm text-muted-foreground">Email parents upon successful registration</p>
+                  <Label>{t("settings.sendConfirmation")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("settings.sendConfirmationDesc")}</p>
                 </div>
                 <Switch
                   checked={globalSettings.sendConfirmationEmails}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, sendConfirmationEmails: checked})
                   }
                 />
@@ -171,12 +173,12 @@ export function AfterSchoolSettings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Require Parent Approval</Label>
-                  <p className="text-sm text-muted-foreground">External parents need admin approval</p>
+                  <Label>{t("settings.requireApproval")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("settings.requireApprovalDesc")}</p>
                 </div>
                 <Switch
                   checked={globalSettings.requireParentApproval}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, requireParentApproval: checked})
                   }
                 />
@@ -184,12 +186,12 @@ export function AfterSchoolSettings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Allow Waitlist</Label>
-                  <p className="text-sm text-muted-foreground">Enable waitlist for full activities</p>
+                  <Label>{t("settings.allowWaitlist")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("settings.allowWaitlistDesc")}</p>
                 </div>
                 <Switch
                   checked={globalSettings.allowWaitlist}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, allowWaitlist: checked})
                   }
                 />
@@ -198,11 +200,11 @@ export function AfterSchoolSettings() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Maximum Waitlist Size</Label>
+                <Label>{t("settings.maxWaitlist")}</Label>
                 <Input
                   type="number"
                   value={globalSettings.maxWaitlistSize}
-                  onChange={(e) => 
+                  onChange={(e) =>
                     setGlobalSettings({...globalSettings, maxWaitlistSize: parseInt(e.target.value)})
                   }
                   disabled={!globalSettings.allowWaitlist}
@@ -210,30 +212,30 @@ export function AfterSchoolSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label>Payment Deadline (Days)</Label>
+                <Label>{t("settings.paymentDeadline")}</Label>
                 <Input
                   type="number"
                   value={globalSettings.paymentDeadlineDays}
-                  onChange={(e) => 
+                  onChange={(e) =>
                     setGlobalSettings({...globalSettings, paymentDeadlineDays: parseInt(e.target.value)})
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Days after registration to complete payment
+                  {t("settings.paymentDeadlineDesc")}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Cancellation Deadline (Days)</Label>
+                <Label>{t("settings.cancellationDeadline")}</Label>
                 <Input
                   type="number"
                   value={globalSettings.cancellationDeadlineDays}
-                  onChange={(e) => 
+                  onChange={(e) =>
                     setGlobalSettings({...globalSettings, cancellationDeadlineDays: parseInt(e.target.value)})
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Days before activity start to allow cancellation
+                  {t("settings.cancellationDeadlineDesc")}
                 </p>
               </div>
             </div>
@@ -243,7 +245,7 @@ export function AfterSchoolSettings() {
 
       {/* Registration Periods */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Registration Periods</h3>
+        <h3 className="text-lg font-semibold">{t("settings.registrationPeriods")}</h3>
         
         {periods.map((period) => {
           const status = getPeriodStatus(period)
@@ -277,18 +279,18 @@ export function AfterSchoolSettings() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label>{t("common.description")}</Label>
                   <Textarea
                     value={period.description}
                     onChange={(e) => updatePeriod(period.id, "description", e.target.value)}
-                    placeholder="Enter period description"
+                    placeholder={t("settings.enterDescription")}
                     rows={2}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Registration Opens</Label>
+                    <Label>{t("settings.registrationOpens")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -296,7 +298,7 @@ export function AfterSchoolSettings() {
                           className="w-full justify-start text-left font-normal"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {period.openDate ? format(period.openDate, "PPP") : "Pick a date"}
+                          {period.openDate ? format(period.openDate, "PPP") : t("settings.pickDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -311,7 +313,7 @@ export function AfterSchoolSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Registration Closes</Label>
+                    <Label>{t("settings.registrationCloses")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -319,7 +321,7 @@ export function AfterSchoolSettings() {
                           className="w-full justify-start text-left font-normal"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {period.closeDate ? format(period.closeDate, "PPP") : "Pick a date"}
+                          {period.closeDate ? format(period.closeDate, "PPP") : t("settings.pickDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -336,7 +338,7 @@ export function AfterSchoolSettings() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Max Activities per Student</Label>
+                    <Label>{t("settings.maxActivities")}</Label>
                     <Input
                       type="number"
                       value={period.maxRegistrationsPerStudent}
@@ -347,7 +349,7 @@ export function AfterSchoolSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Early Bird Discount (%)</Label>
+                    <Label>{t("settings.earlyBirdDiscount")}</Label>
                     <Input
                       type="number"
                       value={period.earlyBirdDiscount}
@@ -358,7 +360,7 @@ export function AfterSchoolSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Early Bird Deadline</Label>
+                    <Label>{t("settings.earlyBirdDeadline")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -366,7 +368,7 @@ export function AfterSchoolSettings() {
                           className="w-full justify-start text-left font-normal"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {period.earlyBirdDeadline ? format(period.earlyBirdDeadline, "MM/dd") : "Pick date"}
+                          {period.earlyBirdDeadline ? format(period.earlyBirdDeadline, "MM/dd") : t("settings.pickDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -383,8 +385,8 @@ export function AfterSchoolSettings() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Allow External Parents</Label>
-                    <p className="text-sm text-muted-foreground">Allow non-SISB parents to register</p>
+                    <Label>{t("settings.allowExternal")}</Label>
+                    <p className="text-sm text-muted-foreground">{t("settings.allowExternalDesc")}</p>
                   </div>
                   <Switch
                     checked={period.allowExternal}
@@ -396,35 +398,35 @@ export function AfterSchoolSettings() {
                 <div className="p-4 bg-muted rounded-lg">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    Period Summary
+                    {t("settings.periodSummary")}
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Status:</span>{" "}
+                      <span className="text-muted-foreground">{t("common.status")}:</span>{" "}
                       <span className={
-                        status === "active" ? "text-green-600" : 
-                        status === "upcoming" ? "text-blue-600" : 
+                        status === "active" ? "text-green-600" :
+                        status === "upcoming" ? "text-blue-600" :
                         status === "closed" ? "text-gray-600" : "text-red-600"
                       }>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                        {t(`settings.${status}`)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Duration:</span>{" "}
-                      {period.openDate && period.closeDate 
-                        ? `${Math.ceil((period.closeDate.getTime() - period.openDate.getTime()) / (1000 * 60 * 60 * 24))} days`
-                        : "Not set"
+                      <span className="text-muted-foreground">{t("settings.duration")}:</span>{" "}
+                      {period.openDate && period.closeDate
+                        ? `${Math.ceil((period.closeDate.getTime() - period.openDate.getTime()) / (1000 * 60 * 60 * 24))} ${t("settings.days")}`
+                        : t("settings.notSet")
                       }
                     </div>
                     <div>
-                      <span className="text-muted-foreground">External:</span>{" "}
+                      <span className="text-muted-foreground">{t("settings.external")}:</span>{" "}
                       <span className={period.allowExternal ? "text-green-600" : "text-red-600"}>
-                        {period.allowExternal ? "Allowed" : "Not allowed"}
+                        {period.allowExternal ? t("settings.allowed") : t("settings.notAllowed")}
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Discount:</span>{" "}
-                      {period.earlyBirdDiscount > 0 ? `${period.earlyBirdDiscount}%` : "None"}
+                      <span className="text-muted-foreground">{t("invoice.discount")}:</span>{" "}
+                      {period.earlyBirdDiscount > 0 ? `${period.earlyBirdDiscount}%` : t("settings.none")}
                     </div>
                   </div>
                 </div>

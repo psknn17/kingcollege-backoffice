@@ -31,7 +31,7 @@ import {
   X,
   Search
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 
 interface ViewDetailsPageProps {
   type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template"
@@ -82,7 +82,7 @@ const availableItems = [
     description: "First term tuition payment",
     category: "Tuition",
     amount: 150000,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "registration-fee",
@@ -90,7 +90,7 @@ const availableItems = [
     description: "Annual registration fee",
     category: "Fee",
     amount: 25000,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "activity-fee",
@@ -98,7 +98,7 @@ const availableItems = [
     description: "Extracurricular activities fee",
     category: "Activity",
     amount: 15000,
-    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "uniform-fee",
@@ -114,7 +114,7 @@ const availableItems = [
     description: "School bus transportation",
     category: "Transport",
     amount: 12000,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "lunch-fee",
@@ -130,7 +130,7 @@ const availableItems = [
     description: "International examination fee",
     category: "Examination",
     amount: 20000,
-    applicableGrades: ["Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "library-fee",
@@ -138,7 +138,7 @@ const availableItems = [
     description: "Library resources and books",
     category: "Resource",
     amount: 3000,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   }
 ]
 
@@ -151,11 +151,15 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
 
+  console.log("ViewDetailsPage rendering with type:", type)
+  console.log("ViewDetailsPage data:", data)
+
   if (!data) {
+    console.log("ViewDetailsPage: No data provided!")
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No data available</p>
+          <p className="text-muted-foreground">{t("viewModal.noData")}</p>
         </div>
       </div>
     )
@@ -173,7 +177,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
       items: [...(editData.items || []), newItem]
     })
     setIsItemSelectionOpen(false)
-    toast.success(`Added ${selectedItem.name} to invoice`)
+    toast.success(t("viewModal.addedItem").replace("{item}", selectedItem.name))
   }
 
   const addNewItem = () => {
@@ -219,14 +223,14 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
     }
     onEdit?.(updatedData)
     setIsEditMode(false)
-    toast.success("Changes saved successfully!")
+    toast.success(t("viewModal.savedSuccessfully"))
   }
 
   const handleCancel = () => {
     setEditData(data)
     setIsEditMode(false)
     setIsItemSelectionOpen(false)
-    toast.info("Changes discarded")
+    toast.info(t("viewModal.changesDiscarded"))
   }
 
   // Filter available items based on search and category
@@ -244,9 +248,9 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
     <Dialog open={isItemSelectionOpen} onOpenChange={setIsItemSelectionOpen}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col p-6">
         <DialogHeader>
-          <DialogTitle>Select Item to Add</DialogTitle>
+          <DialogTitle>{t("viewModal.selectItemToAdd")}</DialogTitle>
           <DialogDescription>
-            Choose from available items or create a custom item for this invoice.
+            {t("viewModal.selectItemDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -254,19 +258,19 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
           {/* Search and Filter */}
           <div className="flex gap-3">
             <Input
-              placeholder="Search items..."
+              placeholder={t("viewModal.searchItems")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
             />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder={t("viewModal.allCategories")} />
               </SelectTrigger>
               <SelectContent>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>
-                    {category === "all" ? "All Categories" : category}
+                    {category === "all" ? t("viewModal.allCategories") : category}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -326,21 +330,6 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
             )}
           </div>
 
-          {/* Add Custom Item Option */}
-          <div className="border-t pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                addNewItem()
-                setIsItemSelectionOpen(false)
-                toast.success("Added custom item")
-              }}
-              className="w-full border-dashed border-2"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Custom Item
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -485,41 +474,21 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-sm font-medium">Item Name</label>
-                        <Input
-                          value={item.name}
-                          onChange={(e) => updateItem(index, 'name', e.target.value)}
-                          placeholder="Enter item name"
-                        />
+                        <label className="text-sm text-muted-foreground">Item Name</label>
+                        <p className="font-medium">{item.name || "-"}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Quantity</label>
-                        <Input
-                          type="number"
-                          value={item.quantity || 1}
-                          onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                          min="1"
-                        />
+                        <label className="text-sm text-muted-foreground">Quantity</label>
+                        <p className="font-medium">{item.quantity || 1}</p>
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Description</label>
-                      <Textarea
-                        value={item.description}
-                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        placeholder="Enter item description"
-                        rows={2}
-                      />
+                      <label className="text-sm text-muted-foreground">Description</label>
+                      <p className="text-sm">{item.description || "-"}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Amount (฿)</label>
-                      <Input
-                        type="number"
-                        value={item.amount}
-                        onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
-                        min="0"
-                        step="0.01"
-                      />
+                      <label className="text-sm text-muted-foreground">Amount (฿)</label>
+                      <p className="font-medium">{formatCurrency(item.amount || 0)}</p>
                     </div>
                     <div className="text-right">
                       <span className="text-sm text-muted-foreground">
@@ -539,10 +508,10 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>{t("table.item")}</TableHead>
+                      <TableHead>{t("table.description")}</TableHead>
+                      <TableHead>{t("table.quantity")}</TableHead>
+                      <TableHead className="text-right">{t("table.amount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -673,7 +642,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-xl font-semibold">{data.name}</h3>
-          <p className="text-muted-foreground">{data.description}</p>
+          {data.description && <p className="text-muted-foreground">{data.description}</p>}
         </div>
         <div className="text-right">
           {getStatusBadge(data.isActive ? "active" : "inactive")}
@@ -703,23 +672,6 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
             <div>
               <label className="text-sm text-muted-foreground">Status</label>
               <p className="font-medium">{data.isActive ? "Active" : "Inactive"}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Applicable Year Groups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {data.applicableGrades?.map((grade: string, index: number) => (
-                <Badge key={index} variant="secondary">{grade}</Badge>
-              ))}
-            </div>
-            <div className="mt-4">
-              <label className="text-sm text-muted-foreground">Total Year Groups</label>
-              <p className="font-medium">{data.applicableGrades?.length || 0} year groups</p>
             </div>
           </CardContent>
         </Card>
@@ -768,8 +720,8 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
               <p className="font-medium">{formatDate(data.paymentDate || data.createdAt || new Date().toISOString())}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Payment Method</label>
-              <p className="font-medium">{data.paymentMethod || "Bank Transfer"}</p>
+              <label className="text-sm text-muted-foreground">{t("paymentMethod.label")}</label>
+              <p className="font-medium">{data.paymentMethod || t("paymentMethod.bankTransfer")}</p>
             </div>
             <div>
               <label className="text-sm text-muted-foreground">Reference Number</label>
@@ -900,17 +852,6 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
             </>
           ) : (
             <>
-              {onEdit && !data.viewOnly && (type === "invoice" || type === "item" || type === "template") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditMode(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </Button>
-              )}
               {onDownload && (
                 <Button
                   variant="outline"

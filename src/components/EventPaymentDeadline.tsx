@@ -12,7 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "./ui/textarea"
 import { Clock, CalendarDays, Edit, Trash2, Plus, AlertTriangle, CheckCircle, Send, Mail } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { th, enUS } from "date-fns/locale"
+import { toast } from "@/components/ui/sonner"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface PaymentDeadline {
   id: number
@@ -74,13 +76,15 @@ const mockDeadlines: PaymentDeadline[] = [
 ]
 
 export function EventPaymentDeadline() {
+  const { t, language } = useLanguage()
+  const locale = language === "th" ? th : enUS
   const [deadlines, setDeadlines] = useState<PaymentDeadline[]>(mockDeadlines)
   const [selectedEvent, setSelectedEvent] = useState("")
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [reminderDays, setReminderDays] = useState<string>("7,3,1")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingDeadline, setEditingDeadline] = useState<PaymentDeadline | null>(null)
-  
+
   // Reminder dialog states
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false)
   const [currentDeadlineForReminder, setCurrentDeadlineForReminder] = useState<PaymentDeadline | null>(null)
@@ -91,10 +95,10 @@ export function EventPaymentDeadline() {
 
   const getStatusBadge = (status: PaymentDeadline['status']) => {
     const variants = {
-      upcoming: { variant: "secondary" as const, label: "Upcoming" },
-      active: { variant: "default" as const, label: "Active" },
-      overdue: { variant: "destructive" as const, label: "Overdue" },
-      completed: { variant: "outline" as const, label: "Completed" }
+      upcoming: { variant: "secondary" as const, label: t("eventPayment.status.upcoming") },
+      active: { variant: "default" as const, label: t("eventPayment.status.active") },
+      overdue: { variant: "destructive" as const, label: t("eventPayment.status.overdue") },
+      completed: { variant: "outline" as const, label: t("eventPayment.status.completed") }
     }
     
     return (
@@ -106,19 +110,19 @@ export function EventPaymentDeadline() {
 
   const handleSaveDeadline = () => {
     if (!selectedEvent || !selectedDate) {
-      toast.error("Please fill in all required fields")
+      toast.error(t("eventPayment.toast.fillRequired"))
       return
     }
 
     const reminderDaysArray = reminderDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d))
 
     if (editingDeadline) {
-      setDeadlines(prev => prev.map(deadline => 
-        deadline.id === editingDeadline.id 
+      setDeadlines(prev => prev.map(deadline =>
+        deadline.id === editingDeadline.id
           ? { ...deadline, paymentDeadline: selectedDate, reminderDays: reminderDaysArray }
           : deadline
       ))
-      toast.success("Payment deadline updated successfully")
+      toast.success(t("eventPayment.toast.deadlineUpdated"))
     } else {
       const newDeadline: PaymentDeadline = {
         id: Date.now(),
@@ -132,7 +136,7 @@ export function EventPaymentDeadline() {
         paidStudents: 0
       }
       setDeadlines(prev => [...prev, newDeadline])
-      toast.success("Payment deadline created successfully")
+      toast.success(t("eventPayment.toast.deadlineCreated"))
     }
 
     setIsDialogOpen(false)
@@ -156,16 +160,16 @@ export function EventPaymentDeadline() {
 
   const handleDelete = (id: number) => {
     setDeadlines(prev => prev.filter(deadline => deadline.id !== id))
-    toast.success("Payment deadline deleted")
+    toast.success(t("eventPayment.toast.deadlineDeleted"))
   }
 
   const toggleActiveStatus = (id: number) => {
-    setDeadlines(prev => prev.map(deadline => 
-      deadline.id === id 
+    setDeadlines(prev => prev.map(deadline =>
+      deadline.id === id
         ? { ...deadline, isActive: !deadline.isActive }
         : deadline
     ))
-    toast.success("Deadline status updated")
+    toast.success(t("eventPayment.toast.statusUpdated"))
   }
 
   const openReminderDialog = (deadline: PaymentDeadline) => {
@@ -177,9 +181,9 @@ export function EventPaymentDeadline() {
 
   const getDefaultReminderMessage = (type: string, deadline: PaymentDeadline) => {
     const messages = {
-      payment_due: `Dear Parent,\n\nThis is a friendly reminder that payment for the ${deadline.eventName} is due by ${format(deadline.paymentDeadline, "MMMM dd, yyyy")}.\n\nPlease ensure payment is completed to secure your child's participation.\n\nThank you for your attention to this matter.\n\nBest regards,\nSISB Finance Team`,
-      payment_overdue: `Dear Parent,\n\nWe notice that the payment for ${deadline.eventName} is now overdue. The deadline was ${format(deadline.paymentDeadline, "MMMM dd, yyyy")}.\n\nPlease make the payment as soon as possible to avoid any inconvenience.\n\nIf you have already made the payment, please disregard this message.\n\nBest regards,\nSISB Finance Team`,
-      final_notice: `Dear Parent,\n\nThis is the final notice regarding the overdue payment for ${deadline.eventName}.\n\nImmediate action is required to secure your child's participation. Please contact our finance office if you need assistance.\n\nThank you for your immediate attention.\n\nBest regards,\nSISB Finance Team`,
+      payment_due: `Dear Parent,\n\nThis is a friendly reminder that payment for the ${deadline.eventName} is due by ${format(deadline.paymentDeadline, "MMMM dd, yyyy")}.\n\nPlease ensure payment is completed to secure your child's participation.\n\nThank you for your attention to this matter.\n\nBest regards,\nKing's College Finance Team`,
+      payment_overdue: `Dear Parent,\n\nWe notice that the payment for ${deadline.eventName} is now overdue. The deadline was ${format(deadline.paymentDeadline, "MMMM dd, yyyy")}.\n\nPlease make the payment as soon as possible to avoid any inconvenience.\n\nIf you have already made the payment, please disregard this message.\n\nBest regards,\nKing's College Finance Team`,
+      final_notice: `Dear Parent,\n\nThis is the final notice regarding the overdue payment for ${deadline.eventName}.\n\nImmediate action is required to secure your child's participation. Please contact our finance office if you need assistance.\n\nThank you for your immediate attention.\n\nBest regards,\nKing's College Finance Team`,
       custom: ''
     }
     return messages[type as keyof typeof messages] || messages.payment_due
@@ -194,16 +198,18 @@ export function EventPaymentDeadline() {
       schedule: reminderSchedule,
       recipients: selectedRecipients,
       message: customMessage,
-      totalRecipients: selectedRecipients === 'all_unpaid' 
+      totalRecipients: selectedRecipients === 'all_unpaid'
         ? currentDeadlineForReminder.totalStudents - currentDeadlineForReminder.paidStudents
         : currentDeadlineForReminder.totalStudents
     }
 
     // Simulate sending reminder
+    const typeLabel = reminderDetails.type === 'payment_due' ? t("eventPayment.reminder.paymentReminder") :
+        reminderDetails.type === 'payment_overdue' ? t("eventPayment.reminder.overdueNotice") :
+        t("eventPayment.reminder.finalNotice")
+    const actionLabel = reminderSchedule === 'immediate' ? t("eventPayment.reminder.sent") : t("eventPayment.reminder.scheduled")
     toast.success(
-      `${reminderDetails.type === 'payment_due' ? 'Payment reminder' : 
-        reminderDetails.type === 'payment_overdue' ? 'Overdue notice' : 
-        'Final notice'} ${reminderSchedule === 'immediate' ? 'sent' : 'scheduled'} to ${reminderDetails.totalRecipients} recipient(s) for ${reminderDetails.eventName}`
+      `${typeLabel} ${actionLabel} ${t("eventPayment.reminder.toRecipients")} ${reminderDetails.totalRecipients} ${t("eventPayment.reminder.forEvent")} ${reminderDetails.eventName}`
     )
 
     setIsReminderDialogOpen(false)
@@ -222,34 +228,34 @@ export function EventPaymentDeadline() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Event Payment Deadlines</h2>
+          <h2 className="mb-2">{t("eventPayment.title")}</h2>
           <p className="text-muted-foreground">
-            Manage payment deadlines and reminders for school events
+            {t("eventPayment.description")}
           </p>
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => resetForm()}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Deadline
+              {t("eventPayment.addDeadline")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg p-6">
             <DialogHeader>
               <DialogTitle>
-                {editingDeadline ? "Edit Payment Deadline" : "Add Payment Deadline"}
+                {editingDeadline ? t("eventPayment.editDeadline") : t("eventPayment.addDeadline")}
               </DialogTitle>
               <DialogDescription>
-                Set payment deadline and reminder schedule for an event
+                {t("eventPayment.dialogDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="event-select">Event</Label>
+                <Label htmlFor="event-select">{t("eventPayment.event")}</Label>
                 <Select value={selectedEvent} onValueChange={setSelectedEvent}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select event" />
+                    <SelectValue placeholder={t("eventPayment.selectEvent")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Sports Day 2024">Sports Day 2024</SelectItem>
@@ -262,12 +268,12 @@ export function EventPaymentDeadline() {
               </div>
 
               <div className="space-y-2">
-                <Label>Payment Deadline</Label>
+                <Label>{t("eventPayment.paymentDeadline")}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
                       <CalendarDays className="w-4 h-4 mr-2" />
-                      {selectedDate ? format(selectedDate, "PPP") : "Select date"}
+                      {selectedDate ? format(selectedDate, "PPP", { locale }) : t("eventPayment.selectDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -282,24 +288,24 @@ export function EventPaymentDeadline() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="reminder-days">Reminder Days</Label>
+                <Label htmlFor="reminder-days">{t("eventPayment.reminderDays")}</Label>
                 <Input
                   id="reminder-days"
                   value={reminderDays}
                   onChange={(e) => setReminderDays(e.target.value)}
-                  placeholder="e.g., 7,3,1"
+                  placeholder={t("eventPayment.reminderDaysPlaceholder")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Comma-separated list of days before deadline to send reminders
+                  {t("eventPayment.reminderDaysHint")}
                 </p>
               </div>
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={handleSaveDeadline}>
-                  {editingDeadline ? "Update" : "Create"} Deadline
+                  {editingDeadline ? t("eventPayment.updateDeadline") : t("eventPayment.createDeadline")}
                 </Button>
               </div>
             </div>
@@ -311,7 +317,7 @@ export function EventPaymentDeadline() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Deadlines</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("eventPayment.activeDeadlines")}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -321,7 +327,7 @@ export function EventPaymentDeadline() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("eventPayment.upcoming")}</CardTitle>
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -331,7 +337,7 @@ export function EventPaymentDeadline() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("eventPayment.overdue")}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -343,7 +349,7 @@ export function EventPaymentDeadline() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("eventPayment.completed")}</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -355,9 +361,9 @@ export function EventPaymentDeadline() {
       {/* Deadlines List */}
       <Card>
         <CardHeader>
-          <CardTitle>Payment Deadlines</CardTitle>
+          <CardTitle>{t("eventPayment.paymentDeadlines")}</CardTitle>
           <CardDescription>
-            Manage and monitor payment deadlines for all events
+            {t("eventPayment.listDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -375,19 +381,19 @@ export function EventPaymentDeadline() {
                         size="sm"
                       />
                       <span className="text-xs text-muted-foreground">
-                        {deadline.isActive ? 'Active' : 'Inactive'}
+                        {deadline.isActive ? t("common.active") : t("common.inactive")}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <span>Event: {deadline.eventDate}</span>
-                    <span>Deadline: {format(deadline.paymentDeadline, "MMM dd, yyyy")}</span>
+                    <span>{t("eventPayment.event")}: {deadline.eventDate}</span>
+                    <span>{t("eventPayment.deadline")}: {format(deadline.paymentDeadline, "MMM dd, yyyy", { locale })}</span>
                     <span>
-                      Paid: {deadline.paidStudents}/{deadline.totalStudents} 
+                      {t("eventPayment.paid")}: {deadline.paidStudents}/{deadline.totalStudents}
                       ({Math.round((deadline.paidStudents / deadline.totalStudents) * 100)}%)
                     </span>
-                    <span>Reminders: {deadline.reminderDays.join(', ')} days</span>
+                    <span>{t("eventPayment.reminders")}: {deadline.reminderDays.join(', ')} {t("eventPayment.days")}</span>
                   </div>
                 </div>
 
@@ -399,7 +405,7 @@ export function EventPaymentDeadline() {
                     disabled={!deadline.isActive}
                   >
                     <Send className="w-4 h-4 mr-1" />
-                    Send Reminder
+                    {t("eventPayment.sendReminder")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -428,13 +434,13 @@ export function EventPaymentDeadline() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Send Payment Reminder
+              {t("eventPayment.sendPaymentReminder")}
             </DialogTitle>
             <DialogDescription>
-              Configure and send payment reminder for {currentDeadlineForReminder?.eventName}
+              {t("eventPayment.configureReminder")} {currentDeadlineForReminder?.eventName}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Event Summary */}
             {currentDeadlineForReminder && (
@@ -442,19 +448,19 @@ export function EventPaymentDeadline() {
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <Label className="text-muted-foreground">Event</Label>
+                      <Label className="text-muted-foreground">{t("eventPayment.event")}</Label>
                       <p className="font-medium">{currentDeadlineForReminder.eventName}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Payment Deadline</Label>
-                      <p className="font-medium">{format(currentDeadlineForReminder.paymentDeadline, "MMM dd, yyyy")}</p>
+                      <Label className="text-muted-foreground">{t("eventPayment.paymentDeadline")}</Label>
+                      <p className="font-medium">{format(currentDeadlineForReminder.paymentDeadline, "MMM dd, yyyy", { locale })}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Total Students</Label>
+                      <Label className="text-muted-foreground">{t("eventPayment.totalStudents")}</Label>
                       <p className="font-medium">{currentDeadlineForReminder.totalStudents}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Unpaid</Label>
+                      <Label className="text-muted-foreground">{t("eventPayment.unpaid")}</Label>
                       <p className="font-medium text-amber-600">
                         {currentDeadlineForReminder.totalStudents - currentDeadlineForReminder.paidStudents}
                       </p>
@@ -467,9 +473,9 @@ export function EventPaymentDeadline() {
             {/* Reminder Settings */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="reminder-type">Reminder Type</Label>
-                <Select 
-                  value={reminderType} 
+                <Label htmlFor="reminder-type">{t("eventPayment.reminderType")}</Label>
+                <Select
+                  value={reminderType}
                   onValueChange={(value) => {
                     setReminderType(value)
                     if (currentDeadlineForReminder) {
@@ -481,84 +487,84 @@ export function EventPaymentDeadline() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="payment_due">Payment Due Reminder</SelectItem>
-                    <SelectItem value="payment_overdue">Payment Overdue Notice</SelectItem>
-                    <SelectItem value="final_notice">Final Notice</SelectItem>
-                    <SelectItem value="custom">Custom Message</SelectItem>
+                    <SelectItem value="payment_due">{t("eventPayment.reminderTypes.paymentDue")}</SelectItem>
+                    <SelectItem value="payment_overdue">{t("eventPayment.reminderTypes.paymentOverdue")}</SelectItem>
+                    <SelectItem value="final_notice">{t("eventPayment.reminderTypes.finalNotice")}</SelectItem>
+                    <SelectItem value="custom">{t("eventPayment.reminderTypes.custom")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="reminder-schedule">Schedule</Label>
+                <Label htmlFor="reminder-schedule">{t("eventPayment.schedule")}</Label>
                 <Select value={reminderSchedule} onValueChange={setReminderSchedule}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="immediate">Send Immediately</SelectItem>
-                    <SelectItem value="next_hour">Send in Next Hour</SelectItem>
-                    <SelectItem value="tomorrow">Send Tomorrow 9 AM</SelectItem>
-                    <SelectItem value="custom_date">Schedule for Later</SelectItem>
+                    <SelectItem value="immediate">{t("eventPayment.scheduleOptions.immediate")}</SelectItem>
+                    <SelectItem value="next_hour">{t("eventPayment.scheduleOptions.nextHour")}</SelectItem>
+                    <SelectItem value="tomorrow">{t("eventPayment.scheduleOptions.tomorrow")}</SelectItem>
+                    <SelectItem value="custom_date">{t("eventPayment.scheduleOptions.later")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="recipients">Recipients</Label>
+              <Label htmlFor="recipients">{t("eventPayment.recipients")}</Label>
               <Select value={selectedRecipients} onValueChange={setSelectedRecipients}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all_unpaid">All Unpaid Students Only</SelectItem>
-                  <SelectItem value="all_students">All Registered Students</SelectItem>
-                  <SelectItem value="specific_groups">Specific Year Groups</SelectItem>
+                  <SelectItem value="all_unpaid">{t("eventPayment.recipientOptions.allUnpaid")}</SelectItem>
+                  <SelectItem value="all_students">{t("eventPayment.recipientOptions.allRegistered")}</SelectItem>
+                  <SelectItem value="specific_groups">{t("eventPayment.recipientOptions.specificGroups")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Message Content */}
             <div className="space-y-2">
-              <Label htmlFor="custom-message">Message Content</Label>
+              <Label htmlFor="custom-message">{t("eventPayment.messageContent")}</Label>
               <Textarea
                 id="custom-message"
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder="Enter your reminder message..."
+                placeholder={t("eventPayment.messagePlaceholder")}
                 rows={8}
                 className="resize-none"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Characters: {customMessage.length}</span>
-                <span>Recipients will receive this via email and SMS</span>
+                <span>{t("eventPayment.characters")}: {customMessage.length}</span>
+                <span>{t("eventPayment.deliveryNote")}</span>
               </div>
             </div>
 
             {/* Preview */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Preview</CardTitle>
+                <CardTitle className="text-sm">{t("eventPayment.preview")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Type:</span>
+                    <span className="text-muted-foreground">{t("common.type")}:</span>
                     <span className="capitalize">{reminderType.replace('_', ' ')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Schedule:</span>
+                    <span className="text-muted-foreground">{t("eventPayment.schedule")}:</span>
                     <span className="capitalize">{reminderSchedule.replace('_', ' ')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Recipients:</span>
+                    <span className="text-muted-foreground">{t("eventPayment.recipients")}:</span>
                     <span>
                       {selectedRecipients === 'all_unpaid' && currentDeadlineForReminder
-                        ? `${currentDeadlineForReminder.totalStudents - currentDeadlineForReminder.paidStudents} unpaid students`
+                        ? `${currentDeadlineForReminder.totalStudents - currentDeadlineForReminder.paidStudents} ${t("eventPayment.unpaidStudents")}`
                         : selectedRecipients === 'all_students' && currentDeadlineForReminder
-                        ? `${currentDeadlineForReminder.totalStudents} all students`
-                        : 'Selected groups'}
+                        ? `${currentDeadlineForReminder.totalStudents} ${t("eventPayment.allStudents")}`
+                        : t("eventPayment.selectedGroups")}
                     </span>
                   </div>
                 </div>
@@ -567,18 +573,18 @@ export function EventPaymentDeadline() {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setIsReminderDialogOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
-              <Button 
+              <Button
                 onClick={sendReminder}
                 disabled={!customMessage.trim()}
               >
                 <Send className="w-4 h-4 mr-2" />
-                {reminderSchedule === 'immediate' ? 'Send Now' : 'Schedule Reminder'}
+                {reminderSchedule === 'immediate' ? t("eventPayment.sendNow") : t("eventPayment.scheduleReminder")}
               </Button>
             </div>
           </div>

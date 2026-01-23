@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -31,7 +32,7 @@ import {
   Tag
 } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 
 interface PricingSettings {
   regularPrice: number
@@ -176,6 +177,7 @@ const mockActivityControls: ActivityControl[] = [
 ]
 
 export function SummerRegistrationControl() {
+  const { t } = useLanguage()
   const [registrationPeriods, setRegistrationPeriods] = useState<RegistrationPeriod[]>(mockRegistrationPeriods)
   const [activityControls, setActivityControls] = useState<ActivityControl[]>(mockActivityControls)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -201,11 +203,11 @@ export function SummerRegistrationControl() {
 
   const getPriorityBadge = (priority: RegistrationPeriod['priority']) => {
     const variants = {
-      high: { variant: "destructive" as const, label: "High Priority" },
-      medium: { variant: "secondary" as const, label: "Medium Priority" },
-      low: { variant: "outline" as const, label: "Low Priority" }
+      high: { variant: "destructive" as const, label: t("summer.highPriority") },
+      medium: { variant: "secondary" as const, label: t("summer.mediumPriority") },
+      low: { variant: "outline" as const, label: t("summer.lowPriority") }
     }
-    
+
     return (
       <Badge variant={variants[priority].variant}>
         {variants[priority].label}
@@ -219,9 +221,9 @@ export function SummerRegistrationControl() {
 
   const getCapacityStatus = (registered: number, capacity: number) => {
     const percentage = (registered / capacity) * 100
-    if (percentage >= 100) return { status: "Full", color: "text-red-600" }
-    if (percentage >= 80) return { status: "Almost Full", color: "text-amber-600" }
-    return { status: "Available", color: "text-green-600" }
+    if (percentage >= 100) return { status: t("summer.full"), color: "text-red-600" }
+    if (percentage >= 80) return { status: t("summer.almostFull"), color: "text-amber-600" }
+    return { status: t("summer.available"), color: "text-green-600" }
   }
 
   const togglePeriodStatus = (id: number) => {
@@ -230,7 +232,7 @@ export function SummerRegistrationControl() {
         ? { ...period, isActive: !period.isActive }
         : period
     ))
-    toast.success("Registration period status updated")
+    toast.success(t("summer.periodStatusUpdated"))
   }
 
   const toggleActivityStatus = (id: number) => {
@@ -239,12 +241,12 @@ export function SummerRegistrationControl() {
         ? { ...activity, isOpen: !activity.isOpen }
         : activity
     ))
-    toast.success("Activity registration status updated")
+    toast.success(t("summer.activityStatusUpdated"))
   }
 
   const handleSavePeriod = () => {
     if (!newPeriodName || !newPeriodStart || !newPeriodEnd) {
-      toast.error("Please fill in all required fields")
+      toast.error(t("common.fillRequiredFields"))
       return
     }
 
@@ -260,7 +262,7 @@ export function SummerRegistrationControl() {
             }
           : period
       ))
-      toast.success("Registration period updated successfully")
+      toast.success(t("summer.periodUpdated"))
     } else {
       const newPeriod: RegistrationPeriod = {
         id: Date.now(),
@@ -275,7 +277,7 @@ export function SummerRegistrationControl() {
         description: newPeriodDescription
       }
       setRegistrationPeriods(prev => [...prev, newPeriod])
-      toast.success("Registration period created successfully")
+      toast.success(t("summer.periodCreated"))
     }
 
     resetForm()
@@ -301,7 +303,7 @@ export function SummerRegistrationControl() {
 
   const handleDelete = (id: number) => {
     setRegistrationPeriods(prev => prev.filter(period => period.id !== id))
-    toast.success("Registration period deleted")
+    toast.success(t("summer.periodDeleted"))
   }
 
   const openPriceDialog = (period: RegistrationPeriod) => {
@@ -327,7 +329,7 @@ export function SummerRegistrationControl() {
         : period
     ))
 
-    toast.success("Pricing settings updated successfully")
+    toast.success(t("summer.pricingUpdated"))
     setIsPriceDialogOpen(false)
   }
 
@@ -364,56 +366,56 @@ export function SummerRegistrationControl() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">Summer Registration Control</h2>
+          <h2 className="mb-2">{t("summer.title")}</h2>
           <p className="text-muted-foreground">
-            Manage registration periods and activity availability for summer programs
+            {t("summer.description")}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch
               checked={globalRegistrationEnabled}
               onCheckedChange={setGlobalRegistrationEnabled}
             />
-            <Label className="text-sm">Global Registration</Label>
+            <Label className="text-sm">{t("summer.globalRegistration")}</Label>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => resetForm()}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Period
+                {t("settings.addPeriod")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg p-6">
               <DialogHeader>
                 <DialogTitle>
-                  {editingPeriod ? "Edit Registration Period" : "Add Registration Period"}
+                  {editingPeriod ? t("summer.editPeriod") : t("summer.addPeriod")}
                 </DialogTitle>
                 <DialogDescription>
-                  Configure registration period settings and availability
+                  {t("summer.periodDialogDesc")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="period-name">Period Name</Label>
+                  <Label htmlFor="period-name">{t("summer.periodName")}</Label>
                   <Input
                     id="period-name"
                     value={newPeriodName}
                     onChange={(e) => setNewPeriodName(e.target.value)}
-                    placeholder="e.g., Early Bird Registration"
+                    placeholder={t("summer.periodNamePlaceholder")}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Start Date</Label>
+                    <Label>{t("summer.startDate")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start">
                           <CalendarDays className="w-4 h-4 mr-2" />
-                          {newPeriodStart ? format(newPeriodStart, "PPP") : "Select date"}
+                          {newPeriodStart ? format(newPeriodStart, "PPP") : t("common.selectDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -428,12 +430,12 @@ export function SummerRegistrationControl() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>End Date</Label>
+                    <Label>{t("summer.endDate")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start">
                           <CalendarDays className="w-4 h-4 mr-2" />
-                          {newPeriodEnd ? format(newPeriodEnd, "PPP") : "Select date"}
+                          {newPeriodEnd ? format(newPeriodEnd, "PPP") : t("common.selectDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -449,22 +451,22 @@ export function SummerRegistrationControl() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="period-description">Description</Label>
+                  <Label htmlFor="period-description">{t("common.description")}</Label>
                   <Textarea
                     id="period-description"
                     value={newPeriodDescription}
                     onChange={(e) => setNewPeriodDescription(e.target.value)}
-                    placeholder="Describe this registration period..."
+                    placeholder={t("summer.descriptionPlaceholder")}
                     rows={3}
                   />
                 </div>
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button onClick={handleSavePeriod}>
-                    {editingPeriod ? "Update" : "Create"} Period
+                    {editingPeriod ? t("summer.updatePeriod") : t("summer.createPeriod")}
                   </Button>
                 </div>
               </div>
@@ -475,9 +477,9 @@ export function SummerRegistrationControl() {
 
       <Tabs defaultValue="periods" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="periods">Registration Periods</TabsTrigger>
-          <TabsTrigger value="activities">Activity Control</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="periods">{t("summer.registrationPeriods")}</TabsTrigger>
+          <TabsTrigger value="activities">{t("summer.activityControl")}</TabsTrigger>
+          <TabsTrigger value="settings">{t("summer.settings")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="periods" className="space-y-6">
@@ -485,7 +487,7 @@ export function SummerRegistrationControl() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Periods</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summer.activePeriods")}</CardTitle>
                 <Play className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -497,7 +499,7 @@ export function SummerRegistrationControl() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Registrations</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summer.totalRegistrations")}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -509,20 +511,20 @@ export function SummerRegistrationControl() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Capacity Used</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summer.capacityUsed")}</CardTitle>
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">68%</div>
                 <p className="text-xs text-muted-foreground">
-                  of total capacity
+                  {t("summer.ofTotalCapacity")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">System Status</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("summer.systemStatus")}</CardTitle>
                 {globalRegistrationEnabled ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
@@ -531,7 +533,7 @@ export function SummerRegistrationControl() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {globalRegistrationEnabled ? 'Online' : 'Offline'}
+                  {globalRegistrationEnabled ? t("summer.online") : t("summer.offline")}
                 </div>
               </CardContent>
             </Card>
@@ -540,9 +542,9 @@ export function SummerRegistrationControl() {
           {/* Registration Periods */}
           <Card>
             <CardHeader>
-              <CardTitle>Registration Periods</CardTitle>
+              <CardTitle>{t("summer.registrationPeriods")}</CardTitle>
               <CardDescription>
-                Manage registration periods and their availability
+                {t("summer.registrationPeriodsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -560,15 +562,15 @@ export function SummerRegistrationControl() {
                             size="sm"
                           />
                           <span className="text-xs text-muted-foreground">
-                            {period.isActive ? 'Active' : 'Inactive'}
+                            {period.isActive ? t("common.active") : t("common.inactive")}
                           </span>
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-2">
-                        <span>Start: {format(period.startDate, "MMM dd, yyyy")}</span>
-                        <span>End: {format(period.endDate, "MMM dd, yyyy")}</span>
-                        <span>Target: {period.targetGroups.join(", ")}</span>
+                        <span>{t("summer.start")}: {format(period.startDate, "MMM dd, yyyy")}</span>
+                        <span>{t("summer.end")}: {format(period.endDate, "MMM dd, yyyy")}</span>
+                        <span>{t("summer.target")}: {period.targetGroups.join(", ")}</span>
                       </div>
                       
                       <p className="text-sm text-muted-foreground mb-2">{period.description}</p>
@@ -577,18 +579,18 @@ export function SummerRegistrationControl() {
                       {period.pricingSettings && (
                         <div className="grid grid-cols-3 gap-4 text-sm mb-2 p-2 bg-gray-50 rounded">
                           <div>
-                            <span className="text-muted-foreground">Base Price:</span>
+                            <span className="text-muted-foreground">{t("summer.basePrice")}:</span>
                             <span className="ml-1 font-medium">฿{period.pricingSettings.regularPrice.toLocaleString()}</span>
                           </div>
                           {period.pricingSettings.earlyBirdDiscount > 0 && (
                             <div>
-                              <span className="text-muted-foreground">Early Bird:</span>
+                              <span className="text-muted-foreground">{t("summer.earlyBird")}:</span>
                               <span className="ml-1 font-medium text-green-600">-{period.pricingSettings.earlyBirdDiscount}%</span>
                             </div>
                           )}
                           {period.pricingSettings.lateRegistrationFee > 0 && (
                             <div>
-                              <span className="text-muted-foreground">Late Fee:</span>
+                              <span className="text-muted-foreground">{t("summer.lateFee")}:</span>
                               <span className="ml-1 font-medium text-red-600">+฿{period.pricingSettings.lateRegistrationFee}</span>
                             </div>
                           )}
@@ -598,7 +600,7 @@ export function SummerRegistrationControl() {
                       <div className="flex items-center gap-4">
                         <div className="flex-1">
                           <div className="flex justify-between text-sm mb-1">
-                            <span>Registrations</span>
+                            <span>{t("summer.registrations")}</span>
                             <span>{period.currentRegistrations}/{period.maxRegistrations}</span>
                           </div>
                           <Progress value={getRegistrationProgress(period.currentRegistrations, period.maxRegistrations)} />
@@ -614,7 +616,7 @@ export function SummerRegistrationControl() {
                         className="flex items-center gap-1"
                       >
                         <DollarSign className="w-4 h-4" />
-                        Price Settings
+                        {t("summer.priceSettings")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -643,10 +645,10 @@ export function SummerRegistrationControl() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sun className="w-5 h-5" />
-                Activity Registration Control
+                {t("summer.activityRegistrationControl")}
               </CardTitle>
               <CardDescription>
-                Manage individual activity registration status and capacity
+                {t("summer.activityControlDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -666,16 +668,16 @@ export function SummerRegistrationControl() {
                         </div>
                         
                         <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground mb-2">
-                          <span>Age: {activity.ageGroup}</span>
-                          <span>Fee: ฿{activity.fee.toLocaleString()}</span>
-                          <span>Deadline: {format(activity.registrationDeadline, "MMM dd")}</span>
-                          <span>Waitlist: {activity.waitlist}</span>
+                          <span>{t("summer.age")}: {activity.ageGroup}</span>
+                          <span>{t("summer.fee")}: ฿{activity.fee.toLocaleString()}</span>
+                          <span>{t("summer.deadline")}: {format(activity.registrationDeadline, "MMM dd")}</span>
+                          <span>{t("summer.waitlist")}: {activity.waitlist}</span>
                         </div>
                         
                         <div className="flex items-center gap-4">
                           <div className="flex-1">
                             <div className="flex justify-between text-sm mb-1">
-                              <span>Capacity</span>
+                              <span>{t("summer.capacity")}</span>
                               <span>{activity.registered}/{activity.capacity}</span>
                             </div>
                             <Progress value={(activity.registered / activity.capacity) * 100} />
@@ -691,7 +693,7 @@ export function SummerRegistrationControl() {
                             size="sm"
                           />
                           <span className="text-xs text-muted-foreground">
-                            {activity.isOpen ? 'Open' : 'Closed'}
+                            {activity.isOpen ? t("summer.open") : t("summer.closed")}
                           </span>
                         </div>
                         <Button variant="ghost" size="icon">
@@ -710,15 +712,15 @@ export function SummerRegistrationControl() {
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Global Settings</CardTitle>
-                <CardDescription>System-wide registration controls</CardDescription>
+                <CardTitle>{t("summer.globalSettings")}</CardTitle>
+                <CardDescription>{t("summer.globalSettingsDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Enable Registration System</Label>
+                    <Label>{t("summer.enableRegistrationSystem")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Turn on/off the entire registration system
+                      {t("summer.enableRegistrationSystemDesc")}
                     </p>
                   </div>
                   <Switch
@@ -729,9 +731,9 @@ export function SummerRegistrationControl() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Auto-close Full Activities</Label>
+                    <Label>{t("summer.autoCloseFullActivities")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Automatically close registration when capacity is reached
+                      {t("summer.autoCloseFullActivitiesDesc")}
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -739,9 +741,9 @@ export function SummerRegistrationControl() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Enable Waitlist</Label>
+                    <Label>{t("summer.enableWaitlist")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Allow students to join waitlist for full activities
+                      {t("summer.enableWaitlistDesc")}
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -751,15 +753,15 @@ export function SummerRegistrationControl() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Configure registration notifications</CardDescription>
+                <CardTitle>{t("summer.notificationSettings")}</CardTitle>
+                <CardDescription>{t("summer.notificationSettingsDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Registration Confirmations</Label>
+                    <Label>{t("summer.registrationConfirmations")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Send email confirmations for successful registrations
+                      {t("summer.registrationConfirmationsDesc")}
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -767,9 +769,9 @@ export function SummerRegistrationControl() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Waitlist Notifications</Label>
+                    <Label>{t("summer.waitlistNotifications")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Notify when waitlist spots become available
+                      {t("summer.waitlistNotificationsDesc")}
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -777,9 +779,9 @@ export function SummerRegistrationControl() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Deadline Reminders</Label>
+                    <Label>{t("summer.deadlineReminders")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Send reminders before registration deadlines
+                      {t("summer.deadlineRemindersDesc")}
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -796,10 +798,10 @@ export function SummerRegistrationControl() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="w-5 h-5" />
-              Price Settings
+              {t("summer.priceSettings")}
             </DialogTitle>
             <DialogDescription>
-              Configure pricing and discounts for {currentPeriodForPricing?.name}
+              {t("summer.priceSettingsDesc")} {currentPeriodForPricing?.name}
             </DialogDescription>
           </DialogHeader>
           
@@ -810,11 +812,11 @@ export function SummerRegistrationControl() {
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <Label className="text-muted-foreground">Period</Label>
+                      <Label className="text-muted-foreground">{t("summer.period")}</Label>
                       <p className="font-medium">{currentPeriodForPricing.name}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Duration</Label>
+                      <Label className="text-muted-foreground">{t("summer.duration")}</Label>
                       <p className="font-medium">
                         {format(currentPeriodForPricing.startDate, "MMM dd")} - {format(currentPeriodForPricing.endDate, "MMM dd, yyyy")}
                       </p>
@@ -828,12 +830,12 @@ export function SummerRegistrationControl() {
             <div className="space-y-4">
               <h3 className="font-medium flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                Basic Pricing
+                {t("summer.basicPricing")}
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="regular-price">Regular Price (฿)</Label>
+                  <Label htmlFor="regular-price">{t("summer.regularPrice")}</Label>
                   <Input
                     id="regular-price"
                     type="number"
@@ -844,15 +846,15 @@ export function SummerRegistrationControl() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
+                  <Label htmlFor="currency">{t("summer.currency")}</Label>
                   <Select value={pricingForm.currency} onValueChange={(value) => setPricingForm({...pricingForm, currency: value})}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="THB">THB (Thai Baht)</SelectItem>
-                      <SelectItem value="USD">USD (US Dollar)</SelectItem>
-                      <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                      <SelectItem value="THB">{t("summer.thb")}</SelectItem>
+                      <SelectItem value="USD">{t("summer.usd")}</SelectItem>
+                      <SelectItem value="EUR">{t("summer.eur")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -863,12 +865,12 @@ export function SummerRegistrationControl() {
             <div className="space-y-4">
               <h3 className="font-medium flex items-center gap-2">
                 <Percent className="w-4 h-4" />
-                Discounts & Fees
+                {t("summer.discountsAndFees")}
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="early-bird">Early Bird Discount (%)</Label>
+                  <Label htmlFor="early-bird">{t("summer.earlyBirdDiscountPercent")}</Label>
                   <Input
                     id="early-bird"
                     type="number"
@@ -881,7 +883,7 @@ export function SummerRegistrationControl() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="late-fee">Late Registration Fee (฿)</Label>
+                  <Label htmlFor="late-fee">{t("summer.lateRegistrationFee")}</Label>
                   <Input
                     id="late-fee"
                     type="number"
@@ -893,7 +895,7 @@ export function SummerRegistrationControl() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sibling-discount">Sibling Discount (%)</Label>
+                  <Label htmlFor="sibling-discount">{t("summer.siblingDiscountPercent")}</Label>
                   <Input
                     id="sibling-discount"
                     type="number"
@@ -906,7 +908,7 @@ export function SummerRegistrationControl() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="group-discount">Group Discount (%)</Label>
+                  <Label htmlFor="group-discount">{t("summer.groupDiscountPercent")}</Label>
                   <Input
                     id="group-discount"
                     type="number"
@@ -916,11 +918,11 @@ export function SummerRegistrationControl() {
                     onChange={(e) => setPricingForm({...pricingForm, groupDiscount: Number(e.target.value)})}
                     placeholder="20"
                   />
-                  <p className="text-xs text-muted-foreground">For 3+ students from same family</p>
+                  <p className="text-xs text-muted-foreground">{t("summer.groupDiscountDesc")}</p>
                 </div>
 
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="external-surcharge">External Student Surcharge (฿)</Label>
+                  <Label htmlFor="external-surcharge">{t("summer.externalStudentSurcharge")}</Label>
                   <Input
                     id="external-surcharge"
                     type="number"
@@ -929,7 +931,7 @@ export function SummerRegistrationControl() {
                     onChange={(e) => setPricingForm({...pricingForm, externalStudentSurcharge: Number(e.target.value)})}
                     placeholder="500"
                   />
-                  <p className="text-xs text-muted-foreground">Additional fee for non-SISB students</p>
+                  <p className="text-xs text-muted-foreground">{t("summer.externalStudentSurchargeDesc")}</p>
                 </div>
               </div>
             </div>
@@ -937,28 +939,28 @@ export function SummerRegistrationControl() {
             {/* Price Preview */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Price Preview</CardTitle>
+                <CardTitle className="text-sm">{t("summer.pricePreview")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span>Regular Price:</span>
+                    <span>{t("summer.regularPriceLabel")}:</span>
                     <span className="font-medium">฿{pricingForm.regularPrice.toLocaleString()}</span>
                   </div>
-                  
+
                   {pricingForm.earlyBirdDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Early Bird Price:</span>
+                      <span>{t("summer.earlyBirdPrice")}:</span>
                       <span className="font-medium">
                         ฿{calculateFinalPrice(pricingForm.regularPrice, {...pricingForm, lateRegistrationFee: 0}).toLocaleString()}
                         <span className="text-xs ml-1">(-{pricingForm.earlyBirdDiscount}%)</span>
                       </span>
                     </div>
                   )}
-                  
+
                   {pricingForm.lateRegistrationFee > 0 && (
                     <div className="flex justify-between text-red-600">
-                      <span>Late Registration Price:</span>
+                      <span>{t("summer.lateRegistrationPrice")}:</span>
                       <span className="font-medium">
                         ฿{calculateFinalPrice(pricingForm.regularPrice, {...pricingForm, earlyBirdDiscount: 0}).toLocaleString()}
                         <span className="text-xs ml-1">(+฿{pricingForm.lateRegistrationFee})</span>
@@ -968,21 +970,21 @@ export function SummerRegistrationControl() {
 
                   {pricingForm.siblingDiscount > 0 && (
                     <div className="flex justify-between text-blue-600">
-                      <span>Sibling Discount:</span>
+                      <span>{t("summer.siblingDiscountLabel")}:</span>
                       <span className="font-medium">-{pricingForm.siblingDiscount}%</span>
                     </div>
                   )}
 
                   {pricingForm.groupDiscount > 0 && (
                     <div className="flex justify-between text-purple-600">
-                      <span>Group Discount (3+):</span>
+                      <span>{t("summer.groupDiscountLabel")}:</span>
                       <span className="font-medium">-{pricingForm.groupDiscount}%</span>
                     </div>
                   )}
 
                   {pricingForm.externalStudentSurcharge > 0 && (
                     <div className="flex justify-between text-orange-600">
-                      <span>External Student Surcharge:</span>
+                      <span>{t("summer.externalStudentSurchargeLabel")}:</span>
                       <span className="font-medium">+฿{pricingForm.externalStudentSurcharge.toLocaleString()}</span>
                     </div>
                   )}
@@ -992,17 +994,17 @@ export function SummerRegistrationControl() {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setIsPriceDialogOpen(false)
                   resetPricingForm()
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleSavePricing}>
-                Save Pricing Settings
+                {t("summer.savePricingSettings")}
               </Button>
             </div>
           </div>

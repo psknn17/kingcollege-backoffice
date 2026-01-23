@@ -10,15 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import { Separator } from "./ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
-import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, Building, CreditCard, AlertCircle } from "lucide-react"
+import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, CreditCard, AlertCircle, Pencil, ArrowLeft, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 
@@ -41,25 +40,43 @@ interface ItemTemplate {
   isActive: boolean
 }
 
-const grades = ["Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+const getGrades = (t: (key: string) => string) => [
+  t('invoiceCreation.gradePreNursery'),
+  t('invoiceCreation.gradeNursery'),
+  t('invoiceCreation.gradeReception'),
+  t('invoiceCreation.gradeYear1'),
+  t('invoiceCreation.gradeYear2'),
+  t('invoiceCreation.gradeYear3'),
+  t('invoiceCreation.gradeYear4'),
+  t('invoiceCreation.gradeYear5'),
+  t('invoiceCreation.gradeYear6'),
+  t('invoiceCreation.gradeYear7'),
+  t('invoiceCreation.gradeYear8'),
+  t('invoiceCreation.gradeYear9'),
+  t('invoiceCreation.gradeYear10'),
+  t('invoiceCreation.gradeYear11'),
+  t('invoiceCreation.gradeYear12'),
+  t('invoiceCreation.gradeYear13')
+]
 
-const rooms = {
-  "Nursery": ["Nursery A", "Nursery B"],
-  "Reception": ["Reception A", "Reception B", "Reception C"],
-  "Year 1": ["1A", "1B", "1C", "1D"],
-  "Year 2": ["2A", "2B", "2C", "2D"],
-  "Year 3": ["3A", "3B", "3C", "3D"],
-  "Year 4": ["4A", "4B", "4C"],
-  "Year 5": ["5A", "5B", "5C"],
-  "Year 6": ["6A", "6B", "6C"],
-  "Year 7": ["7A", "7B", "7C", "7D"],
-  "Year 8": ["8A", "8B", "8C", "8D"],
-  "Year 9": ["9A", "9B", "9C"],
-  "Year 10": ["10A", "10B", "10C"],
-  "Year 11": ["11A", "11B"],
-  "Year 12": ["12A", "12B"],
-  "Year 13": ["13A", "13B"]
-}
+const getRooms = (t: (key: string) => string) => ({
+  [t('invoiceCreation.gradePreNursery')]: [t('invoiceCreation.roomPreNurseryA'), t('invoiceCreation.roomPreNurseryB')],
+  [t('invoiceCreation.gradeNursery')]: [t('invoiceCreation.roomNurseryA'), t('invoiceCreation.roomNurseryB')],
+  [t('invoiceCreation.gradeReception')]: [t('invoiceCreation.roomReceptionA'), t('invoiceCreation.roomReceptionB'), t('invoiceCreation.roomReceptionC')],
+  [t('invoiceCreation.gradeYear1')]: [t('invoiceCreation.room1A'), t('invoiceCreation.room1B'), t('invoiceCreation.room1C'), t('invoiceCreation.room1D')],
+  [t('invoiceCreation.gradeYear2')]: [t('invoiceCreation.room2A'), t('invoiceCreation.room2B'), t('invoiceCreation.room2C'), t('invoiceCreation.room2D')],
+  [t('invoiceCreation.gradeYear3')]: [t('invoiceCreation.room3A'), t('invoiceCreation.room3B'), t('invoiceCreation.room3C'), t('invoiceCreation.room3D')],
+  [t('invoiceCreation.gradeYear4')]: [t('invoiceCreation.room4A'), t('invoiceCreation.room4B'), t('invoiceCreation.room4C')],
+  [t('invoiceCreation.gradeYear5')]: [t('invoiceCreation.room5A'), t('invoiceCreation.room5B'), t('invoiceCreation.room5C')],
+  [t('invoiceCreation.gradeYear6')]: [t('invoiceCreation.room6A'), t('invoiceCreation.room6B'), t('invoiceCreation.room6C')],
+  [t('invoiceCreation.gradeYear7')]: [t('invoiceCreation.room7A'), t('invoiceCreation.room7B'), t('invoiceCreation.room7C'), t('invoiceCreation.room7D')],
+  [t('invoiceCreation.gradeYear8')]: [t('invoiceCreation.room8A'), t('invoiceCreation.room8B'), t('invoiceCreation.room8C'), t('invoiceCreation.room8D')],
+  [t('invoiceCreation.gradeYear9')]: [t('invoiceCreation.room9A'), t('invoiceCreation.room9B'), t('invoiceCreation.room9C')],
+  [t('invoiceCreation.gradeYear10')]: [t('invoiceCreation.room10A'), t('invoiceCreation.room10B'), t('invoiceCreation.room10C')],
+  [t('invoiceCreation.gradeYear11')]: [t('invoiceCreation.room11A'), t('invoiceCreation.room11B')],
+  [t('invoiceCreation.gradeYear12')]: [t('invoiceCreation.room12A'), t('invoiceCreation.room12B')],
+  [t('invoiceCreation.gradeYear13')]: [t('invoiceCreation.room13A'), t('invoiceCreation.room13B')],
+})
 
 // Student Groups storage key (same as DiscountManagement)
 const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
@@ -141,8 +158,9 @@ const hasEarlyBirdDiscount = (studentId: string): boolean => {
 }
 
 
-// Grade level mapping (same as StudentList)
+// Grade level mapping (same as TuitionByYear)
 const gradeLevelMap: { [key: string]: string } = {
+  "pre-nursery": "Pre-Nursery",
   "nursery": "Nursery",
   "reception": "Reception",
   "year1": "Year 1",
@@ -170,6 +188,59 @@ const ITEMS_STORAGE_KEY = "invoiceItems"
 const TEMPLATES_STORAGE_KEY = "invoiceTemplates"
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
+// Get storage key for invoices based on invoice category (must match InvoiceManagement)
+const getInvoicesStorageKey = (category: string): string => {
+  switch (category) {
+    case "afterschool":
+      return "afterschoolInvoices"
+    case "event":
+      return "eventInvoices"
+    case "summer":
+      return "summerInvoices"
+    case "external":
+      return "externalInvoices"
+    case "eca":
+      return "ecaInvoices"
+    default:
+      return "createdInvoices" // student invoices
+  }
+}
+
+// Get storage key based on invoice category
+const getItemsStorageKey = (category: string): string => {
+  switch (category) {
+    case "afterschool":
+      return "afterschoolItems"
+    case "event":
+      return "eventItems"
+    case "summer":
+      return "summerItems"
+    case "external":
+      return "externalItems"
+    case "eca":
+      return "ecaItems"
+    default:
+      return "invoiceItems" // student/tuition items
+  }
+}
+
+const getTemplatesStorageKey = (category: string): string => {
+  switch (category) {
+    case "afterschool":
+      return "afterschoolTemplates"
+    case "event":
+      return "eventTemplates"
+    case "summer":
+      return "summerTemplates"
+    case "external":
+      return "externalTemplates"
+    case "eca":
+      return "ecaTemplates"
+    default:
+      return "invoiceTemplates" // student/tuition templates
+  }
+}
+
 // Interface for saved invoice
 interface SavedInvoice {
   id: string
@@ -180,7 +251,7 @@ interface SavedInvoice {
   studentRoom: string
   parentName: string
   parentEmail: string
-  items: PreCreatedItem[]
+  items: (PreCreatedItem & { lineNumber?: number, itemCode?: string })[]
   subtotal: number
   discounts: { name: string, amount: number, percentage?: number }[]
   totalDiscount: number
@@ -192,7 +263,7 @@ interface SavedInvoice {
   paymentType: "termly"
   createdAt: string
   // External invoice fields
-  invoiceType?: "student" | "external"
+  invoiceType?: "student" | "external" | "afterschool" | "event" | "summer"
   recipientName?: string
   recipientAddress?: string
   eventName?: string
@@ -200,14 +271,21 @@ interface SavedInvoice {
   // New student fields
   isNewStudent?: boolean
   registrationFees?: { name: string, amount: number }[]
-  idCharges?: number
   securityDepositWaiver?: number
+  // Excel export fields
+  familyCode?: string
+  adultIdNo?: string // Parent's national ID or Family Code
+  accountCode?: string // NominalCode
+  documentType?: string // SI (Sales Invoice) or CI (Credit Invoice)
+  academicYear?: string // Separated from term (e.g., "2025/2026")
+  termName?: string // Separated from academic year (e.g., "Term 1")
 }
 
 // Load created invoices from localStorage
-const loadCreatedInvoices = (): SavedInvoice[] => {
+const loadCreatedInvoices = (invoiceType: string = "student"): SavedInvoice[] => {
   try {
-    const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+    const storageKey = getInvoicesStorageKey(invoiceType)
+    const stored = localStorage.getItem(storageKey)
     if (stored) {
       return JSON.parse(stored)
     }
@@ -218,9 +296,10 @@ const loadCreatedInvoices = (): SavedInvoice[] => {
 }
 
 // Save invoice to localStorage
-const saveInvoiceToStorage = (invoice: SavedInvoice) => {
+const saveInvoiceToStorage = (invoice: SavedInvoice, invoiceType: string = "student") => {
   try {
-    const existing = loadCreatedInvoices()
+    const storageKey = getInvoicesStorageKey(invoiceType)
+    const existing = loadCreatedInvoices(invoiceType)
     // Check if invoice already exists (by invoiceNumber)
     const existingIndex = existing.findIndex(inv => inv.invoiceNumber === invoice.invoiceNumber)
     if (existingIndex >= 0) {
@@ -228,7 +307,7 @@ const saveInvoiceToStorage = (invoice: SavedInvoice) => {
     } else {
       existing.push(invoice)
     }
-    localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(existing))
+    localStorage.setItem(storageKey, JSON.stringify(existing))
     // Dispatch custom event to notify Invoice Overview
     window.dispatchEvent(new CustomEvent('invoicesUpdated'))
   } catch (error) {
@@ -237,46 +316,124 @@ const saveInvoiceToStorage = (invoice: SavedInvoice) => {
 }
 
 // Load items from localStorage (initialize with defaults if empty)
-const loadItemsFromStorage = (): PreCreatedItem[] => {
+const loadItemsFromStorage = (invoiceCategory: string = "student"): PreCreatedItem[] => {
+  const storageKey = getItemsStorageKey(invoiceCategory)
+  const categoryDefaults = getDefaultItems(invoiceCategory)
+
   try {
-    const stored = localStorage.getItem(ITEMS_STORAGE_KEY)
+    const stored = localStorage.getItem(storageKey)
     if (stored) {
       const items = JSON.parse(stored)
       // Convert Item format to PreCreatedItem format (itemCode -> id if needed)
-      return items.map((item: any) => ({
+      const loadedItems = items.map((item: any) => ({
         id: item.id,
         name: item.name,
         description: item.description,
         amount: item.amount,
         category: item.category,
         isActive: item.isActive,
-        applicableGrades: item.applicableGrades
+        applicableGrades: item.applicableGrades || []
       }))
+
+      // Migration: Fix summer items with empty applicableGrades
+      if (invoiceCategory === "summer") {
+        const needsMigration = loadedItems.some((item: PreCreatedItem) =>
+          item.applicableGrades.length === 0
+        )
+        if (needsMigration) {
+          console.log("[Migration] Updating summer items with applicableGrades")
+          const allGrades = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+          const migratedItems = loadedItems.map((item: PreCreatedItem) => ({
+            ...item,
+            applicableGrades: item.applicableGrades.length === 0 ? allGrades : item.applicableGrades
+          }))
+          localStorage.setItem(storageKey, JSON.stringify(migratedItems))
+          return migratedItems
+        }
+      }
+
+      return loadedItems
     } else {
       // Initialize localStorage with default items if empty
-      localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(defaultItems))
-      return defaultItems
+      localStorage.setItem(storageKey, JSON.stringify(categoryDefaults))
+      return categoryDefaults
     }
   } catch (error) {
     console.error("Failed to load items from localStorage:", error)
-    return defaultItems
+    return categoryDefaults
   }
 }
 
 // Load templates from localStorage (initialize with defaults if empty)
-const loadTemplatesFromStorage = (): ItemTemplate[] => {
+const loadTemplatesFromStorage = (invoiceCategory: string = "student"): ItemTemplate[] => {
+  const storageKey = getTemplatesStorageKey(invoiceCategory)
+  const categoryDefaults = getDefaultTemplates(invoiceCategory)
+
   try {
-    const stored = localStorage.getItem(TEMPLATES_STORAGE_KEY)
+    const stored = localStorage.getItem(storageKey)
     if (stored) {
-      return JSON.parse(stored)
+      const loadedTemplates = JSON.parse(stored)
+
+      // Migration: Fix summer templates with empty applicableGrades
+      if (invoiceCategory === "summer") {
+        const needsMigration = loadedTemplates.some((template: ItemTemplate) =>
+          template.applicableGrades.length === 0
+        )
+        if (needsMigration) {
+          console.log("[Migration] Updating summer templates with applicableGrades")
+          const allGrades = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+          const migratedTemplates = loadedTemplates.map((template: ItemTemplate) => ({
+            ...template,
+            applicableGrades: template.applicableGrades.length === 0 ? allGrades : template.applicableGrades
+          }))
+          localStorage.setItem(storageKey, JSON.stringify(migratedTemplates))
+          return migratedTemplates
+        }
+      }
+
+      return loadedTemplates
     } else {
       // Initialize localStorage with default templates if empty
-      localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(defaultTemplates))
-      return defaultTemplates
+      localStorage.setItem(storageKey, JSON.stringify(categoryDefaults))
+      return categoryDefaults
     }
   } catch (error) {
     console.error("Failed to load templates from localStorage:", error)
-    return defaultTemplates
+    return categoryDefaults
+  }
+}
+
+// Get default items based on invoice category
+const getDefaultItems = (invoiceCategory: string): PreCreatedItem[] => {
+  switch (invoiceCategory) {
+    case "external":
+      return defaultExternalItems
+    case "afterschool":
+      return defaultAfterSchoolItems
+    case "event":
+      return defaultEventItems
+    case "summer":
+      return defaultSummerItems
+    case "eca":
+      return defaultECAItems
+    default:
+      return defaultItems
+  }
+}
+
+// Get default templates based on invoice category
+const getDefaultTemplates = (invoiceCategory: string): ItemTemplate[] => {
+  switch (invoiceCategory) {
+    case "afterschool":
+      return defaultAfterSchoolTemplates
+    case "event":
+      return defaultEventTemplates
+    case "summer":
+      return defaultSummerTemplates
+    case "eca":
+      return defaultECATemplates
+    default:
+      return defaultTemplates
   }
 }
 
@@ -290,7 +447,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 150000,
     category: "Tuition",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-002",
@@ -299,7 +456,16 @@ const defaultItems: PreCreatedItem[] = [
     amount: 150000,
     category: "Tuition",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+  },
+  {
+    id: "item-003",
+    name: "Term 3 Tuition Fee",
+    description: "Third term tuition payment for academic year",
+    amount: 150000,
+    category: "Tuition",
+    isActive: true,
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-004",
@@ -308,7 +474,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 15000,
     category: "Tuition",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   // ECA items
   {
@@ -318,7 +484,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 80000,
     category: "ECA",
     isActive: true,
-    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-006",
@@ -327,7 +493,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 60000,
     category: "ECA",
     isActive: true,
-    applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-007",
@@ -354,7 +520,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 45000,
     category: "ECA",
     isActive: true,
-    applicableGrades: ["Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   // Trip & Other Activity items
   {
@@ -382,7 +548,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 15000,
     category: "Trip & Other Activity",
     isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-013",
@@ -391,7 +557,7 @@ const defaultItems: PreCreatedItem[] = [
     amount: 35000,
     category: "Trip & Other Activity",
     isActive: true,
-    applicableGrades: ["Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+    applicableGrades: ["Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   },
   {
     id: "item-014",
@@ -400,7 +566,164 @@ const defaultItems: PreCreatedItem[] = [
     amount: 50000,
     category: "Trip & Other Activity",
     isActive: true,
-    applicableGrades: ["Year 6", "Year 12"]
+    applicableGrades: ["Year 6", "Year 12", "Year 13"]
+  }
+]
+
+// Default items for External Invoices
+const defaultExternalItems: PreCreatedItem[] = [
+  {
+    id: "ext-item-001",
+    name: "Conference Room Rental",
+    description: "Full day conference room rental with AV equipment",
+    amount: 15000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-002",
+    name: "Event Catering - Standard",
+    description: "Standard catering package per person",
+    amount: 350,
+    category: "Catering",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-003",
+    name: "Event Catering - Premium",
+    description: "Premium catering package per person",
+    amount: 550,
+    category: "Catering",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-004",
+    name: "Auditorium Rental - Half Day",
+    description: "Auditorium rental for 4 hours with basic setup",
+    amount: 25000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-005",
+    name: "Auditorium Rental - Full Day",
+    description: "Auditorium rental for 8 hours with full setup",
+    amount: 45000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-006",
+    name: "Sports Field Rental",
+    description: "Sports field rental per hour",
+    amount: 5000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-007",
+    name: "Swimming Pool Rental",
+    description: "Swimming pool rental per hour",
+    amount: 8000,
+    category: "Rental",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-008",
+    name: "Parking Fee",
+    description: "Event parking fee per vehicle",
+    amount: 200,
+    category: "Service",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-009",
+    name: "Technical Support",
+    description: "On-site technical support per hour",
+    amount: 1500,
+    category: "Service",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-010",
+    name: "Event Coordination Fee",
+    description: "Event coordination and management fee",
+    amount: 10000,
+    category: "Service",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-011",
+    name: "Holiday Camp - Full Program",
+    description: "Complete holiday camp program including activities, meals, and materials",
+    amount: 15000,
+    category: "Event",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-012",
+    name: "Holiday Camp - Half Day",
+    description: "Half day holiday camp program (morning or afternoon session)",
+    amount: 8000,
+    category: "Event",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-013",
+    name: "Training Course - Professional Development",
+    description: "Professional development training course for educators and staff",
+    amount: 12000,
+    category: "Service",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-014",
+    name: "Training Workshop - Specialized Skills",
+    description: "Specialized skills training workshop (per participant)",
+    amount: 5000,
+    category: "Service",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-015",
+    name: "Gap Year Exam - SAT",
+    description: "SAT examination fee for gap year students",
+    amount: 18000,
+    category: "Event",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-016",
+    name: "Gap Year Exam - IELTS",
+    description: "IELTS examination fee for gap year students",
+    amount: 7500,
+    category: "Event",
+    isActive: true,
+    applicableGrades: []
+  },
+  {
+    id: "ext-item-017",
+    name: "Gap Year Exam - TOEFL",
+    description: "TOEFL examination fee for gap year students",
+    amount: 6500,
+    category: "Event",
+    isActive: true,
+    applicableGrades: []
   }
 ]
 
@@ -443,41 +766,241 @@ const defaultTemplates: ItemTemplate[] = [
     name: "Secondary Activities",
     description: "ECA and trip package for secondary students",
     items: ["item-005", "item-006", "item-009", "item-010"],
-    applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"],
+    applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"],
     isActive: true
   }
+]
+
+// Default items for Trip & Activity (afterschool)
+const defaultAfterSchoolItems: PreCreatedItem[] = [
+  { id: "trip-item-001", name: "Bangkok City Tour", description: "Full day educational tour to historical sites in Bangkok", amount: 2500, category: "Field Trip", isActive: true, applicableGrades: [] },
+  { id: "trip-item-002", name: "Science Museum Visit", description: "Interactive science learning experience at the museum", amount: 1800, category: "Field Trip", isActive: true, applicableGrades: [] },
+  { id: "trip-item-003", name: "Beach Camp - 3 Days", description: "Three-day beach camping trip with outdoor activities", amount: 8500, category: "Camp", isActive: true, applicableGrades: [] },
+  { id: "trip-item-004", name: "Mountain Adventure Camp", description: "Adventure camp with hiking and nature exploration", amount: 9500, category: "Camp", isActive: true, applicableGrades: [] },
+  { id: "trip-item-005", name: "Swimming Competition", description: "Inter-school swimming competition registration", amount: 500, category: "Sports Event", isActive: true, applicableGrades: [] },
+  { id: "trip-item-006", name: "Football Tournament", description: "Annual football tournament participation fee", amount: 800, category: "Sports Event", isActive: true, applicableGrades: [] },
+  { id: "trip-item-007", name: "Annual Sports Day", description: "Sports day event participation and uniform", amount: 350, category: "Sports Event", isActive: true, applicableGrades: [] },
+  { id: "trip-item-008", name: "Music Concert", description: "Annual music concert participation fee", amount: 1200, category: "Cultural Event", isActive: true, applicableGrades: [] },
+  { id: "trip-item-009", name: "Art Exhibition", description: "Student art exhibition entry and materials", amount: 600, category: "Cultural Event", isActive: true, applicableGrades: [] },
+  { id: "trip-item-010", name: "Drama Performance", description: "School drama show participation and costume", amount: 1500, category: "Cultural Event", isActive: true, applicableGrades: [] }
+]
+
+const defaultAfterSchoolTemplates: ItemTemplate[] = [
+  { id: "trip-template-001", name: "Primary Field Trip Package", description: "Educational field trips for primary students", items: ["trip-item-001", "trip-item-002"], applicableGrades: [], isActive: true },
+  { id: "trip-template-002", name: "Adventure Camp Package", description: "Outdoor camping and adventure activities", items: ["trip-item-003", "trip-item-004"], applicableGrades: [], isActive: true },
+  { id: "trip-template-003", name: "Sports Event Bundle", description: "All sports events and competitions", items: ["trip-item-005", "trip-item-006", "trip-item-007"], applicableGrades: [], isActive: true }
+]
+
+// Default items for Exam (event)
+const defaultEventItems: PreCreatedItem[] = [
+  { id: "exam-item-001", name: "Cambridge IGCSE Registration", description: "Cambridge IGCSE examination registration fee", amount: 8500, category: "International Exam", isActive: true, applicableGrades: [] },
+  { id: "exam-item-002", name: "Cambridge A-Level Registration", description: "Cambridge A-Level examination registration fee", amount: 9500, category: "International Exam", isActive: true, applicableGrades: [] },
+  { id: "exam-item-003", name: "IELTS Preparation Test", description: "IELTS mock examination and preparation", amount: 3500, category: "English Proficiency", isActive: true, applicableGrades: [] },
+  { id: "exam-item-004", name: "TOEFL Junior Test", description: "TOEFL Junior examination fee", amount: 2800, category: "English Proficiency", isActive: true, applicableGrades: [] },
+  { id: "exam-item-005", name: "SAT Registration", description: "SAT examination registration fee", amount: 4500, category: "International Exam", isActive: true, applicableGrades: [] },
+  { id: "exam-item-006", name: "Math Olympiad Entry", description: "Mathematics Olympiad competition entry fee", amount: 1200, category: "Competition", isActive: true, applicableGrades: [] },
+  { id: "exam-item-007", name: "Science Olympiad Entry", description: "Science Olympiad competition entry fee", amount: 1200, category: "Competition", isActive: true, applicableGrades: [] },
+  { id: "exam-item-008", name: "Spelling Bee Registration", description: "National Spelling Bee competition registration", amount: 800, category: "Competition", isActive: true, applicableGrades: [] },
+  { id: "exam-item-009", name: "Mid-Term Exam Materials", description: "Mid-term examination answer sheets and materials", amount: 150, category: "School Exam", isActive: true, applicableGrades: [] },
+  { id: "exam-item-010", name: "Final Exam Materials", description: "Final examination answer sheets and materials", amount: 150, category: "School Exam", isActive: true, applicableGrades: [] }
+]
+
+const defaultEventTemplates: ItemTemplate[] = [
+  { id: "exam-template-001", name: "Cambridge Full Package", description: "IGCSE and A-Level examination bundle", items: ["exam-item-001", "exam-item-002"], applicableGrades: [], isActive: true },
+  { id: "exam-template-002", name: "English Proficiency Bundle", description: "All English proficiency tests", items: ["exam-item-003", "exam-item-004"], applicableGrades: [], isActive: true },
+  { id: "exam-template-003", name: "Academic Competition Package", description: "Math and Science Olympiad entries", items: ["exam-item-006", "exam-item-007", "exam-item-008"], applicableGrades: [], isActive: true }
+]
+
+// Default items for School Bus (summer)
+const defaultSummerItems: PreCreatedItem[] = [
+  { id: "bus-item-001", name: "Zone 1 - Round Trip (Annual)", description: "Annual school bus service for Zone 1, morning and afternoon", amount: 45000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-002", name: "Zone 1 - One Way Morning (Annual)", description: "Annual school bus service for Zone 1, morning only", amount: 28000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-003", name: "Zone 1 - One Way Afternoon (Annual)", description: "Annual school bus service for Zone 1, afternoon only", amount: 28000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-004", name: "Zone 2 - Round Trip (Annual)", description: "Annual school bus service for Zone 2, morning and afternoon", amount: 55000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-005", name: "Zone 2 - One Way Morning (Annual)", description: "Annual school bus service for Zone 2, morning only", amount: 35000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-006", name: "Zone 3 - Round Trip (Annual)", description: "Annual school bus service for Zone 3, morning and afternoon", amount: 65000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-007", name: "Monthly Bus Pass - Zone 1", description: "Monthly school bus service for Zone 1", amount: 4500, category: "Monthly Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-008", name: "Monthly Bus Pass - Zone 2", description: "Monthly school bus service for Zone 2", amount: 5500, category: "Monthly Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-009", name: "Term 1 Bus Service - Zone 1", description: "Term 1 school bus service for Zone 1", amount: 15000, category: "Term Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-010", name: "Special Trip Transportation", description: "Transportation for special school events and field trips", amount: 500, category: "Special Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] }
+]
+
+const defaultSummerTemplates: ItemTemplate[] = [
+  { id: "bus-template-001", name: "Zone 1 Complete Package", description: "All Zone 1 transportation options", items: ["bus-item-001", "bus-item-002", "bus-item-003"], applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true },
+  { id: "bus-template-002", name: "Annual Service Bundle", description: "Annual round-trip services for all zones", items: ["bus-item-001", "bus-item-004", "bus-item-006"], applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true },
+  { id: "bus-template-003", name: "Monthly Pass Package", description: "Monthly bus passes for Zone 1 and 2", items: ["bus-item-007", "bus-item-008"], applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true }
+]
+
+// Default items for ECA (Enrichment Care Activities)
+const defaultECAItems: PreCreatedItem[] = [
+  { id: "eca-item-001", name: "Piano Lessons (Beginner)", description: "Weekly piano lessons for beginners", amount: 4500, category: "Music", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"] },
+  { id: "eca-item-002", name: "Piano Lessons (Intermediate)", description: "Weekly piano lessons for intermediate level", amount: 5500, category: "Music", isActive: true, applicableGrades: ["Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"] },
+  { id: "eca-item-003", name: "Guitar Lessons", description: "Weekly guitar lessons for all levels", amount: 4000, category: "Music", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-004", name: "Violin Lessons", description: "Weekly violin lessons for all levels", amount: 5000, category: "Music", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"] },
+  { id: "eca-item-005", name: "Choir Club", description: "Weekly choir practice and performances", amount: 2500, category: "Music", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-006", name: "Art & Painting", description: "Creative art and painting classes", amount: 3500, category: "Arts", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"] },
+  { id: "eca-item-007", name: "Drama Club", description: "Acting and drama performance classes", amount: 3000, category: "Arts", isActive: true, applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-008", name: "Dance Classes", description: "Ballet, jazz, and contemporary dance", amount: 3500, category: "Arts", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-009", name: "Football Training", description: "Weekly football training and matches", amount: 2800, category: "Sports", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-010", name: "Basketball Club", description: "Basketball training and competitions", amount: 2800, category: "Sports", isActive: true, applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-011", name: "Swimming Lessons", description: "Professional swimming lessons and training", amount: 4000, category: "Sports", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-012", name: "Martial Arts", description: "Taekwondo and karate training", amount: 3200, category: "Sports", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-013", name: "Chess Club", description: "Strategic thinking and chess tournaments", amount: 2000, category: "Academic", isActive: true, applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-014", name: "Robotics Club", description: "STEM robotics and programming", amount: 4500, category: "Academic", isActive: true, applicableGrades: ["Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-015", name: "Coding & Programming", description: "Computer programming and app development", amount: 4000, category: "Academic", isActive: true, applicableGrades: ["Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-016", name: "Science Club", description: "Hands-on science experiments and projects", amount: 3000, category: "Academic", isActive: true, applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"] },
+  { id: "eca-item-017", name: "Debate Club", description: "Public speaking and debate competitions", amount: 2500, category: "Academic", isActive: true, applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-018", name: "Mandarin Conversation", description: "Conversational Mandarin Chinese classes", amount: 3500, category: "Academic", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-019", name: "Cooking Club", description: "Culinary skills and healthy cooking", amount: 3000, category: "Other", isActive: true, applicableGrades: ["Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "eca-item-020", name: "Photography Club", description: "Digital photography and editing skills", amount: 3500, category: "Other", isActive: true, applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] }
+]
+
+const defaultECATemplates: ItemTemplate[] = [
+  { id: "eca-template-001", name: "Primary Music Bundle", description: "Popular music courses for primary students", items: ["eca-item-001", "eca-item-003", "eca-item-005"], applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"], isActive: true },
+  { id: "eca-template-002", name: "Arts & Performance Package", description: "Creative arts and performance activities", items: ["eca-item-006", "eca-item-007", "eca-item-008"], applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"], isActive: true },
+  { id: "eca-template-003", name: "Sports Athlete Bundle", description: "Comprehensive sports training package", items: ["eca-item-009", "eca-item-011", "eca-item-012"], applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true },
+  { id: "eca-template-004", name: "STEM Excellence Package", description: "Science, technology, and robotics programs", items: ["eca-item-013", "eca-item-014", "eca-item-015"], applicableGrades: ["Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true },
+  { id: "eca-template-005", name: "Academic Enrichment Bundle", description: "Language, debate, and science activities", items: ["eca-item-016", "eca-item-017", "eca-item-018"], applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true }
 ]
 
 const formatCurrency = (amount: number): string => {
   return `₿${amount.toLocaleString()}`
 }
 
-const itemCategories = [
-  { 
-    id: "Tuition", 
-    label: "Tuition", 
+// Item categories for each invoice type - getter function for translations
+const getItemCategoriesWithTranslations = (t: (key: string) => string) => [
+  {
+    id: "Tuition",
+    label: t('category.tuition'),
     icon: GraduationCap,
-    description: "Academic fees and school essentials"
+    description: t('category.tuitionDesc')
   },
-  { 
-    id: "ECA", 
-    label: "ECA", 
+  {
+    id: "ECA",
+    label: t('category.eca'),
     icon: Zap,
-    description: "Extra-curricular activities"
+    description: t('category.ecaDesc')
   },
-  { 
-    id: "Trip & Other Activity", 
-    label: "Trip & Other Activity", 
+  {
+    id: "Trip & Other Activity",
+    label: t('category.tripActivity'),
     icon: MapPin,
-    description: "Field trips and special events"
+    description: t('category.tripActivityDesc')
   }
 ]
+
+// Keep legacy for backward compatibility with data storage
+const itemCategories = [
+  { id: "Tuition", label: "Tuition", icon: GraduationCap, description: "Academic fees and school essentials" },
+  { id: "ECA", label: "ECA", icon: Zap, description: "Extra-curricular activities" },
+  { id: "Trip & Other Activity", label: "Trip & Other Activity", icon: MapPin, description: "Field trips and special events" }
+]
+
+// Item categories for Trip & Activity (afterschool)
+const afterSchoolItemCategories = [
+  { id: "Field Trip", label: "Field Trip", icon: MapPin, description: "Educational trips and tours" },
+  { id: "Camp", label: "Camp", icon: MapPin, description: "Camping and outdoor activities" },
+  { id: "Sports Event", label: "Sports Event", icon: Zap, description: "Sports competitions and events" },
+  { id: "Cultural Event", label: "Cultural Event", icon: FileText, description: "Arts, music, and cultural activities" },
+  { id: "Workshop", label: "Workshop", icon: GraduationCap, description: "Workshops and training sessions" }
+]
+
+// Item categories for Exam (event)
+const eventItemCategories = [
+  { id: "International Exam", label: "International Exam", icon: GraduationCap, description: "Cambridge, SAT, and other international exams" },
+  { id: "English Proficiency", label: "English Proficiency", icon: FileText, description: "IELTS, TOEFL, and English tests" },
+  { id: "Competition", label: "Competition", icon: Zap, description: "Academic competitions and olympiads" },
+  { id: "School Exam", label: "School Exam", icon: GraduationCap, description: "Internal school examinations" },
+  { id: "Certification", label: "Certification", icon: FileText, description: "Professional certifications" }
+]
+
+// Item categories for School Bus (summer)
+const summerItemCategories = [
+  { id: "Annual Service", label: "Annual Service", icon: MapPin, description: "Full year bus service packages" },
+  { id: "Term Service", label: "Term Service", icon: MapPin, description: "Term-based bus service" },
+  { id: "Monthly Service", label: "Monthly Service", icon: MapPin, description: "Monthly bus passes" },
+  { id: "Special Service", label: "Special Service", icon: Zap, description: "Special trips and events transportation" }
+]
+
+// Item categories for ECA
+const ecaItemCategories = [
+  { id: "Music", label: "Music", icon: Zap, description: "Music lessons and programs" },
+  { id: "Arts", label: "Arts", icon: FileText, description: "Arts and creative activities" },
+  { id: "Sports", label: "Sports", icon: MapPin, description: "Sports and physical activities" },
+  { id: "Academic", label: "Academic", icon: GraduationCap, description: "Academic enrichment programs" },
+  { id: "Other", label: "Other", icon: FileText, description: "Other ECA activities" }
+]
+
+// Get item categories based on invoice type
+const getItemCategories = (invoiceType: string) => {
+  switch (invoiceType) {
+    case "afterschool":
+      return afterSchoolItemCategories
+    case "event":
+      return eventItemCategories
+    case "summer":
+      return summerItemCategories
+    case "eca":
+      return ecaItemCategories
+    default:
+      return itemCategories
+  }
+}
+
+// Get page title based on invoice type
+const getPageTitle = (invoiceType: string, t: (key: string) => string): string => {
+  switch (invoiceType) {
+    case "afterschool":
+      return t('invoiceCreation.createTripInvoice')
+    case "event":
+      return t('invoiceCreation.createExamInvoice')
+    case "summer":
+      return t('invoiceCreation.createBusInvoice')
+    case "eca":
+      return "Create ECA Invoice"
+    default:
+      return t('invoiceCreation.createStudentInvoice')
+  }
+}
+
+// Get card title based on invoice type
+const getCardTitle = (invoiceType: string, t: (key: string) => string): string => {
+  switch (invoiceType) {
+    case "afterschool":
+      return t('invoiceCreation.tripInvoiceDetails')
+    case "event":
+      return t('invoiceCreation.examInvoiceDetails')
+    case "summer":
+      return t('invoiceCreation.busInvoiceDetails')
+    case "eca":
+      return "ECA Invoice Details"
+    default:
+      return t('invoiceCreation.studentInvoiceDetails')
+  }
+}
+
+// Get card icon based on invoice type
+const getCardIcon = (invoiceType: string) => {
+  switch (invoiceType) {
+    case "afterschool":
+      return MapPin
+    case "event":
+      return FileText
+    case "summer":
+      return MapPin
+    case "eca":
+      return Zap
+    default:
+      return GraduationCap
+  }
+}
 
 interface InvoiceCreationProps {
   defaultCategory?: string
   invoiceType?: string
   onNavigateToEmailSending?: (data: any) => void
   onNavigateBack?: () => void
+  editInvoice?: any // Invoice data to edit
 }
 
 // Interface for invoice student with discounts
@@ -511,9 +1034,25 @@ interface InvoiceStudent {
   }
 }
 
-export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmailSending, onNavigateBack }: InvoiceCreationProps) {
+export function InvoiceCreation({ defaultCategory, invoiceType = "student", onNavigateToEmailSending, onNavigateBack, editInvoice }: InvoiceCreationProps) {
   // Language context
   const { t } = useLanguage()
+
+  // Get translated grades and rooms
+  const grades = getGrades(t)
+  const rooms = getRooms(t)
+
+  // Check if this is edit mode
+  const isEditMode = !!editInvoice
+
+  // Check if this is a simplified category view (event only)
+  // ECA, afterschool, and summer are NOT simplified - they follow the full flow like Tuition
+  const isCategoryView = ["event"].includes(invoiceType)
+  const isSimplifiedView = isCategoryView
+
+  // Get the appropriate item categories for this invoice type
+  const currentItemCategories = getItemCategories(invoiceType)
+  const CardIcon = getCardIcon(invoiceType)
 
   // Discount Options context
   const { getRegistrationFees, getLatePaymentSettings, getSiblingDiscountPercentage } = useDiscountOptions()
@@ -530,6 +1069,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const [selectedAcademicYear, setSelectedAcademicYear] = useState("")
   const [selectedTerm, setSelectedTerm] = useState("")
   const [selectedGrade, setSelectedGrade] = useState("")
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([]) // For Trip & Activity multi-select
   const [selectedRoom, setSelectedRoom] = useState("")
 
   // Convert StudentContext students to invoice format
@@ -539,6 +1079,37 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
   const availableStudents = useMemo(() => {
     return students.map(student => {
+      // Convert gradeLevel ID to label format (e.g., "year2" -> "Year 2")
+      const gradeLabel = getGradeLabel(student.gradeLevel)
+
+      // Get room/section from student if available, or leave empty for "All Rooms"
+      const studentRoom = student.section || student.room || ""
+
+      // For simplified views (Trip/Activity, Exam, School Bus), don't calculate discounts or fee waivers
+      if (isSimplifiedView) {
+        return {
+          id: student.studentId,
+          name: `${student.firstName} ${student.lastName}`,
+          grade: gradeLabel,
+          room: studentRoom,
+          parentName: student.parents?.[0]?.name || "Parent",
+          email: student.parents?.[0]?.email || "parent@email.com",
+          originalStudent: student,
+          isNewStudent: false,
+          enrollmentTerm: student.enrollmentTerm || "",
+          enrollmentYear: student.academicYear || "",
+          discounts: {
+            siblingDiscount: 0,
+            studentGroupDiscounts: [],
+            staffChild: false,
+            scholarship: false,
+            earlyBird: false
+          },
+          feeWaiver: undefined
+        } as InvoiceStudent
+      }
+
+      // For regular tuition invoices, calculate all discounts
       // Get sibling discount - available from 1st child onwards (no Year 3+ requirement)
       const childOrder = student.childOrder || 1
       const siblingDiscount = getSiblingDiscountPercentage(childOrder, student.academicYear || effectiveAcademicYear, effectiveTerm)
@@ -552,15 +1123,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       const staffChild = isStaffChildStudent(student.studentId) || notes.includes('staff')
       const scholarship = hasScholarshipDiscount(student.studentId) || notes.includes('scholarship')
       const earlyBird = hasEarlyBirdDiscount(student.studentId) || notes.includes('early bird')
-
-      // Convert gradeLevel ID to label format (e.g., "year2" -> "Year 2")
-      const gradeLabel = getGradeLabel(student.gradeLevel)
-
-      // Get room/section from student if available, or leave empty for "All Rooms"
-      const studentRoom = student.section || student.room || ""
-
-      // Existing students in the system are NOT new students
-      // Only students added via "Add New Student" button are considered new
 
       // Calculate Fee Waiver eligibility (same logic as Family Groups)
       // Pass current invoice term (not enrollment term) to check if eligible NOW
@@ -605,12 +1167,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
         } : undefined
       } as InvoiceStudent
     })
-  }, [students, effectiveAcademicYear, effectiveTerm, checkFeePrivilegeEligibility, getSiblingDiscountPercentage, getStudentGroupDiscounts])
+  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, checkFeePrivilegeEligibility, getSiblingDiscountPercentage, getStudentGroupDiscounts])
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
-    return loadItemsFromStorage()
-  }, [])
+    return loadItemsFromStorage(invoiceType)
+  }, [invoiceType])
 
   // Get available terms based on selected academic year
   const availableTerms = selectedAcademicYear
@@ -633,6 +1195,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const [selectedStudents, setSelectedStudents] = useState<InvoiceStudent[]>([])
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvStudents, setCsvStudents] = useState<any[]>([])
+
+  // Item selection state (moved before useEffect)
+  const [availableItems, setAvailableItems] = useState<PreCreatedItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<PreCreatedItem[]>([])
+  const [availableTemplates, setAvailableTemplates] = useState<ItemTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("")
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    defaultCategory || (invoiceType === "eca" ? "ECA" : "Tuition")
+  )
 
   // Update selected students' feeWaiver and discounts when term/year changes
   useEffect(() => {
@@ -661,30 +1232,78 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     }
   }, [availableStudents]) // Runs when availableStudents recalculates (due to term/year change)
 
-  // Item selection state
-  const [availableItems, setAvailableItems] = useState<PreCreatedItem[]>([])
-  const [selectedItems, setSelectedItems] = useState<PreCreatedItem[]>([])
-  const [availableTemplates, setAvailableTemplates] = useState<ItemTemplate[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("")
-  const [selectedCategory, setSelectedCategory] = useState<string>(defaultCategory || "Tuition")
+  // Load edit invoice data
+  useEffect(() => {
+    if (editInvoice && isEditMode) {
+      console.log("Loading edit invoice data:", editInvoice)
 
+      // Extract term and academic year from the term string (e.g., "2025-2026 - Term 1")
+      const termMatch = editInvoice.term?.match(/([\d-]+)\s*-\s*(.+)/)
+      if (termMatch) {
+        setSelectedAcademicYear(termMatch[1].trim())
+        setSelectedTerm(termMatch[2].trim())
+      }
+
+      // Set grade and room
+      setSelectedGrade(editInvoice.studentGrade || '')
+      setSelectedRoom(editInvoice.studentRoom || '')
+
+      // Set payment deadline
+      if (editInvoice.dueDate) {
+        setPaymentDeadline(new Date(editInvoice.dueDate))
+      }
+
+      // Set selected items
+      if (editInvoice.items && Array.isArray(editInvoice.items)) {
+        setSelectedItems(editInvoice.items.map((item: any, index: number) => ({
+          id: item.id || item.itemCode || `item-${Date.now()}-${index}`,
+          name: item.name || '',
+          description: item.description || '',
+          amount: item.amount || 0,
+          category: item.category || 'Tuition',
+          applicableGrades: item.applicableGrades || [],
+          isActive: true,
+          itemCode: item.itemCode || item.id
+        })))
+      }
+
+      // Set selected student
+      if (editInvoice.studentId) {
+        const student: InvoiceStudent = {
+          id: editInvoice.studentId,
+          name: editInvoice.studentName || '',
+          grade: editInvoice.studentGrade || '',
+          email: editInvoice.parentEmail || '',
+          parentName: editInvoice.parentName || '',
+          room: editInvoice.studentRoom || '',
+          isNewStudent: editInvoice.isNewStudent || false,
+          discounts: {
+            siblingDiscount: 0,
+            studentGroupDiscounts: [],
+            staffChild: false,
+            scholarship: false,
+            earlyBird: false
+          },
+          feeWaiver: editInvoice.feeWaiver
+        }
+        setSelectedStudents([student])
+      }
+
+      // Go to preview mode immediately
+      setIsPreviewMode(true)
+    }
+  }, [editInvoice, isEditMode])
 
   // Add item from list state
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false)
   const [addItemSearchTerm, setAddItemSearchTerm] = useState("")
   const [addItemCategory, setAddItemCategory] = useState("all")
 
-  // Invoice type tab state
-  const [invoiceTab, setInvoiceTab] = useState<"student" | "external">("student")
-
-  // External invoice state
-  const [externalRecipientName, setExternalRecipientName] = useState("")
-  const [externalRecipientEmail, setExternalRecipientEmail] = useState("")
-  const [externalRecipientAddress, setExternalRecipientAddress] = useState("")
-  const [externalEventName, setExternalEventName] = useState("")
-  const [externalSelectedItems, setExternalSelectedItems] = useState<PreCreatedItem[]>([])
-  const [externalPaymentDeadline, setExternalPaymentDeadline] = useState<Date | undefined>(undefined)
-  const [externalNotes, setExternalNotes] = useState("")
+  // Edit item state
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<PreCreatedItem | null>(null)
+  const [editItemDescription, setEditItemDescription] = useState("")
+  const [editItemAmount, setEditItemAmount] = useState<number>(0)
 
   // Add New Student dialog state
   const [isAddNewStudentOpen, setIsAddNewStudentOpen] = useState(false)
@@ -704,10 +1323,61 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   const [newStudentPhone, setNewStudentPhone] = useState("")
   const [newStudentAddress, setNewStudentAddress] = useState("")
 
+  // ==========================================
+  // Menu-specific fields for simplified views
+  // ==========================================
+
+  // Trip & Activity fields
+  const [tripName, setTripName] = useState("")
+  const [tripDate, setTripDate] = useState<Date | undefined>(undefined)
+  const [tripLocation, setTripLocation] = useState("")
+
+  // Exam fields
+  const [examName, setExamName] = useState("")
+  const [examDate, setExamDate] = useState<Date | undefined>(undefined)
+  const [examType, setExamType] = useState("")
+  const [testCenter, setTestCenter] = useState("")
+
+  // School Bus fields
+  const [busRoute, setBusRoute] = useState("")
+  const [busServiceType, setBusServiceType] = useState("")
+
+  // Payer selection type for simplified views
+  const [payerSelectionType, setPayerSelectionType] = useState<"fromSystem" | "manual">("fromSystem")
+
+  // Manual payer info
+  const [manualClientName, setManualClientName] = useState("")
+  const [manualContactName, setManualContactName] = useState("")
+  const [manualClientEmail, setManualClientEmail] = useState("")
+  const [manualClientAddress, setManualClientAddress] = useState("")
+  const [manualClientPhone, setManualClientPhone] = useState("")
+
+  // Sync state
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Bus routes options
+  const busRoutes = [
+    "Zone 1 - Sukhumvit (Soi 1-30)",
+    "Zone 2 - Sukhumvit (Soi 31-63)",
+    "Zone 3 - Silom / Sathorn",
+    "Zone 4 - Ratchadaphisek",
+    "Zone 5 - Rama 9 / Petchaburi",
+    "Zone 6 - Ladprao / Pahonyothin"
+  ]
+
+  // Bus service types
+  const busServiceTypes = [
+    { value: "term1", label: "Term 1 Service" },
+    { value: "term2", label: "Term 2 Service" },
+    { value: "term3", label: "Term 3 Service" },
+    { value: "full_year", label: "Full Year Service" }
+  ]
+
   // Load items when grade or category changes
+  // Skip for summer and afterschool - they have their own item loading logic
   useEffect(() => {
-    if (selectedGrade) {
-      const allItems = loadItemsFromStorage()
+    if (selectedGrade && invoiceType !== "summer" && invoiceType !== "afterschool") {
+      const allItems = loadItemsFromStorage(invoiceType)
       const filteredItems = allItems.filter(item =>
         item.isActive &&
         item.applicableGrades.includes(selectedGrade) &&
@@ -715,45 +1385,168 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       )
       setAvailableItems(filteredItems)
 
-      const allTemplates = loadTemplatesFromStorage()
+      const allTemplates = loadTemplatesFromStorage(invoiceType)
       const filteredTemplates = allTemplates.filter(template =>
         template.isActive && template.applicableGrades.includes(selectedGrade)
       )
       setAvailableTemplates(filteredTemplates)
     }
-  }, [selectedGrade, selectedCategory])
+  }, [selectedGrade, selectedCategory, invoiceType])
+
+  // Load all items for simplified views (no grade filtering needed)
+  useEffect(() => {
+    if (isSimplifiedView) {
+      const allItems = loadItemsFromStorage(invoiceType)
+      const filteredItems = allItems.filter(item => item.isActive)
+      setAvailableItems(filteredItems)
+
+      const allTemplates = loadTemplatesFromStorage(invoiceType)
+      const filteredTemplates = allTemplates.filter(template => template.isActive)
+      setAvailableTemplates(filteredTemplates)
+    }
+  }, [isSimplifiedView, invoiceType])
+
+  // Load items when grades are selected for Trip & Activity (afterschool)
+  useEffect(() => {
+    if (invoiceType === "afterschool" && selectedGrades.length > 0) {
+      const allItems = loadItemsFromStorage(invoiceType)
+      // Afterschool items don't filter by grade - load all active items
+      const filteredItems = allItems.filter(item => item.isActive)
+      setAvailableItems(filteredItems)
+
+      const allTemplates = loadTemplatesFromStorage(invoiceType)
+      const filteredTemplates = allTemplates.filter(template => template.isActive)
+      setAvailableTemplates(filteredTemplates)
+    }
+  }, [selectedGrades, invoiceType])
 
   const handleGradeChange = (grade: string) => {
     setSelectedGrade(grade)
+    // For summer and afterschool, term is selected BEFORE grade, so don't reset it
+    // For others (student, eca), grade is selected BEFORE term, so reset it
+    if (invoiceType !== "summer" && invoiceType !== "afterschool") {
+      setSelectedTerm("") // Reset term when grade changes
+    }
     setSelectedRoom("")
     setSelectedStudents([])
     setCsvStudents([])
     setCsvFile(null)
-    setSelectedItems([])
     setSelectedTemplate("")
-    setSelectedCategory(defaultCategory || "Tuition")
+    // Set correct category based on invoice type
+    setSelectedCategory(invoiceType === "eca" ? "ECA" : (defaultCategory || "Tuition"))
     setPaymentDeadline("")
     setIsPreviewMode(false)
 
     // Load items from localStorage
-    const allItems = loadItemsFromStorage()
+    const allItems = loadItemsFromStorage(invoiceType)
+    console.log(`[${invoiceType}] Loaded ${allItems.length} items from storage`)
 
-    // Filter available items for this grade and category
-    const gradeItems = allItems.filter(item =>
-      item.isActive &&
-      item.applicableGrades.includes(grade) &&
-      item.category === (defaultCategory || "Tuition")
-    )
+    // Filter available items for this grade
+    // For School Bus (summer), load all items (not grade-specific)
+    // For ECA, include all items (Music, Arts, Sports, Academic, Other categories)
+    // For other types, filter by specific category
+    const gradeItems = invoiceType === "summer"
+      ? allItems.filter(item => item.isActive)
+      : invoiceType === "eca"
+        ? allItems.filter(item =>
+            item.isActive &&
+            item.applicableGrades.includes(grade)
+          )
+        : allItems.filter(item =>
+            item.isActive &&
+            item.applicableGrades.includes(grade) &&
+            item.category === (defaultCategory || "Tuition")
+          )
+    console.log(`[${invoiceType}] Filtered to ${gradeItems.length} items for grade ${grade}`)
     setAvailableItems(gradeItems)
 
+    // Don't auto-select items yet - wait for term to be selected
+    setSelectedItems([])
+
     // Load templates from localStorage
-    const allTemplates = loadTemplatesFromStorage()
+    const allTemplates = loadTemplatesFromStorage(invoiceType)
 
     // Filter available templates for this grade
-    const gradeTemplates = allTemplates.filter(template =>
-      template.isActive && template.applicableGrades.includes(grade)
-    )
+    // For School Bus (summer), load all templates (not grade-specific)
+    const gradeTemplates = invoiceType === "summer"
+      ? allTemplates.filter(template => template.isActive)
+      : allTemplates.filter(template =>
+          template.isActive && template.applicableGrades.includes(grade)
+        )
     setAvailableTemplates(gradeTemplates)
+  }
+
+  const handleTermChange = (term: string) => {
+    setSelectedTerm(term)
+    setSelectedRoom("")
+    setSelectedStudents([])
+    setCsvStudents([])
+    setCsvFile(null)
+    setPaymentDeadline("")
+    setIsPreviewMode(false)
+
+    // Auto-select tuition fee from Tuition By Year data (for student/tuition invoices)
+    // Now we have: selectedAcademicYear, selectedGrade, and term (just selected)
+    if (invoiceType === "student" && selectedAcademicYear && selectedGrade) {
+      try {
+        // Load tuition data from localStorage
+        const tuitionData = localStorage.getItem("tuitionByYearData")
+        if (tuitionData) {
+          const parsedData = JSON.parse(tuitionData)
+          const yearData = parsedData[selectedAcademicYear]
+
+          if (yearData && Array.isArray(yearData) && selectedGrade) {
+            // Convert grade to lowercase format (e.g., "Year 1" -> "year1")
+            const gradeId = selectedGrade.toLowerCase().replace(/\s+/g, '')
+
+            // Find the tuition fees for this grade
+            const gradeTuition = yearData.find((item: any) =>
+              item.gradeLevel === gradeId || item.id === gradeId
+            )
+
+            if (gradeTuition) {
+              // Determine which term amount to use
+              let termAmount = 0
+              let termName = ""
+
+              if (term.includes("Term 1") || term === "term1") {
+                termAmount = gradeTuition.term1Amount || 0
+                termName = "Term 1"
+              } else if (term.includes("Term 2") || term === "term2") {
+                termAmount = gradeTuition.term2Amount || 0
+                termName = "Term 2"
+              } else if (term.includes("Term 3") || term === "term3") {
+                termAmount = gradeTuition.term3Amount || 0
+                termName = "Term 3"
+              }
+
+              if (termAmount > 0) {
+                setSelectedItems([{
+                  id: `tuition-${gradeId}-${term}`,
+                  name: `${termName} Tuition Fee - ${selectedGrade}`,
+                  description: `${termName} tuition payment for ${selectedGrade}`,
+                  quantity: 1,
+                  amount: termAmount
+                }])
+              } else {
+                setSelectedItems([])
+              }
+            } else {
+              setSelectedItems([])
+            }
+          } else {
+            setSelectedItems([])
+          }
+        } else {
+          setSelectedItems([])
+        }
+      } catch (error) {
+        console.error("Failed to load tuition fees:", error)
+        setSelectedItems([])
+      }
+    } else {
+      setSelectedItems([])
+    }
   }
 
   const handleRoomChange = (room: string) => {
@@ -766,7 +1559,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     setSelectedCategory(category)
 
     // Load items from localStorage
-    const allItems = loadItemsFromStorage()
+    const allItems = loadItemsFromStorage(invoiceType)
 
     // Filter available items for selected grade and new category
     const categoryItems = allItems.filter(item =>
@@ -777,13 +1570,37 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     setAvailableItems(categoryItems)
   }
 
-  const filteredStudents = availableStudents.filter(student =>
-    (student.id.toLowerCase().includes(searchStudentTerm.toLowerCase()) ||
-     student.name.toLowerCase().includes(searchStudentTerm.toLowerCase())) &&
-    student.grade === selectedGrade &&
-    (selectedRoom === "" || student.room === selectedRoom) &&
-    !selectedStudents.find(s => s.id === student.id)
-  )
+  const filteredStudents = availableStudents.filter(student => {
+    const searchLower = (searchStudentTerm || '').toLowerCase()
+    const matchesSearch = (student.id || '').toLowerCase().includes(searchLower) ||
+                         (student.name || '').toLowerCase().includes(searchLower)
+    const notAlreadySelected = !selectedStudents.find(s => s.id === student.id)
+
+    // For simplified views (event only), don't filter by grade/room
+    if (isSimplifiedView) {
+      return matchesSearch && notAlreadySelected
+    }
+
+    // For Trip & Activity (afterschool), filter by multiple selected grades
+    if (invoiceType === "afterschool") {
+      return matchesSearch &&
+             selectedGrades.includes(student.grade) &&
+             notAlreadySelected
+    }
+
+    // For School Bus (summer), filter by single grade (no room filter)
+    if (invoiceType === "summer") {
+      return matchesSearch &&
+             student.grade === selectedGrade &&
+             notAlreadySelected
+    }
+
+    // For regular student invoices (Tuition, ECA), filter by single grade and room
+    return matchesSearch &&
+           student.grade === selectedGrade &&
+           (selectedRoom === "" || student.room === selectedRoom) &&
+           notAlreadySelected
+  })
 
   // Calculate discounts for a student
   const calculateStudentDiscounts = (student: InvoiceStudent, subtotal: number) => {
@@ -810,16 +1627,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       totalDiscountAmount += amount
     }
 
-    // Registration Fee Waiver (after Sibling) - only show if eligible
-    if (student.feeWaiver?.eligible && student.feeWaiver?.termsRemaining > 0) {
-      const termNumber = 4 - student.feeWaiver.termsRemaining
-      discountItems.push({
-        name: `Registration Fee Waiver (฿${student.feeWaiver.creditPerTerm.toLocaleString()}/term ${termNumber}/3)`,
-        amount: student.feeWaiver.creditPerTerm
-      })
-    }
-
-    // Scholarship (after Registration Fee Waiver)
+    // Scholarship
     if (discounts.scholarship) {
       const amount = subtotal
       discountItems.push({
@@ -884,8 +1692,19 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       student.discounts.studentGroupDiscounts.length > 0 ||
       student.discounts.staffChild ||
       student.discounts.scholarship ||
-      student.discounts.earlyBird ||
-      (student.feeWaiver?.eligible && student.feeWaiver?.termsRemaining > 0)
+      student.discounts.earlyBird
+  }
+
+  // Sync student list from system
+  const handleSyncStudentList = () => {
+    setIsSyncing(true)
+    // Simulate sync delay
+    setTimeout(() => {
+      setIsSyncing(false)
+      toast.success(t('invoiceCreation.studentListSynced'), {
+        description: t('invoiceCreation.studentListSyncedDesc', { count: students.length })
+      })
+    }, 800)
   }
 
   const handleIndividualStudentSelect = (student: any) => {
@@ -898,11 +1717,29 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   }
 
   const handleSelectAllStudents = () => {
-    const gradeStudents = availableStudents.filter(s =>
-      s.grade === selectedGrade &&
-      (selectedRoom === "" || s.room === selectedRoom)
-    )
-    setSelectedStudents(gradeStudents)
+    // For simplified views, select all available students
+    if (isSimplifiedView) {
+      setSelectedStudents(availableStudents)
+    } else if (invoiceType === "afterschool") {
+      // For Trip & Activity, select all students from selected grades
+      const gradeStudents = availableStudents.filter(s =>
+        selectedGrades.includes(s.grade)
+      )
+      setSelectedStudents(gradeStudents)
+    } else if (invoiceType === "summer") {
+      // For School Bus, select all students from selected grade (no room filter)
+      const gradeStudents = availableStudents.filter(s =>
+        s.grade === selectedGrade
+      )
+      setSelectedStudents(gradeStudents)
+    } else {
+      // For regular invoices (Tuition, ECA), filter by grade and room
+      const gradeStudents = availableStudents.filter(s =>
+        s.grade === selectedGrade &&
+        (selectedRoom === "" || s.room === selectedRoom)
+      )
+      setSelectedStudents(gradeStudents)
+    }
   }
 
   // Handle adding a new student (not in system yet)
@@ -976,7 +1813,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
       nickname: newStudentNickname || "",
       dateOfBirth: newStudentDob ? new Date(newStudentDob) : null,
       gender: newStudentGender,
-      gradeLevel: selectedGrade.toLowerCase().replace(/\s+/g, ''), // "Year 3" -> "year3"
+      gradeLevel: (selectedGrade || '').toLowerCase().replace(/\s+/g, ''), // "Year 3" -> "year3"
       academicYear: selectedAcademicYear,
       enrollmentTerm: (selectedTerm || "term1") as "term1" | "term2" | "term3",
       status: "active" as const,
@@ -1067,13 +1904,35 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     setSelectedItems(selectedItems.filter(i => i.id !== itemId))
   }
 
+  // Edit item handlers
+  const handleEditItem = (item: PreCreatedItem) => {
+    setEditingItem(item)
+    setEditItemDescription(item.description)
+    setEditItemAmount(item.amount)
+    setIsEditItemDialogOpen(true)
+  }
+
+  const handleSaveEditItem = () => {
+    if (!editingItem) return
+
+    setSelectedItems(selectedItems.map(item =>
+      item.id === editingItem.id
+        ? { ...item, description: editItemDescription, amount: editItemAmount }
+        : item
+    ))
+    setIsEditItemDialogOpen(false)
+    setEditingItem(null)
+    toast.success("Item updated successfully")
+  }
+
   // Get all items for Add Item dialog (filtered by search and category)
   const getItemsForDialog = () => {
-    const allItems = loadItemsFromStorage()
+    const allItems = loadItemsFromStorage(invoiceType)
     return allItems.filter(item => {
+      const searchLower = (addItemSearchTerm || '').toLowerCase()
       const matchesSearch = addItemSearchTerm === "" ||
-        item.name.toLowerCase().includes(addItemSearchTerm.toLowerCase()) ||
-        item.description.toLowerCase().includes(addItemSearchTerm.toLowerCase())
+        (item.name || '').toLowerCase().includes(searchLower) ||
+        (item.description || '').toLowerCase().includes(searchLower)
       const matchesCategory = addItemCategory === "all" || item.category === addItemCategory
       const notAlreadySelected = !selectedItems.find(s => s.id === item.id)
       return item.isActive && matchesSearch && matchesCategory && notAlreadySelected
@@ -1082,11 +1941,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
   // Add item from list
   const handleAddItemFromList = (item: PreCreatedItem) => {
-    if (invoiceTab === "external") {
-      setExternalSelectedItems([...externalSelectedItems, item])
-    } else {
-      setSelectedItems([...selectedItems, item])
-    }
+    setSelectedItems([...selectedItems, item])
     toast.success(`Added: ${item.name}`)
   }
 
@@ -1098,8 +1953,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     }
 
     // Load templates and items from localStorage
-    const allTemplates = loadTemplatesFromStorage()
-    const allItems = loadItemsFromStorage()
+    const allTemplates = loadTemplatesFromStorage(invoiceType)
+    const allItems = loadItemsFromStorage(invoiceType)
 
     const template = allTemplates.find(t => t.id === templateId)
     if (template) {
@@ -1121,9 +1976,25 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
   }
 
   const handlePreviewInvoice = () => {
-    if (selectedStudents.length === 0 || selectedItems.length === 0) {
-      toast.error("Please select students and items")
+    // Check if items are selected
+    if (selectedItems.length === 0) {
+      toast.error("Please select items")
       return
+    }
+
+    // Check payer selection based on view type
+    if (isSimplifiedView && payerSelectionType === "manual") {
+      // Manual entry - check required fields
+      if (!manualClientName || !manualClientEmail) {
+        toast.error("Please fill in client name and email")
+        return
+      }
+    } else {
+      // From system - check students selected
+      if (selectedStudents.length === 0) {
+        toast.error("Please select students")
+        return
+      }
     }
 
     if (!paymentDeadline) {
@@ -1146,6 +2017,45 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     return `INV-${year}${month}-${studentId.slice(-4)}`
+  }
+
+  // Get account code (Nominal Code) based on item name/category
+  const getAccountCode = (item: PreCreatedItem): string => {
+    const name = (item.name || '').toLowerCase()
+    const category = (item.category || '').toLowerCase()
+
+    // Security Deposit
+    if (name.includes('security deposit') || name.includes('deposit')) {
+      return '2220001'
+    }
+
+    // Tuition fees
+    if (category.includes('tuition') || name.includes('tuition fee') || name.includes('term')) {
+      return '2130001'
+    }
+
+    // School Bus
+    if (category.includes('school bus') || category.includes('bus')) {
+      return '2130002'
+    }
+
+    // ECA
+    if (category.includes('eca') || category.includes('extra')) {
+      return '2130003'
+    }
+
+    // Trip & Activities
+    if (category.includes('trip') || category.includes('activity')) {
+      return '2130004'
+    }
+
+    // Default
+    return '2130001'
+  }
+
+  // Convert academic year to Excel format (2025-2026 -> 2025/2026)
+  const formatAcademicYearForExcel = (year: string): string => {
+    return (year || '').replace('-', '/')
   }
 
   const handleConfirmAndSendEmail = () => {
@@ -1189,20 +2099,26 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           ? fees.securityDeposit
           : 0
 
-      // Calculate ID Charges (3%)
-      const subtotalBeforeIdCharges = discountCalc.netAmount + registrationFeesTotal - securityDepositWaiverAmount
-      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+      // Add line numbers and itemCode to items
+      const itemsWithLineNumbers = selectedItems.map((item, index) => ({
+        ...item,
+        lineNumber: index + 1,
+        itemCode: item.itemCode || getAccountCode(item) // Use existing itemCode or generate from category
+      }))
+
+      // Get first item's account code for invoice-level accountCode
+      const invoiceAccountCode = selectedItems.length > 0 ? getAccountCode(selectedItems[0]) : '2130001'
 
       const savedInvoice: SavedInvoice = {
         id: `inv-${student.id}-${Date.now()}`,
         invoiceNumber: invoiceNumber,
-        studentName: student.name,
-        studentId: student.id,
-        studentGrade: selectedGrade,
-        studentRoom: student.room,
-        parentName: student.parentName,
-        parentEmail: student.email,
-        items: selectedItems,
+        studentName: student.name || '',
+        studentId: student.id || '',
+        studentGrade: selectedGrade || '',
+        studentRoom: student.room || '',
+        parentName: student.parentName || '',
+        parentEmail: student.email || '',
+        items: itemsWithLineNumbers,
         subtotal: subtotal,
         discounts: discountCalc.discountItems,
         totalDiscount: discountCalc.totalDiscountAmount,
@@ -1213,14 +2129,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
+        invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+        // Event/Trip/Activity name for afterschool/event/summer/eca invoices
+        eventName: (invoiceType === "event" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
         // New student data
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
-        idCharges: idCharges > 0 ? idCharges : undefined,
-        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined
+        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
+        // Excel export fields
+        familyCode: invoiceStudent.originalStudent?.familyCode || '',
+        adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
+        accountCode: invoiceAccountCode,
+        documentType: 'SI', // Sales Invoice
+        academicYear: formatAcademicYearForExcel(selectedAcademicYear || effectiveAcademicYear),
+        termName: selectedTerm || effectiveTerm
       }
 
-      saveInvoiceToStorage(savedInvoice)
+      saveInvoiceToStorage(savedInvoice, invoiceType)
     })
 
     // Create invoice data for email sending
@@ -1264,15 +2189,28 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
   // Save as Draft - saves invoices without sending email
   const handleSaveAsDraft = () => {
+    console.log("=== handleSaveAsDraft called ===")
+    console.log("selectedStudents:", selectedStudents)
+    console.log("selectedAcademicYear:", selectedAcademicYear)
+    console.log("selectedTerm:", selectedTerm)
+    console.log("selectedItems:", selectedItems)
+
     const now = new Date()
     const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
 
-    // Save each student's invoice to localStorage with "pending" status
-    selectedStudents.forEach((student) => {
+    try {
+      console.log("Starting to save invoices...")
+
+      // Save each student's invoice to localStorage with "pending" status
+      selectedStudents.forEach((student) => {
+        console.log("Processing student:", student.name)
       const invoiceStudent = student as InvoiceStudent
       const subtotal = getTotalAmount()
       const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal)
-      const invoiceNumber = generateInvoiceNumber(student.id)
+      // Use existing invoice number if editing, otherwise create draft number
+      const invoiceNumber = isEditMode && editInvoice?.invoiceNumber
+        ? editInvoice.invoiceNumber
+        : `DRAFT-${Date.now()}-${student.id.slice(-4)}`
 
       // Calculate registration fees for new students
       const registrationFeesList: { name: string, amount: number }[] = []
@@ -1299,260 +2237,130 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           ? fees.securityDeposit
           : 0
 
-      // Calculate ID Charges (3%)
-      const subtotalBeforeIdCharges = discountCalc.netAmount + registrationFeesTotal - securityDepositWaiverAmount
-      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+      // Add line numbers and itemCode to items
+      const itemsWithLineNumbers = selectedItems.map((item, index) => ({
+        ...item,
+        lineNumber: index + 1,
+        itemCode: item.itemCode || getAccountCode(item)
+      }))
+
+      // Get first item's account code for invoice-level accountCode
+      const invoiceAccountCode = selectedItems.length > 0 ? getAccountCode(selectedItems[0]) : '2130001'
 
       const savedInvoice: SavedInvoice = {
-        id: `inv-${student.id}-${Date.now()}`,
+        id: isEditMode && editInvoice?.id ? editInvoice.id : `inv-${student.id}-${Date.now()}`,
         invoiceNumber: invoiceNumber,
-        studentName: student.name,
-        studentId: student.id,
-        studentGrade: selectedGrade,
-        studentRoom: student.room,
-        parentName: student.parentName,
-        parentEmail: student.email,
-        items: selectedItems,
+        studentName: student.name || '',
+        studentId: student.id || '',
+        studentGrade: selectedGrade || '',
+        studentRoom: student.room || '',
+        parentName: student.parentName || '',
+        parentEmail: student.email || '',
+        items: itemsWithLineNumbers,
         subtotal: subtotal,
         discounts: discountCalc.discountItems,
         totalDiscount: discountCalc.totalDiscountAmount,
         netAmount: discountCalc.netAmount,
         dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
-        issueDate: now.toISOString().split('T')[0],
+        issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : now.toISOString().split('T')[0],
         status: "pending_approval", // Pending approval status
-        term: `${selectedAcademicYear} - ${selectedTerm}`,
+        term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
+        invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+        // Event/Trip/Activity name for afterschool/event/summer/eca invoices
+        eventName: (invoiceType === "event" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
         // New student data
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
-        idCharges: idCharges > 0 ? idCharges : undefined,
-        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined
+        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
+        // Excel export fields
+        familyCode: invoiceStudent.originalStudent?.familyCode || '',
+        adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
+        accountCode: invoiceAccountCode,
+        documentType: 'SI', // Sales Invoice
+        academicYear: formatAcademicYearForExcel(selectedAcademicYear || effectiveAcademicYear),
+        termName: selectedTerm || effectiveTerm
       }
 
-      saveInvoiceToStorage(savedInvoice)
-    })
+      console.log("Saving invoice to storage:", savedInvoice)
+        saveInvoiceToStorage(savedInvoice, invoiceType)
+        console.log("Invoice saved successfully for student:", student.name)
+      })
 
-    toast.success(`Submitted ${selectedStudents.length} invoice(s) for approval`)
-    setIsPreviewDialogOpen(false)
+      console.log("All invoices saved successfully")
+      toast.success(isEditMode
+        ? `Invoice ${editInvoice?.invoiceNumber} updated successfully`
+        : `Submitted ${selectedStudents.length} invoice(s) for approval`)
+      setIsPreviewDialogOpen(false)
 
-    // Navigate back to Invoice Management
-    if (onNavigateBack) {
-      onNavigateBack()
-      return
+      // Navigate back to Invoice Management
+      if (onNavigateBack) {
+        onNavigateBack()
+        return
+      }
+
+      // Reset form
+      setSelectedAcademicYear("")
+      setSelectedTerm("")
+      setSelectedGrade("")
+      setSelectedRoom("")
+      setSelectedStudents([])
+      setCsvStudents([])
+      setCsvFile(null)
+      setSelectedItems([])
+      setAvailableItems([])
+      setAvailableTemplates([])
+      setSelectedTemplate("")
+      setPaymentDeadline("")
+      setIsPreviewMode(false)
+
+      console.log("=== Draft saved successfully ===")
+    } catch (error) {
+      console.error("=== Error saving draft ===")
+      console.error("Error details:", error)
+      console.error("Error message:", error instanceof Error ? error.message : String(error))
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
+      toast.error(`Failed to save draft: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
-
-    // Reset form
-    setSelectedAcademicYear("")
-    setSelectedTerm("")
-    setSelectedGrade("")
-    setSelectedRoom("")
-    setSelectedStudents([])
-    setCsvStudents([])
-    setCsvFile(null)
-    setSelectedItems([])
-    setAvailableItems([])
-    setAvailableTemplates([])
-    setSelectedTemplate("")
-    setPaymentDeadline("")
-    setIsPreviewMode(false)
   }
 
   const getTotalAmount = () => {
     return selectedItems.reduce((sum, item) => sum + item.amount, 0)
   }
 
-  // Generate invoice number for external invoice
-  const generateExternalInvoiceNumber = () => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
-    return `EXT-${year}-${random}`
-  }
-
-  // Get total amount for external invoice
-  const getExternalTotalAmount = () => {
-    return externalSelectedItems.reduce((sum, item) => sum + item.amount, 0)
-  }
-
-  // Reset external invoice form
-  const resetExternalForm = () => {
-    setExternalRecipientName("")
-    setExternalRecipientEmail("")
-    setExternalRecipientAddress("")
-    setExternalEventName("")
-    setExternalSelectedItems([])
-    setExternalPaymentDeadline(undefined)
-    setExternalNotes("")
-  }
-
-  // Save External Invoice as Draft
-  const handleSaveExternalAsDraft = () => {
-    if (!externalRecipientName || !externalRecipientEmail) {
-      toast.error("Please fill in recipient name and email")
-      return
-    }
-
-    const now = new Date()
-    const subtotal = getExternalTotalAmount()
-
-    const savedInvoice: SavedInvoice = {
-      id: `ext-inv-${Date.now()}`,
-      invoiceNumber: generateExternalInvoiceNumber(),
-      studentName: externalRecipientName, // Use recipientName as studentName for compatibility
-      studentId: "EXTERNAL",
-      studentGrade: "-",
-      studentRoom: "-",
-      parentName: externalRecipientName,
-      parentEmail: externalRecipientEmail,
-      items: externalSelectedItems,
-      subtotal: subtotal,
-      discounts: [],
-      totalDiscount: 0,
-      netAmount: subtotal,
-      dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
-      issueDate: now.toISOString().split('T')[0],
-      status: "pending_approval",
-      term: externalEventName || "External",
-      paymentType: "termly",
-      createdAt: now.toISOString(),
-      // External specific fields
-      invoiceType: "external",
-      recipientName: externalRecipientName,
-      recipientAddress: externalRecipientAddress,
-      eventName: externalEventName,
-      notes: externalNotes
-    }
-
-    saveInvoiceToStorage(savedInvoice)
-    toast.success("External invoice submitted for approval")
-    resetExternalForm()
-
-    if (onNavigateBack) {
-      onNavigateBack()
-    }
-  }
-
-  // Create External Invoice (pending status)
-  const handleCreateExternalInvoice = () => {
-    if (!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0) {
-      toast.error("Please fill in required fields and add at least one item")
-      return
-    }
-
-    const now = new Date()
-    const subtotal = getExternalTotalAmount()
-
-    const savedInvoice: SavedInvoice = {
-      id: `ext-inv-${Date.now()}`,
-      invoiceNumber: generateExternalInvoiceNumber(),
-      studentName: externalRecipientName,
-      studentId: "EXTERNAL",
-      studentGrade: "-",
-      studentRoom: "-",
-      parentName: externalRecipientName,
-      parentEmail: externalRecipientEmail,
-      items: externalSelectedItems,
-      subtotal: subtotal,
-      discounts: [],
-      totalDiscount: 0,
-      netAmount: subtotal,
-      dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
-      issueDate: now.toISOString().split('T')[0],
-      status: "pending",
-      term: externalEventName || "External",
-      paymentType: "termly",
-      createdAt: now.toISOString(),
-      invoiceType: "external",
-      recipientName: externalRecipientName,
-      recipientAddress: externalRecipientAddress,
-      eventName: externalEventName,
-      notes: externalNotes
-    }
-
-    saveInvoiceToStorage(savedInvoice)
-    toast.success("External invoice created successfully")
-    resetExternalForm()
-
-    if (onNavigateBack) {
-      onNavigateBack()
-    }
-  }
-
-  // Create External Invoice and Send Email
-  const handleCreateExternalAndSendEmail = () => {
-    if (!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0) {
-      toast.error("Please fill in required fields and add at least one item")
-      return
-    }
-
-    const now = new Date()
-    const subtotal = getExternalTotalAmount()
-
-    const savedInvoice: SavedInvoice = {
-      id: `ext-inv-${Date.now()}`,
-      invoiceNumber: generateExternalInvoiceNumber(),
-      studentName: externalRecipientName,
-      studentId: "EXTERNAL",
-      studentGrade: "-",
-      studentRoom: "-",
-      parentName: externalRecipientName,
-      parentEmail: externalRecipientEmail,
-      items: externalSelectedItems,
-      subtotal: subtotal,
-      discounts: [],
-      totalDiscount: 0,
-      netAmount: subtotal,
-      dueDate: externalPaymentDeadline ? externalPaymentDeadline.toISOString().split('T')[0] : "",
-      issueDate: now.toISOString().split('T')[0],
-      status: "sent",
-      term: externalEventName || "External",
-      paymentType: "termly",
-      createdAt: now.toISOString(),
-      invoiceType: "external",
-      recipientName: externalRecipientName,
-      recipientAddress: externalRecipientAddress,
-      eventName: externalEventName,
-      notes: externalNotes
-    }
-
-    saveInvoiceToStorage(savedInvoice)
-    toast.success("External invoice created and email sent")
-    resetExternalForm()
-
-    if (onNavigateBack) {
-      onNavigateBack()
-    }
-  }
-
   return (
     <div className="space-y-6">
+      {/* Header with Back button */}
+      <div className="flex items-center gap-4">
+        {onNavigateBack && (
+          <Button variant="ghost" onClick={onNavigateBack} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            {t('common.back')}
+          </Button>
+        )}
+        <h1 className="text-xl font-semibold">
+          {isEditMode ? `Edit Invoice - ${editInvoice?.invoiceNumber || ''}` : getPageTitle(invoiceType, t)}
+        </h1>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>{t("invoiceCreate.title")}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CardIcon className="w-5 h-5" />
+            {getCardTitle(invoiceType, t)}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={invoiceTab} onValueChange={(value) => setInvoiceTab(value as "student" | "external")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="student" className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4" />
-                {t("invoice.studentInvoices")}
-              </TabsTrigger>
-              <TabsTrigger value="external" className="flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                {t("invoice.externalInvoices")}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="student">
           <div className="space-y-6">
-            {/* Step 1: Select Academic Year */}
+            {/* Step 1: Select Academic Year - Hide for simplified views */}
+            {!isSimplifiedView && (
             <div className="space-y-3">
               <h3 className="font-medium">1. {t("invoiceCreate.selectAcademicYear")}</h3>
               <Select value={selectedAcademicYear} onValueChange={(value) => {
                 setSelectedAcademicYear(value)
-                setSelectedTerm("") // Reset term when year changes
-                setSelectedGrade("") // Reset grade
+                setSelectedGrade("") // Reset grade when year changes
+                setSelectedTerm("") // Reset term
                 setSelectedRoom("")
                 setSelectedStudents([])
                 setSelectedItems([])
@@ -1567,49 +2375,130 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Step 2: Select Term */}
-            {selectedAcademicYear && (
-              <div className="space-y-3">
-                <h3 className="font-medium">2. {t("invoiceCreate.selectTerm")}</h3>
-                <Select value={selectedTerm} onValueChange={(value) => {
-                  setSelectedTerm(value)
-                  setSelectedGrade("") // Reset grade when term changes
-                  setSelectedRoom("")
-                  setSelectedStudents([])
-                  setSelectedItems([])
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("invoiceCreate.selectTerm")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTerms.map(term => (
-                      <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             )}
 
-            {/* Step 3: Select Grade */}
-            {selectedAcademicYear && selectedTerm && (
-              <div className="space-y-3">
-                <h3 className="font-medium">3. {t("invoiceCreate.selectGrade")}</h3>
-                <Select value={selectedGrade} onValueChange={handleGradeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("invoice.chooseGradeLevel")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {grades.map(grade => (
-                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Step 2: Select Term (for Trip & Activity and School Bus) or Grade (for others) */}
+            {!isSimplifiedView && selectedAcademicYear && (
+              (invoiceType === "afterschool" || invoiceType === "summer") ? (
+                // Step 2 for Trip & Activity and School Bus: Select Term first
+                <div className="space-y-3">
+                  <h3 className="font-medium">2. {t("invoiceCreate.selectTerm")}</h3>
+                  <Select value={selectedTerm} onValueChange={handleTermChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("invoiceCreate.selectTerm")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTerms.map(term => (
+                        <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                // Step 2 for others: Select Grade
+                <div className="space-y-3">
+                  <h3 className="font-medium">2. {t("invoiceCreate.selectGrade")}</h3>
+                  <Select value={selectedGrade} onValueChange={handleGradeChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("invoice.chooseGradeLevel")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grades.map(grade => (
+                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )
             )}
 
-            {/* Step 4: Select Room */}
-            {selectedAcademicYear && selectedTerm && selectedGrade && (
+            {/* Step 3: Select Grade (for Trip & Activity/School Bus) or Term (for others) */}
+            {!isSimplifiedView && selectedAcademicYear && (
+              invoiceType === "afterschool" ? (
+                // Step 3 for Trip & Activity: Multi-select Grades
+                selectedTerm && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium">
+                      3. {t("invoiceCreate.selectGrade")} (Multiple selection allowed)
+                    </h3>
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {grades.map(grade => (
+                          <label
+                            key={grade}
+                            className={`flex items-center gap-2 p-3 rounded-md cursor-pointer transition-all ${
+                              selectedGrades.includes(grade)
+                                ? "bg-primary/10 border-2 border-primary"
+                                : "bg-background border-2 border-muted hover:border-primary/50"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedGrades.includes(grade)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedGrades([...selectedGrades, grade])
+                                } else {
+                                  setSelectedGrades(selectedGrades.filter(g => g !== grade))
+                                }
+                                // Reset downstream selections
+                                setSelectedRoom("")
+                                setSelectedStudents([])
+                                setSelectedItems([])
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-medium">{grade}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {selectedGrades.length > 0 && (
+                        <p className="text-sm text-green-600 mt-3">
+                          Selected {selectedGrades.length} year group(s): {selectedGrades.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              ) : invoiceType === "summer" ? (
+                // Step 3 for School Bus: Single-select Grade
+                selectedTerm && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium">3. {t("invoiceCreate.selectGrade")}</h3>
+                    <Select value={selectedGrade} onValueChange={handleGradeChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("invoice.chooseGradeLevel")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {grades.map(grade => (
+                          <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )
+              ) : (
+                // Step 3 for others (Tuition, ECA): Select Term
+                selectedGrade && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium">3. {t("invoiceCreate.selectTerm")}</h3>
+                    <Select value={selectedTerm} onValueChange={handleTermChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("invoiceCreate.selectTerm")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTerms.map(term => (
+                          <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )
+              )
+            )}
+
+            {/* Step 4: Select Room - Skip for Trip & Activity and School Bus */}
+            {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "summer" && selectedAcademicYear && selectedGrade && selectedTerm && (
               <div className="space-y-3">
                 <h3 className="font-medium">4. {t("invoiceCreate.selectRoom")} ({t("common.optional")})</h3>
                 <Select value={selectedRoom === "" ? "all" : selectedRoom} onValueChange={handleRoomChange}>
@@ -1626,10 +2515,198 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               </div>
             )}
 
-            {/* Step 5: Select Items */}
-            {selectedAcademicYear && selectedTerm && selectedGrade && (
+            {/* Step 1 for simplified views: Menu-specific information */}
+            {isSimplifiedView && (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 pb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+                    1
+                  </div>
+                  <h3 className="font-semibold text-base">
+                    {invoiceType === "afterschool" && "Trip & Activity Information"}
+                    {invoiceType === "event" && "Exam Information"}
+                    {invoiceType === "summer" && "School Bus Information"}
+                    {invoiceType === "eca" && "ECA Information"}
+                  </h3>
+                </div>
+
+                {/* Trip & Activity Fields */}
+                {invoiceType === "afterschool" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Trip / Activity Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder={t('invoiceCreation.placeholderActivityName')}
+                        value={tripName}
+                        onChange={(e) => setTripName(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {t('invoiceCreation.date')} <span className="text-red-500">*</span>
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full h-10 justify-start font-normal">
+                            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                            {tripDate ? format(tripDate, "dd/MM/yyyy") : t('invoiceCreation.selectDate')}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={tripDate}
+                            onSelect={setTripDate}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">{t('invoiceCreation.location')}</Label>
+                      <Input
+                        placeholder={t('invoiceCreation.placeholderLocation')}
+                        value={tripLocation}
+                        onChange={(e) => setTripLocation(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Exam Fields */}
+                {invoiceType === "event" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Exam Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder={t('invoiceCreation.placeholderExamName')}
+                        value={examName}
+                        onChange={(e) => setExamName(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {t('invoiceCreation.examDate')} <span className="text-red-500">*</span>
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full h-10 justify-start font-normal">
+                            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                            {examDate ? format(examDate, "dd/MM/yyyy") : t('invoiceCreation.selectDate')}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={examDate}
+                            onSelect={setExamDate}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">{t('invoiceCreation.testCenter')}</Label>
+                      <Input
+                        placeholder={t('invoiceCreation.placeholderSchoolName')}
+                        value={testCenter}
+                        onChange={(e) => setTestCenter(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ECA Fields */}
+                {invoiceType === "eca" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        ECA Activity Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder="Enter ECA activity name"
+                        value={examName}
+                        onChange={(e) => setExamName(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Term <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={examType} onValueChange={setExamType}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select term" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Term 1">Term 1</SelectItem>
+                          <SelectItem value="Term 2">Term 2</SelectItem>
+                          <SelectItem value="Term 3">Term 3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Academic Year <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder="e.g., 2024-2025"
+                        value={tripLocation}
+                        onChange={(e) => setTripLocation(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* School Bus Fields */}
+                {invoiceType === "summer" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Route / Zone <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={busRoute} onValueChange={setBusRoute}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select route" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {busRoutes.map(route => (
+                            <SelectItem key={route} value={route}>{route}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Service Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={busServiceType} onValueChange={setBusServiceType}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select service type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {busServiceTypes.map(type => (
+                            <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 4 (or Step 2 for simplified views): Select Items */}
+            {(isSimplifiedView || (selectedAcademicYear && selectedTerm && (invoiceType === "afterschool" ? selectedGrades.length > 0 : invoiceType === "summer" ? selectedGrade : selectedGrade))) && (
               <div className="space-y-4">
-                <h3 className="font-medium">5. {t("invoiceCreate.selectItems")}</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "2" : ((invoiceType === "afterschool" || invoiceType === "summer") ? "4" : "5")}. {t("invoiceCreate.selectItems")}</h3>
 
                 {/* Template Selection */}
                 {availableTemplates.length > 0 && (
@@ -1733,50 +2810,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                   </div>
                 )}
 
-                {/* Category Navigation */}
-                <div className="space-y-3">
-                  <label className="font-medium">Item Categories</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {itemCategories.map((category) => (
-                      <Card
-                        key={category.id}
-                        className={`cursor-pointer transition-all ${
-                          selectedCategory === category.id
-                            ? "ring-2 ring-primary bg-primary/5"
-                            : "hover:bg-muted/50"
-                        }`}
-                        onClick={() => handleCategoryChange(category.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex flex-col items-center text-center space-y-2">
-                            <category.icon className={`w-6 h-6 ${
-                              selectedCategory === category.id
-                                ? "text-primary"
-                                : "text-muted-foreground"
-                            }`} />
-                            <div>
-                              <h4 className="font-medium text-sm">
-                                {category.label}
-                              </h4>
-                              <p className="text-xs text-muted-foreground">
-                                {category.description}
-                              </p>
-                            </div>
-                            {selectedCategory === category.id && (
-                              <CheckCircle className="w-4 h-4 text-primary" />
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Available Items */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="font-medium">Available {selectedCategory} Items for {selectedGrade}</label>
-                    <span className="text-sm text-muted-foreground">{availableItems.length} items available</span>
+                    <label className="font-medium">
+                      {isSimplifiedView
+                        ? t('invoiceCreation.availableItems')
+                        : t('invoiceCreation.availableItemsForGrade', { category: selectedCategory, grade: selectedGrade })}
+                    </label>
+                    <span className="text-sm text-muted-foreground">{t('invoiceCreation.itemsAvailableCount', { count: availableItems.length })}</span>
                   </div>
                   <div className="grid grid-cols-1 gap-3">
                     {availableItems.map((item) => {
@@ -1812,9 +2854,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                                 <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
                                 <div className="flex items-center gap-4">
                                   <p className="font-medium text-lg">₿{item.amount.toLocaleString()}</p>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {item.applicableGrades.length} grades
-                                  </Badge>
                                 </div>
                               </div>
                               <div className="flex items-center">
@@ -1867,10 +2906,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Item</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Actions</TableHead>
+                            <TableHead>{t("table.item")}</TableHead>
+                            <TableHead>{t("table.category")}</TableHead>
+                            <TableHead>{t("table.amount")}</TableHead>
+                            <TableHead>{t("table.actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1913,13 +2952,22 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                                   ₿{item.amount.toLocaleString()}
                                 </TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleItemRemove(item.id)}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditItem(item)}
+                                    >
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleItemRemove(item.id)}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             )
@@ -1933,17 +2981,31 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                 {availableItems.length === 0 && (
                   <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
                     <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No {selectedCategory.toLowerCase()} items available for {selectedGrade}</p>
-                    <p className="text-sm text-muted-foreground">Try selecting a different category or contact admin to add items</p>
+                    <p className="text-muted-foreground">
+                      {isSimplifiedView
+                        ? "No items available"
+                        : invoiceType === "afterschool"
+                          ? "No trip & activity items available"
+                          : invoiceType === "summer"
+                            ? "No school bus items available"
+                            : invoiceType === "eca"
+                              ? "No ECA items available"
+                              : `No ${selectedCategory.toLowerCase()} items available for ${selectedGrade}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {isSimplifiedView || invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "eca"
+                        ? "Contact admin to add items"
+                        : "Try selecting a different category or contact admin to add items"}
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 6: Set Payment Deadline */}
+            {/* Step 5 (or Step 3 for simplified views): Set Payment Deadline */}
             {selectedItems.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-medium">6. Set Payment Deadline</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "3" : ((invoiceType === "afterschool" || invoiceType === "summer") ? "5" : "6")}. Set Payment Deadline</h3>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -1971,49 +3033,167 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               </div>
             )}
 
-            {/* Step 7: Select Students */}
+            {/* Step 6 (or Step 4 for simplified views): Select Students/Payer */}
             {selectedItems.length > 0 && paymentDeadline && (
               <div className="space-y-4">
-                <h3 className="font-medium">7. Select Students</h3>
-                
-                {/* Selection Type */}
-                <div className="grid grid-cols-3 gap-4">
-                  <Card className={`cursor-pointer transition-all ${studentSelectionType === "individual" ? "ring-2 ring-primary" : ""}`}>
-                    <CardContent className="p-4" onClick={() => setStudentSelectionType("individual")}>
-                      <div className="flex items-center justify-center mb-2">
-                        <User className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <h4 className="font-medium text-center text-sm">Individual</h4>
-                      <p className="text-xs text-muted-foreground text-center mt-1">
-                        Select specific students
-                      </p>
-                    </CardContent>
-                  </Card>
+                <h3 className="font-medium">{isSimplifiedView ? "4" : ((invoiceType === "afterschool" || invoiceType === "summer") ? "6" : "7")}. {isSimplifiedView ? "Select Payer" : "Select Students"}</h3>
 
-                  <Card className={`cursor-pointer transition-all ${studentSelectionType === "csv" ? "ring-2 ring-primary" : ""}`}>
-                    <CardContent className="p-4" onClick={() => setStudentSelectionType("csv")}>
-                      <div className="flex items-center justify-center mb-2">
-                        <FileSpreadsheet className="w-6 h-6 text-green-600" />
-                      </div>
-                      <h4 className="font-medium text-center text-sm">CSV Upload</h4>
-                      <p className="text-xs text-muted-foreground text-center mt-1">
-                        Upload student list
-                      </p>
-                    </CardContent>
-                  </Card>
+                {/* Payer Selection Type for Simplified Views */}
+                {isSimplifiedView && (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <Card
+                      className={`cursor-pointer transition-all ${payerSelectionType === "fromSystem" ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                      onClick={() => {
+                        setPayerSelectionType("fromSystem")
+                        setStudentSelectionType("individual")
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${payerSelectionType === "fromSystem" ? "bg-primary/10" : "bg-muted"}`}>
+                            <Users className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm">Select from System</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Choose existing student in the system
+                            </p>
+                          </div>
+                          {payerSelectionType === "fromSystem" && (
+                            <CheckCircle className="w-5 h-5 text-primary ml-auto" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  <Card className={`cursor-pointer transition-all ${studentSelectionType === "all" ? "ring-2 ring-primary" : ""}`}>
-                    <CardContent className="p-4" onClick={() => setStudentSelectionType("all")}>
-                      <div className="flex items-center justify-center mb-2">
-                        <Users className="w-6 h-6 text-purple-600" />
+                    <Card
+                      className={`cursor-pointer transition-all ${payerSelectionType === "manual" ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                      onClick={() => {
+                        setPayerSelectionType("manual")
+                        setSelectedStudents([])
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${payerSelectionType === "manual" ? "bg-primary/10" : "bg-muted"}`}>
+                            <Pencil className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm">Enter Manually</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Fill in client information
+                            </p>
+                          </div>
+                          {payerSelectionType === "manual" && (
+                            <CheckCircle className="w-5 h-5 text-primary ml-auto" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Manual Entry Form for Simplified Views */}
+                {isSimplifiedView && payerSelectionType === "manual" && (
+                  <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="w-4 h-4 text-primary" />
+                      <h4 className="font-medium text-sm">{t('invoiceCreation.clientInformation')}</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t('invoiceCreation.clientName')} <span className="text-red-500">*</span></Label>
+                        <Input
+                          placeholder={t('invoiceCreation.placeholderParentName')}
+                          value={manualClientName}
+                          onChange={(e) => setManualClientName(e.target.value)}
+                          className="h-10"
+                        />
                       </div>
-                      <h4 className="font-medium text-center text-sm">All Students</h4>
-                      <p className="text-xs text-muted-foreground text-center mt-1">
-                        Select entire {selectedRoom ? "room" : "grade"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t('invoiceCreation.contactName')}</Label>
+                        <Input
+                          placeholder={t('invoiceCreation.placeholderContactPerson')}
+                          value={manualContactName}
+                          onChange={(e) => setManualClientName(e.target.value)}
+                          className="h-10"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t('common.email')} <span className="text-red-500">*</span></Label>
+                        <Input
+                          type="email"
+                          placeholder={t('invoiceCreation.placeholderEmail')}
+                          value={manualClientEmail}
+                          onChange={(e) => setManualClientEmail(e.target.value)}
+                          className="h-10"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t('common.phone')}</Label>
+                        <Input
+                          placeholder={t('invoiceCreation.placeholderPhone')}
+                          value={manualClientPhone}
+                          onChange={(e) => setManualClientPhone(e.target.value)}
+                          className="h-10"
+                        />
+                      </div>
+                      <div className="col-span-2 space-y-2">
+                        <Label className="text-sm">{t('common.address')}</Label>
+                        <Input
+                          placeholder={t('invoiceCreation.placeholderAddress')}
+                          value={manualClientAddress}
+                          onChange={(e) => setManualClientAddress(e.target.value)}
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Selection Type for Standard Views OR when "fromSystem" is selected in Simplified View */}
+                {(!isSimplifiedView || payerSelectionType === "fromSystem") && (
+                  <>
+                    {/* Standard Selection Type Cards - Only show for non-simplified views */}
+                    {!isSimplifiedView && (
+                      <div className="grid grid-cols-3 gap-4">
+                        <Card className={`cursor-pointer transition-all ${studentSelectionType === "individual" ? "ring-2 ring-primary" : ""}`}>
+                          <CardContent className="p-4" onClick={() => setStudentSelectionType("individual")}>
+                            <div className="flex items-center justify-center mb-2">
+                              <User className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <h4 className="font-medium text-center text-sm">Individual</h4>
+                            <p className="text-xs text-muted-foreground text-center mt-1">
+                              Select specific students
+                            </p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className={`cursor-pointer transition-all ${studentSelectionType === "csv" ? "ring-2 ring-primary" : ""}`}>
+                          <CardContent className="p-4" onClick={() => setStudentSelectionType("csv")}>
+                            <div className="flex items-center justify-center mb-2">
+                              <FileSpreadsheet className="w-6 h-6 text-green-600" />
+                            </div>
+                            <h4 className="font-medium text-center text-sm">CSV Upload</h4>
+                            <p className="text-xs text-muted-foreground text-center mt-1">
+                              Upload student list
+                            </p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className={`cursor-pointer transition-all ${studentSelectionType === "all" ? "ring-2 ring-primary" : ""}`}>
+                          <CardContent className="p-4" onClick={() => setStudentSelectionType("all")}>
+                            <div className="flex items-center justify-center mb-2">
+                              <Users className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <h4 className="font-medium text-center text-sm">All Students</h4>
+                            <p className="text-xs text-muted-foreground text-center mt-1">
+                              Select entire {selectedRoom ? "room" : "grade"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
 
                 {/* Individual Selection */}
                 {studentSelectionType === "individual" && (
@@ -2021,13 +3201,22 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Input
-                          placeholder="Search by Student ID or name"
+                          placeholder={t('invoiceCreation.placeholderSearchStudent')}
                           value={searchStudentTerm}
                           onChange={(e) => setSearchStudentTerm(e.target.value)}
                           onFocus={() => setIsStudentSearchFocused(true)}
                           onBlur={() => setTimeout(() => setIsStudentSearchFocused(false), 200)}
                         />
                       </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleSyncStudentList}
+                        disabled={isSyncing}
+                        className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                      >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                        {t('invoiceCreation.syncStudentList')}
+                      </Button>
                       <Button
                         variant="outline"
                         onClick={() => setIsAddNewStudentOpen(true)}
@@ -2042,13 +3231,13 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                       <div className="border rounded-lg max-h-64 overflow-y-auto">
                         <div className="p-2 bg-muted/50 border-b sticky top-0">
                           <p className="text-xs text-muted-foreground">
-                            {filteredStudents.length} students in {selectedGrade}{selectedRoom ? ` - ${selectedRoom}` : ''}
+                            {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''}{!isSimplifiedView && selectedGrade ? ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}` : ''}
                           </p>
                         </div>
                         {filteredStudents.length > 0 ? (
                           filteredStudents.map((student) => {
                             const invoiceStudent = student as InvoiceStudent
-                            const studentHasDiscounts = hasDiscounts(invoiceStudent)
+                            const studentHasDiscounts = !isSimplifiedView && hasDiscounts(invoiceStudent)
                             return (
                               <div
                                 key={student.id}
@@ -2084,11 +3273,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                                         {invoiceStudent.discounts.earlyBird && (
                                           <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
                                             Early Bird
-                                          </Badge>
-                                        )}
-                                        {invoiceStudent.feeWaiver?.eligible && invoiceStudent.feeWaiver?.termsRemaining > 0 && (
-                                          <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
-                                            Fee Waiver ({invoiceStudent.feeWaiver.termsRemaining} terms)
                                           </Badge>
                                         )}
                                       </div>
@@ -2139,19 +3323,31 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                       <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                       <p className="text-sm text-blue-700 mb-2">
-                        Select all students in {selectedGrade} {selectedRoom && `- ${selectedRoom}`}
+                        Select all students
+                        {!isSimplifiedView && invoiceType === "afterschool" && selectedGrades.length > 0 && ` in ${selectedGrades.join(", ")}`}
+                        {!isSimplifiedView && invoiceType === "summer" && selectedGrade && ` in ${selectedGrade}`}
+                        {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "summer" && selectedGrade && ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}`}
                       </p>
                       <p className="text-sm text-blue-600 mb-3">
-                        {availableStudents.filter(s =>
-                          s.grade === selectedGrade &&
-                          (selectedRoom === "" || s.room === selectedRoom)
-                        ).length} students will be selected
+                        {isSimplifiedView
+                          ? availableStudents.length
+                          : invoiceType === "afterschool"
+                            ? availableStudents.filter(s => selectedGrades.includes(s.grade)).length
+                            : invoiceType === "summer"
+                              ? availableStudents.filter(s => s.grade === selectedGrade).length
+                              : availableStudents.filter(s =>
+                                  s.grade === selectedGrade &&
+                                  (selectedRoom === "" || s.room === selectedRoom)
+                                ).length
+                        } students will be selected
                       </p>
                       <Button onClick={handleSelectAllStudents} size="sm">
                         Select All Students
                       </Button>
                     </div>
                   </div>
+                )}
+                  </>
                 )}
 
                 {/* Selected Students Display */}
@@ -2221,11 +3417,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                                   {invoiceStudent.discounts.earlyBird && (
                                     <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
                                       Early Bird
-                                    </Badge>
-                                  )}
-                                  {invoiceStudent.feeWaiver?.eligible && invoiceStudent.feeWaiver?.termsRemaining > 0 && (
-                                    <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
-                                      Fee Waiver ({invoiceStudent.feeWaiver.termsRemaining} terms left)
                                     </Badge>
                                   )}
                                 </div>
@@ -2321,54 +3512,54 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                   )
                 })()}
 
-                {/* ID Charges (placeholder) */}
-                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="w-5 h-5 text-gray-600" />
-                    <h4 className="font-medium text-gray-700">ID Charges</h4>
-                    <Badge variant="outline" className="text-xs text-gray-500">Coming Soon</Badge>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Student ID card charges will be added here in a future update.
-                  </p>
-                </div>
-
                 {/* Late Payment Charges Info */}
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-5 h-5 text-red-600" />
-                    <h4 className="font-medium text-red-800">Late Payment Policy</h4>
-                  </div>
-                  <p className="text-sm text-red-700">
-                    Late payment charges of <strong>1.5% per month</strong> or part thereof will be applied to payments made after the invoice due date.
-                  </p>
-                </div>
+                <p className="mt-4 text-xs text-gray-400">
+                  Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
+                </p>
               </div>
             )}
 
-            {/* Step 8: Preview and Create Invoice */}
-            {selectedStudents.length > 0 && selectedItems.length > 0 && paymentDeadline && (
+            {/* Step 8 (or Step 5 for simplified views): Preview and Create Invoice */}
+            {((selectedStudents.length > 0 || (isSimplifiedView && payerSelectionType === "manual" && manualClientName && manualClientEmail)) && selectedItems.length > 0 && paymentDeadline) && (
               <div className="space-y-4">
-                <h3 className="font-medium">8. {isPreviewMode ? "Confirm and Send" : "Preview Invoice"}</h3>
-                
+                <h3 className="font-medium">{isSimplifiedView ? "5" : "8"}. {isPreviewMode ? "Confirm and Send" : "Preview Invoice"}</h3>
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 mb-2">Invoice Summary</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-blue-700">Academic Year: <span className="font-medium">{selectedAcademicYear}</span></p>
-                      <p className="text-blue-700">Term: <span className="font-medium">{selectedTerm}</span></p>
-                      <p className="text-blue-700">Grade: <span className="font-medium">{selectedGrade}</span></p>
-                      {selectedRoom && (
-                        <p className="text-blue-700">Room: <span className="font-medium">{selectedRoom}</span></p>
+                      {!isSimplifiedView && (
+                        <>
+                          <p className="text-blue-700">Academic Year: <span className="font-medium">{selectedAcademicYear}</span></p>
+                          <p className="text-blue-700">Term: <span className="font-medium">{selectedTerm}</span></p>
+                          <p className="text-blue-700">Grade: <span className="font-medium">{selectedGrade}</span></p>
+                          {selectedRoom && (
+                            <p className="text-blue-700">Room: <span className="font-medium">{selectedRoom}</span></p>
+                          )}
+                        </>
                       )}
-                      <p className="text-blue-700">Students: <span className="font-medium">{selectedStudents.length}</span></p>
+                      {isSimplifiedView && payerSelectionType === "manual" ? (
+                        <>
+                          <p className="text-blue-700">Client: <span className="font-medium">{manualClientName}</span></p>
+                          <p className="text-blue-700">Email: <span className="font-medium">{manualClientEmail}</span></p>
+                          {manualClientPhone && (
+                            <p className="text-blue-700">Phone: <span className="font-medium">{manualClientPhone}</span></p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-blue-700">Students: <span className="font-medium">{selectedStudents.length}</span></p>
+                      )}
                     </div>
                     <div>
-                      <p className="text-blue-700">Items per Invoice: <span className="font-medium">{selectedItems.length}</span></p>
-                      <p className="text-blue-700">Amount per Student: <span className="font-medium">₿{getTotalAmount().toLocaleString()}</span></p>
-                      <p className="text-blue-700">Total Amount: <span className="font-medium">₿{(getTotalAmount() * selectedStudents.length).toLocaleString()}</span></p>
+                      <p className="text-blue-700">Items: <span className="font-medium">{selectedItems.length}</span></p>
+                      <p className="text-blue-700">Amount: <span className="font-medium">฿{getTotalAmount().toLocaleString()}</span></p>
+                      {selectedStudents.length > 1 && (
+                        <p className="text-blue-700">Total Amount: <span className="font-medium">฿{(getTotalAmount() * selectedStudents.length).toLocaleString()}</span></p>
+                      )}
                       <p className="text-blue-700">Payment Deadline: <span className="font-medium">{paymentDeadline ? format(paymentDeadline, "dd/MM/yyyy") : "-"}</span></p>
-                      <p className="text-blue-700">Invoices to Create: <span className="font-medium">{selectedStudents.length}</span></p>
+                      {selectedStudents.length > 0 && (
+                        <p className="text-blue-700">Invoices to Create: <span className="font-medium">{selectedStudents.length}</span></p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2395,185 +3586,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               </div>
             )}
           </div>
-          </TabsContent>
-
-            {/* External Invoice Tab */}
-            <TabsContent value="external">
-              <div className="space-y-6">
-                {/* Recipient Information */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Building className="w-4 h-4" />
-                    1. Recipient Information
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Recipient Name / Organization *</Label>
-                      <Input
-                        placeholder="Enter recipient name or organization"
-                        value={externalRecipientName}
-                        onChange={(e) => setExternalRecipientName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        placeholder="Enter email address"
-                        value={externalRecipientEmail}
-                        onChange={(e) => setExternalRecipientEmail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Address (Optional)</Label>
-                    <Textarea
-                      placeholder="Enter address"
-                      value={externalRecipientAddress}
-                      onChange={(e) => setExternalRecipientAddress(e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-                </div>
-
-                {/* Event Selection */}
-                <div className="space-y-3">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    2. Event (Optional)
-                  </h3>
-                  <Input
-                    placeholder="Enter event name (e.g., Summer Camp 2025, Sports Day)"
-                    value={externalEventName}
-                    onChange={(e) => setExternalEventName(e.target.value)}
-                  />
-                </div>
-
-                {/* Item Selection for External */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    3. Select Items
-                  </h3>
-
-                  {/* Add Item Button */}
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddItemDialogOpen(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Item
-                  </Button>
-
-                  {/* Selected Items List */}
-                  {externalSelectedItems.length > 0 && (
-                    <div className="border rounded-lg p-4 space-y-3">
-                      <h4 className="font-medium text-sm">Selected Items</h4>
-                      {externalSelectedItems.map((item, index) => (
-                        <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                          <div>
-                            <p className="font-medium">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">{item.description}</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-medium">฿{item.amount.toLocaleString()}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setExternalSelectedItems(prev => prev.filter((_, i) => i !== index))
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      <Separator />
-                      <div className="flex justify-between font-semibold">
-                        <span>Total</span>
-                        <span>฿{externalSelectedItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Payment Deadline */}
-                <div className="space-y-3">
-                  <h3 className="font-medium">4. Set Payment Deadline</h3>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="max-w-xs justify-start text-left font-normal"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {externalPaymentDeadline ? format(externalPaymentDeadline, "dd/MM/yyyy") : "Select date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={externalPaymentDeadline}
-                        onSelect={setExternalPaymentDeadline}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {externalPaymentDeadline && (
-                    <p className="text-sm text-green-600">
-                      Payment deadline set for {format(externalPaymentDeadline, "dd/MM/yyyy")}
-                    </p>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-3">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    5. Notes (Optional)
-                  </h3>
-                  <Textarea
-                    placeholder="Additional notes for this invoice"
-                    value={externalNotes}
-                    onChange={(e) => setExternalNotes(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-4 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={handleSaveExternalAsDraft}
-                    className="w-44 flex items-center justify-center gap-2"
-                    disabled={!externalRecipientName || !externalRecipientEmail}
-                  >
-                    <Bookmark className="w-4 h-4" />
-                    Save Draft
-                  </Button>
-                  <Button
-                    onClick={handleCreateExternalInvoice}
-                    className="w-44 flex items-center justify-center gap-2"
-                    disabled={!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0}
-                  >
-                    <Save className="w-4 h-4" />
-                    Create Invoice
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleCreateExternalAndSendEmail}
-                    className="w-44 flex items-center justify-center gap-2"
-                    disabled={!externalRecipientName || !externalRecipientEmail || externalSelectedItems.length === 0}
-                  >
-                    <Mail className="w-4 h-4" />
-                    Create & Send Email
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
         </CardContent>
       </Card>
 
@@ -2599,28 +3611,28 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
             {/* Student Information */}
             <div className="border rounded-lg p-4 space-y-3">
-              <h4 className="font-medium text-sm text-gray-700">Student Information</h4>
+              <h4 className="font-medium text-sm text-gray-700">{t('invoiceCreation.studentInformation')}</h4>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label>First Name <span className="text-red-500">*</span></Label>
+                  <Label>{t('common.firstName')} <span className="text-red-500">*</span></Label>
                   <Input
-                    placeholder="First name"
+                    placeholder={t('common.firstName')}
                     value={newStudentFirstName}
                     onChange={(e) => setNewStudentFirstName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Last Name <span className="text-red-500">*</span></Label>
+                  <Label>{t('common.lastName')} <span className="text-red-500">*</span></Label>
                   <Input
-                    placeholder="Last name"
+                    placeholder={t('common.lastName')}
                     value={newStudentLastName}
                     onChange={(e) => setNewStudentLastName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Nickname</Label>
+                  <Label>{t('common.nickname')}</Label>
                   <Input
-                    placeholder="Nickname"
+                    placeholder={t('common.nickname')}
                     value={newStudentNickname}
                     onChange={(e) => setNewStudentNickname(e.target.value)}
                   />
@@ -2628,20 +3640,20 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label>Gender</Label>
+                  <Label>{t('common.gender')}</Label>
                   <Select value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="male">{t('common.male')}</SelectItem>
+                      <SelectItem value="female">{t('common.female')}</SelectItem>
+                      <SelectItem value="other">{t('common.other')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Date of Birth</Label>
+                  <Label>{t('common.dateOfBirth')}</Label>
                   <Input
                     type="date"
                     value={newStudentDob}
@@ -2649,7 +3661,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Grade</Label>
+                  <Label>{t('common.grade')}</Label>
                   <Input value={selectedGrade} disabled className="bg-muted" />
                 </div>
               </div>
@@ -2657,7 +3669,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
             {/* Family Selection */}
             <div className="border rounded-lg p-4 space-y-3">
-              <h4 className="font-medium text-sm text-gray-700">Family</h4>
+              <h4 className="font-medium text-sm text-gray-700">{t('common.family')}</h4>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -2667,7 +3679,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     onChange={() => setNewStudentFamilyType("new")}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Create New Family</span>
+                  <span className="text-sm">{t('invoiceCreation.createNewFamily')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -2677,16 +3689,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     onChange={() => setNewStudentFamilyType("existing")}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Join Existing Family (Sibling)</span>
+                  <span className="text-sm">{t('invoiceCreation.joinExistingFamily')}</span>
                 </label>
               </div>
 
               {newStudentFamilyType === "existing" ? (
                 <div className="space-y-2">
-                  <Label>Select Family</Label>
+                  <Label>{t('invoiceCreation.selectFamily')}</Label>
                   <Select value={newStudentFamilyId} onValueChange={setNewStudentFamilyId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a family..." />
+                      <SelectValue placeholder={t('invoiceCreation.selectFamily')} />
                     </SelectTrigger>
                     <SelectContent>
                       {families.map(family => (
@@ -2704,16 +3716,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label>Child Order in Family</Label>
+                  <Label>{t('invoiceCreation.childOrderInFamily')}</Label>
                   <Select value={String(newStudentChildOrder)} onValueChange={(v) => setNewStudentChildOrder(Number(v))}>
                     <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">1st Child</SelectItem>
-                      <SelectItem value="2">2nd Child</SelectItem>
-                      <SelectItem value="3">3rd Child</SelectItem>
-                      <SelectItem value="4">4th Child</SelectItem>
+                      <SelectItem value="1">{t('invoiceCreation.firstChild')}</SelectItem>
+                      <SelectItem value="2">{t('invoiceCreation.secondChild')}</SelectItem>
+                      <SelectItem value="3">{t('invoiceCreation.thirdChild')}</SelectItem>
+                      <SelectItem value="4">{t('invoiceCreation.fourthChild')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2723,54 +3735,54 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
             {/* Parent/Guardian Information - only show for new family */}
             {newStudentFamilyType === "new" && (
               <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-sm text-gray-700">Parent/Guardian Information</h4>
+                <h4 className="font-medium text-sm text-gray-700">{t('invoiceCreation.parentGuardianInfo')}</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Parent/Guardian Name</Label>
+                    <Label>{t('invoiceCreation.parentGuardianName')}</Label>
                     <Input
-                      placeholder="Full name"
+                      placeholder={t('invoiceCreation.placeholderFullName')}
                       value={newStudentParentName}
                       onChange={(e) => setNewStudentParentName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Relationship</Label>
+                    <Label>{t('common.relationship')}</Label>
                     <Select value={newStudentParentRelation} onValueChange={(v: "father" | "mother" | "guardian" | "other") => setNewStudentParentRelation(v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="father">Father</SelectItem>
-                        <SelectItem value="mother">Mother</SelectItem>
-                        <SelectItem value="guardian">Guardian</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="father">{t('common.father')}</SelectItem>
+                        <SelectItem value="mother">{t('common.mother')}</SelectItem>
+                        <SelectItem value="guardian">{t('common.guardian')}</SelectItem>
+                        <SelectItem value="other">{t('common.other')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Email <span className="text-red-500">*</span></Label>
+                    <Label>{t('common.email')} <span className="text-red-500">*</span></Label>
                     <Input
                       type="email"
-                      placeholder="parent@email.com"
+                      placeholder={t('invoiceCreation.placeholderParentEmail')}
                       value={newStudentEmail}
                       onChange={(e) => setNewStudentEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Phone</Label>
+                    <Label>{t('common.phone')}</Label>
                     <Input
-                      placeholder="Phone number"
+                      placeholder={t('invoiceCreation.placeholderPhoneNumber')}
                       value={newStudentPhone}
                       onChange={(e) => setNewStudentPhone(e.target.value)}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Address</Label>
+                  <Label>{t('common.address')}</Label>
                   <Input
-                    placeholder="Home address"
+                    placeholder={t('invoiceCreation.placeholderHomeAddress')}
                     value={newStudentAddress}
                     onChange={(e) => setNewStudentAddress(e.target.value)}
                   />
@@ -2840,14 +3852,242 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
 
       {/* Invoice Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-4xl w-[95vw] p-0">
+        <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Invoice Preview</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col max-h-[90vh]">
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {selectedStudents.length > 0 && selectedStudents[previewStudentIndex] ? (
+          <div className="flex flex-col">
+            {/* Content */}
+            <div className="flex-1 p-6">
+              {/* Manual Entry Preview for Simplified Views */}
+              {isSimplifiedView && payerSelectionType === "manual" && manualClientName ? (
+                (() => {
+                  const subtotal = getTotalAmount()
+                  const invoiceNumber = generateInvoiceNumber("MANUAL")
+                  const issueDate = new Date()
+                  const dueDate = paymentDeadline || null
+
+                  return (
+                    <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
+                      {/* School Header */}
+                      <div className="text-center py-4 border-b border-gray-300 mb-3">
+                        <img
+                          src={SchoolLogo}
+                          alt="King's College International School Bangkok"
+                          style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
+                        />
+                        <p className="text-xs text-gray-600">
+                          {SCHOOL_INFO.address}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
+                        </p>
+                        <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
+                      </div>
+
+                      {/* Client & Invoice Info - Two Column Layout */}
+                      <div className="px-4 py-3">
+                        <div className="border border-black p-4" style={{ fontSize: '11px' }}>
+                          <div className="flex justify-between">
+                            {/* Left Column - Client Info */}
+                            <div style={{ width: '45%' }}>
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Client name</span>
+                                <span>{manualClientName}</span>
+                              </div>
+                              {manualContactName && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>Contact name</span>
+                                  <span>{manualContactName}</span>
+                                </div>
+                              )}
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Email</span>
+                                <span>{manualClientEmail}</span>
+                              </div>
+                              {manualClientPhone && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>Phone</span>
+                                  <span>{manualClientPhone}</span>
+                                </div>
+                              )}
+                              {manualClientAddress && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>Address</span>
+                                  <span>{manualClientAddress}</span>
+                                </div>
+                              )}
+                              {/* Menu-specific info */}
+                              {invoiceType === "afterschool" && tripName && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>Trip/Activity</span>
+                                  <span>{tripName}</span>
+                                </div>
+                              )}
+                              {invoiceType === "event" && examName && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>Exam</span>
+                                  <span>{examName}</span>
+                                </div>
+                              )}
+                              {invoiceType === "eca" && examName && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>ECA Activity</span>
+                                  <span>{examName}</span>
+                                </div>
+                              )}
+                              {invoiceType === "summer" && busRoute && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '110px' }}>Bus Route</span>
+                                  <span>{busRoute}</span>
+                                </div>
+                              )}
+                            </div>
+                            {/* Right Column - Invoice Info */}
+                            <div style={{ width: '45%' }}>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Invoice no.</span>
+                                <span className="flex-1 text-right">{invoiceNumber}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Invoice date</span>
+                                <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Due date</span>
+                                <span className="flex-1 text-right">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>
+                              </div>
+                              {invoiceType === "afterschool" && tripDate && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '90px' }}>Trip date</span>
+                                  <span className="flex-1 text-right">{tripDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                </div>
+                              )}
+                              {invoiceType === "event" && examDate && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '90px' }}>Exam date</span>
+                                  <span className="flex-1 text-right">{examDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                </div>
+                              )}
+                              {invoiceType === "eca" && examType && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '90px' }}>Term</span>
+                                  <span className="flex-1 text-right">{examType}</span>
+                                </div>
+                              )}
+                              {invoiceType === "eca" && tripLocation && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '90px' }}>Academic Year</span>
+                                  <span className="flex-1 text-right">{tripLocation}</span>
+                                </div>
+                              )}
+                              {invoiceType === "summer" && busServiceType && (
+                                <div className="flex py-1">
+                                  <span style={{ width: '90px' }}>Service type</span>
+                                  <span className="flex-1 text-right">{busServiceTypes.find(t => t.value === busServiceType)?.label || busServiceType}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Invoice Items Table */}
+                      <div className="px-4 py-2">
+                        <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
+                          <thead>
+                            <tr className="border-b border-black bg-gray-50">
+                              <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
+                              <th className="py-1.5 px-2 text-left font-semibold">Description</th>
+                              <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedItems.map((item, index) => (
+                              <tr key={item.id} className="border-b border-gray-200">
+                                <td className="py-1.5 px-2 align-top">{index + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                  <div>{item.name}</div>
+                                  {item.description && (
+                                    <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
+                                  )}
+                                </td>
+                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
+                              </tr>
+                            ))}
+                            {/* Total Row */}
+                            <tr className="border-t border-black bg-gray-100">
+                              <td colSpan={2} className="py-2 px-2">
+                                <div className="flex justify-between items-center">
+                                  <span style={{ fontSize: '10px' }}>{numberToWords(subtotal)}</span>
+                                  <span className="font-bold ml-4">TOTAL</span>
+                                </div>
+                              </td>
+                              <td className="py-2 px-2 text-right font-bold">{formatCurrency(subtotal)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Notes Section */}
+                      <div className="px-4 py-2">
+                        <p className="text-gray-400 text-xs">
+                          Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
+                        </p>
+                      </div>
+
+                      {/* Payment Methods */}
+                      <div className="px-4 py-2" style={{ fontSize: '11px' }}>
+                        <h3 className="font-bold mb-3">Payment methods</h3>
+                        <div className="space-y-3">
+                          {/* Bank Transfer */}
+                          <div>
+                            <span>- </span>
+                            <span className="font-medium">Bank Transfer:</span>
+                            <span> Please transfer to the account below and email proof of payment to finance@kingsbangkok.ac.th</span>
+                            <table className="mt-3 ml-8">
+                              <tbody>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account name</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountName}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account number</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountNumber}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Bank name</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.bankName}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Branch</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.branch}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Signature Section */}
+                      <div className="px-4 py-4">
+                        <div className="flex justify-between px-6">
+                          <div className="text-center">
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
+                            <div className="w-40 border-t border-black mb-1"></div>
+                            <p style={{ fontSize: '10px' }}>Prepared by</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+                            <div className="w-40 border-t border-black mb-1"></div>
+                            <p style={{ fontSize: '10px' }}>Authorised officer</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : selectedStudents.length > 0 && selectedStudents[previewStudentIndex] ? (
                 (() => {
                   const currentStudent = selectedStudents[previewStudentIndex] as InvoiceStudent
                   const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
@@ -2891,11 +4131,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
 
-                  // Fee Waiver credit (only if eligible and terms remaining > 0)
-                  const feeWaiverCredit = currentStudent.feeWaiver?.eligible && currentStudent.feeWaiver?.termsRemaining > 0
-                    ? currentStudent.feeWaiver.creditPerTerm
-                    : 0
-
                   // Security Deposit Fee Waiver (for new students who are eligible for fee waiver)
                   const securityDepositWaiver = currentStudent.isNewStudent &&
                     currentStudent.feeWaiver?.eligible &&
@@ -2903,321 +4138,252 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
                     ? fees.securityDeposit
                     : 0
 
-                  // Calculate subtotal before ID Charges
-                  const subtotalBeforeIdCharges = discountCalc.netAmount + registrationFeesTotal - feeWaiverCredit - securityDepositWaiver
-
-                  // ID Charges (3% of subtotal)
-                  const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
-
-                  const finalTotal = Math.max(0, subtotalBeforeIdCharges + idCharges)
+                  // Calculate final total
+                  const finalTotal = Math.max(0, discountCalc.netAmount + registrationFeesTotal - securityDepositWaiver)
 
                   return (
-                    <div className="bg-white border rounded-lg shadow-sm text-sm">
+                    <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
                       {/* School Header */}
-                      <div className="text-center py-6 border-b">
+                      <div className="text-center py-4 border-b border-gray-300 mb-3">
                         <img
                           src={SchoolLogo}
                           alt="King's College International School Bangkok"
-                          style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
+                          style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
                         />
-                        <h1 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h1>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-600">
                           {SCHOOL_INFO.address}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-600">
                           {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
                         </p>
-                        <h2 className="text-2xl font-bold mt-4 tracking-wide">INVOICE</h2>
+                        <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
                       </div>
 
-                      {/* Student & Invoice Info */}
-                      <div className="p-6 border-b">
-                        <div className="flex justify-center" style={{ gap: '120px' }}>
-                          {/* Left Column - Student Info */}
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-500">Student Name: </span>
-                              <span className="font-medium">{currentStudent.name}</span>
-                              {currentStudent.isNewStudent && (
-                                <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                  New Student
-                                </Badge>
-                              )}
+                      {/* Student & Invoice Info - Two Column Layout */}
+                      <div className="px-4 py-3">
+                        <div className="border border-black p-4" style={{ fontSize: '11px' }}>
+                          <div className="flex justify-between">
+                            {/* Left Column - Student Info */}
+                            <div style={{ width: '45%' }}>
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Student ID no.</span>
+                                <span>{currentStudent.id}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Student name</span>
+                                <span>{currentStudent.name}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Year group</span>
+                                <span>{selectedGrade}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Contact name</span>
+                                <span>{currentStudent.parentName}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '110px' }}>Address</span>
+                                <span>{currentStudent.originalStudent?.parents?.[0]?.address || '-'}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-gray-500">Student ID: </span>
-                              <span>{currentStudent.id}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Year Group: </span>
-                              <span>{selectedGrade}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Academic Year: </span>
-                              <span>{getAcademicYear(issueDate)}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Bill To: </span>
-                              <span>{currentStudent.parentName}</span>
-                            </div>
-                          </div>
-
-                          {/* Right Column - Invoice Info */}
-                          <div className="space-y-2">
-                            <div>
-                              <span className="text-gray-500">Invoice No: </span>
-                              <span className="font-medium">{invoiceNumber}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Invoice Date: </span>
-                              <span>{issueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Due Date: </span>
-                              <span className="text-red-600 font-medium">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Term: </span>
-                              <span>Term 1</span>
+                            {/* Right Column - Invoice Info */}
+                            <div style={{ width: '45%' }}>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Invoice no.</span>
+                                <span className="flex-1 text-right">{invoiceNumber}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Invoice date</span>
+                                <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Due date</span>
+                                <span className="flex-1 text-right">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>School year</span>
+                                <span className="flex-1 text-right">{selectedAcademicYear || getAcademicYear(issueDate)}</span>
+                              </div>
+                              <div className="flex py-1">
+                                <span style={{ width: '90px' }}>Term</span>
+                                <span className="flex-1 text-right">{selectedTerm || '-'}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Invoice Items Table */}
-                      <div className="p-4 border-b">
-                        <table className="w-full border-collapse table-fixed">
+                      <div className="px-4 py-2">
+                        <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
                           <thead>
-                            <tr className="bg-gray-100 border-y">
-                              <th className="py-2 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
-                              <th className="py-2 px-2 text-left font-semibold">Description</th>
-                              <th className="py-2 px-2 text-right font-semibold whitespace-nowrap" style={{ width: '120px' }}>Amount (THB)</th>
+                            <tr className="border-b border-black bg-gray-50">
+                              <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
+                              <th className="py-1.5 px-2 text-left font-semibold">Description</th>
+                              <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
                             </tr>
                           </thead>
                           <tbody>
                             {/* Regular Items */}
                             {selectedItems.map((item, index) => (
-                              <tr key={item.id} className="border-b">
-                                <td className="py-2 px-2 align-top">{index + 1}</td>
-                                <td className="py-2 px-2" style={{ wordBreak: 'break-word' }}>
-                                  <div className="font-medium">{item.name}</div>
-                                  {item.description && <div className="text-gray-500 text-xs">{item.description}</div>}
+                              <tr key={item.id} className="border-b border-gray-200">
+                                <td className="py-1.5 px-2 align-top">{index + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                  <div>{item.name}</div>
+                                  {item.description && (
+                                    <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
+                                  )}
                                 </td>
-                                <td className="py-2 px-2 text-right font-medium align-top">{formatCurrency(item.amount)}</td>
+                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
                               </tr>
                             ))}
-
-                            {/* Other Discounts (NOT Registration Fee Waiver - shown separately below) */}
-                            {discountCalc.discountItems
-                              .filter(d => !d.name.includes('Registration Fee Waiver'))
-                              .map((discount, idx) => (
-                              <tr key={idx} className="border-b text-green-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  {discount.name}{discount.percentage ? ` (${discount.percentage}%)` : ''}
+                            {/* Registration Fee Items (New Students Only) - Orange */}
+                            {registrationFeeItems.map((item, idx) => (
+                              <tr key={item.id} className="border-b border-gray-200 text-orange-600">
+                                <td className="py-1.5 px-2 align-top">{selectedItems.length + idx + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                  {item.name} <span className="text-xs">(New Student)</span>
                                 </td>
-                                <td className="py-2 px-2 text-right">-{formatCurrency(discount.amount)}</td>
+                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
                               </tr>
                             ))}
-
-                            {/* For New Students: Fees and Waivers in specific order */}
-                            {/* 1. Application Fee */}
-                            {registrationFeeItems.find(item => item.id === 'app-fee') && (
-                              <tr className="border-b text-orange-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  Application Fee
-                                </td>
-                                <td className="py-2 px-2 text-right">+{formatCurrency(registrationFeeItems.find(item => item.id === 'app-fee')!.amount)}</td>
-                              </tr>
-                            )}
-
-                            {/* 2. Registration Fee */}
-                            {registrationFeeItems.find(item => item.id === 'reg-fee') && (
-                              <tr className="border-b text-orange-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  Registration Fee
-                                </td>
-                                <td className="py-2 px-2 text-right">+{formatCurrency(registrationFeeItems.find(item => item.id === 'reg-fee')!.amount)}</td>
-                              </tr>
-                            )}
-
-                            {/* 3. Registration Fee Waiver (comes after Registration Fee) */}
-                            {discountCalc.discountItems
-                              .filter(d => d.name.includes('Registration Fee Waiver'))
-                              .map((discount, idx) => (
-                              <tr key={`reg-waiver-${idx}`} className="border-b text-green-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  {discount.name}
-                                </td>
-                                <td className="py-2 px-2 text-right">-{formatCurrency(discount.amount)}</td>
-                              </tr>
-                            ))}
-
-                            {/* 4. Security Deposit */}
-                            {registrationFeeItems.find(item => item.id === 'sec-dep') && (
-                              <tr className="border-b text-orange-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  Security Deposit{fees.securityDepositRefundable && <span className="text-xs ml-1">(Refundable)</span>}
-                                </td>
-                                <td className="py-2 px-2 text-right">+{formatCurrency(registrationFeeItems.find(item => item.id === 'sec-dep')!.amount)}</td>
-                              </tr>
-                            )}
-
-                            {/* 5. Security Deposit Fee Waiver (comes after Security Deposit) */}
+                            {/* Security Deposit Waiver (for new students with fee waiver) - Purple - After Registration Fees */}
                             {securityDepositWaiver > 0 && (
-                              <tr className="border-b text-green-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  Security Deposit Fee Waiver
-                                </td>
-                                <td className="py-2 px-2 text-right">-{formatCurrency(securityDepositWaiver)}</td>
+                              <tr className="border-b border-gray-200 text-purple-700">
+                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + 1}</td>
+                                <td className="py-1.5 px-2">Security Deposit Waiver <span className="text-xs">(New Student)</span></td>
+                                <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(securityDepositWaiver)}</td>
                               </tr>
                             )}
-
-                            {/* 6. ID Charges (3% of subtotal) - always last */}
-                            {idCharges > 0 && (
-                              <tr className="border-b text-purple-600">
-                                <td colSpan={2} className="py-2 px-2 text-left">
-                                  ID Charges (3%)
+                            {/* Discount Items - Green (Sibling, Registration Fee Waiver, Group, Scholarship, Staff Child, Early Bird) */}
+                            {discountCalc.discountItems.map((discount, idx) => (
+                              <tr key={`discount-${idx}`} className="border-b border-gray-200 text-green-700">
+                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + (securityDepositWaiver > 0 ? 1 : 0) + idx + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                  {discount.name} {discount.percentage ? `(${discount.percentage}%)` : ''}
                                 </td>
-                                <td className="py-2 px-2 text-right">+{formatCurrency(idCharges)}</td>
+                                <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(discount.amount)}</td>
                               </tr>
-                            )}
-
+                            ))}
+                            {/* Total Row */}
+                            <tr className="border-t border-black bg-gray-100">
+                              <td colSpan={2} className="py-2 px-2">
+                                <div className="flex justify-between items-center">
+                                  <span style={{ fontSize: '10px' }}>{numberToWords(finalTotal)}</span>
+                                  <span className="font-bold ml-4">TOTAL</span>
+                                </div>
+                              </td>
+                              <td className="py-2 px-2 text-right font-bold">{formatCurrency(finalTotal)}</td>
+                            </tr>
                           </tbody>
                         </table>
-
-                        {/* Amount in Words + Total */}
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="text-xs text-gray-600 mb-2">{numberToWords(finalTotal)}</div>
-                          <div className="flex justify-between items-center font-bold">
-                            <span>TOTAL</span>
-                            <span>{formatCurrency(finalTotal)}</span>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Notes Section */}
-                      <div className="p-6 border-b text-xs">
-                        <h3 className="font-semibold mb-2">Notes:</h3>
-                        <ul className="list-disc list-inside space-y-1 text-gray-600">
-                          <li>{INVOICE_NOTES.latePayment}</li>
-                          <li>{INVOICE_NOTES.refundCondition}</li>
-                        </ul>
+                      <div className="px-4 py-2">
+                        <p className="text-gray-400 text-xs">
+                          Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
+                        </p>
                       </div>
 
                       {/* Payment Methods */}
-                      <div className="p-6 text-xs">
-                        <h3 className="font-semibold mb-3">Payment methods</h3>
-                        <div className="space-y-4">
+                      <div className="px-4 py-2" style={{ fontSize: '11px' }}>
+                        <h3 className="font-bold mb-3">Payment methods</h3>
+                        <div className="space-y-3">
                           {/* Cheque */}
-                          <div className="flex">
-                            <span className="mr-2">-</span>
-                            <div>
-                              <span className="font-medium">Cheque:</span>
-                              <span className="text-gray-600 ml-1">{INVOICE_NOTES.chequeInstruction}</span>
-                            </div>
+                          <div>
+                            <span>- </span>
+                            <span className="font-medium">Cheque:</span>
+                            <span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.</span>
                           </div>
 
                           {/* Bank Transfer */}
-                          <div className="flex">
-                            <span className="mr-2">-</span>
-                            <div className="flex-1">
-                              <span className="font-medium">Bank Transfer:</span>
-                              <span className="text-gray-600 ml-1">{INVOICE_NOTES.bankTransferInstruction}</span>
-                              <table className="mt-3 ml-4">
-                                <tbody className="text-xs">
-                                  <tr>
-                                    <td className="pr-8 py-0.5 text-gray-600">Account name</td>
-                                    <td className="py-0.5">{BANK_DETAILS.accountName}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="pr-8 py-0.5 text-gray-600">Account number</td>
-                                    <td className="py-0.5 font-medium">{BANK_DETAILS.accountNumber}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="pr-8 py-0.5 text-gray-600">Bank name</td>
-                                    <td className="py-0.5">{BANK_DETAILS.bankName}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="pr-8 py-0.5 text-gray-600">Branch</td>
-                                    <td className="py-0.5">{BANK_DETAILS.branch}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="pr-8 py-0.5 text-gray-600">Swift code</td>
-                                    <td className="py-0.5">{BANK_DETAILS.swiftCode}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="pr-8 py-0.5 text-gray-600">Bank address</td>
-                                    <td className="py-0.5">{BANK_DETAILS.bankAddress}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
+                          <div>
+                            <span>- </span>
+                            <span className="font-medium">Bank Transfer:</span>
+                            <span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to finance@kingsbangkok.ac.th with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.</span>
+                            <table className="mt-3 ml-8">
+                              <tbody>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account name</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountName}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account number</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountNumber}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Bank name</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.bankName}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Branch</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.branch}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Swift code</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.swiftCode}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Bank address</td>
+                                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.bankAddress}</td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </div>
 
                           {/* Bill Payment */}
-                          <div className="flex">
-                            <span className="mr-2">-</span>
-                            <div className="flex-1">
-                              <span className="font-medium">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span>
-                              <span className="text-gray-600 ml-1">{INVOICE_NOTES.billPaymentInstruction}</span>
-                              <div className="mt-3 ml-4 flex items-start gap-6">
-                                <table>
-                                  <tbody className="text-xs">
-                                    <tr>
-                                      <td className="pr-8 py-0.5 text-gray-600">Biller ID no.</td>
-                                      <td className="py-0.5 font-medium">{BILL_PAYMENT.billerId}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-8 py-0.5 text-gray-600">Reference no. (Ref 1)</td>
-                                      <td className="py-0.5">{currentStudent.id}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-8 py-0.5 text-gray-600">Reference no. (Ref 2)</td>
-                                      <td className="py-0.5">{invoiceNumber}</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                                <div className="w-20 h-20 bg-white p-1">
-                                  <div className="grid grid-cols-7 gap-px w-full h-full">
-                                    {/* QR Code pattern - 7x7 grid with position markers */}
-                                    {[
-                                      1,1,1,1,1,1,1,
-                                      1,0,0,0,0,0,1,
-                                      1,0,1,1,1,0,1,
-                                      1,0,1,1,1,0,1,
-                                      1,0,1,1,1,0,1,
-                                      1,0,0,0,0,0,1,
-                                      1,1,1,1,1,1,1,
-                                    ].map((cell, i) => (
-                                      <div key={i} className={`${cell ? 'bg-black' : 'bg-white'}`} />
-                                    ))}
-                                  </div>
+                          <div>
+                            <span>- </span>
+                            <span className="font-medium">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span>
+                            <span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.</span>
+                            <div className="mt-3 ml-8 flex items-start gap-8">
+                              <table>
+                                <tbody>
+                                  <tr>
+                                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Biller ID no.</td>
+                                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BILL_PAYMENT.billerId}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Reference no. (Ref 1)</td>
+                                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{currentStudent.id}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Reference no. (Ref 2)</td>
+                                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{invoiceNumber}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              {/* QR Code placeholder */}
+                              <div className="border border-black" style={{ width: '70px', height: '70px' }}>
+                                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                                  QR
                                 </div>
                               </div>
                             </div>
                           </div>
 
                           {/* Credit Card */}
-                          <div className="flex">
-                            <span className="mr-2">-</span>
-                            <div>
-                              <span className="font-medium">Credit card:</span>
-                              <span className="text-gray-600 ml-1">{INVOICE_NOTES.creditCardNote}</span>
-                            </div>
+                          <div>
+                            <span>- </span>
+                            <span className="font-medium">Credit card:</span>
+                            <span> The online payment link will be provided on the parent portal. Visa & Mastercard issued by local banks in Thailand are accepted. Kindly note that a 1.3% bank fee will be applied to individual online payment transaction.</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Signature Section */}
-                      <div className="p-6 pt-8">
-                        <div className="flex justify-between px-12">
+                      <div className="px-4 py-4">
+                        <div className="flex justify-between px-6">
                           <div className="text-center">
-                            <div className="w-48 border-b border-gray-400 mb-1"></div>
-                            <p className="text-xs text-gray-600">Prepared by</p>
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
+                            <div className="w-40 border-t border-black mb-1"></div>
+                            <p style={{ fontSize: '10px' }}>Prepared by</p>
                           </div>
                           <div className="text-center">
-                            <div className="w-48 border-b border-gray-400 mb-1"></div>
-                            <p className="text-xs text-gray-600">Authorised officer</p>
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+                            <div className="w-40 border-t border-black mb-1"></div>
+                            <p style={{ fontSize: '10px' }}>Authorised officer</p>
                           </div>
                         </div>
                       </div>
@@ -3231,54 +4397,48 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               )}
             </div>
 
-            {/* Fixed Footer */}
-            <div className="p-4 border-t bg-background">
-              <div className="flex justify-between items-center gap-4">
-                {/* Navigation for multiple students */}
-                {selectedStudents.length > 1 ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPreviewStudentIndex(Math.max(0, previewStudentIndex - 1))}
-                      disabled={previewStudentIndex === 0}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-muted-foreground">
-                      {previewStudentIndex + 1} / {selectedStudents.length}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPreviewStudentIndex(Math.min(selectedStudents.length - 1, previewStudentIndex + 1))}
-                      disabled={previewStudentIndex === selectedStudents.length - 1}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                ) : <div />}
-                <div className="flex gap-2">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between px-8 py-4 border-t bg-gray-50">
+              {/* Navigation for multiple students */}
+              {selectedStudents.length > 1 ? (
+                <div className="flex items-center gap-2 text-sm">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => setIsPreviewDialogOpen(false)}
+                    onClick={() => setPreviewStudentIndex(Math.max(0, previewStudentIndex - 1))}
+                    disabled={previewStudentIndex === 0}
                   >
-                    Edit
+                    Previous
                   </Button>
+                  <span className="text-muted-foreground">
+                    {previewStudentIndex + 1} / {selectedStudents.length}
+                  </span>
                   <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleSaveAsDraft}
+                    variant="outline"
+                    onClick={() => setPreviewStudentIndex(Math.min(selectedStudents.length - 1, previewStudentIndex + 1))}
+                    disabled={previewStudentIndex === selectedStudents.length - 1}
                   >
-                    <Save className="w-4 h-4 mr-1" />
-                    Draft
-                  </Button>
-                  <Button size="sm" onClick={handleConfirmFromPreview}>
-                    <Mail className="w-4 h-4 mr-1" />
-                    Confirm & Send
+                    Next
                   </Button>
                 </div>
+              ) : <div />}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPreviewDialogOpen(false)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleSaveAsDraft}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Draft
+                </Button>
+                <Button onClick={handleConfirmFromPreview}>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Confirm & Send
+                </Button>
               </div>
             </div>
           </div>
@@ -3299,7 +4459,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
           <div className="flex gap-2 flex-shrink-0 pb-3">
             <div className="flex-1 relative">
               <Input
-                placeholder="Search..."
+                placeholder={t('common.search')}
                 value={addItemSearchTerm}
                 onChange={(e) => setAddItemSearchTerm(e.target.value)}
                 className=""
@@ -3374,6 +4534,79 @@ export function InvoiceCreation({ defaultCategory, invoiceType, onNavigateToEmai
               }}
             >
               Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+            <DialogDescription>
+              Edit the description and amount for this item
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingItem && (
+            <div className="space-y-4 py-4">
+              {/* Item Name (Read-only) */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('invoiceCreation.itemName')}</Label>
+                <div className="p-3 bg-muted rounded-md">
+                  <p className="font-medium">{editingItem.name}</p>
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 text-xs ${
+                      editingItem.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                      editingItem.category === "ECA" ? "border-green-300 text-green-700" :
+                      "border-orange-300 text-orange-700"
+                    }`}
+                  >
+                    {editingItem.category}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Description (Editable) */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">{t('common.description')}</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editItemDescription}
+                  onChange={(e) => setEditItemDescription(e.target.value)}
+                  placeholder={t('invoiceCreation.placeholderDescription')}
+                  rows={3}
+                />
+              </div>
+
+              {/* Amount (Editable) */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">{t('invoiceCreation.amountTHB')}</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  value={editItemAmount}
+                  onChange={(e) => setEditItemAmount(Number(e.target.value))}
+                  min={0}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditItemDialogOpen(false)
+                setEditingItem(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEditItem}>
+              Save Changes
             </Button>
           </div>
         </DialogContent>

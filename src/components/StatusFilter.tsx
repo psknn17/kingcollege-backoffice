@@ -14,17 +14,17 @@ interface StatusFilterProps {
 export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterProps) {
   const { t } = useLanguage()
   const statusOptions = [
-    { value: "all" as PaymentStatus, label: "All Status", color: undefined },
-    { value: "paid" as PaymentStatus, label: "Paid", color: "bg-green-100 text-green-800 hover:bg-green-100" },
-    { value: "partial" as PaymentStatus, label: "Partial", color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" },
-    { value: "unpaid" as PaymentStatus, label: "Unpaid", color: "bg-gray-100 text-gray-800 hover:bg-gray-100" },
-    { value: "cancelled" as PaymentStatus, label: "Cancelled", color: "bg-red-100 text-red-800 hover:bg-red-100" },
-    { value: "overdue" as PaymentStatus, label: "Overdue", color: "bg-orange-100 text-orange-800 hover:bg-orange-100" }
+    { value: "all" as PaymentStatus, label: t("status.allStatus"), color: undefined },
+    { value: "paid" as PaymentStatus, label: t("status.paid"), color: "bg-green-100 text-green-800 hover:bg-green-100" },
+    { value: "partial" as PaymentStatus, label: t("status.partial"), color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" },
+    { value: "unpaid" as PaymentStatus, label: t("status.unpaid"), color: "bg-gray-100 text-gray-800 hover:bg-gray-100" },
+    { value: "cancelled" as PaymentStatus, label: t("status.cancelled"), color: "bg-red-100 text-red-800 hover:bg-red-100" },
+    { value: "overdue" as PaymentStatus, label: t("status.overdue"), color: "bg-orange-100 text-orange-800 hover:bg-orange-100" }
   ]
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium">Status:</label>
+      <label className="text-sm font-medium">{t("status.status")}</label>
       <Select value={selectedStatus} onValueChange={onStatusChange}>
         <SelectTrigger className="w-[140px]">
           <SelectValue />
@@ -54,18 +54,19 @@ interface PaymentChannelFilterProps {
 }
 
 export function PaymentChannelFilter({ selectedChannel, onChannelChange }: PaymentChannelFilterProps) {
+  const { t } = useLanguage()
   const channelOptions = [
-    { value: "all" as PaymentChannel, label: "All Channels" },
-    { value: "credit_card" as PaymentChannel, label: "Credit Card" },
-    { value: "wechat_pay" as PaymentChannel, label: "WeChat Pay" },
-    { value: "alipay" as PaymentChannel, label: "Alipay" },
-    { value: "qr_payment" as PaymentChannel, label: "QR Payment" },
-    { value: "counter_bank" as PaymentChannel, label: "Counter Bank" }
+    { value: "all" as PaymentChannel, label: t("paymentChannel.allChannels") },
+    { value: "credit_card" as PaymentChannel, label: t("paymentChannel.creditCard") },
+    { value: "wechat_pay" as PaymentChannel, label: t("paymentChannel.wechatPay") },
+    { value: "alipay" as PaymentChannel, label: t("paymentChannel.alipay") },
+    { value: "qr_payment" as PaymentChannel, label: t("paymentChannel.qrPayment") },
+    { value: "counter_bank" as PaymentChannel, label: t("paymentChannel.counterBank") }
   ]
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium">Payment Channel:</label>
+      <label className="text-sm font-medium">{t("paymentChannel.label")}</label>
       <Select value={selectedChannel} onValueChange={onChannelChange}>
         <SelectTrigger className="w-[160px]">
           <SelectValue />
@@ -82,38 +83,38 @@ export function PaymentChannelFilter({ selectedChannel, onChannelChange }: Payme
   )
 }
 
-export function getStatusBadge(status: string) {
+export function getStatusBadge(status: string, t: (key: string) => string) {
   const statusLower = status.toLowerCase()
-  
+
   switch (statusLower) {
     case "paid":
       return (
         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-          Paid
+          {t("status.paid")}
         </Badge>
       )
     case "partial":
       return (
         <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-          Partial
+          {t("status.partial")}
         </Badge>
       )
     case "unpaid":
       return (
         <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-          Unpaid
+          {t("status.unpaid")}
         </Badge>
       )
     case "cancelled":
       return (
         <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-          Cancelled
+          {t("status.cancelled")}
         </Badge>
       )
     case "overdue":
       return (
         <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-          Overdue
+          {t("status.overdue")}
         </Badge>
       )
     default:
@@ -125,20 +126,20 @@ export function getStatusBadge(status: string) {
   }
 }
 
-export function getPaymentChannelLabel(channel: string) {
+export function getPaymentChannelLabel(channel: string, t: (key: string) => string) {
   const channelLower = channel.toLowerCase()
-  
+
   switch (channelLower) {
     case "credit_card":
-      return "Credit Card"
+      return t("paymentChannel.creditCard")
     case "wechat_pay":
-      return "WeChat Pay"
+      return t("paymentChannel.wechatPay")
     case "alipay":
-      return "Alipay"
+      return t("paymentChannel.alipay")
     case "qr_payment":
-      return "QR Payment"
+      return t("paymentChannel.qrPayment")
     case "counter_bank":
-      return "Counter Bank"
+      return t("paymentChannel.counterBank")
     default:
       return channel
   }

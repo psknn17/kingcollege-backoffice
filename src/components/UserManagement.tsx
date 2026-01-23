@@ -11,7 +11,7 @@ import { Checkbox } from "./ui/checkbox"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 
 type UserRole = "admin" | "approver" | "accounting" | "viewer"
 type UserStatus = "active" | "inactive" | "suspended"
@@ -36,45 +36,64 @@ interface User {
   lastLogin: Date | null
 }
 
-const allPermissions: Permission[] = [
+// Permission definitions with translation keys
+const permissionDefs = [
   // Tuition Management
-  { id: "tuition_view", name: "View Tuition", description: "View tuition dashboard and data", module: "Tuition" },
-  { id: "tuition_edit", name: "Edit Tuition", description: "Edit tuition settings and terms", module: "Tuition" },
-  { id: "tuition_delete", name: "Delete Tuition", description: "Delete tuition records", module: "Tuition" },
+  { id: "tuition_view", nameKey: "permission.viewTuition", descKey: "permissionDesc.viewTuition", moduleKey: "permissionModule.tuition" },
+  { id: "tuition_edit", nameKey: "permission.editTuition", descKey: "permissionDesc.editTuition", moduleKey: "permissionModule.tuition" },
+  { id: "tuition_delete", nameKey: "permission.deleteTuition", descKey: "permissionDesc.deleteTuition", moduleKey: "permissionModule.tuition" },
 
   // After School
-  { id: "afterschool_view", name: "View After School", description: "View after school activities", module: "After School" },
-  { id: "afterschool_edit", name: "Edit After School", description: "Edit after school settings", module: "After School" },
-  { id: "afterschool_approve", name: "Approve Registrations", description: "Approve after school registrations", module: "After School" },
+  { id: "afterschool_view", nameKey: "permission.viewAfterSchool", descKey: "permissionDesc.viewAfterSchool", moduleKey: "permissionModule.afterSchool" },
+  { id: "afterschool_edit", nameKey: "permission.editAfterSchool", descKey: "permissionDesc.editAfterSchool", moduleKey: "permissionModule.afterSchool" },
+  { id: "afterschool_approve", nameKey: "permission.approveRegistrations", descKey: "permissionDesc.approveRegistrations", moduleKey: "permissionModule.afterSchool" },
 
   // Events
-  { id: "event_view", name: "View Events", description: "View event management", module: "Events" },
-  { id: "event_edit", name: "Edit Events", description: "Edit event settings", module: "Events" },
-  { id: "event_import", name: "Import Events", description: "Import event data", module: "Events" },
+  { id: "event_view", nameKey: "permission.viewEvents", descKey: "permissionDesc.viewEvents", moduleKey: "permissionModule.events" },
+  { id: "event_edit", nameKey: "permission.editEvents", descKey: "permissionDesc.editEvents", moduleKey: "permissionModule.events" },
+  { id: "event_import", nameKey: "permission.importEvents", descKey: "permissionDesc.importEvents", moduleKey: "permissionModule.events" },
 
   // Summer Activities
-  { id: "summer_view", name: "View Summer Activities", description: "View summer activities", module: "Summer" },
-  { id: "summer_edit", name: "Edit Summer Activities", description: "Edit summer activities", module: "Summer" },
+  { id: "summer_view", nameKey: "permission.viewSummerActivities", descKey: "permissionDesc.viewSummerActivities", moduleKey: "permissionModule.summer" },
+  { id: "summer_edit", nameKey: "permission.editSummerActivities", descKey: "permissionDesc.editSummerActivities", moduleKey: "permissionModule.summer" },
 
   // Discounts
-  { id: "discount_view", name: "View Discounts", description: "View discount management", module: "Discounts" },
-  { id: "discount_edit", name: "Edit Discounts", description: "Edit discounts and promotions", module: "Discounts" },
-  { id: "discount_approve", name: "Approve Discounts", description: "Approve discount requests", module: "Discounts" },
+  { id: "discount_view", nameKey: "permission.viewDiscounts", descKey: "permissionDesc.viewDiscounts", moduleKey: "permissionModule.discounts" },
+  { id: "discount_edit", nameKey: "permission.editDiscounts", descKey: "permissionDesc.editDiscounts", moduleKey: "permissionModule.discounts" },
+  { id: "discount_approve", nameKey: "permission.approveDiscounts", descKey: "permissionDesc.approveDiscounts", moduleKey: "permissionModule.discounts" },
 
   // Invoices
-  { id: "invoice_view", name: "View Invoices", description: "View invoice management", module: "Invoices" },
-  { id: "invoice_create", name: "Create Invoices", description: "Create new invoices", module: "Invoices" },
-  { id: "invoice_edit", name: "Edit Invoices", description: "Edit existing invoices", module: "Invoices" },
-  { id: "invoice_delete", name: "Delete Invoices", description: "Delete invoices", module: "Invoices" },
-  { id: "invoice_approve", name: "Approve Invoices", description: "Approve invoices for sending", module: "Invoices" },
+  { id: "invoice_view", nameKey: "permission.viewInvoices", descKey: "permissionDesc.viewInvoices", moduleKey: "permissionModule.invoices" },
+  { id: "invoice_create", nameKey: "permission.createInvoices", descKey: "permissionDesc.createInvoices", moduleKey: "permissionModule.invoices" },
+  { id: "invoice_edit", nameKey: "permission.editInvoices", descKey: "permissionDesc.editInvoices", moduleKey: "permissionModule.invoices" },
+  { id: "invoice_delete", nameKey: "permission.deleteInvoices", descKey: "permissionDesc.deleteInvoices", moduleKey: "permissionModule.invoices" },
+  { id: "invoice_approve", nameKey: "permission.approveInvoices", descKey: "permissionDesc.approveInvoices", moduleKey: "permissionModule.invoices" },
 
   // User Management
-  { id: "user_view", name: "View Users", description: "View user management", module: "Users" },
-  { id: "user_create", name: "Create Users", description: "Create new users", module: "Users" },
-  { id: "user_edit", name: "Edit Users", description: "Edit user details", module: "Users" },
-  { id: "user_delete", name: "Delete Users", description: "Delete users", module: "Users" },
-  { id: "user_permissions", name: "Manage Permissions", description: "Manage user permissions", module: "Users" },
+  { id: "user_view", nameKey: "permission.viewUsers", descKey: "permissionDesc.viewUsers", moduleKey: "permissionModule.users" },
+  { id: "user_create", nameKey: "permission.createUsers", descKey: "permissionDesc.createUsers", moduleKey: "permissionModule.users" },
+  { id: "user_edit", nameKey: "permission.editUsers", descKey: "permissionDesc.editUsers", moduleKey: "permissionModule.users" },
+  { id: "user_delete", nameKey: "permission.deleteUsers", descKey: "permissionDesc.deleteUsers", moduleKey: "permissionModule.users" },
+  { id: "user_permissions", nameKey: "permission.managePermissions", descKey: "permissionDesc.managePermissions", moduleKey: "permissionModule.users" },
 ]
+
+// Helper function to get translated permissions
+const getTranslatedPermissions = (t: (key: string) => string): Permission[] => {
+  return permissionDefs.map(def => ({
+    id: def.id,
+    name: t(def.nameKey),
+    description: t(def.descKey),
+    module: t(def.moduleKey),
+  }))
+}
+
+// Dummy allPermissions for backward compatibility (will be replaced at runtime)
+const allPermissions: Permission[] = permissionDefs.map(def => ({
+  id: def.id,
+  name: def.nameKey,
+  description: def.descKey,
+  module: def.moduleKey,
+}))
 
 const roleDefaultPermissions: Record<UserRole, string[]> = {
   admin: allPermissions.map(p => p.id),
@@ -440,13 +459,13 @@ export function UserManagement() {
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case "admin":
-        return <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
+        return <Badge className="bg-purple-100 text-purple-800">{t("role.admin")}</Badge>
       case "approver":
-        return <Badge className="bg-blue-100 text-blue-800">Approver</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("role.approver")}</Badge>
       case "accounting":
-        return <Badge className="bg-green-100 text-green-800">Accounting</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("role.accounting")}</Badge>
       case "viewer":
-        return <Badge className="bg-gray-100 text-gray-800">Viewer</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">{t("role.viewer")}</Badge>
       default:
         return <Badge variant="secondary">{role}</Badge>
     }
@@ -465,7 +484,8 @@ export function UserManagement() {
     }
   }
 
-  const groupedPermissions = allPermissions.reduce((acc, perm) => {
+  const translatedPermissions = getTranslatedPermissions(t)
+  const groupedPermissions = translatedPermissions.reduce((acc, perm) => {
     if (!acc[perm.module]) {
       acc[perm.module] = []
     }
@@ -583,10 +603,10 @@ export function UserManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="approver">Approver</SelectItem>
-                      <SelectItem value="accounting">Accounting</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="admin">{t("role.admin")}</SelectItem>
+                      <SelectItem value="approver">{t("role.approver")}</SelectItem>
+                      <SelectItem value="accounting">{t("role.accounting")}</SelectItem>
+                      <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -637,8 +657,8 @@ export function UserManagement() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateUser}>Create User</Button>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>{t("common.cancel")}</Button>
+              <Button onClick={handleCreateUser}>{t("common.createUser")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -710,8 +730,8 @@ export function UserManagement() {
               Search & Filter
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
@@ -737,10 +757,10 @@ export function UserManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="approver">Approver</SelectItem>
-                  <SelectItem value="accounting">Accounting</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="admin">{t("role.admin")}</SelectItem>
+                  <SelectItem value="approver">{t("role.approver")}</SelectItem>
+                  <SelectItem value="accounting">{t("role.accounting")}</SelectItem>
+                  <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -778,47 +798,47 @@ export function UserManagement() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                   <div className="flex items-center gap-1">
-                    User
+                    {t("table.user")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("username")}>
                   <div className="flex items-center gap-1">
-                    Username
+                    {t("table.username")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("role")}>
                   <div className="flex items-center gap-1">
-                    Role
+                    {t("table.role")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("table.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("permissions")}>
                   <div className="flex items-center gap-1">
-                    Permissions
+                    {t("table.permissions")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
                   <div className="flex items-center gap-1">
-                    Created
+                    {t("table.created")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("lastLogin")}>
                   <div className="flex items-center gap-1">
-                    Last Login
+                    {t("table.lastLogin")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -891,7 +911,7 @@ export function UserManagement() {
           {sortedUsers.length > 0 && (
             <div className="flex items-center justify-between border-t p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Show</span>
+                <span>{t("common.show")}</span>
                 <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
                   <SelectTrigger className="w-[70px] h-8">
                     <SelectValue />
@@ -903,7 +923,7 @@ export function UserManagement() {
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                <span>entries</span>
+                <span>{t("common.entries")}</span>
               </div>
 
               <div className="text-sm text-muted-foreground">
@@ -1039,8 +1059,8 @@ export function UserManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditUser}>Save Changes</Button>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button onClick={handleEditUser}>{t("common.saveChanges")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1111,8 +1131,8 @@ export function UserManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPermissionDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePermissions}>Save Permissions</Button>
+            <Button variant="outline" onClick={() => setIsPermissionDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button onClick={handleSavePermissions}>{t("common.savePermissions")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1127,8 +1147,8 @@ export function UserManagement() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button variant="destructive" onClick={handleDeleteUser}>{t("common.delete")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

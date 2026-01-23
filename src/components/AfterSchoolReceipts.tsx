@@ -10,7 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, Receipt, Users, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
+import { th, enUS } from "date-fns/locale"
 import { InternalEmailManagement } from "./InternalEmailManagement"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Student data matching StudentContext (for internal SISB students)
 const studentData = [
@@ -120,12 +122,15 @@ const mockReceipts: AfterSchoolReceipt[] = [
 ]
 
 export function AfterSchoolReceipts() {
+  const { t, language } = useLanguage()
+  const locale = language === "th" ? th : enUS
   const [receipts] = useState<AfterSchoolReceipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<AfterSchoolReceipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 15
+  const [statusFilter, setStatusFilter] = useState("all")
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("all")
   const [parentTypeFilter, setParentTypeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -262,20 +267,20 @@ export function AfterSchoolReceipts() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "issued":
-        return <Badge className="bg-green-100 text-green-800">Issued</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge>
       case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">Resent</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.resent")}</Badge>
       case "failed":
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("receipt.failed")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
   const getPaymentTypeBadge = (paymentType: string) => {
-    return paymentType === "complete" 
-      ? <Badge variant="default">Complete Package</Badge>
-      : <Badge variant="outline">Single Activity</Badge>
+    return paymentType === "complete"
+      ? <Badge variant="default">{t("receipt.completePackage")}</Badge>
+      : <Badge variant="outline">{t("receipt.singleActivity")}</Badge>
   }
 
   const summaryStats = {
@@ -292,9 +297,9 @@ export function AfterSchoolReceipts() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold">After School Receipt Management</h2>
+          <h2 className="text-xl font-semibold">{t("receipt.afterSchoolTitle")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage receipts and internal email notifications
+            {t("receipt.afterSchoolSubtitle")}
           </p>
         </div>
       </div>
@@ -303,30 +308,30 @@ export function AfterSchoolReceipts() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="receipts" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
-            Receipt Management
+            {t("receipt.management")}
           </TabsTrigger>
           <TabsTrigger value="whitelist" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Internal Email Whitelist
+            {t("receipt.internalEmailWhitelist")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="receipts" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h3 className="text-lg font-medium">Receipt Management</h3>
+              <h3 className="text-lg font-medium">{t("receipt.management")}</h3>
               <p className="text-sm text-muted-foreground">
-                View and download after school activity payment receipts
+                {t("receipt.viewAndDownload")}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                Bulk Resend
+                {t("receipt.bulkResend")}
               </Button>
               <Button className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                Export All
+                {t("receipt.exportAll")}
               </Button>
             </div>
           </div>
@@ -335,48 +340,48 @@ export function AfterSchoolReceipts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Receipts</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("receipt.totalReceipts")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
             <p className="text-xs text-muted-foreground">
-              {summaryStats.externalParents} from external parents
+              {summaryStats.externalParents} {t("receipt.fromExternalParents")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Successfully Issued</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("receipt.successfullyIssued")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.issued}</div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((summaryStats.issued / summaryStats.total) * 100)}% success rate
+              {Math.round((summaryStats.issued / summaryStats.total) * 100)}% {t("receipt.successRate")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.totalRevenue")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              From after school activities
+              {t("receipt.fromAfterSchool")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("receipt.totalDownloads")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.totalDownloads}</div>
             <p className="text-xs text-muted-foreground">
-              Avg {(summaryStats.totalDownloads / summaryStats.total).toFixed(1)} per receipt
+              {t("receipt.avgPerReceipt").replace("{avg}", (summaryStats.totalDownloads / summaryStats.total).toFixed(1))}
             </p>
           </CardContent>
         </Card>
@@ -388,21 +393,21 @@ export function AfterSchoolReceipts() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("invoice.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("common.search")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Receipt, parent, student, activity"
+                  placeholder={t("receipt.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -411,56 +416,56 @@ export function AfterSchoolReceipts() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="issued">Issued</SelectItem>
-                  <SelectItem value="resent">Resent</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                  <SelectItem value="issued">{t("receipt.issued")}</SelectItem>
+                  <SelectItem value="resent">{t("receipt.resent")}</SelectItem>
+                  <SelectItem value="failed">{t("receipt.failed")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Type</label>
+              <label className="text-sm font-medium">{t("receipt.paymentType")}</label>
               <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="single">Single Activity</SelectItem>
-                  <SelectItem value="complete">Complete Package</SelectItem>
+                  <SelectItem value="all">{t("receipt.allTypes")}</SelectItem>
+                  <SelectItem value="single">{t("receipt.singleActivity")}</SelectItem>
+                  <SelectItem value="complete">{t("receipt.completePackage")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Parent Type</label>
+              <label className="text-sm font-medium">{t("receipt.parentType")}</label>
               <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Parents</SelectItem>
-                  <SelectItem value="internal">SISB Parents</SelectItem>
-                  <SelectItem value="external">External Parents</SelectItem>
+                  <SelectItem value="all">{t("receipt.allParents")}</SelectItem>
+                  <SelectItem value="internal">{t("receipt.sisbParents")}</SelectItem>
+                  <SelectItem value="external">{t("receipt.externalParents")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date Range</label>
+              <label className="text-sm font-medium">{t("invoice.dateRange")}</label>
               <div className="flex gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateFrom ? format(dateFrom, "MM/dd") : "From"}
+                      {dateFrom ? format(dateFrom, "MM/dd", { locale }) : t("invoice.fromDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -472,12 +477,12 @@ export function AfterSchoolReceipts() {
                     />
                   </PopoverContent>
                 </Popover>
-                
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateTo ? format(dateTo, "MM/dd") : "To"}
+                      {dateTo ? format(dateTo, "MM/dd", { locale }) : t("invoice.toDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -498,7 +503,7 @@ export function AfterSchoolReceipts() {
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredReceipts.length} of {receipts.length} receipts
+          {t("receipt.showingReceipts").replace("{count}", filteredReceipts.length.toString()).replace("{total}", receipts.length.toString())}
         </p>
       </div>
 
@@ -510,49 +515,49 @@ export function AfterSchoolReceipts() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                   <div className="flex items-center gap-1">
-                    Receipt Number
+                    {t("receipt.receiptNumber")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                   <div className="flex items-center gap-1">
-                    Parent & Student
+                    {t("receipt.parentAndStudent")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Activities</TableHead>
+                <TableHead>{t("receipt.activities")}</TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalAmount")}>
                   <div className="flex items-center gap-1">
-                    Amount
+                    {t("common.amount")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
                   <div className="flex items-center gap-1">
-                    Payment Method
+                    {t("receipt.paymentMethod")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentType")}>
                   <div className="flex items-center gap-1">
-                    Type
+                    {t("common.type")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                   <div className="flex items-center gap-1">
-                    Date
+                    {t("common.date")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                   <div className="flex items-center gap-1">
-                    Downloads
+                    {t("receipt.downloads")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -630,8 +635,8 @@ export function AfterSchoolReceipts() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Most Popular Activities</CardTitle>
-            <p className="text-sm text-muted-foreground">Based on receipt volume</p>
+            <CardTitle>{t("receipt.mostPopularActivities")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("receipt.basedOnVolume")}</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -645,10 +650,10 @@ export function AfterSchoolReceipts() {
                 <div key={index} className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">{item.activity}</div>
-                    <div className="text-sm text-muted-foreground">{item.receipts} receipts</div>
+                    <div className="text-sm text-muted-foreground">{item.receipts} {t("receipt.receipts")}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">₿{item.revenue.toLocaleString()}</div>
+                    <div className="font-medium">฿{item.revenue.toLocaleString()}</div>
                   </div>
                 </div>
               ))}
@@ -658,21 +663,21 @@ export function AfterSchoolReceipts() {
 
         <Card>
           <CardHeader>
-            <CardTitle>External vs Internal Parents</CardTitle>
-            <p className="text-sm text-muted-foreground">Revenue comparison</p>
+            <CardTitle>{t("receipt.externalVsInternal")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("receipt.revenueComparison")}</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-medium">SISB Parents</div>
+                  <div className="font-medium">{t("receipt.sisbParents")}</div>
                   <div className="text-sm text-muted-foreground">
-                    {receipts.filter(r => !r.isExternal).length} receipts
+                    {receipts.filter(r => !r.isExternal).length} {t("receipt.receipts")}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    ₿{receipts.filter(r => !r.isExternal).reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}
+                    ฿{receipts.filter(r => !r.isExternal).reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {Math.round((receipts.filter(r => !r.isExternal).reduce((sum, r) => sum + r.totalAmount, 0) / summaryStats.totalRevenue) * 100)}%
@@ -682,14 +687,14 @@ export function AfterSchoolReceipts() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-medium">External Parents</div>
+                  <div className="font-medium">{t("receipt.externalParents")}</div>
                   <div className="text-sm text-muted-foreground">
-                    {receipts.filter(r => r.isExternal).length} receipts
+                    {receipts.filter(r => r.isExternal).length} {t("receipt.receipts")}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    ₿{receipts.filter(r => r.isExternal).reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}
+                    ฿{receipts.filter(r => r.isExternal).reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {Math.round((receipts.filter(r => r.isExternal).reduce((sum, r) => sum + r.totalAmount, 0) / summaryStats.totalRevenue) * 100)}%
@@ -699,7 +704,7 @@ export function AfterSchoolReceipts() {
 
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm">
-                  <strong>Insight:</strong> External parents represent {Math.round((summaryStats.externalParents / summaryStats.total) * 100)}% of receipts and contribute significantly to after school revenue.
+                  <strong>{t("receipt.insight")}:</strong> {t("receipt.externalInsight").replace("{percent}", Math.round((summaryStats.externalParents / summaryStats.total) * 100).toString())}
                 </p>
               </div>
             </div>
@@ -709,9 +714,9 @@ export function AfterSchoolReceipts() {
         </TabsContent>
 
         <TabsContent value="whitelist">
-          <InternalEmailManagement 
-            title="After School Receipt Email Whitelist"
-            description="Manage internal staff emails who receive after school receipt notifications"
+          <InternalEmailManagement
+            title={t("receipt.afterSchoolWhitelistTitle")}
+            description={t("receipt.afterSchoolWhitelistDesc")}
           />
         </TabsContent>
       </Tabs>

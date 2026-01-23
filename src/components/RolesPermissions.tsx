@@ -22,7 +22,7 @@ import {
   XCircle,
   ArrowUpDown
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 
 // Permission modules and actions
 const permissionModules = [
@@ -495,12 +495,12 @@ export function RolesPermissions() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[200px]">Module</TableHead>
-              <TableHead className="text-center">View</TableHead>
-              <TableHead className="text-center">Create</TableHead>
-              <TableHead className="text-center">Edit</TableHead>
-              <TableHead className="text-center">Delete</TableHead>
-              <TableHead className="text-center">Other</TableHead>
+              <TableHead className="w-[200px]">{t("table.module")}</TableHead>
+              <TableHead className="text-center">{t("table.view")}</TableHead>
+              <TableHead className="text-center">{t("table.create")}</TableHead>
+              <TableHead className="text-center">{t("table.edit")}</TableHead>
+              <TableHead className="text-center">{t("common.delete")}</TableHead>
+              <TableHead className="text-center">{t("table.other")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -873,12 +873,12 @@ export function RolesPermissions() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="w-[220px] py-3 pl-4">Module</TableHead>
-                      <TableHead className="text-center w-[80px] py-3">View</TableHead>
-                      <TableHead className="text-center w-[80px] py-3">Create</TableHead>
-                      <TableHead className="text-center w-[80px] py-3">Edit</TableHead>
-                      <TableHead className="text-center w-[80px] py-3">Delete</TableHead>
-                      <TableHead className="text-center py-3 pr-4">Other</TableHead>
+                      <TableHead className="w-[220px] py-3 pl-4">{t("table.module")}</TableHead>
+                      <TableHead className="text-center w-[80px] py-3">{t("table.view")}</TableHead>
+                      <TableHead className="text-center w-[80px] py-3">{t("table.create")}</TableHead>
+                      <TableHead className="text-center w-[80px] py-3">{t("table.edit")}</TableHead>
+                      <TableHead className="text-center w-[80px] py-3">{t("common.delete")}</TableHead>
+                      <TableHead className="text-center py-3 pr-4">{t("table.other")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

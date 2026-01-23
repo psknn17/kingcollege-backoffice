@@ -12,9 +12,11 @@ import { Separator } from "./ui/separator"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { CalendarIcon, Search, Download, Filter, Eye, Receipt, CreditCard, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { th, enUS } from "date-fns/locale"
+import { toast } from "@/components/ui/sonner"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface PaymentRecord {
   id: string
@@ -51,8 +53,16 @@ const studentData = [
 ]
 
 // Generate mock payments data with more entries for pagination testing
-const generateMockPayments = (): PaymentRecord[] => {
-  const paymentMethods = ["Credit Card", "PromptPay", "Bank Counter", "WeChat Pay", "Bank Transfer", "Cash"]
+const generateMockPayments = (t?: any): PaymentRecord[] => {
+  // Use translation keys if available, otherwise fallback to English
+  const paymentMethods = t ? [
+    t("paymentMethod.creditCard"),
+    "PromptPay",
+    "Bank Counter",
+    "WeChat Pay",
+    t("paymentMethod.bankTransfer"),
+    t("paymentMethod.cash")
+  ] : ["Credit Card", "PromptPay", "Bank Counter", "WeChat Pay", "Bank Transfer", "Cash"]
   const paymentChannels: ("credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank")[] = ["credit_card", "wechat_pay", "alipay", "qr_payment", "counter_bank"]
   const payerNames = ["Mr. John Smith", "Mrs. Sarah Smith", "Mr. David Johnson", "Mrs. Lisa Johnson", "Mr. Robert Williams", "Mrs. Jennifer Williams", "Mr. Thomas Brown", "Mrs. Emma Brown", "Mr. Andrew Davis", "Mr. Daniel Miller"]
   const statuses: ("paid" | "partial" | "unpaid" | "cancelled" | "overdue")[] = ["paid", "paid", "paid", "partial", "unpaid", "cancelled", "overdue"]
@@ -85,7 +95,7 @@ const generateMockPayments = (): PaymentRecord[] => {
       payerName,
       status,
       transactionDate: date,
-      parentType: Math.random() > 0.7 ? "external" : "internal",
+      parentType: "internal", // Payment History only shows internal student payments
       referenceNumber: `REF-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
       paymentDescription: `Term ${term} tuition fee payment for academic year 2025-2026`,
       dueDate: new Date(date.getTime() + 15 * 24 * 60 * 60 * 1000),
@@ -100,16 +110,16 @@ const generateMockPayments = (): PaymentRecord[] => {
   return payments
 }
 
-const mockPayments: PaymentRecord[] = generateMockPayments()
-
 interface PaymentHistoryProps {
   type?: "tuition" | "afterschool"
 }
 
 export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
+  const { t, language } = useLanguage()
+  const locale = language === "th" ? th : enUS
   const { academicYears = [] } = useAcademicYears()
-  const [payments] = useState<PaymentRecord[]>(mockPayments)
-  const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>(mockPayments)
+  const [payments] = useState<PaymentRecord[]>(() => generateMockPayments(t))
+  const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>(() => generateMockPayments(t))
   const [searchTerm, setSearchTerm] = useState("")
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
@@ -259,7 +269,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     const totalAmount = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0)
     
     const metadata = [
-      'SISB Schooney Payment History Export',
+      'King\'s College Payment History Export',
       `Export Date: ${currentDate}`,
       `Report Type: ${type === 'tuition' ? 'Tuition Management' : 'After School Management'}`,
       `Total Records: ${filteredPayments.length}`,
@@ -267,9 +277,8 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       '',
       'Applied Filters:',
       `- Status: ${statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}`,
-      `- Term: ${termFilter === 'all' ? 'All Terms' : terms.find(t => t.id === termFilter)?.name || termFilter}`,
+      `- Term: ${termFilter === 'all' ? 'All Terms' : availableTerms.find(t => t.id === termFilter)?.name || termFilter}`,
       `- Year Group: ${gradeFilter === 'all' ? 'All Year Groups' : gradeFilter}`,
-      `- Parent Type: ${parentTypeFilter === 'all' ? 'All Parent Types' : parentTypeFilter.charAt(0).toUpperCase() + parentTypeFilter.slice(1)}`,
       `- Date Range: ${dateFrom ? format(dateFrom, 'yyyy-MM-dd') : 'No start date'} to ${dateTo ? format(dateTo, 'yyyy-MM-dd') : 'No end date'}`,
       `- Search Term: ${searchTerm || 'No search applied'}`,
       '',
@@ -285,7 +294,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       'Year Group',
       'Amount (THB)',
       'Term',
-      'Payment Method',
+      t("paymentMethod.label"),
       'Payment Channel',
       'Payer Name',
       'Status',
@@ -371,7 +380,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     console.log("Downloading receipt for payment:", payment.invoiceNumber)
     // Create a mock download
     const element = document.createElement('a')
-    const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nYear Group: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "MMM dd, yyyy")}`
+    const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nYear Group: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "MMM dd, yyyy", { locale })}`
     const file = new Blob([content], { type: 'text/plain' })
     element.href = URL.createObjectURL(file)
     element.download = `receipt-${payment.invoiceNumber}.txt`
@@ -385,15 +394,15 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold">
-            {type === "tuition" ? "Tuition" : "After School"} Payment History
+            {type === "tuition" ? t("payment.tuitionHistory") : t("payment.afterSchoolHistory")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            View payment records and transaction details
+            {t("payment.viewRecordsDesc")}
           </p>
         </div>
         <Button onClick={exportData} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
-          Export Data
+          {t("payment.exportData")}
         </Button>
       </div>
 
@@ -403,11 +412,11 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("common.searchAndFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
@@ -416,9 +425,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Search</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
               <Input
-                placeholder="Invoice, student, parent..."
+                placeholder={t("payment.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
@@ -427,16 +436,16 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
             {/* Academic Year */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
               <Select value={academicYearFilter} onValueChange={(value) => {
                 setAcademicYearFilter(value)
                 setTermFilter("all") // Reset term when year changes
               }}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Years" />
+                  <SelectValue placeholder={t("common.allYears")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="all">{t("common.allYears")}</SelectItem>
                   {academicYears.map(year => (
                     <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
                   ))}
@@ -446,13 +455,13 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
             {/* Term */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.term")}</label>
               <Select value={termFilter} onValueChange={setTermFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Terms" />
+                  <SelectValue placeholder={t("payment.allTerms")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Terms</SelectItem>
+                  <SelectItem value="all">{t("payment.allTerms")}</SelectItem>
                   {availableTerms.map(term => (
                     <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>
                   ))}
@@ -465,13 +474,13 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Year Group */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Year Group</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("student.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Year Groups" />
+                  <SelectValue placeholder={t("payment.allYearGroups")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Year Groups</SelectItem>
+                  <SelectItem value="all">{t("payment.allYearGroups")}</SelectItem>
                   {uniqueGrades.map((grade) => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
@@ -481,27 +490,27 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
             {/* Status */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PaymentStatus)}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder={t("common.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
                   <SelectItem value="paid">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("common.paid")}</Badge>
                   </SelectItem>
                   <SelectItem value="partial">
-                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Partial</Badge>
+                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("payment.partial")}</Badge>
                   </SelectItem>
                   <SelectItem value="unpaid">
-                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge>
+                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t("common.unpaid")}</Badge>
                   </SelectItem>
                   <SelectItem value="overdue">
-                    <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Overdue</Badge>
+                    <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">{t("common.overdue")}</Badge>
                   </SelectItem>
                   <SelectItem value="cancelled">
-                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Cancelled</Badge>
+                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.cancelled")}</Badge>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -509,13 +518,13 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
             {/* Date Range */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Date Range</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.dateRange")}</label>
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
+                      {dateFrom ? format(dateFrom, "dd/MM/yy", { locale }) : "From"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -532,7 +541,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
+                      {dateTo ? format(dateTo, "dd/MM/yy", { locale }) : "To"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -554,11 +563,11 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length} payment records
-            {filteredPayments.length < payments.length && ` (filtered from ${payments.length} total)`}
+            {t("payment.showingRecords", { from: startIndex + 1, to: Math.min(endIndex, filteredPayments.length), total: filteredPayments.length })}
+            {filteredPayments.length < payments.length && ` (${t("payment.filteredFrom", { total: payments.length })})`}
           </p>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground">Show:</label>
+            <label className="text-sm text-muted-foreground">{t("payment.show")}:</label>
             <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-20">
                 <SelectValue />
@@ -570,11 +579,11 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-sm text-muted-foreground">per page</span>
+            <span className="text-sm text-muted-foreground">{t("payment.perPage")}</span>
           </div>
         </div>
         <div className="text-sm text-muted-foreground">
-          Total Amount: ₿{filteredPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString()}
+          {t("payment.totalAmount")}: ₿{filteredPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString()}
         </div>
       </div>
 
@@ -586,54 +595,54 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
                   <div className="flex items-center gap-1">
-                    Invoice Number
+                    {t("payment.invoiceNumber")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    Student
+                    {t("payment.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                   <div className="flex items-center gap-1">
-                    Year Group
+                    {t("student.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                   <div className="flex items-center gap-1">
-                    Amount
+                    {t("common.amount")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
                   <div className="flex items-center gap-1">
-                    Term
+                    {t("payment.term")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentChannel")}>
                   <div className="flex items-center gap-1">
-                    Channel
+                    {t("payment.channel")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                {type === "afterschool" && <TableHead>Parent Type</TableHead>}
+                {type === "afterschool" && <TableHead>{t("receipt.parentType")}</TableHead>}
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                   <div className="flex items-center gap-1">
-                    Date
+                    {t("common.date")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -659,12 +668,12 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                   {type === "afterschool" && (
                     <TableCell>
                       <Badge variant={payment.parentType === "external" ? "secondary" : "outline"}>
-                        {payment.parentType === "external" ? "External" : "Internal"}
+                        {payment.parentType === "external" ? t("common.external") : t("common.internal")}
                       </Badge>
                     </TableCell>
                   )}
                   <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                  <TableCell>{format(payment.transactionDate, "MMM dd, yyyy")}</TableCell>
+                  <TableCell>{format(payment.transactionDate, "MMM dd, yyyy", { locale })}</TableCell>
                   <TableCell>
                     <Dialog>
                       <DialogTrigger asChild>
@@ -680,10 +689,10 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
                             <Receipt className="w-5 h-5" />
-                            Payment Details
+                            {t("payment.paymentDetails")}
                           </DialogTitle>
                           <DialogDescription>
-                            Complete payment information for invoice {payment.invoiceNumber}
+                            {t("payment.completeInfoFor", { invoice: payment.invoiceNumber })}
                           </DialogDescription>
                         </DialogHeader>
                         
@@ -697,7 +706,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                             <div className="text-right">
                               {getStatusBadge(payment.status)}
                               <p className="text-sm text-muted-foreground mt-1">
-                                {format(payment.transactionDate, "MMM dd, yyyy 'at' HH:mm")}
+                                {format(payment.transactionDate, "MMM dd, yyyy 'at' HH:mm", { locale })}
                               </p>
                             </div>
                           </div>
@@ -707,48 +716,48 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                           {/* Student Information */}
                           <div className="grid grid-cols-2 gap-6">
                             <div>
-                              <h4 className="font-medium mb-3">Student Information</h4>
+                              <h4 className="font-medium mb-3">{t("payment.studentInformation")}</h4>
                               <div className="space-y-2">
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Student Name</p>
+                                  <p className="text-sm text-muted-foreground">{t("payment.studentName")}</p>
                                   <p className="font-medium">{payment.studentName}</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Student ID</p>
+                                  <p className="text-sm text-muted-foreground">{t("payment.studentId")}</p>
                                   <p className="font-mono text-sm">{payment.studentId}</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Year Group</p>
+                                  <p className="text-sm text-muted-foreground">{t("student.yearGroup")}</p>
                                   <Badge variant="secondary">{payment.studentGrade}</Badge>
                                 </div>
                               </div>
                             </div>
 
                             <div>
-                              <h4 className="font-medium mb-3">Payment Information</h4>
+                              <h4 className="font-medium mb-3">{t("payment.paymentInformation")}</h4>
                               <div className="space-y-2">
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Term</p>
-                                  <Badge variant="outline">Term {payment.term}</Badge>
+                                  <p className="text-sm text-muted-foreground">{t("payment.term")}</p>
+                                  <Badge variant="outline">{t("payment.termNum", { num: payment.term })}</Badge>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Payment Method</p>
+                                  <p className="text-sm text-muted-foreground">{t("payment.paymentMethod")}</p>
                                   <div className="flex items-center gap-2">
                                     <CreditCard className="w-4 h-4" />
                                     <span>{payment.paymentMethod}</span>
                                   </div>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Payment Channel</p>
+                                  <p className="text-sm text-muted-foreground">{t("payment.paymentChannel")}</p>
                                   <p>{payment.paymentChannel}</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Payer Name</p>
+                                  <p className="text-sm text-muted-foreground">{t("payment.payerName")}</p>
                                   <p className="font-medium">{payment.payerName}</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Due Date</p>
-                                  <p>{payment.dueDate ? format(payment.dueDate, "MMM dd, yyyy") : "N/A"}</p>
+                                  <p className="text-sm text-muted-foreground">{t("payment.dueDate")}</p>
+                                  <p>{payment.dueDate ? format(payment.dueDate, "MMM dd, yyyy", { locale }) : "N/A"}</p>
                                 </div>
                               </div>
                             </div>
@@ -758,10 +767,10 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
                           {/* Transaction Details */}
                           <div>
-                            <h4 className="font-medium mb-3">Transaction Details</h4>
+                            <h4 className="font-medium mb-3">{t("payment.transactionDetails")}</h4>
                             <div className="grid grid-cols-1 gap-4">
                               <div>
-                                <p className="text-sm text-muted-foreground">Reference Number</p>
+                                <p className="text-sm text-muted-foreground">{t("payment.referenceNumber")}</p>
                                 <p className="font-mono text-sm">{payment.referenceNumber || "N/A"}</p>
                               </div>
                             </div>
@@ -777,21 +786,21 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
                           {/* Action Buttons */}
                           <div className="flex justify-between pt-4">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               onClick={() => downloadReceipt(payment)}
                               className="flex items-center gap-2"
                             >
                               <Download className="w-4 h-4" />
-                              Download Receipt
+                              {t("payment.downloadReceipt")}
                             </Button>
-                            
+
                             <div className="space-x-2">
                               {payment.status === "failed" && (
-                                <Button 
+                                <Button
                                   onClick={() => console.log("Retry payment for", payment.invoiceNumber)}
                                 >
-                                  Retry Payment
+                                  {t("payment.retryPayment")}
                                 </Button>
                               )}
                             </div>

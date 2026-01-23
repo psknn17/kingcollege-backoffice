@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -17,7 +18,7 @@ import { Textarea } from "./ui/textarea"
 import { Progress } from "./ui/progress"
 import { Label } from "./ui/label"
 import { format } from "date-fns"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/sonner"
 import { InternalEmailManagement } from "./InternalEmailManagement"
 
 interface Receipt {
@@ -152,7 +153,12 @@ for (let i = 6; i <= 120; i++) {
   })
 }
 
-export function ReceiptPage() {
+interface ReceiptPageProps {
+  onNavigateToSubPage?: (page: string, params?: any) => void
+}
+
+export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
+  const { t } = useLanguage()
   const [receipts] = useState<Receipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
@@ -184,7 +190,16 @@ export function ReceiptPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Grade options for filter
-  const gradeOptions = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
+  const gradeOptions = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+
+  // Handle create receipt
+  const handleCreateReceipt = () => {
+    if (onNavigateToSubPage) {
+      onNavigateToSubPage('receipt-creation', { menuType: 'tuition' })
+    } else {
+      toast.error("Navigation not configured")
+    }
+  }
 
   const applyFilters = () => {
     let filtered = receipts
@@ -370,11 +385,11 @@ export function ReceiptPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "issued":
-        return <Badge className="bg-green-100 text-green-800">Issued</Badge>
+        return <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge>
       case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">Resent</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.resent")}</Badge>
       case "failed":
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>
+        return <Badge className="bg-red-100 text-red-800">{t("receipt.failed")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -403,45 +418,48 @@ export function ReceiptPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Tuition Receipt Management</h2>
+          <h2 className="text-xl font-semibold">{t("receipt.tuitionTitle")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage receipts and internal email notifications
+            {t("receipt.tuitionSubtitle")}
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="receipts" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList>
           <TabsTrigger value="receipts" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
-            Receipt Management
-          </TabsTrigger>
-          <TabsTrigger value="whitelist" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Internal Email Whitelist
+            {t("receipt.management")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="receipts" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h3 className="text-lg font-medium">Receipt Management</h3>
+              <h3 className="text-lg font-medium">{t("receipt.management")}</h3>
               <p className="text-sm text-muted-foreground">
-                View and download tuition payment receipts
+                {t("receipt.viewAndDownloadTuition")}
               </p>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex items-center gap-2"
                 onClick={openBulkResendModal}
               >
                 <Mail className="w-4 h-4" />
-                Bulk Resend
+                {t("receipt.bulkResend")}
               </Button>
-              <Button className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+              >
                 <Download className="w-4 h-4" />
-                Export All
+                {t("receipt.exportAll")}
+              </Button>
+              <Button onClick={handleCreateReceipt} className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Create Receipt
               </Button>
             </div>
           </div>
@@ -450,7 +468,7 @@ export function ReceiptPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Receipts</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.totalReceipts")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.total}</div>
@@ -459,19 +477,19 @@ export function ReceiptPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Successfully Issued</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.successfullyIssued")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{summaryStats.issued}</div>
                 <p className="text-xs text-muted-foreground">
-                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% success rate
+                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% {t("receipt.successRate")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Resent</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.resent")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">{summaryStats.resent}</div>
@@ -480,7 +498,7 @@ export function ReceiptPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Failed</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.failed")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">{summaryStats.failed}</div>
@@ -489,12 +507,12 @@ export function ReceiptPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("receipt.totalDownloads")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.totalDownloads}</div>
                 <p className="text-xs text-muted-foreground">
-                  Avg {(summaryStats.totalDownloads / summaryStats.total).toFixed(1)} per receipt
+                  {t("receipt.avgPerReceipt").replace("{avg}", (summaryStats.totalDownloads / summaryStats.total).toFixed(1))}
                 </p>
               </CardContent>
             </Card>
@@ -506,21 +524,21 @@ export function ReceiptPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Filter className="w-4 h-4" />
-                  Search & Filter
+                  {t("common.searchAndFilter")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={applyFilters} className="h-9">Apply</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+                  <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Search</label>
+                  <label className="text-sm font-medium">{t("common.search")}</label>
                   <div className="relative">
                     <Input
-                      placeholder="Receipt, invoice, student name"
+                      placeholder={t("receipt.tuitionSearchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className=""
@@ -529,42 +547,42 @@ export function ReceiptPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
+                  <label className="text-sm font-medium">{t("common.status")}</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="issued">Issued</SelectItem>
-                      <SelectItem value="resent">Resent</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                      <SelectItem value="issued">{t("receipt.issued")}</SelectItem>
+                      <SelectItem value="resent">{t("receipt.resent")}</SelectItem>
+                      <SelectItem value="failed">{t("receipt.failed")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Payment Type</label>
+                  <label className="text-sm font-medium">{t("receipt.paymentType")}</label>
                   <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                      <SelectItem value="termly">Termly</SelectItem>
+                      <SelectItem value="all">{t("receipt.allTypes")}</SelectItem>
+                      <SelectItem value="yearly">{t("receipt.yearly")}</SelectItem>
+                      <SelectItem value="termly">{t("receipt.termly")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Year Group</label>
+                  <label className="text-sm font-medium">{t("receipt.yearGroup")}</label>
                   <Select value={gradeFilter} onValueChange={setGradeFilter}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Year Groups</SelectItem>
+                      <SelectItem value="all">{t("receipt.allYearGroups")}</SelectItem>
                       {gradeOptions.map((grade) => (
                         <SelectItem key={grade} value={grade}>
                           {grade}
@@ -575,13 +593,13 @@ export function ReceiptPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
+                  <label className="text-sm font-medium">{t("receipt.dateRange")}</label>
                   <div className="flex gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "MM/dd") : "From"}
+                          {dateFrom ? format(dateFrom, "MM/dd") : t("receipt.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -593,12 +611,12 @@ export function ReceiptPage() {
                         />
                       </PopoverContent>
                     </Popover>
-                    
+
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "MM/dd") : "To"}
+                          {dateTo ? format(dateTo, "MM/dd") : t("receipt.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -620,36 +638,36 @@ export function ReceiptPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredReceipts.length)} of {filteredReceipts.length} receipts
+                {t("receipt.showingRange").replace("{from}", String(startIndex + 1)).replace("{to}", String(Math.min(endIndex, filteredReceipts.length))).replace("{total}", String(filteredReceipts.length))}
                 {filteredReceipts.length !== receipts.length && (
-                  <span> (filtered from {receipts.length} total)</span>
+                  <span> ({t("receipt.filteredFrom").replace("{total}", String(receipts.length))})</span>
                 )}
               </p>
               {selectedReceipts.size > 0 && (
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">
-                    {selectedReceipts.size} selected
+                    {selectedReceipts.size} {t("receipt.selected")}
                   </Badge>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={selectAllFiltered}
                   >
-                    Select All ({filteredReceipts.length})
+                    {t("common.selectAll")} ({filteredReceipts.length})
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={clearSelection}
                   >
-                    Clear Selection
+                    {t("receipt.clearSelection")}
                   </Button>
                 </div>
               )}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
+                {t("receipt.page")} {currentPage} {t("receipt.of")} {totalPages}
               </span>
             </div>
           </div>
@@ -678,59 +696,59 @@ export function ReceiptPage() {
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                       <div className="flex items-center gap-1">
-                        Receipt Number
+                        {t("receipt.receiptNumber")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
                       <div className="flex items-center gap-1">
-                        Invoice
+                        {t("receipt.invoice")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
-                        Student
+                        {t("receipt.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                       <div className="flex items-center gap-1">
-                        Year Group
+                        {t("receipt.yearGroup")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
-                        Amount
+                        {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
                       <div className="flex items-center gap-1">
-                        Payment Method
+                        {t("receipt.paymentMethod")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                       <div className="flex items-center gap-1">
-                        Date
+                        {t("common.date")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                       <div className="flex items-center gap-1">
-                        Status
+                        {t("common.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                       <div className="flex items-center gap-1">
-                        Downloads
+                        {t("receipt.downloads")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -763,7 +781,7 @@ export function ReceiptPage() {
                       <TableCell>{getStatusBadge(receipt.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {receipt.downloadCount} times
+                          {receipt.downloadCount} {t("receipt.times")}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -809,7 +827,7 @@ export function ReceiptPage() {
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Previous
+                  {t("invoice.previous")}
                 </Button>
                 <Button
                   variant="outline"
@@ -817,7 +835,7 @@ export function ReceiptPage() {
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                 >
-                  Next
+                  {t("invoice.next")}
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -899,13 +917,6 @@ export function ReceiptPage() {
             </div>
           )}
         </TabsContent>
-
-        <TabsContent value="whitelist">
-          <InternalEmailManagement 
-            title="Tuition Receipt Email Whitelist"
-            description="Manage internal staff emails who receive tuition receipt notifications"
-          />
-        </TabsContent>
       </Tabs>
 
       {/* Receipt Detail Modal */}
@@ -913,59 +924,59 @@ export function ReceiptPage() {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="max-w-2xl p-6">
             <DialogHeader>
-              <DialogTitle>Receipt Details</DialogTitle>
+              <DialogTitle>{t("receipt.receiptDetails")}</DialogTitle>
               <DialogDescription>
-                View detailed information about receipt {selectedReceipt.receiptNumber}
+                {t("receipt.viewDetailedInfo").replace("{receiptNumber}", selectedReceipt.receiptNumber)}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium">Receipt Information</h4>
+                  <h4 className="font-medium">{t("receipt.receiptInformation")}</h4>
                   <div className="space-y-2 mt-2">
-                    <p><span className="font-medium">Receipt Number:</span> {selectedReceipt.receiptNumber}</p>
-                    <p><span className="font-medium">Invoice Number:</span> {selectedReceipt.invoiceNumber}</p>
-                    <p><span className="font-medium">Status:</span> {getStatusBadge(selectedReceipt.status)}</p>
+                    <p><span className="font-medium">{t("receipt.receiptNumber")}:</span> {selectedReceipt.receiptNumber}</p>
+                    <p><span className="font-medium">{t("receipt.invoiceNumber")}:</span> {selectedReceipt.invoiceNumber}</p>
+                    <p><span className="font-medium">{t("common.status")}:</span> {getStatusBadge(selectedReceipt.status)}</p>
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium">Student Information</h4>
+                  <h4 className="font-medium">{t("receipt.studentInformation")}</h4>
                   <div className="space-y-2 mt-2">
-                    <p><span className="font-medium">Name:</span> {selectedReceipt.studentName}</p>
-                    <p><span className="font-medium">ID:</span> {selectedReceipt.studentId}</p>
-                    <p><span className="font-medium">Grade:</span> {selectedReceipt.studentGrade}</p>
+                    <p><span className="font-medium">{t("common.name")}:</span> {selectedReceipt.studentName}</p>
+                    <p><span className="font-medium">{t("receipt.studentId")}:</span> {selectedReceipt.studentId}</p>
+                    <p><span className="font-medium">{t("receipt.grade")}:</span> {selectedReceipt.studentGrade}</p>
                   </div>
                 </div>
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium">Payment Details</h4>
+                  <h4 className="font-medium">{t("receipt.paymentDetails")}</h4>
                   <div className="space-y-2 mt-2">
-                    <p><span className="font-medium">Amount:</span> ₿{selectedReceipt.amount.toLocaleString()}</p>
-                    <p><span className="font-medium">Method:</span> {selectedReceipt.paymentMethod}</p>
-                    <p><span className="font-medium">Type:</span> {selectedReceipt.paymentType}</p>
+                    <p><span className="font-medium">{t("common.amount")}:</span> ₿{selectedReceipt.amount.toLocaleString()}</p>
+                    <p><span className="font-medium">{t("receipt.method")}:</span> {selectedReceipt.paymentMethod}</p>
+                    <p><span className="font-medium">{t("common.type")}:</span> {selectedReceipt.paymentType}</p>
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium">Additional Info</h4>
+                  <h4 className="font-medium">{t("receipt.additionalInfo")}</h4>
                   <div className="space-y-2 mt-2">
-                    <p><span className="font-medium">Date:</span> {format(selectedReceipt.transactionDate, "MMMM dd, yyyy")}</p>
-                    <p><span className="font-medium">Term:</span> {selectedReceipt.term}</p>
-                    <p><span className="font-medium">Downloads:</span> {selectedReceipt.downloadCount} times</p>
+                    <p><span className="font-medium">{t("common.date")}:</span> {format(selectedReceipt.transactionDate, "MMMM dd, yyyy")}</p>
+                    <p><span className="font-medium">{t("receipt.term")}:</span> {selectedReceipt.term}</p>
+                    <p><span className="font-medium">{t("receipt.downloads")}:</span> {selectedReceipt.downloadCount} {t("receipt.times")}</p>
                   </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => downloadReceipt(selectedReceipt.id)}>
                   <Download className="w-4 h-4 mr-2" />
-                  Download
+                  {t("common.download")}
                 </Button>
                 <Button variant="outline" onClick={() => resendReceipt(selectedReceipt.id)}>
                   <Mail className="w-4 h-4 mr-2" />
-                  Resend
+                  {t("receipt.resend")}
                 </Button>
-                <Button onClick={closeModal}>Close</Button>
+                <Button onClick={closeModal}>{t("common.close")}</Button>
               </div>
             </div>
           </DialogContent>
@@ -976,15 +987,15 @@ export function ReceiptPage() {
       <Dialog open={isBulkResendModalOpen} onOpenChange={closeBulkResendModal}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Bulk Resend Receipts</DialogTitle>
+            <DialogTitle>{t("receipt.bulkResendReceipts")}</DialogTitle>
             <DialogDescription>
-              Send receipt emails to selected recipients
+              {t("receipt.sendReceiptEmails")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <p>Feature coming soon: Bulk resend for {selectedReceipts.size} selected receipts</p>
+            <p>{t("receipt.featureComingSoon").replace("{count}", String(selectedReceipts.size))}</p>
             <div className="flex justify-end">
-              <Button onClick={closeBulkResendModal}>Close</Button>
+              <Button onClick={closeBulkResendModal}>{t("common.close")}</Button>
             </div>
           </div>
         </DialogContent>

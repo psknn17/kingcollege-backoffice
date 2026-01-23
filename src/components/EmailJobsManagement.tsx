@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -44,10 +45,43 @@ interface EmailJob {
   completedAt?: string
   createdBy: string
   description: string
+  jobType?: "student" | "external"
 }
 
-// Mock data
-const mockEmailJobs: EmailJob[] = [
+// Get storage key based on job type
+const getEmailJobsStorageKey = (jobType: string): string => {
+  switch (jobType) {
+    case "external":
+      return "externalEmailJobs"
+    default:
+      return "studentEmailJobs"
+  }
+}
+
+// Load email jobs from localStorage
+const loadEmailJobsFromStorage = (jobType: string): EmailJob[] | null => {
+  try {
+    const stored = localStorage.getItem(getEmailJobsStorageKey(jobType))
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error("Failed to load email jobs from localStorage:", error)
+  }
+  return null
+}
+
+// Save email jobs to localStorage
+const saveEmailJobsToStorage = (jobs: EmailJob[], jobType: string) => {
+  try {
+    localStorage.setItem(getEmailJobsStorageKey(jobType), JSON.stringify(jobs))
+  } catch (error) {
+    console.error("Failed to save email jobs to localStorage:", error)
+  }
+}
+
+// Default mock data for student jobs
+const mockStudentEmailJobs: EmailJob[] = [
   {
     id: "EJ001",
     batchId: "BATCH-2024-001",
@@ -60,7 +94,7 @@ const mockEmailJobs: EmailJob[] = [
     status: "completed",
     createdAt: "2024-01-15T08:30:00Z",
     completedAt: "2024-01-15T08:45:00Z",
-    createdBy: "admin@sisb.ac.th",
+    createdBy: "admin@kingcollege.ac.th",
     description: "Term 2 Tuition Invoice - Year 7"
   },
   {
@@ -74,7 +108,7 @@ const mockEmailJobs: EmailJob[] = [
     pendingCount: 3,
     status: "in-progress",
     createdAt: "2024-01-15T10:15:00Z",
-    createdBy: "admin@sisb.ac.th",
+    createdBy: "admin@kingcollege.ac.th",
     description: "Football Club Registration - Year 8-9"
   },
   {
@@ -88,7 +122,7 @@ const mockEmailJobs: EmailJob[] = [
     pendingCount: 0,
     status: "failed",
     createdAt: "2024-01-15T14:20:00Z",
-    createdBy: "admin@sisb.ac.th",
+    createdBy: "admin@kingcollege.ac.th",
     description: "Science Museum Trip - Year 10"
   },
   {
@@ -102,16 +136,59 @@ const mockEmailJobs: EmailJob[] = [
     pendingCount: 22,
     status: "pending",
     createdAt: "2024-01-15T16:00:00Z",
-    createdBy: "admin@sisb.ac.th",
-    description: "Term 2 Tuition Invoice - Reception"
+    createdBy: "admin@kingcollege.ac.th",
+    description: "Term 2 Tuition Invoice - Reception",
+    jobType: "student"
   }
 ]
 
-interface EmailJobsManagementProps {
-  onNavigateToSubPage?: (subPage: string, params?: any) => void
+// Default mock data for external jobs
+const mockExternalEmailJobs: EmailJob[] = [
+  {
+    id: "EEJ001",
+    batchId: "EXT-BATCH-2024-001",
+    invoiceType: "trip",
+    yearGroup: "External",
+    totalEmails: 15,
+    sentCount: 15,
+    failedCount: 0,
+    pendingCount: 0,
+    status: "completed",
+    createdAt: "2024-01-10T09:00:00Z",
+    completedAt: "2024-01-10T09:15:00Z",
+    createdBy: "admin@kingcollege.ac.th",
+    description: "External Event Invoice - Conference",
+    jobType: "external"
+  }
+]
+
+// Get default mock data based on job type
+const getDefaultMockData = (jobType: string): EmailJob[] => {
+  return jobType === "external" ? mockExternalEmailJobs : mockStudentEmailJobs
 }
 
-export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagementProps) {
+interface EmailJobsManagementProps {
+  onNavigateToSubPage?: (subPage: string, params?: any) => void
+  jobType?: "student" | "external" | "afterschool" | "event" | "summer"
+}
+
+export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }: EmailJobsManagementProps) {
+  const { t } = useLanguage()
+  const isExternalView = jobType === "external"
+  const isCategoryView = ["afterschool", "event", "summer"].includes(jobType)
+  const isSimplifiedView = isExternalView || isCategoryView
+
+  // Load email jobs from localStorage or use default mock data
+  const [emailJobs, setEmailJobs] = useState<EmailJob[]>(() => {
+    const stored = loadEmailJobsFromStorage(jobType)
+    return stored || getDefaultMockData(jobType)
+  })
+
+  // Save to localStorage when emailJobs change
+  useEffect(() => {
+    saveEmailJobsToStorage(emailJobs, jobType)
+  }, [emailJobs, jobType])
+
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
@@ -157,7 +234,8 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
     }
   }
 
-  const filteredJobs = mockEmailJobs.filter(job => {
+  // Use emailJobs from state (already filtered by jobType via localStorage)
+  const filteredJobs = emailJobs.filter(job => {
     const matchesSearch = job.batchId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.yearGroup.toLowerCase().includes(searchTerm.toLowerCase())
@@ -269,14 +347,14 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2>Email Jobs Management</h2>
+          <h2>{isExternalView ? t("emailJobs.externalTitle") : isSimplifiedView ? t("emailJobs.activityTitle") : t("emailJobs.title")}</h2>
           <p className="text-muted-foreground">
-            Monitor and manage email delivery status for invoice batches
+            {isSimplifiedView ? t("emailJobs.activitySubtitle") : t("emailJobs.subtitle")}
           </p>
         </div>
         <Button onClick={() => window.location.reload()}>
           <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 
@@ -284,46 +362,46 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailJobs.totalJobs")}</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockEmailJobs.length}</div>
+            <div className="text-2xl font-bold">{emailJobs.length}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailJobs.completed")}</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockEmailJobs.filter(j => j.status === "completed").length}
+              {emailJobs.filter(j => j.status === "completed").length}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailJobs.inProgress")}</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockEmailJobs.filter(j => j.status === "in-progress").length}
+              {emailJobs.filter(j => j.status === "in-progress").length}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("emailJobs.failed")}</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockEmailJobs.filter(j => j.status === "failed").length}
+              {emailJobs.filter(j => j.status === "failed").length}
             </div>
           </CardContent>
         </Card>
@@ -336,38 +414,40 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
             <div className="flex-1">
               <div className="relative">
                 <Input
-                  placeholder="Search by batch ID, description, or year group..."
+                  placeholder={t("emailJobs.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
                 />
               </div>
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t("emailJobs.filterByStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                <SelectItem value="completed">{t("emailJobs.completed")}</SelectItem>
+                <SelectItem value="in-progress">{t("emailJobs.inProgress")}</SelectItem>
+                <SelectItem value="failed">{t("emailJobs.failed")}</SelectItem>
+                <SelectItem value="pending">{t("common.pending")}</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="tuition">Tuition</SelectItem>
-                <SelectItem value="eca">ECA</SelectItem>
-                <SelectItem value="trip">Trip & Activities</SelectItem>
-              </SelectContent>
-            </Select>
+            {!isSimplifiedView && (
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder={t("emailJobs.filterByType")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.allTypes")}</SelectItem>
+                  <SelectItem value="tuition">{t("emailJobs.tuition")}</SelectItem>
+                  <SelectItem value="eca">{t("emailJobs.eca")}</SelectItem>
+                  <SelectItem value="trip">{t("emailJobs.tripActivities")}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -380,64 +460,68 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("batchId")}>
                   <div className="flex items-center gap-1">
-                    Batch ID
+                    {t("emailJobs.batchId")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceType")}>
-                  <div className="flex items-center gap-1">
-                    Type
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
+                {!isSimplifiedView && (
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceType")}>
+                    <div className="flex items-center gap-1">
+                      {t("common.type")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                )}
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
                   <div className="flex items-center gap-1">
-                    Year Group
+                    {isExternalView ? t("emailJobs.recipient") : t("emailJobs.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
                   <div className="flex items-center gap-1">
-                    Description
+                    {t("common.description")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalEmails")}>
                   <div className="flex items-center gap-1">
-                    Total
+                    {t("common.total")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("successRate")}>
                   <div className="flex items-center gap-1">
-                    Success Rate
+                    {t("emailJobs.successRate")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1">
-                    Status
+                    {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
                   <div className="flex items-center gap-1">
-                    Created
+                    {t("emailJobs.created")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedJobs.map((job) => (
                 <TableRow key={job.id}>
                   <TableCell className="font-mono">{job.batchId}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {job.invoiceType}
-                    </Badge>
-                  </TableCell>
+                  {!isSimplifiedView && (
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {job.invoiceType}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell>{job.yearGroup}</TableCell>
                   <TableCell className="max-w-[200px] truncate">
                     {job.description}
@@ -468,11 +552,11 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleViewHistory(job)}>
                           <History className="mr-2 h-4 w-4" />
-                          View History
+                          {t("emailJobs.viewHistory")}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleExportCsv(job)}>
                           <FileSpreadsheet className="mr-2 h-4 w-4" />
-                          Export CSV Log
+                          {t("emailJobs.exportCsvLog")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -485,9 +569,9 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
           {filteredJobs.length === 0 && (
             <div className="text-center py-8">
               <Mail className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3>No email jobs found</h3>
+              <h3>{t("emailJobs.noJobsFound")}</h3>
               <p className="text-muted-foreground">
-                No email jobs match your current filters.
+                {t("emailJobs.noJobsMatchFilter")}
               </p>
             </div>
           )}
@@ -498,7 +582,7 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
       {sortedJobs.length > 0 && (
         <div className="flex items-center justify-between border rounded-lg p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Show</span>
+            <span>{t("emailJobs.show")}</span>
             <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
               <SelectTrigger className="w-[70px] h-8">
                 <SelectValue />
@@ -510,11 +594,11 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <span>entries</span>
+            <span>{t("emailJobs.entries")}</span>
           </div>
 
           <div className="text-sm text-muted-foreground">
-            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedJobs.length)} of {sortedJobs.length} email jobs
+            {t("emailJobs.showing")} {((currentPage - 1) * pageSize) + 1} {t("emailJobs.to")} {Math.min(currentPage * pageSize, sortedJobs.length)} {t("emailJobs.of")} {sortedJobs.length} {t("emailJobs.emailJobs")}
           </div>
 
           <div className="flex items-center gap-1">
@@ -525,7 +609,7 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
+              {t("emailJobs.previous")}
             </Button>
             <div className="flex items-center gap-1 mx-2">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -558,7 +642,7 @@ export function EmailJobsManagement({ onNavigateToSubPage }: EmailJobsManagement
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
             >
-              Next
+              {t("emailJobs.next")}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>

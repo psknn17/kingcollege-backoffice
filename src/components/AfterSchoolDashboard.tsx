@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts"
 import { Users, DollarSign, Calendar, BookOpen, TrendingUp, Clock } from "lucide-react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 const registrationData = [
   { month: "Aug", registrations: 145, revenue: 58000 },
@@ -40,58 +41,60 @@ const revenueByActivityData = [
 ]
 
 export function AfterSchoolDashboard() {
+  const { t } = useLanguage()
+
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Registrations</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("afterschool.totalRegistrations")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1,219</div>
             <p className="text-xs text-muted-foreground">
-              +15% from last period
+              {t("afterschool.fromLastPeriod").replace("{percent}", "+15")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.totalRevenue")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₿367,600</div>
+            <div className="text-2xl font-bold">฿367,600</div>
             <p className="text-xs text-muted-foreground">
-              +8% from last period
+              {t("afterschool.fromLastPeriod").replace("{percent}", "+8")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Activities</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("afterschool.activeActivities")}</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">24</div>
             <p className="text-xs text-muted-foreground">
-              Across 8 categories
+              {t("afterschool.acrossCategories").replace("{count}", "8")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Attendance</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("afterschool.averageAttendance")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">90.6%</div>
             <p className="text-xs text-muted-foreground">
-              +2.4% this week
+              {t("afterschool.thisWeek").replace("{percent}", "+2.4")}
             </p>
           </CardContent>
         </Card>
@@ -102,8 +105,8 @@ export function AfterSchoolDashboard() {
         {/* 1. Registration & Revenue Trends */}
         <Card>
           <CardHeader>
-            <CardTitle>Registration & Revenue Trends</CardTitle>
-            <p className="text-sm text-muted-foreground">Monthly registration count and revenue correlation</p>
+            <CardTitle>{t("afterschool.registrationTrend")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("afterschool.registrationTrendDesc")}</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -128,8 +131,8 @@ export function AfterSchoolDashboard() {
         {/* 2. Activity Popularity */}
         <Card>
           <CardHeader>
-            <CardTitle>Activity Popularity</CardTitle>
-            <p className="text-sm text-muted-foreground">Student enrollment by activity type</p>
+            <CardTitle>{t("afterschool.activityPopularity")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("afterschool.activityPopularityDesc")}</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -156,8 +159,8 @@ export function AfterSchoolDashboard() {
         {/* 3. Weekly Attendance Pattern */}
         <Card>
           <CardHeader>
-            <CardTitle>Weekly Attendance Pattern</CardTitle>
-            <p className="text-sm text-muted-foreground">Average attendance rate by day of week</p>
+            <CardTitle>{t("afterschool.weeklyAttendance")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("afterschool.weeklyAttendanceDesc")}</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -181,8 +184,8 @@ export function AfterSchoolDashboard() {
         {/* 4. Revenue by Activity */}
         <Card>
           <CardHeader>
-            <CardTitle>Revenue by Activity</CardTitle>
-            <p className="text-sm text-muted-foreground">Top performing activities by revenue generation</p>
+            <CardTitle>{t("afterschool.revenueByActivity")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("afterschool.revenueByActivityDesc")}</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -203,7 +206,7 @@ export function AfterSchoolDashboard() {
         {/* Capacity Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>Capacity Overview</CardTitle>
+            <CardTitle>{t("afterschool.capacityOverview")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -241,7 +244,7 @@ export function AfterSchoolDashboard() {
         {/* Recent Registrations */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Registrations</CardTitle>
+            <CardTitle>{t("afterschool.recentRegistrations")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -273,42 +276,42 @@ export function AfterSchoolDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Performance Alerts
+            {t("afterschool.performanceAlerts")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-              <h4 className="font-medium text-red-800">High Demand Activities</h4>
+              <h4 className="font-medium text-red-800">{t("afterschool.highDemand")}</h4>
               <p className="text-sm text-red-600 mt-1">
-                3 activities are at 90%+ capacity. Consider adding more sessions.
+                {t("afterschool.highDemandDesc")}
               </p>
               <ul className="text-xs text-red-600 mt-2 space-y-1">
-                <li>• Basketball (94% full)</li>
-                <li>• Art Studio (91% full)</li>
-                <li>• Football (90% full)</li>
+                <li>• {t("activity.basketball")} (94% {t("afterschool.full")})</li>
+                <li>• {t("activity.artStudio")} (91% {t("afterschool.full")})</li>
+                <li>• {t("activity.football")} (90% {t("afterschool.full")})</li>
               </ul>
             </div>
 
             <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <h4 className="font-medium text-yellow-800">Low Registration</h4>
+              <h4 className="font-medium text-yellow-800">{t("afterschool.lowRegistration")}</h4>
               <p className="text-sm text-yellow-600 mt-1">
-                2 activities have low enrollment. Marketing needed.
+                {t("afterschool.lowRegistrationDesc")}
               </p>
               <ul className="text-xs text-yellow-600 mt-2 space-y-1">
-                <li>• Chess (32 students)</li>
-                <li>• Coding (29 students)</li>
+                <li>• {t("activity.chess")} (32 {t("afterschool.students")})</li>
+                <li>• {t("activity.coding")} (29 {t("afterschool.students")})</li>
               </ul>
             </div>
 
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <h4 className="font-medium text-green-800">Top Performers</h4>
+              <h4 className="font-medium text-green-800">{t("afterschool.topPerformers")}</h4>
               <p className="text-sm text-green-600 mt-1">
-                Best revenue-generating activities this month.
+                {t("afterschool.topPerformersDesc")}
               </p>
               <ul className="text-xs text-green-600 mt-2 space-y-1">
-                <li>• Swimming (₿25,500)</li>
-                <li>• Football (₿21,600)</li>
+                <li>• {t("activity.swimming")} (฿25,500)</li>
+                <li>• {t("activity.football")} (฿21,600)</li>
               </ul>
             </div>
           </div>
