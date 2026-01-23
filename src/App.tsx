@@ -51,7 +51,7 @@ import {
   TrendingDown,
   FileCheck,
   FileText as FileInvoice,
-
+  Building,
   Settings2,
   UsersRound,
   Shield,
