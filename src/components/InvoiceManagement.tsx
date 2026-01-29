@@ -3139,19 +3139,6 @@ export function InvoiceManagement({
                             <span className="text-sm text-gray-500">Contact Name</span>
                             <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
                           </div>
-                          {/* New Student Indicator - if Application/Registration fees exist */}
-                          {selectedInvoice.items.some(item =>
-                            item.description.toLowerCase().includes('application') ||
-                            item.description.toLowerCase().includes('registration fee') ||
-                            item.description.toLowerCase().includes('security deposit')
-                          ) && (
-                              <div className="flex justify-between items-center pt-2 border-t mt-2">
-                                <span className="text-sm text-gray-500">Status</span>
-                                <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
-                                  New Student
-                                </Badge>
-                              </div>
-                            )}
                         </>
                       )}
                     </div>
