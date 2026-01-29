@@ -362,7 +362,7 @@ export function EventRegistrationReports() {
                   {t("common.filter")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={() => {}} className="h-9">{t("common.apply")}</Button>
+                  <Button onClick={() => toast.success(t("common.filtersApplied"))} className="h-9">{t("common.apply")}</Button>
                   <Button variant="outline" onClick={() => {
                     setSearchTerm("")
                     setSelectedEvent("all")
@@ -371,6 +371,7 @@ export function EventRegistrationReports() {
                     setSelectedPaymentChannel("all")
                     setDateFrom(null)
                     setDateTo(null)
+                    toast.success(t("common.filtersCleared"))
                   }} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>

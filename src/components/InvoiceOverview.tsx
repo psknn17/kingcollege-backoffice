@@ -469,7 +469,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               {t("invoiceOverview.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
               <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>

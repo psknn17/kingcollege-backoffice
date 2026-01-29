@@ -478,7 +478,7 @@ export function SummerPaymentReports() {
                   {t("summerPayment.paymentFilters")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={() => {}} className="h-9">{t("common.apply")}</Button>
+                  <Button onClick={() => toast.success(t("common.filtersApplied"))} className="h-9">{t("common.apply")}</Button>
                   <Button variant="outline" onClick={() => {
                     setSearchTerm("")
                     setSelectedActivity("all")
@@ -487,6 +487,7 @@ export function SummerPaymentReports() {
                     setSelectedPaymentMethod("all")
                     setDateFrom(null)
                     setDateTo(null)
+                    toast.success(t("common.filtersCleared"))
                   }} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>

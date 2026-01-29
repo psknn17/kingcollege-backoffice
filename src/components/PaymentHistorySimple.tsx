@@ -10,6 +10,7 @@ import { Calendar } from "./ui/calendar"
 import { Download, Search, Filter, Eye, CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { toast } from "@/components/ui/sonner"
 import { cn } from "./ui/utils"
 
 interface PaymentRecord {
@@ -205,10 +206,7 @@ export function PaymentHistorySimple() {
             {/* Action Buttons */}
             <div className="flex gap-2">
               <Button
-                onClick={() => {
-                  // Filters are already applied automatically
-                  // This button can be used for future manual apply logic if needed
-                }}
+                onClick={() => toast.success(t("common.filtersApplied"))}
               >
                 {t("common.apply")}
               </Button>
@@ -223,6 +221,7 @@ export function PaymentHistorySimple() {
                   setPaymentMethodFilter("all")
                   setDateFrom(undefined)
                   setDateTo(undefined)
+                  toast.success(t("common.filtersCleared"))
                 }}
               >
                 {t("common.clear")}
