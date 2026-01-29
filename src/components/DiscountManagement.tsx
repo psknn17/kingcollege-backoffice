@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -88,13 +88,10 @@ const convertStudentsToDiscountFormat = (contextStudents: any[]): Student[] => {
   })
 }
 
-// LocalStorage key for Student Groups
-const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
-
-// Load Student Groups from localStorage
-const loadStudentGroupsFromStorage = () => {
+// Load Student Groups from localStorage with specific key
+const loadStudentGroupsFromStorage = (storageKey: string) => {
   try {
-    const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+    const stored = localStorage.getItem(storageKey)
     if (stored) {
       return JSON.parse(stored)
     }
@@ -104,10 +101,10 @@ const loadStudentGroupsFromStorage = () => {
   return null
 }
 
-// Save Student Groups to localStorage
-const saveStudentGroupsToStorage = (groups: any[]) => {
+// Save Student Groups to localStorage with specific key
+const saveStudentGroupsToStorage = (groups: any[], storageKey: string) => {
   try {
-    localStorage.setItem(STUDENT_GROUPS_STORAGE_KEY, JSON.stringify(groups))
+    localStorage.setItem(storageKey, JSON.stringify(groups))
   } catch (error) {
     console.error("Failed to save student groups to localStorage:", error)
   }
@@ -174,13 +171,20 @@ const mockDiscountCodes: DiscountCode[] = [
 
 interface DiscountManagementProps {
   activeTab: string
+  category?: "tuition" | "bus" // Category determines which item type the discount applies to
   onNavigateToSubPage?: (subPage: string, params?: any) => void
   onTabChange?: (tabId: string) => void
 }
 
-export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange }: DiscountManagementProps) {
+export function DiscountManagement({ activeTab, category = "tuition", onNavigateToSubPage, onTabChange }: DiscountManagementProps) {
   const { t } = useLanguage()
   const { students: contextStudents } = useStudents()
+
+  // Determine department based on category
+  const departmentType = category === "bus" ? "School Bus" : "Tuition"
+
+  // Use category-specific localStorage key
+  const STORAGE_KEY = `studentGroups_${category}`
 
   // Convert students from context to local format
   const availableStudents = useMemo(() =>
@@ -210,7 +214,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
   })
 
   // Generate default student groups with random students from context
-  const generateDefaultGroups = (allStudents: Student[]) => {
+  const generateDefaultGroups = (allStudents: Student[], department: string) => {
     // Filter students by grade for each group
     const year7Students = allStudents.filter(s => s.yearGroup === "Year 7").slice(0, 5)
     const year8Students = allStudents.filter(s => s.yearGroup === "Year 8").slice(0, 3)
@@ -231,7 +235,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 15,
         fixedAmount: 0,
-        departments: ["Tuition"],
+        departments: [department],
         isActive: true
       },
       {
@@ -241,7 +245,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 10,
         fixedAmount: 0,
-        departments: ["Tuition", "School Bus"],
+        departments: [department], // Discount applies to Tuition only
         isActive: true
       },
       {
@@ -251,7 +255,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "fixed" as "percentage" | "fixed",
         discountPercentage: 0,
         fixedAmount: 25000,
-        departments: ["Tuition"],
+        departments: [department],
         isActive: true
       },
       {
@@ -261,7 +265,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 5,
         fixedAmount: 0,
-        departments: ["Tuition", "School Bus"],
+        departments: [department], // Discount applies to Tuition only
         isActive: true
       }
     ]
@@ -269,26 +273,36 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
 
   // Student Groups Management - Load from localStorage or use defaults
   const [studentGroups, setStudentGroups] = useState(() => {
-    const saved = loadStudentGroupsFromStorage()
+    const saved = loadStudentGroupsFromStorage(STORAGE_KEY)
     if (saved) return saved
     return [] // Will be populated in useEffect when students are available
   })
 
-  // Initialize default groups when students are loaded and no saved groups exist
+  // Reload data when STORAGE_KEY changes (when switching between categories)
   useEffect(() => {
-    if (studentGroups.length === 0 && availableStudents.length > 0) {
-      const saved = loadStudentGroupsFromStorage()
-      if (!saved) {
-        const defaultGroups = generateDefaultGroups(availableStudents)
+    const saved = loadStudentGroupsFromStorage(STORAGE_KEY)
+    if (saved) {
+      setStudentGroups(saved)
+    } else {
+      // If no saved data, generate defaults if students are available
+      if (availableStudents.length > 0) {
+        const defaultGroups = generateDefaultGroups(availableStudents, departmentType)
         setStudentGroups(defaultGroups)
+      } else {
+        setStudentGroups([])
       }
     }
-  }, [availableStudents])
+  }, [STORAGE_KEY, departmentType, availableStudents])
 
-  // Save studentGroups to localStorage when it changes
+  // Save studentGroups to localStorage when it changes (but not on initial load)
+  const isInitialMount = useRef(true)
   useEffect(() => {
-    saveStudentGroupsToStorage(studentGroups)
-  }, [studentGroups])
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+    saveStudentGroupsToStorage(studentGroups, STORAGE_KEY)
+  }, [studentGroups, STORAGE_KEY])
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false)
   const [groupForm, setGroupForm] = useState({
     name: "",
@@ -682,7 +696,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
         fixedAmount: groupForm.fixedAmount,
-        departments: ["Tuition"], // Always set to Tuition for Tuition Discount Groups
+        departments: [departmentType], // Hardcoded based on category: Tuition Discount Groups apply to Tuition only. Bus Discount Groups apply to School Bus only.
         isActive: groupForm.isActive
       }
 
@@ -698,7 +712,7 @@ export function DiscountManagement({ activeTab, onNavigateToSubPage, onTabChange
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
         fixedAmount: groupForm.fixedAmount,
-        departments: ["Tuition"], // Always set to Tuition for Tuition Discount Groups
+        departments: [departmentType], // Hardcoded based on category: Tuition Discount Groups apply to Tuition only. Bus Discount Groups apply to School Bus only.
         isActive: groupForm.isActive
       }
 

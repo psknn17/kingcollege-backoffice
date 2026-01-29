@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -37,7 +37,6 @@ import {
   ArrowLeft,
   RotateCcw,
   Eye,
-  Mail,
   Send,
   CalendarDays,
   Upload,
@@ -55,6 +54,8 @@ import {
   Settings2,
   UsersRound,
   Shield,
+  Activity,
+  ClipboardCheck,
   UserCog,
   ChevronDown,
   LogOut
@@ -63,7 +64,7 @@ import { TuitionDashboard } from "./components/TuitionDashboard"
 import { TuitionTermSettings } from "./components/TuitionTermSettings"
 import { TuitionByYear } from "./components/TuitionByYear"
 import { DebtReminderSettings } from "./components/DebtReminderSettings"
-import { PaymentHistory } from "./components/PaymentHistory"
+import { PaymentHistorySimple } from "./components/PaymentHistorySimple"
 import { TuitionInvoiceManagement } from "./components/TuitionInvoiceManagement"
 import { AfterSchoolDashboard } from "./components/AfterSchoolDashboard"
 import { AfterSchoolSettings } from "./components/AfterSchoolSettings"
@@ -82,10 +83,10 @@ import { SummerRegistrationControl } from "./components/SummerRegistrationContro
 import { SummerPaymentReports } from "./components/SummerPaymentReports"
 import { SummerActivitiesReceipts } from "./components/SummerActivitiesReceiptsUpdated"
 import { DiscountManagement } from "./components/DiscountManagement"
-import { DiscountOptions } from "./components/DiscountOptions"
 import { DiscountReports } from "./components/DiscountReports"
 import { InvoiceManagement } from "./components/InvoiceManagement"
 import { InvoiceCreation } from "./components/InvoiceCreation"
+import { ExternalInvoiceCreation } from "./components/ExternalInvoiceCreation"
 import { ItemManagement } from "./components/ItemManagement"
 import { ReceiptPage } from "./components/ReceiptPageUpdated"
 import { EmailJobsManagement } from "./components/EmailJobsManagement"
@@ -94,6 +95,9 @@ import { EmailCsvExport } from "./components/EmailCsvExport"
 import { WaiveFeeYearDetails } from "./components/WaiveFeeYearDetails"
 import { UserManagement } from "./components/UserManagement"
 import { RolesPermissions } from "./components/RolesPermissions"
+import { ActivityLog } from "./components/ActivityLog"
+import { ApprovalQueue } from "./components/ApprovalQueue"
+import { logActivity } from "@/lib/activityLog"
 import { StudentList } from "./components/StudentList"
 import { FamilyGroups } from "./components/FamilyGroups"
 
@@ -106,11 +110,13 @@ const menuItems = {
     { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
     { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
+    { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "waive-fee", labelKey: "menu.waiveFees", icon: TrendingDown },
+    { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "email-jobs", labelKey: "menu.emailJobs", icon: Mail },
   ],
   eca: [
     { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
@@ -131,12 +137,7 @@ const menuItems = {
     { id: "bus-invoices", labelKey: "menu.busInvoices", icon: FileInvoice },
     { id: "bus-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "bus-receipts", labelKey: "menu.receipts", icon: Receipt },
-  ],
-  discountManagement: [
-    { id: "discount-options", labelKey: "menu.promotions", icon: Settings2 },
-    { id: "student-groups", labelKey: "menu.studentGroups", icon: Users },
-    { id: "waive-fee", labelKey: "menu.waiveFees", icon: TrendingDown },
-    { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
+    { id: "bus-discount-groups", labelKey: "menu.studentGroups", icon: Users },
   ],
   externalInvoice: [
     { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
@@ -146,6 +147,8 @@ const menuItems = {
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
     { id: "role-management", labelKey: "menu.rolesPermissions", icon: Shield },
+    { id: "activity-log", labelKey: "menu.activityLog", icon: Activity },
+    { id: "approval-queue", labelKey: "menu.approvalQueue", icon: ClipboardCheck },
   ],
   studentManagement: [
     { id: "student-list", labelKey: "menu.studentList", icon: GraduationCap },
@@ -166,7 +169,6 @@ export default function App() {
     tripActivity: false,
     exam: false,
     schoolBus: false,
-    discountManagement: false,
     externalInvoice: false,
     studentManagement: false,
     userManagement: false
@@ -190,6 +192,36 @@ export default function App() {
   
   // ViewDetailsPage state
   const [viewDetailsData, setViewDetailsData] = useState<any>(null)
+
+  const getModuleName = (section: string) => {
+    const sections = [
+      ...menuItems.tuition,
+      ...menuItems.eca,
+      ...menuItems.tripActivity,
+      ...menuItems.exam,
+      ...menuItems.schoolBus,
+      ...menuItems.externalInvoice,
+      ...menuItems.userManagement,
+      ...menuItems.studentManagement
+    ]
+    const matched = sections.find(item => item.id === section)
+    if (matched) return t(matched.labelKey)
+    if (section === "approval-queue") return "Approval Queue"
+    if (section === "activity-log") return "Activity Log"
+    if (section === "invoice-creation") return "Invoice Creation"
+    if (section === "external-invoice-creation") return "External Invoice Creation"
+    if (section === "view-details") return "View Details"
+    return section
+  }
+
+  useEffect(() => {
+    const moduleName = getModuleName(activeSection)
+    logActivity({
+      action: `Viewed ${moduleName}`,
+      module: moduleName,
+      detail: `Menu: ${activeSection}`
+    })
+  }, [activeSection, t])
   const [viewDetailsType, setViewDetailsType] = useState<"invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template">("invoice")
 
   const navigateToSubPage = (subPage: string, params?: any) => {
@@ -265,19 +297,19 @@ export default function App() {
       case "debt-reminder-settings":
         return <DebtReminderSettings />
       case "payment-history":
-        return <PaymentHistory />
+        return <PaymentHistorySimple />
       case "tuition-invoice-management":
         return <TuitionInvoiceManagement />
       case "student-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="tuition" />
+      case "student-discount-groups":
+        return <DiscountManagement activeTab="student-groups" category="tuition" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "student-groups":
       case "promotional-campaigns":
       case "waive-fee":
-        return <DiscountManagement activeTab={activeSection} onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
+        return <DiscountManagement activeTab={activeSection} category="tuition" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "discount-reports":
         return <DiscountReports />
-      case "discount-options":
-        return <DiscountOptions />
       case "waive-fee-year-details":
         return <WaiveFeeYearDetails
           academicYear={subPageParams?.academicYear || '2024-2025'}
@@ -286,42 +318,50 @@ export default function App() {
       case "external-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="external" showTypeTabs={false} category="external" />
       case "external-item-management":
-        return <ItemManagement onNavigateToSubPage={navigateToSubPage} invoiceType="external" />
+        return <ItemManagement key="external-items" onNavigateToSubPage={navigateToSubPage} invoiceType="external" />
       case "external-receipts":
         return <ReceiptPage category="external" />
       case "eca-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="eca" />
       case "eca-item-management":
-        return <ItemManagement onNavigateToSubPage={navigateToSubPage} invoiceType="eca" />
+        return <ItemManagement key="eca-items" onNavigateToSubPage={navigateToSubPage} invoiceType="eca" />
       case "eca-receipts":
         return <ReceiptPage category="eca" />
       case "trip-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="trip" />
       case "trip-item-management":
-        return <ItemManagement onNavigateToSubPage={navigateToSubPage} invoiceType="trip" />
+        return <ItemManagement key="trip-items" onNavigateToSubPage={navigateToSubPage} invoiceType="trip" />
       case "trip-receipts":
         return <ReceiptPage category="trip" />
       case "exam-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="exam" />
       case "exam-item-management":
-        return <ItemManagement onNavigateToSubPage={navigateToSubPage} invoiceType="exam" />
+        return <ItemManagement key="exam-items" onNavigateToSubPage={navigateToSubPage} invoiceType="exam" />
       case "exam-receipts":
         return <ReceiptPage category="exam" />
       case "bus-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="bus" />
       case "bus-item-management":
-        return <ItemManagement onNavigateToSubPage={navigateToSubPage} invoiceType="bus" />
+        return <ItemManagement key="bus-items" onNavigateToSubPage={navigateToSubPage} invoiceType="bus" />
       case "bus-receipts":
         return <ReceiptPage category="bus" />
+      case "bus-discount-groups":
+        return <DiscountManagement activeTab="student-groups" category="bus" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "invoice-creation":
         return <InvoiceCreation
           defaultCategory={subPageParams?.defaultCategory}
           invoiceType={subPageParams?.invoiceType}
           category={subPageParams?.category}
           onNavigateBack={navigateBack}
+          editInvoice={subPageParams?.editInvoice}
+        />
+      case "external-invoice-creation":
+        return <ExternalInvoiceCreation
+          onNavigateBack={navigateBack}
+          editInvoice={subPageParams?.editInvoice}
         />
       case "item-management":
-        return <ItemManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} invoiceType="tuition" />
+        return <ItemManagement key="tuition-items" onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} invoiceType="tuition" />
       case "email-jobs":
         return <EmailJobsManagement onNavigateToSubPage={navigateToSubPage} />
       case "email-history-view":
@@ -341,6 +381,10 @@ export default function App() {
         return <UserManagement />
       case "role-management":
         return <RolesPermissions />
+      case "activity-log":
+        return <ActivityLog />
+      case "approval-queue":
+        return <ApprovalQueue />
       case "student-list":
         return <StudentList />
       case "family-groups":
@@ -516,35 +560,6 @@ export default function App() {
               </SidebarGroup>
             </Collapsible>
 
-            {/* Discount Management */}
-            <Collapsible open={openGroups["discountManagement"]} onOpenChange={() => toggleGroup("discountManagement")}>
-              <SidebarGroup>
-                <CollapsibleTrigger className="w-full">
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                    {t("menu.discountManagement")}
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["discountManagement"] ? "rotate-180" : ""}`} />
-                  </SidebarGroupLabel>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {menuItems.discountManagement.map((item) => (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton
-                            onClick={() => handleMenuItemClick(item.id)}
-                            isActive={activeSection === item.id}
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span>{t(item.labelKey)}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
-              </SidebarGroup>
-            </Collapsible>
-
             {/* External Invoice */}
             <Collapsible open={openGroups["externalInvoice"]} onOpenChange={() => toggleGroup("externalInvoice")}>
               <SidebarGroup>
@@ -634,7 +649,18 @@ export default function App() {
 
           </SidebarContent>
 
-                  </Sidebar>
+          <SidebarFooter className="p-4 border-t">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => console.log("Logout")}>
+                  <LogOut className="w-4 h-4" />
+                  <span>{t("common.logout")}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+
+        </Sidebar>
 
         <main className="flex-1 flex flex-col">
           <header className="border-b p-4 flex items-center gap-4">
@@ -657,7 +683,6 @@ export default function App() {
                  menuItems.tripActivity.find(item => item.id === activeSection)?.label ||
                  menuItems.exam.find(item => item.id === activeSection)?.label ||
                  menuItems.schoolBus.find(item => item.id === activeSection)?.label ||
-                 menuItems.discountManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.externalInvoice.find(item => item.id === activeSection)?.label ||
                  menuItems.userManagement.find(item => item.id === activeSection)?.label ||
                  menuItems.studentManagement.find(item => item.id === activeSection)?.label ||

@@ -16,13 +16,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { EmptySearchResults, EmptyDataState } from "./ui/states"
-import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building } from "lucide-react"
+import { Checkbox } from "./ui/checkbox"
+import { Search, Filter, Eye, Plus, Download, Mail, Calendar as CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
+import { logActivity } from "@/lib/activityLog"
+
+type ApprovalStatus = "wait" | "approved" | "rejected"
 
 interface Invoice {
   id: string
@@ -36,6 +40,7 @@ interface Invoice {
   discountAmount: number
   finalAmount: number
   status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "overdue" | "cancelled"
+  approvalStatus?: ApprovalStatus
   issueDate: Date
   dueDate: Date
   paidDate?: Date
@@ -53,6 +58,11 @@ interface Invoice {
   approvedBy?: string
   approvedAt?: Date
   rejectedReason?: string
+  // Payment fields
+  paymentMethod?: string
+  paymentProofs?: { name: string; dataUrl: string }[]
+  // Email fields
+  emailSentAt?: Date
   // Academic info
   term?: string
   academicYear?: string
@@ -87,12 +97,24 @@ interface InvoiceTemplate {
 
 // localStorage key for created invoices (same as InvoiceCreation)
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
-const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
 
-// Helper function to get student group discounts
-const getStudentGroupDiscounts = (studentId: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number }[] => {
+// Helper function to check if invoice can be edited (not yet approved)
+const canEditInvoice = (_status: string, approvalStatus?: ApprovalStatus): boolean => {
+  // Allow editing only when approval is wait.
+  return approvalStatus === "wait"
+}
+
+// Helper function to get student group discounts based on category
+const getStudentGroupDiscounts = (studentId: string, category: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number }[] => {
   try {
-    const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+    // No discounts for ECA, Trip, Exam, and External invoices
+    if (category === "eca" || category === "trip" || category === "exam" || category === "external") {
+      return []
+    }
+
+    // Get storage key based on category
+    const storageKey = `studentGroups_${category}`
+    const stored = localStorage.getItem(storageKey)
     if (!stored) return []
 
     const groups = JSON.parse(stored)
@@ -117,9 +139,33 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
     if (stored) {
       const savedInvoices = JSON.parse(stored)
       return savedInvoices.map((inv: any) => {
-        // Handle empty or invalid dates
-        const issueDate = inv.issueDate ? new Date(inv.issueDate) : new Date()
-        const dueDate = inv.dueDate ? new Date(inv.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days from now
+        // Handle empty or invalid dates - parse as local time to avoid timezone issues
+        let issueDate = new Date()
+        if (inv.issueDate) {
+          if (inv.issueDate.includes('-')) {
+            const [year, month, day] = inv.issueDate.split('-').map(Number)
+            issueDate = new Date(year, month - 1, day)
+          } else {
+            issueDate = new Date(inv.issueDate)
+          }
+        }
+
+        let dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        if (inv.dueDate) {
+          if (inv.dueDate.includes('-')) {
+            const [year, month, day] = inv.dueDate.split('-').map(Number)
+            dueDate = new Date(year, month - 1, day)
+          } else {
+            dueDate = new Date(inv.dueDate)
+          }
+        }
+
+        const approvalStatus: ApprovalStatus = inv.approvalStatus
+          ?? (inv.status === "approved"
+            ? "approved"
+            : inv.status === "rejected"
+              ? "rejected"
+              : "wait")
 
         return {
           id: inv.id,
@@ -133,6 +179,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           discountAmount: inv.totalDiscount ?? 0,
           finalAmount: inv.netAmount ?? inv.subtotal ?? 0,
           status: (inv.status === "pending" ? "draft" : inv.status) as "draft" | "sent" | "paid" | "overdue" | "cancelled",
+          approvalStatus,
           issueDate: isNaN(issueDate.getTime()) ? new Date() : issueDate,
           dueDate: isNaN(dueDate.getTime()) ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : dueDate,
           issuedBy: "System",
@@ -153,7 +200,9 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           category: inv.category,
           // Academic info
           term: inv.term || "",
-          academicYear: inv.academicYear || ""
+          academicYear: inv.academicYear || "",
+          paymentMethod: inv.paymentMethod,
+          paymentProofs: inv.paymentProofs
         }
       })
     }
@@ -329,13 +378,32 @@ export function InvoiceManagement({
   const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(mockTemplates)
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState("")
   const [academicYearFilter, setAcademicYearFilter] = useState("2024-2025")
   const [termFilter, setTermFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
+  const [isExportingAll, setIsExportingAll] = useState(false)
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
+  const [sortKey, setSortKey] = useState<
+    | "invoiceNumber"
+    | "studentName"
+    | "studentGrade"
+    | "finalAmount"
+    | "invoiceStatus"
+    | "emailStatus"
+    | "paymentStatus"
+    | "eventName"
+    | "issueDate"
+    | "dueDate"
+    | null
+  >(null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -348,6 +416,15 @@ export function InvoiceManagement({
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
     : [...new Map(academicYears.flatMap(y => y.terms).map(t => [t.name, t])).values()]
+
+  const getApprovalStatus = (invoice: Invoice): ApprovalStatus => (
+    invoice.approvalStatus
+    ?? (invoice.status === "approved"
+      ? "approved"
+      : invoice.status === "rejected"
+        ? "rejected"
+        : "wait")
+  )
 
   // Reload invoices from localStorage
   const reloadInvoices = () => {
@@ -393,6 +470,9 @@ export function InvoiceManagement({
   const [editingItems, setEditingItems] = useState<InvoiceItem[]>([])
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false)
 
+  // External invoice preview dialog state
+  const [isExternalPreviewOpen, setIsExternalPreviewOpen] = useState(false)
+
   // Import Excel state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -426,6 +506,13 @@ export function InvoiceManagement({
   const [selectedInvoiceForApproval, setSelectedInvoiceForApproval] = useState<Invoice | null>(null)
   const [rejectionReason, setRejectionReason] = useState("")
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve")
+  const [isEmailDetailDialogOpen, setIsEmailDetailDialogOpen] = useState(false)
+  const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = useState<Invoice | null>(null)
+  const [isMarkPaidOpen, setIsMarkPaidOpen] = useState(false)
+  const [markPaidInvoice, setMarkPaidInvoice] = useState<Invoice | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState("")
+  const [paymentFiles, setPaymentFiles] = useState<File[]>([])
+  const [isSavingPayment, setIsSavingPayment] = useState(false)
 
   const applyFilters = (tabType?: "student" | "external") => {
     const currentTab = tabType || invoiceTypeTab
@@ -453,7 +540,33 @@ export function InvoiceManagement({
     }
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter(inv => inv.status === statusFilter)
+      filtered = filtered.filter(inv => {
+        const emailStatus = getEmailStatus(inv)
+        if (statusFilter === "wait") return emailStatus === "wait"
+        if (statusFilter === "sent") return emailStatus === "sent"
+        if (statusFilter === "unsent") return emailStatus === "unsent"
+        return true
+      })
+    }
+
+    if (invoiceStatusFilter !== "all") {
+      filtered = filtered.filter(inv => {
+        const approvalStatus = getApprovalStatus(inv)
+        if (invoiceStatusFilter === "wait") return approvalStatus === "wait"
+        if (invoiceStatusFilter === "approved") return approvalStatus === "approved"
+        if (invoiceStatusFilter === "rejected") return approvalStatus === "rejected"
+        return true
+      })
+    }
+
+    if (paymentStatusFilter !== "all") {
+      filtered = filtered.filter(inv => {
+        const paymentStatus = getPaymentStatus(inv)
+        if (paymentStatusFilter === "unpaid") return paymentStatus === "unpaid"
+        if (paymentStatusFilter === "paid") return paymentStatus === "paid"
+        if (paymentStatusFilter === "overdue") return paymentStatus === "overdue"
+        return true
+      })
     }
 
     if (gradeFilter !== "all" && currentTab === "student") {
@@ -472,12 +585,69 @@ export function InvoiceManagement({
     setCurrentPage(1)
   }
 
+  const handleSort = (key: NonNullable<typeof sortKey>) => {
+    if (sortKey === key) {
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
+  }
+
+  const renderSortHeader = (label: string, key: NonNullable<typeof sortKey>) => (
+    <button
+      type="button"
+      onClick={() => handleSort(key)}
+      className="flex items-center gap-1 font-medium text-left"
+    >
+      <span>{label}</span>
+      <ArrowUpDown
+        className={`h-3 w-3 ${sortKey === key ? "text-foreground" : "text-muted-foreground"}`}
+      />
+    </button>
+  )
+
   // Pagination logic
   const totalPages = Math.ceil(filteredInvoices.length / pageSize)
+  const sortedInvoices = useMemo(() => {
+    if (!sortKey) return filteredInvoices
+    const sorted = [...filteredInvoices]
+    const direction = sortDirection === "asc" ? 1 : -1
+    const invoiceStatusOrder: Record<ApprovalStatus, number> = { wait: 0, approved: 1, rejected: 2 }
+    const paymentStatusOrder: Record<"unpaid" | "paid" | "overdue", number> = { unpaid: 0, paid: 1, overdue: 2 }
+    sorted.sort((a, b) => {
+      switch (sortKey) {
+        case "invoiceNumber":
+          return (a.invoiceNumber || "").localeCompare(b.invoiceNumber || "") * direction
+        case "studentName":
+          return (a.studentName || "").localeCompare(b.studentName || "") * direction
+        case "studentGrade":
+          return (a.studentGrade || "").localeCompare(b.studentGrade || "") * direction
+        case "finalAmount":
+          return ((a.finalAmount || 0) - (b.finalAmount || 0)) * direction
+        case "invoiceStatus":
+          return (invoiceStatusOrder[getApprovalStatus(a)] - invoiceStatusOrder[getApprovalStatus(b)]) * direction
+        case "emailStatus":
+          return (a.status || "").localeCompare(b.status || "") * direction
+        case "paymentStatus":
+          return (paymentStatusOrder[getPaymentStatus(a)] - paymentStatusOrder[getPaymentStatus(b)]) * direction
+        case "eventName":
+          return (a.eventName || "").localeCompare(b.eventName || "") * direction
+        case "issueDate":
+          return (a.issueDate.getTime() - b.issueDate.getTime()) * direction
+        case "dueDate":
+          return (a.dueDate.getTime() - b.dueDate.getTime()) * direction
+        default:
+          return 0
+      }
+    })
+    return sorted
+  }, [filteredInvoices, sortKey, sortDirection])
+
   const paginatedInvoices = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
-    return filteredInvoices.slice(startIndex, startIndex + pageSize)
-  }, [filteredInvoices, currentPage, pageSize])
+    return sortedInvoices.slice(startIndex, startIndex + pageSize)
+  }, [sortedInvoices, currentPage, pageSize])
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -489,11 +659,31 @@ export function InvoiceManagement({
     setAcademicYearFilter("2024-2025")
     setTermFilter("all")
     setStatusFilter("all")
+    setInvoiceStatusFilter("all")
+    setPaymentStatusFilter("all")
     setGradeFilter("all")
     setDateFrom(null)
     setDateTo(null)
     setFilteredInvoices(invoices)
     setCurrentPage(1)
+  }
+
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    const newSelected = new Set(selectedInvoiceIds)
+    if (newSelected.has(invoiceId)) {
+      newSelected.delete(invoiceId)
+    } else {
+      newSelected.add(invoiceId)
+    }
+    setSelectedInvoiceIds(newSelected)
+  }
+
+  const selectAllCurrentPage = (pageInvoices: Invoice[]) => {
+    const newSelected = new Set(selectedInvoiceIds)
+    pageInvoices.forEach(invoice => {
+      newSelected.add(invoice.id)
+    })
+    setSelectedInvoiceIds(newSelected)
   }
 
   const openInvoiceDetail = (invoice: Invoice) => {
@@ -543,8 +733,65 @@ export function InvoiceManagement({
 
   const handleEditInvoice = (data: any) => {
     setIsViewModalOpen(false)
-    // Open edit modal or navigate to edit page
-    toast.success("Edit functionality would be implemented here")
+
+    // Find the original invoice from the invoices array
+    const invoice = invoices.find(inv => inv.id === data.id)
+    if (!invoice) {
+      toast.error("Invoice not found")
+      return
+    }
+
+    // Check if it's an external invoice
+    if (invoice.invoiceType === "external" || invoice.studentId === "EXTERNAL") {
+      // Navigate to ExternalInvoiceCreation for editing
+      const editInvoice = {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        clientName: invoice.recipientName || invoice.studentName,
+        contactName: invoice.parentName,
+        address: invoice.recipientAddress || "",
+        invoiceDate: invoice.issueDate.toISOString(),
+        dueDate: invoice.dueDate.toISOString(),
+        items: invoice.items.map(item => ({
+          itemId: item.id,
+          description: item.description,
+          details: item.notes || "",
+          amount: item.discountedAmount
+        })),
+        status: invoice.status
+      }
+      onNavigateToSubPage?.("external-invoice-creation", { editInvoice })
+    } else {
+      // Navigate to InvoiceCreation for editing student invoice
+      const editInvoice = {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        studentName: invoice.studentName,
+        studentId: invoice.studentId,
+        studentGrade: invoice.studentGrade,
+        parentName: invoice.parentName,
+        parentEmail: invoice.parentEmail,
+        totalAmount: invoice.totalAmount,
+        discountAmount: invoice.discountAmount,
+        finalAmount: invoice.finalAmount,
+        status: invoice.status,
+        issueDate: invoice.issueDate.toISOString(),
+        dueDate: invoice.dueDate.toISOString(),
+        items: invoice.items.map(item => ({
+          id: item.id,
+          name: item.description,
+          description: item.description,
+          category: "Tuition",
+          quantity: 1,
+          amount: item.discountedAmount
+        })),
+        category: invoice.category || category,
+        term: invoice.term,
+        academicYear: invoice.academicYear
+      }
+      // Navigate to invoice-creation page with edit data
+      onNavigateToSubPage?.("invoice-creation", { editInvoice, category: invoice.category || category })
+    }
   }
 
   const handleDownloadInvoice = (data: any) => {
@@ -555,6 +802,76 @@ export function InvoiceManagement({
   const handlePrintInvoice = (data: any) => {
     toast.success(`Printing invoice ${data.invoiceNumber}...`)
     // Implement print logic
+  }
+
+  // Handle saving invoice from inline edit in ViewModal
+  const handleSaveInvoiceFromModal = (editedData: any) => {
+    if (!editedData?.id) return
+
+    // Calculate total from items
+    const totalAmount = editedData.items?.reduce((sum: number, item: any) =>
+      sum + (Number(item.discountedAmount) || Number(item.amount) || 0), 0) || 0
+
+    // Update the invoice in state
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === editedData.id) {
+        return {
+          ...inv,
+          studentName: editedData.studentName || inv.studentName,
+          studentId: editedData.studentId || inv.studentId,
+          studentGrade: editedData.grade || editedData.studentGrade || inv.studentGrade,
+          parentEmail: editedData.parentEmail || inv.parentEmail,
+          dueDate: editedData.dueDate ? new Date(editedData.dueDate) : inv.dueDate,
+          items: editedData.items?.map((item: any, idx: number) => ({
+            id: item.id || String(idx + 1),
+            description: item.name || item.description,
+            amount: Number(item.amount) || 0,
+            discountPercent: item.discountPercent || 0,
+            discountedAmount: Number(item.discountedAmount) || Number(item.amount) || 0
+          })) || inv.items,
+          totalAmount: totalAmount,
+          finalAmount: totalAmount
+        }
+      }
+      return inv
+    }))
+
+    // Also update in localStorage
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      if (stored) {
+        const savedInvoices = JSON.parse(stored)
+        const updatedSavedInvoices = savedInvoices.map((inv: any) => {
+          if (inv.id === editedData.id) {
+            return {
+              ...inv,
+              studentName: editedData.studentName || inv.studentName,
+              studentId: editedData.studentId || inv.studentId,
+              studentGrade: editedData.grade || editedData.studentGrade || inv.studentGrade,
+              parentEmail: editedData.parentEmail || inv.parentEmail,
+              dueDate: editedData.dueDate || inv.dueDate,
+              items: editedData.items?.map((item: any) => ({
+                ...item,
+                name: item.name || item.description,
+                description: item.name || item.description,
+                amount: Number(item.discountedAmount) || Number(item.amount) || 0
+              })) || inv.items,
+              subtotal: totalAmount,
+              netAmount: totalAmount
+            }
+          }
+          return inv
+        })
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
+      }
+    } catch (error) {
+      console.error("Failed to save invoice to localStorage:", error)
+    }
+
+    // Update viewModalData to reflect changes
+    setViewModalData(editedData)
+
+    toast.success(`Invoice ${editedData.invoiceNumber || editedData.id} saved successfully`)
   }
 
   const closeInvoiceModal = () => {
@@ -590,6 +907,7 @@ export function InvoiceManagement({
 
   const saveEditedInvoice = () => {
     if (!selectedInvoice || !editingDueDate) return
+    const previousInvoice = selectedInvoice
 
     const updatedInvoices = invoices.map(inv =>
       inv.id === selectedInvoice.id
@@ -605,7 +923,7 @@ export function InvoiceManagement({
         const savedInvoices = JSON.parse(stored)
         const updatedSavedInvoices = savedInvoices.map((inv: any) =>
           inv.id === selectedInvoice.id
-            ? { ...inv, dueDate: editingDueDate.toISOString().split('T')[0], notes: editingNotes }
+            ? { ...inv, dueDate: format(editingDueDate, 'yyyy-MM-dd'), notes: editingNotes }
             : inv
         )
         localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
@@ -615,15 +933,44 @@ export function InvoiceManagement({
     }
 
     toast.success(`Invoice ${selectedInvoice.invoiceNumber} saved`)
+    const changes = [] as Array<{ field: string; from: string; to: string }>
+    if (format(previousInvoice.dueDate, "yyyy-MM-dd") !== format(editingDueDate, "yyyy-MM-dd")) {
+      changes.push({
+        field: "Due Date",
+        from: format(previousInvoice.dueDate, "yyyy-MM-dd"),
+        to: format(editingDueDate, "yyyy-MM-dd")
+      })
+    }
+    if ((previousInvoice.notes || "") !== editingNotes) {
+      changes.push({
+        field: "Notes",
+        from: previousInvoice.notes || "-",
+        to: editingNotes || "-"
+      })
+    }
+    logActivity({
+      action: `Updated invoice ${selectedInvoice.invoiceNumber}`,
+      module: "Invoices",
+      detail: formatChanges(changes)
+    })
     closeEditModal()
   }
 
   const saveAndSendInvoice = () => {
     if (!selectedInvoice || !editingDueDate) return
 
+    // Check if invoice is approved before sending
+    if (getApprovalStatus(selectedInvoice) !== "approved") {
+      toast.error(`Cannot send email. Invoice ${selectedInvoice.invoiceNumber} must be approved first.`)
+      return
+    }
+
+    const previousInvoice = selectedInvoice
+    const emailSentAt = new Date().toISOString()
+
     const updatedInvoices = invoices.map(inv =>
       inv.id === selectedInvoice.id
-        ? { ...inv, dueDate: editingDueDate, notes: editingNotes, status: "sent" as const }
+        ? { ...inv, dueDate: editingDueDate, notes: editingNotes, status: "sent" as const, emailSentAt }
         : inv
     )
     setInvoices(updatedInvoices)
@@ -635,7 +982,7 @@ export function InvoiceManagement({
         const savedInvoices = JSON.parse(stored)
         const updatedSavedInvoices = savedInvoices.map((inv: any) =>
           inv.id === selectedInvoice.id
-            ? { ...inv, dueDate: editingDueDate.toISOString().split('T')[0], notes: editingNotes, status: "sent" }
+            ? { ...inv, dueDate: format(editingDueDate, 'yyyy-MM-dd'), notes: editingNotes, status: "sent", emailSentAt }
             : inv
         )
         localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
@@ -645,11 +992,32 @@ export function InvoiceManagement({
     }
 
     toast.success(`Invoice ${selectedInvoice.invoiceNumber} saved and sent to ${selectedInvoice.parentEmail}`)
+    const changes = [] as Array<{ field: string; from: string; to: string }>
+    if (format(previousInvoice.dueDate, "yyyy-MM-dd") !== format(editingDueDate, "yyyy-MM-dd")) {
+      changes.push({
+        field: "Due Date",
+        from: format(previousInvoice.dueDate, "yyyy-MM-dd"),
+        to: format(editingDueDate, "yyyy-MM-dd")
+      })
+    }
+    if ((previousInvoice.notes || "") !== editingNotes) {
+      changes.push({
+        field: "Notes",
+        from: previousInvoice.notes || "-",
+        to: editingNotes || "-"
+      })
+    }
+    logActivity({
+      action: `Saved and sent invoice ${selectedInvoice.invoiceNumber}`,
+      module: "Invoices",
+      detail: formatChanges(changes)
+    })
     closeEditModal()
   }
 
   const handleSaveChanges = () => {
     if (!selectedInvoice) return
+    const previousItems = selectedInvoice.items
 
     // Update invoice with edited items
     const updatedInvoice = {
@@ -678,6 +1046,11 @@ export function InvoiceManagement({
     }
 
     toast.success("Invoice updated successfully")
+    logActivity({
+      action: `Updated invoice ${selectedInvoice.invoiceNumber}`,
+      module: "Invoices",
+      detail: `Items updated (${previousItems.length} → ${editingItems.length})`
+    })
     setIsConfirmSaveOpen(false)
     closeEditModal()
   }
@@ -702,6 +1075,11 @@ export function InvoiceManagement({
     }
 
     toast.success(`Invoice ${selectedInvoice.invoiceNumber} deleted`)
+    logActivity({
+      action: `Deleted invoice ${selectedInvoice.invoiceNumber}`,
+      module: "Invoices",
+      detail: `Invoice removed by user`
+    })
     closeEditModal()
   }
 
@@ -841,50 +1219,433 @@ export function InvoiceManagement({
     const totalItems = selectedItems.reduce((sum, item) => sum + item.amount, 0)
 
     toast.success(`Created ${selectedStudents.length} invoices with ${selectedItems.length} items each - Total per invoice: ₿${totalItems.toLocaleString()}`)
+    logActivity({
+      action: "Created invoices",
+      module: "Invoices",
+      detail: `Students: ${selectedStudents.length}, Items per invoice: ${selectedItems.length}, Total per invoice: ₿${totalItems.toLocaleString()}`
+    })
     closeCreateModal()
   }
 
   const sendInvoice = (invoiceId: string) => {
     const invoice = invoices.find(inv => inv.id === invoiceId)
-    if (invoice) {
-      // Update invoice status to "sent"
-      const updatedInvoices = invoices.map(inv =>
-        inv.id === invoiceId ? { ...inv, status: "sent" as const } : inv
-      )
-      setInvoices(updatedInvoices)
+    if (!invoice) return
 
-      // Update localStorage
-      try {
-        const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
-        if (stored) {
-          const savedInvoices = JSON.parse(stored)
-          const updatedSavedInvoices = savedInvoices.map((inv: any) =>
-            inv.id === invoiceId ? { ...inv, status: "sent" } : inv
-          )
-          localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
-        }
-      } catch (error) {
-        console.error("Failed to update invoice status in localStorage:", error)
+    // Check if invoice is approved before sending
+    if (getApprovalStatus(invoice) !== "approved") {
+      toast.error(`Cannot send email. Invoice ${invoice.invoiceNumber} must be approved first.`)
+      return
+    }
+
+    // Update invoice status to "sent" and record email sent timestamp
+    const emailSentAt = new Date().toISOString()
+    const updatedInvoices = invoices.map(inv =>
+      inv.id === invoiceId ? { ...inv, status: "sent" as const, emailSentAt } : inv
+    )
+    setInvoices(updatedInvoices)
+
+    // Update localStorage
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      if (stored) {
+        const savedInvoices = JSON.parse(stored)
+        const updatedSavedInvoices = savedInvoices.map((inv: any) =>
+          inv.id === invoiceId ? { ...inv, status: "sent", emailSentAt } : inv
+        )
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
+      }
+    } catch (error) {
+      console.error("Failed to update invoice status in localStorage:", error)
+    }
+
+    toast.success(`Invoice ${invoice.invoiceNumber} sent to ${invoice.parentEmail}`)
+    logActivity({
+      action: `Sent invoice email ${invoice.invoiceNumber}`,
+      module: "Invoices",
+      detail: `Recipient: ${invoice.parentEmail}`
+    })
+  }
+
+  const downloadInvoiceData = (invoiceId: string) => {
+    const invoice = invoices.find(inv => inv.id === invoiceId)
+    if (!invoice) return
+    const resolvedCategory = category ?? invoice.category ?? ""
+
+    const escapeCsvValue = (value: unknown) => {
+      const text = value === null || value === undefined ? "" : String(value)
+      if (/[",\n]/.test(text)) {
+        return `"${text.replace(/"/g, '""')}"`
+      }
+      return text
+    }
+
+    const headerRows: string[][] = [
+      ["Invoice Number", invoice.invoiceNumber],
+      ["Student Name", invoice.studentName],
+      ["Student ID", invoice.studentId],
+      ["Year Group", invoice.studentGrade],
+      ["Parent Name", invoice.parentName],
+      ["Parent Email", invoice.parentEmail],
+      ["Recipient Name", invoice.recipientName || ""],
+      ["Recipient Address", invoice.recipientAddress || ""],
+      ["Event Name", invoice.eventName || ""],
+      ["Category", resolvedCategory],
+      ["Academic Year", invoice.academicYear || ""],
+      ["Term", invoice.term || ""],
+      ["Status", invoice.status],
+      ["Issue Date", format(invoice.issueDate, "yyyy-MM-dd")],
+      ["Due Date", format(invoice.dueDate, "yyyy-MM-dd")],
+      ["Total Amount", invoice.totalAmount],
+      ["Discount Amount", invoice.discountAmount],
+      ["Final Amount", invoice.finalAmount],
+      ["Notes", invoice.notes || ""]
+    ]
+
+    const itemHeader = ["Item ID", "Description", "Amount", "Discount %", "Discounted Amount", "Notes"]
+    const itemRows = invoice.items.map(item => [
+      item.id,
+      item.description,
+      item.amount,
+      item.discountPercent,
+      item.discountedAmount,
+      item.notes || ""
+    ])
+
+    const csvRows = [
+      ["Field", "Value"],
+      ...headerRows,
+      [""],
+      ["Items"],
+      itemHeader,
+      ...itemRows
+    ]
+
+    const csvContent = csvRows
+      .map(row => row.map(escapeCsvValue).join(","))
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `${invoice.invoiceNumber || invoice.id}_data.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast.success(`Invoice ${invoice.invoiceNumber} data downloaded`)
+  }
+
+  const exportInvoiceReport = () => {
+    if (filteredInvoices.length === 0) {
+      toast.error("No invoices to export")
+      return
+    }
+
+    const escapeCsvValue = (value: unknown) => {
+      const text = value === null || value === undefined ? "" : String(value)
+      if (/[",\n]/.test(text)) {
+        return `"${text.replace(/"/g, '""')}"`
+      }
+      return text
+    }
+
+    const headers = [
+      "Invoice Number",
+      "Student Name",
+      "Student ID",
+      "Year Group",
+      "Parent Name",
+      "Parent Email",
+      "Category",
+      "Academic Year",
+      "Term",
+      "Status",
+      "Issue Date",
+      "Due Date",
+      "Total Amount",
+      "Discount Amount",
+      "Final Amount"
+    ]
+
+    const rows = filteredInvoices.map(inv => ([
+      inv.invoiceNumber,
+      inv.studentName,
+      inv.studentId,
+      inv.studentGrade,
+      inv.parentName,
+      inv.parentEmail,
+      category ?? inv.category ?? "",
+      inv.academicYear || "",
+      inv.term || "",
+      inv.status,
+      format(inv.issueDate, "yyyy-MM-dd"),
+      format(inv.dueDate, "yyyy-MM-dd"),
+      inv.totalAmount,
+      inv.discountAmount,
+      inv.finalAmount
+    ]))
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(escapeCsvValue).join(","))
+      .join("\n")
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `invoice-report-${format(new Date(), "yyyyMMdd_HHmmss")}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast.success(`Exported ${filteredInvoices.length} invoices`)
+  }
+
+  const exportAllInvoicesZip = async () => {
+    if (filteredInvoices.length === 0) {
+      toast.error("No invoices to export")
+      return
+    }
+
+    try {
+      setIsExportingAll(true)
+      const [{ default: JSZip }, { jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jszip"),
+        import("jspdf"),
+        import("html2canvas")
+      ])
+
+      const zip = new JSZip()
+
+      const escapeHtml = (value: unknown) => {
+        const text = value === null || value === undefined ? "" : String(value)
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;")
       }
 
-      toast.success(`Invoice ${invoice.invoiceNumber} sent to ${invoice.parentEmail}`)
+      const buildInvoicePreviewElement = (invoice: Invoice) => {
+        const itemsRows = invoice.items.map(item => `
+          <tr>
+            <td style="padding:6px 8px; border:1px solid #e5e7eb;">${escapeHtml(item.description)}</td>
+            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.amount.toLocaleString()}</td>
+            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.discountPercent || 0}%</td>
+            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.discountedAmount.toLocaleString()}</td>
+          </tr>
+        `).join("")
+
+        const container = document.createElement("div")
+        container.style.width = "794px"
+        container.style.padding = "24px"
+        container.style.background = "white"
+        container.style.color = "#111827"
+        container.style.fontFamily = "Arial, sans-serif"
+        container.style.fontSize = "12px"
+        container.style.boxSizing = "border-box"
+
+        container.innerHTML = `
+          <div style="text-align:center; border-bottom:1px solid #d1d5db; padding-bottom:12px; margin-bottom:12px;">
+            <img src="${SchoolLogo}" style="height:80px; margin:0 auto 8px; display:block;" alt="School Logo" />
+            <div style="font-size:12px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.address)}</div>
+            <div style="font-size:12px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.phone)}, ${escapeHtml(SCHOOL_INFO.email)}, ${escapeHtml(SCHOOL_INFO.website)}</div>
+            <div style="margin-top:8px; font-size:18px; font-weight:700; letter-spacing:2px;">INVOICE</div>
+          </div>
+
+          <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:11px;">
+            <tr>
+              <td style="width:50%; vertical-align:top; padding-right:12px;">
+                <table style="width:100%; border-collapse:collapse;">
+                  <tr><td style="padding:4px 0; width:120px;">Student ID</td><td style="padding:4px 0;">${escapeHtml(invoice.studentId)}</td></tr>
+                  <tr><td style="padding:4px 0;">Student Name</td><td style="padding:4px 0;">${escapeHtml(invoice.studentName)}</td></tr>
+                  <tr><td style="padding:4px 0;">Year Group</td><td style="padding:4px 0;">${escapeHtml(invoice.studentGrade)}</td></tr>
+                  <tr><td style="padding:4px 0;">Parent Name</td><td style="padding:4px 0;">${escapeHtml(invoice.parentName)}</td></tr>
+                  <tr><td style="padding:4px 0;">Parent Email</td><td style="padding:4px 0;">${escapeHtml(invoice.parentEmail)}</td></tr>
+                </table>
+              </td>
+              <td style="width:50%; vertical-align:top; padding-left:12px;">
+                <table style="width:100%; border-collapse:collapse;">
+                  <tr><td style="padding:4px 0; width:120px;">Invoice No.</td><td style="padding:4px 0;">${escapeHtml(invoice.invoiceNumber)}</td></tr>
+                  <tr><td style="padding:4px 0;">Issue Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.issueDate, "yyyy-MM-dd"))}</td></tr>
+                  <tr><td style="padding:4px 0;">Due Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.dueDate, "yyyy-MM-dd"))}</td></tr>
+                  <tr><td style="padding:4px 0;">Status</td><td style="padding:4px 0;">${escapeHtml(invoice.status)}</td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:11px;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:left;">Description</th>
+                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">Amount</th>
+                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">Discount %</th>
+                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">Net Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRows}
+              <tr>
+                <td colspan="3" style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">Total</td>
+                <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">${invoice.finalAmount.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="font-size:11px; color:#374151;">
+            <div style="font-weight:700; margin-bottom:4px;">Notes</div>
+            <div>${escapeHtml(INVOICE_NOTES.bankTransferInstruction)}</div>
+          </div>
+        `
+
+        container.style.position = "fixed"
+        container.style.left = "-10000px"
+        container.style.top = "0"
+        return container
+      }
+
+      const waitForImages = async (container: HTMLElement) => {
+        const images = Array.from(container.querySelectorAll("img"))
+        await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve()
+          return new Promise<void>(resolve => {
+            img.onload = () => resolve()
+            img.onerror = () => resolve()
+          })
+        }))
+      }
+
+      const total = filteredInvoices.length
+      setExportProgress({ current: 0, total })
+
+      for (let index = 0; index < filteredInvoices.length; index += 1) {
+        const invoice = filteredInvoices[index]
+        setExportProgress({ current: index + 1, total })
+
+        const container = buildInvoicePreviewElement(invoice)
+        document.body.appendChild(container)
+
+        await waitForImages(container)
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff"
+        })
+        document.body.removeChild(container)
+
+        const doc = new jsPDF({ unit: "pt", format: "a4" })
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 24
+        const imgWidth = pageWidth - margin * 2
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+        const imgData = canvas.toDataURL("image/png")
+
+        let heightLeft = imgHeight
+        let position = margin
+        doc.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight)
+        heightLeft -= (pageHeight - margin * 2)
+
+        while (heightLeft > 0) {
+          doc.addPage()
+          position = margin - (imgHeight - heightLeft)
+          doc.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight)
+          heightLeft -= (pageHeight - margin * 2)
+        }
+
+        const safeName = (invoice.invoiceNumber || invoice.id)
+          .replace(/[^a-zA-Z0-9-_]/g, "_")
+        const pdfBlob = doc.output("blob")
+        zip.file(`${safeName}.pdf`, pdfBlob)
+
+        await new Promise(resolve => setTimeout(resolve, 0))
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" })
+      const url = URL.createObjectURL(zipBlob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `invoices-export-${format(new Date(), "yyyyMMdd_HHmmss")}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`Exported ${filteredInvoices.length} invoices`)
+    } catch (error) {
+      console.error("Failed to export invoices:", error)
+      toast.error("Failed to export invoices")
+    } finally {
+      setIsExportingAll(false)
+      setExportProgress(null)
     }
   }
 
+  const downloadInterfaceTemplate = () => {
+    const headers = [
+      "Student ID",
+      "Student Name",
+      "Grade",
+      "Parent Name",
+      "Parent Email",
+      "Amount",
+      "Due Date"
+    ]
+    const sampleRow = [
+      "ST001",
+      "John Doe",
+      "Year 1",
+      "Parent Name",
+      "parent@email.com",
+      "450000",
+      "2026-01-31"
+    ]
+    const csv = [headers.join(","), sampleRow.join(",")].join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute("download", "invoice_interface_template.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   const downloadInvoice = (invoiceId: string) => {
-    const invoice = invoices.find(inv => inv.id === invoiceId)
-    if (invoice) {
-      toast.success(`Invoice ${invoice.invoiceNumber} downloaded`)
-    }
+    downloadInvoiceData(invoiceId)
+  }
+
+  // Generate proper invoice number (INV-YYYYMM-XXXX format)
+  const generateInvoiceNumber = (studentId: string) => {
+    const date = new Date()
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    // Use last 4 characters of student ID
+    const idSuffix = studentId.slice(-4)
+    return `INV-${year}${month}-${idSuffix}`
   }
 
   // Approval handlers
   const handleApproveInvoice = (invoice: Invoice) => {
+    // Generate proper invoice number if it's a draft number
+    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.startsWith('DRAFT-')
+    const finalInvoiceNumber = needsNewInvoiceNumber
+      ? generateInvoiceNumber(invoice.studentId)
+      : invoice.invoiceNumber
+
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
         ? {
           ...inv,
-          status: "approved" as const,
+          invoiceNumber: finalInvoiceNumber,
+          approvalStatus: "approved",
           approvedBy: "Admin",
           approvedAt: new Date()
         }
@@ -901,7 +1662,8 @@ export function InvoiceManagement({
           inv.id === invoice.id
             ? {
               ...inv,
-              status: "approved",
+              invoiceNumber: finalInvoiceNumber,
+              approvalStatus: "approved",
               approvedBy: "Admin",
               approvedAt: new Date().toISOString()
             }
@@ -913,7 +1675,12 @@ export function InvoiceManagement({
       console.error("Failed to update invoice approval in localStorage:", error)
     }
 
-    toast.success(`Invoice ${invoice.invoiceNumber} has been approved`)
+    toast.success(`Invoice ${finalInvoiceNumber} has been approved`)
+    logActivity({
+      action: `Approved invoice ${finalInvoiceNumber}`,
+      module: "Invoices",
+      detail: "Approval Status: wait → approved"
+    })
     setIsApprovalDialogOpen(false)
     setSelectedInvoiceForApproval(null)
   }
@@ -923,7 +1690,7 @@ export function InvoiceManagement({
       inv.id === invoice.id
         ? {
           ...inv,
-          status: "rejected" as const,
+          approvalStatus: "rejected",
           rejectedReason: reason
         }
         : inv
@@ -939,7 +1706,7 @@ export function InvoiceManagement({
           inv.id === invoice.id
             ? {
               ...inv,
-              status: "rejected",
+              approvalStatus: "rejected",
               rejectedReason: reason
             }
             : inv
@@ -951,9 +1718,139 @@ export function InvoiceManagement({
     }
 
     toast.success(`Invoice ${invoice.invoiceNumber} has been rejected`)
+    logActivity({
+      action: `Rejected invoice ${invoice.invoiceNumber}`,
+      module: "Invoices",
+      detail: `Approval Status: wait → rejected; Reason: ${reason}`
+    })
     setIsApprovalDialogOpen(false)
     setSelectedInvoiceForApproval(null)
     setRejectionReason("")
+  }
+
+  const handleViewEmailDetails = (invoice: Invoice) => {
+    setSelectedInvoiceForEmail(invoice)
+    setIsEmailDetailDialogOpen(true)
+  }
+
+  const openMarkPaidDialog = (invoice: Invoice) => {
+    setMarkPaidInvoice(invoice)
+    setPaymentMethod("")
+    setPaymentFiles([])
+    setIsMarkPaidOpen(true)
+  }
+
+  const readFileAsDataUrl = (file: File): Promise<{ name: string; dataUrl: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve({ name: file.name, dataUrl: String(reader.result || "") })
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const confirmMarkPaid = async () => {
+    if (!markPaidInvoice) return
+    if (!paymentMethod) {
+      toast.error("Please select a payment method")
+      return
+    }
+    if (paymentFiles.length === 0) {
+      toast.error("Please upload at least 1 proof image (JPG/PNG)")
+      return
+    }
+
+    setIsSavingPayment(true)
+    try {
+      const proofs = await Promise.all(paymentFiles.map(readFileAsDataUrl))
+      const paidAt = new Date()
+      const isPartial = paymentMethod === "partial"
+
+      const updatedInvoices = invoices.map(inv =>
+        inv.id === markPaidInvoice.id
+          ? {
+              ...inv,
+              status: isPartial ? inv.status : ("paid" as const),
+              paidDate: isPartial ? inv.paidDate : paidAt,
+              paymentMethod,
+              paymentProofs: proofs
+            }
+          : inv
+      )
+      setInvoices(updatedInvoices)
+
+      // Update localStorage
+      try {
+        const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+        if (stored) {
+          const savedInvoices = JSON.parse(stored)
+          const updatedSavedInvoices = savedInvoices.map((inv: any) =>
+            inv.id === markPaidInvoice.id
+              ? {
+                  ...inv,
+                  status: isPartial ? inv.status : "paid",
+                  paidDate: isPartial ? inv.paidDate : paidAt.toISOString(),
+                  paymentMethod,
+                  paymentProofs: proofs
+                }
+              : inv
+          )
+          localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
+        }
+      } catch (error) {
+        console.error("Failed to update paid status in localStorage:", error)
+      }
+
+      // Save payment record
+      try {
+        const paymentKey = "paymentRecords"
+        const storedPayments = localStorage.getItem(paymentKey)
+        const payments = storedPayments ? JSON.parse(storedPayments) : []
+        const paymentRecord = {
+          id: `payment-${markPaidInvoice.id}`,
+          invoiceId: markPaidInvoice.id,
+          invoiceNumber: markPaidInvoice.invoiceNumber,
+          studentName: markPaidInvoice.studentName,
+          studentId: markPaidInvoice.studentId,
+          studentGrade: markPaidInvoice.studentGrade,
+          amount: markPaidInvoice.finalAmount,
+          term: markPaidInvoice.term || "-",
+          paymentMethod,
+          status: isPartial ? "partial" : "paid",
+          transactionDate: paidAt.toISOString(),
+          paymentProofs: proofs
+        }
+        const existingIndex = payments.findIndex((p: any) =>
+          p.invoiceId === markPaidInvoice.id || p.invoiceNumber === markPaidInvoice.invoiceNumber
+        )
+        if (existingIndex >= 0) {
+          payments[existingIndex] = paymentRecord
+        } else {
+          payments.push(paymentRecord)
+        }
+        localStorage.setItem(paymentKey, JSON.stringify(payments))
+        window.dispatchEvent(new CustomEvent("paymentsUpdated"))
+      } catch (error) {
+        console.error("Failed to save payment record:", error)
+      }
+
+      window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+      logActivity({
+        action: `${isPartial ? "Recorded partial payment" : "Marked invoice as paid"} ${markPaidInvoice.invoiceNumber}`,
+        module: "Invoices",
+        detail: `Payment Method: ${paymentMethod}, Proofs: ${proofs.length}`
+      })
+      toast.success(isPartial ? "Saved partial payment" : "Marked invoice as paid")
+      setIsMarkPaidOpen(false)
+      setMarkPaidInvoice(null)
+      setPaymentMethod("")
+      setPaymentFiles([])
+    } catch (error) {
+      console.error("Failed to mark paid:", error)
+      toast.error("Failed to mark invoice as paid")
+    } finally {
+      setIsSavingPayment(false)
+    }
   }
 
   const openApprovalDialog = (invoice: Invoice, action: "approve" | "reject") => {
@@ -965,42 +1862,94 @@ export function InvoiceManagement({
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "draft":
-        return <Badge variant="secondary"><FileText className="w-3 h-3 mr-1" />{t("common.draft")}</Badge>
-      case "pending_approval":
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />{t("invoice.pendingApproval")}</Badge>
-      case "approved":
-        return <Badge className="bg-purple-100 text-purple-800"><CheckCircle className="w-3 h-3 mr-1" />{t("common.approved")}</Badge>
-      case "rejected":
-        return <Badge className="bg-red-100 text-red-800"><X className="w-3 h-3 mr-1" />{t("common.rejected")}</Badge>
+      case "wait":
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
       case "sent":
-        return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />{t("common.sent")}</Badge>
-      case "paid":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t("common.paid")}</Badge>
-      case "overdue":
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />{t("common.overdue")}</Badge>
-      case "cancelled":
-        return <Badge className="bg-gray-100 text-gray-800"><X className="w-3 h-3 mr-1" />{t("common.cancelled")}</Badge>
+        return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
+      case "unsent":
+        return <Badge className="bg-gray-100 text-gray-800"><Mail className="w-3 h-3 mr-1" />Unsent</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  // Filter invoices based on active tab
-  const tabFilteredInvoices = invoices.filter(inv => {
-    if (invoiceTypeTab === "external") {
-      return inv.invoiceType === "external" || inv.studentId === "EXTERNAL"
-    } else {
-      return inv.invoiceType !== "external" && inv.studentId !== "EXTERNAL"
+  const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "unsent" => {
+    if (invoice.status === "paid") return "sent"
+    if (invoice.status === "sent") return "sent"
+    if (invoice.status === "draft" || invoice.status === "pending_approval") return "wait"
+    return "unsent"
+  }
+
+  const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
+    if (invoice.status === "paid") return "paid"
+    if (invoice.status === "overdue") return "overdue"
+    return "unpaid"
+  }
+
+  const getPaymentStatusBadge = (status: "unpaid" | "paid" | "overdue") => {
+    switch (status) {
+      case "paid":
+        return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+      case "overdue":
+        return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+      case "unpaid":
+      default:
+        return <Badge className="bg-gray-100 text-gray-800">Unpaid</Badge>
     }
+  }
+
+  const formatChanges = (changes: Array<{ field: string; from: string; to: string }>) => {
+    if (changes.length === 0) return "No changes"
+    return changes.map(change => `${change.field}: "${change.from}" → "${change.to}"`).join("; ")
+  }
+
+  const getInvoiceStatusBadge = (approvalStatus: ApprovalStatus) => {
+    switch (approvalStatus) {
+      case "approved":
+        return <Badge className="bg-green-100 text-green-800">Approve</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800">Reject</Badge>
+      case "wait":
+      default:
+        return <Badge className="bg-yellow-100 text-yellow-800">Wait</Badge>
+    }
+  }
+
+  // Filter invoices based on active tab and category
+  const tabFilteredInvoices = invoices.filter(inv => {
+    // First filter by tab (external vs student)
+    if (invoiceTypeTab === "external") {
+      if (!(inv.invoiceType === "external" || inv.studentId === "EXTERNAL")) {
+        return false
+      }
+    } else {
+      if (inv.invoiceType === "external" || inv.studentId === "EXTERNAL") {
+        return false
+      }
+    }
+
+    // Then filter by category if provided
+    if (category) {
+      // Map category to invoiceType for proper filtering
+      if (category === "tuition") {
+        return inv.category === "tuition" || inv.invoiceType === "student" || (!inv.category && !inv.invoiceType)
+      } else if (category === "external") {
+        return inv.category === "external" || inv.invoiceType === "external" || inv.studentId === "EXTERNAL"
+      } else {
+        // For eca, trip, exam, bus - match exact category
+        return inv.category === category
+      }
+    }
+
+    return true
   })
 
   const summaryStats = {
     total: tabFilteredInvoices.length,
     draft: tabFilteredInvoices.filter(inv => inv.status === "draft").length,
-    pendingApproval: tabFilteredInvoices.filter(inv => inv.status === "pending_approval").length,
-    approved: tabFilteredInvoices.filter(inv => inv.status === "approved").length,
-    rejected: tabFilteredInvoices.filter(inv => inv.status === "rejected").length,
+    pendingApproval: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "wait").length,
+    approved: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length,
+    rejected: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length,
     sent: tabFilteredInvoices.filter(inv => inv.status === "sent").length,
     paid: tabFilteredInvoices.filter(inv => inv.status === "paid").length,
     overdue: tabFilteredInvoices.filter(inv => inv.status === "overdue").length,
@@ -1017,19 +1966,30 @@ export function InvoiceManagement({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2" onClick={() => { reloadInvoices(); toast.success(t("invoice.refreshed")) }}>
-            <RefreshCw className="w-4 h-4" />
-            {t("common.refresh")}
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={downloadInterfaceTemplate}
+          >
+            <Download className="w-4 h-4" />
+            Download Interface File
           </Button>
-          <Button variant="outline" className="flex items-center gap-2" onClick={() => setIsImportDialogOpen(true)}>
-            <Upload className="w-4 h-4" />
-            {t("invoice.importExcel")}
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={exportAllInvoicesZip}
+            disabled={isExportingAll}
+          >
+            <Download className="w-4 h-4" />
+            {isExportingAll
+              ? `${t("invoice.exporting")} ${exportProgress?.current ?? 0}/${exportProgress?.total ?? 0}`
+              : t("invoice.exportAll")}
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={exportInvoiceReport}>
             <Download className="w-4 h-4" />
             {t("invoice.exportReport")}
           </Button>
-          <Button onClick={() => onNavigateToSubPage('invoice-creation', { category })} className="flex items-center gap-2">
+          <Button onClick={() => onNavigateToSubPage(category === 'external' ? 'external-invoice-creation' : 'invoice-creation', { category, invoiceType: category === 'tuition' ? 'student' : category })} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {t("invoice.createInvoice")}
           </Button>
@@ -1134,7 +2094,7 @@ export function InvoiceManagement({
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Row 1 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Search */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
@@ -1180,62 +2140,6 @@ export function InvoiceManagement({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              {/* Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Year Group */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
-                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allYearGroups")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
-                      {grades.map(grade => (
-                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Status */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allStatus")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                      <SelectItem value="pending_approval">
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("invoice.pendingApproval")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="approved">
-                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("common.approved")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="rejected">
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.rejected")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="draft">
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t("common.draft")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="sent">
-                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t("common.sent")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="paid">
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("common.paid")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="overdue">
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.overdue")}</Badge>
-                      </SelectItem>
-                      <SelectItem value="cancelled">
-                        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">{t("common.cancelled")}</Badge>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 {/* Date Range */}
                 <div className="space-y-1.5">
@@ -1277,6 +2181,91 @@ export function InvoiceManagement({
                   </div>
                 </div>
               </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Year Group */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
+                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allYearGroups")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
+                      {grades.map(grade => (
+                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Approval Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
+                  <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="wait">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
+                      </SelectItem>
+                      <SelectItem value="approved">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approve</Badge>
+                      </SelectItem>
+                      <SelectItem value="rejected">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Reject</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">E-mail Status</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="wait">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
+                      </SelectItem>
+                      <SelectItem value="sent">
+                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge>
+                      </SelectItem>
+                      <SelectItem value="unsent">
+                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unsent</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Invoice Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+                  <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="unpaid">
+                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge>
+                      </SelectItem>
+                      <SelectItem value="paid">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+                      </SelectItem>
+                      <SelectItem value="overdue">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -1293,21 +2282,45 @@ export function InvoiceManagement({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("invoice.invoiceNumber")}</TableHead>
-                    <TableHead>{t("invoice.student")}</TableHead>
-                    <TableHead>{t("invoice.yearGroup")}</TableHead>
-                    <TableHead>{t("common.amount")}</TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead>{t("invoice.issueDate")}</TableHead>
-                    <TableHead>{t("invoice.dueDate")}</TableHead>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={paginatedInvoices.length > 0 && paginatedInvoices.every(invoice => selectedInvoiceIds.has(invoice.id))}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            selectAllCurrentPage(paginatedInvoices)
+                          } else {
+                            const newSelected = new Set(selectedInvoiceIds)
+                            paginatedInvoices.forEach(invoice => {
+                              newSelected.delete(invoice.id)
+                            })
+                            setSelectedInvoiceIds(newSelected)
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead>{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
+                    <TableHead>{renderSortHeader(t("invoice.student"), "studentName")}</TableHead>
+                    <TableHead>{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
+                    <TableHead>{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
+                    <TableHead>{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
+                    <TableHead>{renderSortHeader("E-mail Status", "emailStatus")}</TableHead>
+                    <TableHead>{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
+                    <TableHead>{renderSortHeader(t("invoice.issueDate"), "issueDate")}</TableHead>
+                    <TableHead>{renderSortHeader(t("invoice.dueDate"), "dueDate")}</TableHead>
                     <TableHead className="text-center">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedInvoiceIds.has(invoice.id)}
+                          onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {invoice.invoiceNumber}
+                        {invoice.invoiceNumber || "DRAFT"}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -1328,7 +2341,14 @@ export function InvoiceManagement({
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                      <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
+                      <TableCell
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleViewEmailDetails(invoice)}
+                      >
+                        {getStatusBadge(getEmailStatus(invoice))}
+                      </TableCell>
+                      <TableCell>{getPaymentStatusBadge(getPaymentStatus(invoice))}</TableCell>
                       <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
                       <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                       <TableCell>
@@ -1348,40 +2368,41 @@ export function InvoiceManagement({
                           <Button
                             size="sm"
                             variant="ghost"
-                            disabled={invoice.status !== "draft"}
-                            className={invoice.status !== "draft" ? "opacity-30 cursor-not-allowed" : ""}
+                            disabled={!canEditInvoice(invoice.status, getApprovalStatus(invoice))}
+                            className={!canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "opacity-30 cursor-not-allowed" : ""}
                             onClick={() => {
-                              if (invoice.status !== "draft") return
-                              // Navigate to full page (can edit)
-                              if (onNavigateToView) {
-                                const invoiceData = {
-                                  ...invoice,
-                                  invoiceNumber: invoice.invoiceNumber,
-                                  studentName: invoice.studentName,
-                                  studentId: invoice.studentId,
-                                  grade: invoice.studentGrade,
-                                  parentEmail: invoice.parentEmail,
-                                  amount: invoice.finalAmount,
-                                  total: invoice.finalAmount,
-                                  status: invoice.status,
-                                  issueDate: invoice.issueDate.toISOString(),
-                                  dueDate: invoice.dueDate.toISOString(),
-                                  items: invoice.items.map(item => ({
-                                    name: item.description,
-                                    description: item.description,
-                                    quantity: 1,
-                                    amount: item.discountedAmount
-                                  })),
-                                  invoiceType: "student",
-                                  viewOnly: false  // Can edit
-                                }
-                                onNavigateToView("invoice", invoiceData)
-                              } else {
-                                setSelectedInvoice(invoice)
-                                setIsEditModalOpen(true)
+                              if (!canEditInvoice(invoice.status, getApprovalStatus(invoice))) return
+                              // Navigate to invoice-creation page for editing
+                              const editInvoice = {
+                                id: invoice.id,
+                                invoiceNumber: invoice.invoiceNumber,
+                                studentName: invoice.studentName,
+                                studentId: invoice.studentId,
+                                studentGrade: invoice.studentGrade,
+                                parentName: invoice.parentName,
+                                parentEmail: invoice.parentEmail,
+                                totalAmount: invoice.totalAmount,
+                                discountAmount: invoice.discountAmount,
+                                finalAmount: invoice.finalAmount,
+                                status: invoice.status,
+                                approvalStatus: getApprovalStatus(invoice),
+                                issueDate: invoice.issueDate.toISOString(),
+                                dueDate: invoice.dueDate.toISOString(),
+                                items: invoice.items.map(item => ({
+                                  id: item.id,
+                                  name: item.description,
+                                  description: item.description,
+                                  category: "Tuition",
+                                  quantity: 1,
+                                  amount: item.discountedAmount
+                                })),
+                                category: invoice.category || category,
+                                term: invoice.term,
+                                academicYear: invoice.academicYear
                               }
+                              onNavigateToSubPage?.("invoice-creation", { editInvoice, category: invoice.category || category })
                             }}
-                            title={invoice.status === "draft" ? "Edit" : "Cannot edit (not draft)"}
+                            title={canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "Edit" : "Cannot edit (already approved)"}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -1401,27 +2422,16 @@ export function InvoiceManagement({
                           >
                             <Mail className="w-4 h-4" />
                           </Button>
-                          {invoice.status === "pending_approval" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                onClick={() => openApprovalDialog(invoice, "approve")}
-                                title="Approve"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => openApprovalDialog(invoice, "reject")}
-                                title="Reject"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </>
+                          {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => openMarkPaidDialog(invoice)}
+                              title="Mark Paid"
+                            >
+                              <DollarSign className="w-4 h-4" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>
@@ -1521,6 +2531,7 @@ export function InvoiceManagement({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Row 1 */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Search */}
                 <div className="space-y-1.5">
@@ -1533,33 +2544,75 @@ export function InvoiceManagement({
                   />
                 </div>
 
-                {/* Status */}
+                {/* Approval Status */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                  <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
+                  <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="wait">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
+                      </SelectItem>
+                      <SelectItem value="approved">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approve</Badge>
+                      </SelectItem>
+                      <SelectItem value="rejected">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Reject</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* E-mail Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">E-mail Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder={t("invoice.allStatus")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                      <SelectItem value="pending_approval">
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("invoice.pendingApproval")}</Badge>
+                      <SelectItem value="wait">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
                       </SelectItem>
-                      <SelectItem value="approved">
-                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("common.approved")}</Badge>
+                      <SelectItem value="sent">
+                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge>
                       </SelectItem>
-                      <SelectItem value="rejected">
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.rejected")}</Badge>
+                      <SelectItem value="unsent">
+                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unsent</Badge>
                       </SelectItem>
-                      <SelectItem value="draft">{t("common.draft")}</SelectItem>
-                      <SelectItem value="sent">{t("common.sent")}</SelectItem>
-                      <SelectItem value="paid">{t("common.paid")}</SelectItem>
-                      <SelectItem value="overdue">{t("common.overdue")}</SelectItem>
-                      <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Invoice Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+                  <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("invoice.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                      <SelectItem value="unpaid">
+                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge>
+                      </SelectItem>
+                      <SelectItem value="paid">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+                      </SelectItem>
+                      <SelectItem value="overdue">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Date From */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("invoice.fromDate")}</label>
@@ -1607,20 +2660,46 @@ export function InvoiceManagement({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("invoice.invoiceNumber")}</TableHead>
-                      <TableHead>{t("invoice.recipient")}</TableHead>
-                      <TableHead>{t("invoice.event")}</TableHead>
-                      <TableHead>{t("common.amount")}</TableHead>
-                      <TableHead>{t("common.status")}</TableHead>
-                      <TableHead>{t("invoice.issueDate")}</TableHead>
-                      <TableHead>{t("invoice.dueDate")}</TableHead>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={paginatedInvoices.length > 0 && paginatedInvoices.every(invoice => selectedInvoiceIds.has(invoice.id))}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              selectAllCurrentPage(paginatedInvoices)
+                            } else {
+                              const newSelected = new Set(selectedInvoiceIds)
+                              paginatedInvoices.forEach(invoice => {
+                                newSelected.delete(invoice.id)
+                              })
+                              setSelectedInvoiceIds(newSelected)
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
+                      <TableHead>{renderSortHeader(t("invoice.recipient"), "studentName")}</TableHead>
+                      <TableHead>{renderSortHeader(t("invoice.event"), "eventName")}</TableHead>
+                      <TableHead>{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
+                      <TableHead>{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
+                      <TableHead>{renderSortHeader("E-mail Status", "emailStatus")}</TableHead>
+                      <TableHead>{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
+                      <TableHead>{renderSortHeader(t("invoice.issueDate"), "issueDate")}</TableHead>
+                      <TableHead>{renderSortHeader(t("invoice.dueDate"), "dueDate")}</TableHead>
                       <TableHead className="text-center">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedInvoices.map((invoice) => (
                       <TableRow key={invoice.id}>
-                        <TableCell className="font-mono text-sm">{invoice.invoiceNumber}</TableCell>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedInvoiceIds.has(invoice.id)}
+                            onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {invoice.invoiceNumber || "DRAFT"}
+                        </TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium">{invoice.recipientName || invoice.studentName}</div>
@@ -1631,16 +2710,14 @@ export function InvoiceManagement({
                           <Badge variant="outline">{invoice.eventName || "-"}</Badge>
                         </TableCell>
                         <TableCell className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            invoice.status === "paid" ? "default" :
-                              invoice.status === "sent" ? "secondary" :
-                                invoice.status === "draft" ? "outline" :
-                                  invoice.status === "overdue" ? "destructive" : "outline"
-                          }>
-                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                          </Badge>
+                        <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
+                        <TableCell
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleViewEmailDetails(invoice)}
+                        >
+                          {getStatusBadge(getEmailStatus(invoice))}
                         </TableCell>
+                        <TableCell>{getPaymentStatusBadge(getPaymentStatus(invoice))}</TableCell>
                         <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
                         <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                         <TableCell>
@@ -1649,9 +2726,9 @@ export function InvoiceManagement({
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                // Open Modal (view only)
+                                // Open external preview dialog
                                 setSelectedInvoice(invoice)
-                                setIsModalOpen(true)
+                                setIsExternalPreviewOpen(true)
                               }}
                               title="View"
                             >
@@ -1660,44 +2737,31 @@ export function InvoiceManagement({
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={invoice.status !== "draft"}
-                              className={invoice.status !== "draft" ? "opacity-30 cursor-not-allowed" : ""}
+                              disabled={!canEditInvoice(invoice.status, getApprovalStatus(invoice))}
+                              className={!canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "opacity-30 cursor-not-allowed" : ""}
                               onClick={() => {
-                                if (invoice.status !== "draft") return
-                                // Navigate to full page (can edit)
-                                if (onNavigateToView) {
-                                  const invoiceData = {
-                                    ...invoice,
-                                    invoiceNumber: invoice.invoiceNumber,
-                                    studentName: invoice.recipientName || invoice.studentName,
-                                    studentId: invoice.studentId,
-                                    grade: invoice.studentGrade,
-                                    parentEmail: invoice.parentEmail,
-                                    amount: invoice.finalAmount,
-                                    total: invoice.finalAmount,
-                                    status: invoice.status,
-                                    issueDate: invoice.issueDate.toISOString(),
-                                    dueDate: invoice.dueDate.toISOString(),
-                                    items: invoice.items.map(item => ({
-                                      name: item.description,
-                                      description: item.description,
-                                      quantity: 1,
-                                      amount: item.discountedAmount
-                                    })),
-                                    // External invoice specific fields
-                                    invoiceType: invoice.invoiceType || "external",
-                                    recipientName: invoice.recipientName,
-                                    recipientAddress: invoice.recipientAddress,
-                                    eventName: invoice.eventName,
-                                    viewOnly: false  // Can edit
-                                  }
-                                  onNavigateToView("invoice", invoiceData)
-                                } else {
-                                  setSelectedInvoice(invoice)
-                                  setIsEditModalOpen(true)
+                                if (!canEditInvoice(invoice.status, getApprovalStatus(invoice))) return
+                                // Navigate to ExternalInvoiceCreation for editing
+                                const editInvoice = {
+                                  id: invoice.id,
+                                  invoiceNumber: invoice.invoiceNumber,
+                                  clientName: invoice.recipientName || invoice.studentName,
+                                  contactName: invoice.parentName,
+                                  address: invoice.recipientAddress || "",
+                                  invoiceDate: invoice.issueDate.toISOString(),
+                                  dueDate: invoice.dueDate.toISOString(),
+                                  items: invoice.items.map(item => ({
+                                    itemId: item.id,
+                                    description: item.description,
+                                    details: item.notes || "",
+                                    amount: item.discountedAmount
+                                  })),
+                                  status: invoice.status,
+                                  approvalStatus: getApprovalStatus(invoice)
                                 }
+                                onNavigateToSubPage("external-invoice-creation", { editInvoice })
                               }}
-                              title={invoice.status === "draft" ? "Edit" : "Cannot edit (not draft)"}
+                              title={canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "Edit" : "Cannot edit (already approved)"}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -1717,27 +2781,16 @@ export function InvoiceManagement({
                             >
                               <Mail className="w-4 h-4" />
                             </Button>
-                            {invoice.status === "pending_approval" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  onClick={() => openApprovalDialog(invoice, "approve")}
-                                  title="Approve"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => openApprovalDialog(invoice, "reject")}
-                                  title="Reject"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </>
+                            {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => openMarkPaidDialog(invoice)}
+                                title="Mark Paid"
+                              >
+                                <DollarSign className="w-4 h-4" />
+                              </Button>
                             )}
                           </div>
                         </TableCell>
@@ -1797,9 +2850,11 @@ export function InvoiceManagement({
 
       {/* Invoice Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-7xl w-[95vw] max-h-[75vh] overflow-y-auto p-6">
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] p-0 flex flex-col">
           {selectedInvoice && (
-            <div className="bg-white">
+            <div className="flex flex-col h-full">
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 bg-white">
               {/* School Header */}
               <div className="text-center pt-6 pb-4 border-b">
                 <img
@@ -1890,7 +2945,11 @@ export function InvoiceManagement({
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Invoice No.</span>
-                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.invoiceNumber}</span>
+                        <span className="text-sm font-medium text-gray-800">
+                          {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
+                            ? selectedInvoice.invoiceNumber
+                            : 'Pending Approval'}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Invoice Date</span>
@@ -1972,8 +3031,19 @@ export function InvoiceManagement({
 
                     const discountLines: { name: string; amount: number; percent?: number }[] = []
 
+                    // Skip all discounts for ECA, Trip & Activity, Exam, and Bus invoices
+                    const isNonDiscountableInvoice = selectedInvoice.invoiceType === "eca" ||
+                                                      selectedInvoice.invoiceType === "afterschool" ||
+                                                      selectedInvoice.invoiceType === "trip" ||
+                                                      selectedInvoice.invoiceType === "exam" ||
+                                                      selectedInvoice.invoiceType === "bus" ||
+                                                      selectedInvoice.category === "eca" ||
+                                                      selectedInvoice.category === "trip" ||
+                                                      selectedInvoice.category === "exam" ||
+                                                      selectedInvoice.category === "bus"
+
                     // 1. Sibling discount
-                    if (student && student.childOrder >= 2 && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                    if (!isNonDiscountableInvoice && student && student.childOrder >= 2 && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
                       const siblingPercent = getSiblingDiscount(student)
                       if (siblingPercent > 0) {
                         const siblingAmount = Math.round(subtotal * siblingPercent / 100)
@@ -1986,19 +3056,22 @@ export function InvoiceManagement({
                     }
 
                     // 2. Registration Fee Waiver - check if any item has waiver
-                    const registrationFeeWaiver = selectedInvoice.items
-                      .filter(item => item.description.toLowerCase().includes('registration') && item.discountPercent > 0)
-                      .reduce((sum, item) => sum + (item.amount - item.discountedAmount), 0)
-                    if (registrationFeeWaiver > 0) {
-                      discountLines.push({
-                        name: "Registration Fee Waiver",
-                        amount: registrationFeeWaiver
-                      })
+                    if (!isNonDiscountableInvoice) {
+                      const registrationFeeWaiver = selectedInvoice.items
+                        .filter(item => item.description.toLowerCase().includes('registration') && item.discountPercent > 0)
+                        .reduce((sum, item) => sum + (item.amount - item.discountedAmount), 0)
+                      if (registrationFeeWaiver > 0) {
+                        discountLines.push({
+                          name: "Registration Fee Waiver",
+                          amount: registrationFeeWaiver
+                        })
+                      }
                     }
 
                     // 3. Student group discounts
-                    if (selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                      const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId)
+                    if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                      const invoiceCategory = selectedInvoice.category || category
+                      const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId, invoiceCategory)
                       groupDiscounts.forEach(group => {
                         const groupAmount = group.discountType === "percentage"
                           ? Math.round(subtotal * group.discountPercentage / 100)
@@ -2012,7 +3085,7 @@ export function InvoiceManagement({
                     }
 
                     // 4. Fee Waiver Program (฿75,000/term for eligible students)
-                    if (student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                    if (!isNonDiscountableInvoice && student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
                       const feeWaiverEligibility = checkFeePrivilegeEligibility(
                         student,
                         student.academicYear || selectedInvoice.academicYear,
@@ -2027,7 +3100,7 @@ export function InvoiceManagement({
                     }
 
                     // 5. Staff Child (50%)
-                    if (student && student.notes?.toLowerCase().includes('staff')) {
+                    if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('staff')) {
                       const staffAmount = Math.round(subtotal * 50 / 100)
                       discountLines.push({
                         name: "Staff Child Discount",
@@ -2037,7 +3110,7 @@ export function InvoiceManagement({
                     }
 
                     // 6. Scholarship
-                    if (student && student.notes?.toLowerCase().includes('scholarship')) {
+                    if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('scholarship')) {
                       const scholarshipAmount = subtotal // 100% scholarship
                       discountLines.push({
                         name: "Scholarship",
@@ -2047,7 +3120,7 @@ export function InvoiceManagement({
                     }
 
                     // 7. Early Bird (5%)
-                    if (student && student.notes?.toLowerCase().includes('early bird')) {
+                    if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('early bird')) {
                       const earlyBirdAmount = Math.round(subtotal * 5 / 100)
                       discountLines.push({
                         name: "Early Bird Discount",
@@ -2196,25 +3269,26 @@ export function InvoiceManagement({
                   <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
                 </p>
               </div>
+            </div>
 
-              {/* Action Buttons - View Only */}
-              <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50">
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={closeInvoiceModal}>
-                    Close
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      sendInvoice(selectedInvoice.id)
-                      closeInvoiceModal()
-                    }}
-                  >
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send Email
-                  </Button>
-                </div>
+            {/* Action Buttons - Sticky Footer */}
+            <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={closeInvoiceModal}>
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    sendInvoice(selectedInvoice.id)
+                    closeInvoiceModal()
+                  }}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Email
+                </Button>
               </div>
             </div>
+          </div>
           )}
         </DialogContent>
       </Dialog>
@@ -2681,12 +3755,13 @@ export function InvoiceManagement({
         </DialogContent>
       </Dialog>
 
-      {/* View Modal - View Only (No Edit) */}
+      {/* View Modal - With Edit capability for non-approved invoices */}
       <ViewModal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         type="invoice"
         data={viewModalData}
+        onSave={handleSaveInvoiceFromModal}
         onDownload={handleDownloadInvoice}
         onPrint={handlePrintInvoice}
       />
@@ -2837,6 +3912,83 @@ export function InvoiceManagement({
         </DialogContent>
       </Dialog>
 
+      {/* Mark Paid Dialog */}
+      <Dialog open={isMarkPaidOpen} onOpenChange={setIsMarkPaidOpen}>
+        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+          <DialogHeader>
+            <DialogTitle>Mark Invoice as Paid</DialogTitle>
+            <DialogDescription>
+              Upload payment proof (JPG/PNG) and select a payment method.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Payment Method</label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cashier-check">Cashier&apos;s cheque</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Payment Proof (JPG/PNG)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || [])
+                    setPaymentFiles(files)
+                  }}
+                  className="hidden"
+                  id="payment-proof-upload"
+                />
+                <label htmlFor="payment-proof-upload">
+                  <Button variant="outline" className="cursor-pointer" asChild>
+                    <span>Browse</span>
+                  </Button>
+                </label>
+                <span className="text-sm text-muted-foreground">
+                  {paymentFiles.length > 0 ? `${paymentFiles.length} file(s) selected` : "No file chosen"}
+                </span>
+              </div>
+              {paymentFiles.length > 0 && (
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  {paymentFiles.map((file, index) => (
+                    <div key={`${file.name}-${index}`}>{file.name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsMarkPaidOpen(false)
+                setMarkPaidInvoice(null)
+                setPaymentMethod("")
+                setPaymentFiles([])
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmMarkPaid} disabled={isSavingPayment}>
+              {isSavingPayment ? "Saving..." : "Confirm Paid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Draft Invoice Modal - Professional SaaS Design */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
@@ -2919,7 +4071,21 @@ export function InvoiceManagement({
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Due Date</span>
-                      <span className="text-sm font-medium text-red-600">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
+                      <Input
+                        type="date"
+                        value={editingDueDate ? format(editingDueDate, "yyyy-MM-dd") : format(selectedInvoice.dueDate, "yyyy-MM-dd")}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            // Parse date correctly to avoid timezone issues
+                            const [year, month, day] = e.target.value.split('-').map(Number)
+                            setEditingDueDate(new Date(year, month - 1, day))
+                          } else {
+                            setEditingDueDate(undefined)
+                          }
+                        }}
+                        className="h-9 text-red-600 font-medium"
+                        min={format(new Date(), "yyyy-MM-dd")}
+                      />
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Academic Year</span>
@@ -2958,7 +4124,8 @@ export function InvoiceManagement({
                   }
 
                   // Get student group discounts
-                  const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId)
+                  const invoiceCategory = selectedInvoice.category || category
+                  const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId, invoiceCategory)
                   groupDiscounts.forEach(group => {
                     discounts.push({
                       name: group.name,
@@ -3303,6 +4470,310 @@ export function InvoiceManagement({
               Confirm Save
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* External Invoice Preview Dialog */}
+      <Dialog open={isExternalPreviewOpen} onOpenChange={setIsExternalPreviewOpen}>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogDescription>Preview of the external invoice</DialogDescription>
+          </DialogHeader>
+          {selectedInvoice && (
+            <div className="bg-white text-black p-8 max-w-[794px] mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
+              {/* School Header */}
+              <div className="text-center mb-2">
+                <img src={SchoolLogo} alt="School Logo" className="mx-auto mb-1" style={{ height: '180px' }} />
+                <p className="text-xs font-bold tracking-wider">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
+                <p className="text-[10px] text-gray-600 tracking-wide">BANGKOK</p>
+                <p className="text-[9px] text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
+                <p className="text-[9px] text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+              </div>
+
+              {/* Invoice Title */}
+              <h1 className="font-black text-center my-6" style={{ fontSize: '32px' }}>INVOICE</h1>
+
+              {/* Client & Invoice Info */}
+              <div className="border border-black p-4 mb-6" style={{ fontSize: '12px' }}>
+                <div className="flex justify-between">
+                  {/* Left side - Client Info */}
+                  <table>
+                    <tbody>
+                      <tr>
+                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client no.</td>
+                        <td className="py-1">000000</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client name</td>
+                        <td className="py-1">{selectedInvoice.recipientName || selectedInvoice.studentName}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Contact name</td>
+                        <td className="py-1">{selectedInvoice.parentName || '-'}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 font-bold align-top" style={{ paddingRight: '24px' }}>Address</td>
+                        <td className="py-1 whitespace-pre-line">{selectedInvoice.recipientAddress || '-'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  {/* Right side - Invoice Info */}
+                  <table>
+                    <tbody>
+                      <tr>
+                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice no.</td>
+                        <td className="py-1">
+                          {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
+                            ? (selectedInvoice.invoiceNumber || "-")
+                            : "Pending Approval"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice date</td>
+                        <td className="py-1">{format(selectedInvoice.issueDate, 'd MMMM yyyy')}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>
+                        <td className="py-1">{format(selectedInvoice.dueDate, 'd MMMM yyyy')}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full border border-black mb-6" style={{ borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr className="border-b border-black">
+                    <th className="py-2 px-4 text-center font-bold border-r border-black">Description</th>
+                    <th className="py-2 px-4 text-center font-bold" style={{ width: '100px' }}>Amount<br/>(THB)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedInvoice.items.map((item, index) => (
+                    <tr key={item.id || index}>
+                      <td className="py-3 px-4 align-top border-r border-black">
+                        <div>{item.description}</div>
+                        {item.notes && (
+                          <div className="text-gray-600">{item.notes}</div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right align-top">
+                        {item.discountedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Total row */}
+                  <tr className="border-t border-black">
+                    <td className="py-3 px-4 border-r border-black">
+                      <div className="flex justify-between items-center">
+                        <span>{numberToWords(selectedInvoice.finalAmount)}</span>
+                        <span className="font-bold">Total</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold">
+                      {selectedInvoice.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Payment Methods */}
+              <div className="mb-6" style={{ fontSize: '10px', lineHeight: '1.5' }}>
+                <p className="font-bold mb-2">Payment methods</p>
+                <div className="space-y-2">
+                  <div className="flex">
+                    <span className="mr-2">-</span>
+                    <div>
+                      <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+                    </div>
+                  </div>
+                  <div className="flex">
+                    <span className="mr-2">-</span>
+                    <div>
+                      <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {SCHOOL_INFO.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
+                      <table className="mt-2 ml-6">
+                        <tbody>
+                          <tr><td className="pr-6 py-0.5">Account name</td><td>{BANK_DETAILS.accountName}</td></tr>
+                          <tr><td className="pr-6 py-0.5">Account number</td><td>{BANK_DETAILS.accountNumber}</td></tr>
+                          <tr><td className="pr-6 py-0.5">Bank name</td><td>{BANK_DETAILS.bankName}</td></tr>
+                          <tr><td className="pr-6 py-0.5">Branch</td><td>{BANK_DETAILS.branch}</td></tr>
+                          <tr><td className="pr-6 py-0.5">Swift code</td><td>KASITHBK</td></tr>
+                          <tr><td className="pr-6 py-0.5">Bank address</td><td>1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="flex">
+                    <span className="mr-2">-</span>
+                    <div className="flex-1">
+                      <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+                      <div className="flex justify-between items-start mt-2">
+                        <table className="ml-6">
+                          <tbody>
+                            <tr><td className="pr-6 py-0.5">Biller ID no.</td><td>099-4-00259063-3</td></tr>
+                            <tr><td className="pr-6 py-0.5">Reference no. (Ref 1)</td><td>700002</td></tr>
+                            <tr><td className="pr-6 py-0.5">Reference no. (Ref 2)</td><td>
+                              {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
+                                ? (selectedInvoice.invoiceNumber || "-")
+                                : "-"}
+                            </td></tr>
+                          </tbody>
+                        </table>
+                        {/* QR Code */}
+                        <div className="w-16 h-16 border border-black flex items-center justify-center bg-gray-100">
+                          <span className="text-[8px] text-gray-500">QR</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Signatures */}
+              <div className="flex justify-between mt-8 px-8">
+                <div className="text-center">
+                  <p className="mb-4" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattana</p>
+                  <div className="border-t border-black w-40 mx-auto"></div>
+                  <p className="mt-1" style={{ fontSize: '10px' }}>Prepared by</p>
+                </div>
+                <div className="text-center">
+                  <p className="mb-4" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+                  <div className="border-t border-black w-40 mx-auto"></div>
+                  <p className="mt-1" style={{ fontSize: '10px' }}>Authorised officer</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-3 p-4 border-t">
+            <Button variant="outline" onClick={() => setIsExternalPreviewOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Detail Dialog */}
+      <Dialog open={isEmailDetailDialogOpen} onOpenChange={setIsEmailDetailDialogOpen}>
+        <DialogContent className="max-w-2xl p-0 gap-0">
+          {/* Header */}
+          <DialogHeader className="px-8 pt-5 pb-4 border-b bg-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+              <Mail className="w-4 h-4 text-foreground" />
+              E-mail Status Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedInvoiceForEmail && (() => {
+            // Get display date for email sent - use emailSentAt, or fallback to approvedAt or issueDate for "sent" status
+            const emailStatus = getEmailStatus(selectedInvoiceForEmail)
+            const displayEmailDate = selectedInvoiceForEmail.emailSentAt
+              || (emailStatus === "sent" ? (selectedInvoiceForEmail.approvedAt || selectedInvoiceForEmail.issueDate) : null)
+
+            return (
+              <div className="px-8 pt-6 pb-6">
+                {/* Main Information - Flat Style */}
+                <div className="grid grid-cols-3 gap-8 mb-6 pb-4 border-b">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Invoice Number</p>
+                    <p className="text-base font-bold text-foreground">{selectedInvoiceForEmail.invoiceNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Student Name</p>
+                    <p className="text-base font-bold text-foreground">{selectedInvoiceForEmail.studentName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Email Status</p>
+                    <div className="mt-1">
+                      {getStatusBadge(emailStatus)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Sent Success - Clean Card */}
+                {displayEmailDate && emailStatus === "sent" && (
+                  <div className="rounded-xl border-2 border-green-500 bg-white p-6">
+                    <div className="mb-4">
+                      <h4 className="font-bold text-foreground text-lg mb-1">Email Sent Successfully</h4>
+                      <p className="text-sm text-green-700">Invoice email has been delivered to the recipient</p>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-50">
+                          <CalendarIcon className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground font-medium">Date</p>
+                          <p className="text-sm font-bold text-foreground">
+                            {format(new Date(displayEmailDate), "EEEE, MMMM dd, yyyy")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-50">
+                          <Clock className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground font-medium">Time</p>
+                          <p className="text-sm font-bold text-foreground">
+                            {format(new Date(displayEmailDate), "hh:mm a")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Approval - Info Card */}
+                {emailStatus === "wait" && (
+                  <div className="rounded-xl border-2 border-yellow-500 bg-white p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-2 rounded-lg bg-yellow-50">
+                        <Clock className="w-5 h-5 text-yellow-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-foreground text-base mb-1">Pending Approval</p>
+                        <p className="text-sm text-muted-foreground">
+                          Email will be sent after invoice approval.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Not Sent Yet - Neutral Card */}
+                {emailStatus === "unsent" && (
+                  <div className="rounded-xl border-2 border-slate-300 bg-white p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-2 rounded-lg bg-slate-50">
+                        <Mail className="w-5 h-5 text-slate-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-foreground text-base mb-1">Not Sent Yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Email has not been sent to the recipient.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Footer */}
+          <DialogFooter className="px-8 py-4 border-t bg-white">
+            <div className="flex justify-end w-full">
+              <Button
+                variant="outline"
+                onClick={() => setIsEmailDetailDialogOpen(false)}
+                className="px-6"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

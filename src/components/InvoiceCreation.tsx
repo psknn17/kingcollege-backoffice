@@ -20,6 +20,7 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
+import { logActivity } from "@/lib/activityLog"
 
 interface PreCreatedItem {
   id: string
@@ -59,6 +60,26 @@ const getGrades = (t: (key: string) => string) => [
   t('invoiceCreation.gradeYear13')
 ]
 
+// Mapping from translated grade labels back to grade IDs (used for TuitionByYear lookup)
+const getGradeIdMap = (t: (key: string) => string): { [label: string]: string } => ({
+  [t('invoiceCreation.gradePreNursery')]: 'pre-nursery',
+  [t('invoiceCreation.gradeNursery')]: 'nursery',
+  [t('invoiceCreation.gradeReception')]: 'reception',
+  [t('invoiceCreation.gradeYear1')]: 'year1',
+  [t('invoiceCreation.gradeYear2')]: 'year2',
+  [t('invoiceCreation.gradeYear3')]: 'year3',
+  [t('invoiceCreation.gradeYear4')]: 'year4',
+  [t('invoiceCreation.gradeYear5')]: 'year5',
+  [t('invoiceCreation.gradeYear6')]: 'year6',
+  [t('invoiceCreation.gradeYear7')]: 'year7',
+  [t('invoiceCreation.gradeYear8')]: 'year8',
+  [t('invoiceCreation.gradeYear9')]: 'year9',
+  [t('invoiceCreation.gradeYear10')]: 'year10',
+  [t('invoiceCreation.gradeYear11')]: 'year11',
+  [t('invoiceCreation.gradeYear12')]: 'year12',
+  [t('invoiceCreation.gradeYear13')]: 'year13',
+})
+
 const getRooms = (t: (key: string) => string) => ({
   [t('invoiceCreation.gradePreNursery')]: [t('invoiceCreation.roomPreNurseryA'), t('invoiceCreation.roomPreNurseryB')],
   [t('invoiceCreation.gradeNursery')]: [t('invoiceCreation.roomNurseryA'), t('invoiceCreation.roomNurseryB')],
@@ -78,13 +99,17 @@ const getRooms = (t: (key: string) => string) => ({
   [t('invoiceCreation.gradeYear13')]: [t('invoiceCreation.room13A'), t('invoiceCreation.room13B')],
 })
 
-// Student Groups storage key (same as DiscountManagement)
-const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
-
-// Helper function to get student group discounts
-const getStudentGroupDiscounts = (studentId: string): { name: string, discountType: string, discountPercentage: number, fixedAmount: number }[] => {
+// Helper function to get student group discounts based on category
+const getStudentGroupDiscounts = (studentId: string, category: string): { name: string, discountType: string, discountPercentage: number, fixedAmount: number }[] => {
   try {
-    const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+    // No discounts for ECA, Trip, Exam, and External invoices
+    if (category === "eca" || category === "trip" || category === "exam" || category === "external") {
+      return []
+    }
+
+    // Get storage key based on category
+    const storageKey = `studentGroups_${category}`
+    const stored = localStorage.getItem(storageKey)
     if (!stored) return []
 
     const groups = JSON.parse(stored)
@@ -190,20 +215,8 @@ const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
 // Get storage key for invoices based on invoice category (must match InvoiceManagement)
 const getInvoicesStorageKey = (category: string): string => {
-  switch (category) {
-    case "afterschool":
-      return "afterschoolInvoices"
-    case "event":
-      return "eventInvoices"
-    case "summer":
-      return "summerInvoices"
-    case "external":
-      return "externalInvoices"
-    case "eca":
-      return "ecaInvoices"
-    default:
-      return "createdInvoices" // student invoices
-  }
+  // All invoices are stored in the same key, filtered by category field
+  return "createdInvoices"
 }
 
 // Get storage key based on invoice category
@@ -219,6 +232,15 @@ const getItemsStorageKey = (category: string): string => {
       return "externalItems"
     case "eca":
       return "ecaItems"
+    case "trip":
+      return "tripItems"
+    case "exam":
+      return "examItems"
+    case "bus":
+      return "busItems"
+    case "tuition":
+    case "student":
+      return "invoiceItems" // student/tuition items
     default:
       return "invoiceItems" // student/tuition items
   }
@@ -236,6 +258,15 @@ const getTemplatesStorageKey = (category: string): string => {
       return "externalTemplates"
     case "eca":
       return "ecaTemplates"
+    case "trip":
+      return "tripTemplates"
+    case "exam":
+      return "examTemplates"
+    case "bus":
+      return "busTemplates"
+    case "tuition":
+    case "student":
+      return "invoiceTemplates" // student/tuition templates
     default:
       return "invoiceTemplates" // student/tuition templates
   }
@@ -259,6 +290,7 @@ interface SavedInvoice {
   dueDate: string
   issueDate: string
   status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "partial" | "unpaid" | "overdue" | "cancelled"
+  approvalStatus?: "wait" | "approved" | "rejected"
   term: string
   paymentType: "termly"
   createdAt: string
@@ -317,17 +349,40 @@ const saveInvoiceToStorage = (invoice: SavedInvoice, invoiceType: string = "stud
   }
 }
 
+// Define allowed categories for each invoice type
+const getAllowedCategories = (category: string): string[] | null => {
+  switch (category) {
+    case "student":
+    case "tuition":
+      return ["Tuition"] // Only Tuition items for student/tuition invoices
+    case "eca":
+      return ["ECA", "Music", "Arts", "Sports", "Academic", "Other"]
+    case "trip":
+    case "afterschool":
+      return ["Trip & Other Activity", "Field Trip", "Camp", "Sports Event", "Cultural Event", "Workshop"]
+    case "exam":
+    case "event":
+      return ["Exam", "International Exam", "English Proficiency", "Competition", "School Exam", "Certification"]
+    case "bus":
+    case "summer":
+      return ["School Bus", "Annual Service", "Term Service", "Monthly Service", "Special Service"]
+    default:
+      return null // No filter for external and other types
+  }
+}
+
 // Load items from localStorage (initialize with defaults if empty)
 const loadItemsFromStorage = (invoiceCategory: string = "student"): PreCreatedItem[] => {
   const storageKey = getItemsStorageKey(invoiceCategory)
   const categoryDefaults = getDefaultItems(invoiceCategory)
+  const allowedCategories = getAllowedCategories(invoiceCategory)
 
   try {
     const stored = localStorage.getItem(storageKey)
     if (stored) {
       const items = JSON.parse(stored)
       // Convert Item format to PreCreatedItem format (itemCode -> id if needed)
-      const loadedItems = items.map((item: any) => ({
+      let loadedItems = items.map((item: any) => ({
         id: item.id,
         name: item.name,
         description: item.description,
@@ -345,13 +400,19 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): PreCreatedIt
         if (needsMigration) {
           console.log("[Migration] Updating summer items with applicableGrades")
           const allGrades = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-          const migratedItems = loadedItems.map((item: PreCreatedItem) => ({
+          loadedItems = loadedItems.map((item: PreCreatedItem) => ({
             ...item,
             applicableGrades: item.applicableGrades.length === 0 ? allGrades : item.applicableGrades
           }))
-          localStorage.setItem(storageKey, JSON.stringify(migratedItems))
-          return migratedItems
+          localStorage.setItem(storageKey, JSON.stringify(loadedItems))
         }
+      }
+
+      // Filter by allowed categories if applicable
+      if (allowedCategories) {
+        loadedItems = loadedItems.filter((item: PreCreatedItem) =>
+          allowedCategories.includes(item.category || "")
+        )
       }
 
       return loadedItems
@@ -418,6 +479,14 @@ const getDefaultItems = (invoiceCategory: string): PreCreatedItem[] => {
       return defaultSummerItems
     case "eca":
       return defaultECAItems
+    case "trip":
+      return defaultTripItems
+    case "exam":
+      return defaultExamItems
+    case "bus":
+      return defaultBusItems
+    case "tuition":
+    case "student":
     default:
       return defaultItems
   }
@@ -434,6 +503,14 @@ const getDefaultTemplates = (invoiceCategory: string): ItemTemplate[] => {
       return defaultSummerTemplates
     case "eca":
       return defaultECATemplates
+    case "trip":
+      return defaultTripTemplates
+    case "exam":
+      return defaultExamTemplates
+    case "bus":
+      return defaultBusTemplates
+    case "tuition":
+    case "student":
     default:
       return defaultTemplates
   }
@@ -865,6 +942,64 @@ const defaultECATemplates: ItemTemplate[] = [
   { id: "eca-template-005", name: "Academic Enrichment Bundle", description: "Language, debate, and science activities", items: ["eca-item-016", "eca-item-017", "eca-item-018"], applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true }
 ]
 
+// Default items for Trip & Activities
+const defaultTripItems: PreCreatedItem[] = [
+  { id: "trip-item-001", name: "Field Trip - Science Museum", description: "Educational trip to the Science Museum", amount: 850, category: "Field Trip", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"] },
+  { id: "trip-item-002", name: "Field Trip - Art Gallery", description: "Art appreciation trip to National Gallery", amount: 750, category: "Field Trip", isActive: true, applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9"] },
+  { id: "trip-item-003", name: "Field Trip - Historical Site", description: "History learning trip to Ayutthaya", amount: 1200, category: "Field Trip", isActive: true, applicableGrades: ["Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "trip-item-004", name: "Camping Trip - 2 Days", description: "Overnight camping with outdoor activities", amount: 3500, category: "Camp", isActive: true, applicableGrades: ["Year 5", "Year 6", "Year 7", "Year 8", "Year 9"] },
+  { id: "trip-item-005", name: "Camping Trip - 3 Days", description: "Extended camping with leadership training", amount: 5500, category: "Camp", isActive: true, applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "trip-item-006", name: "Sports Day Event", description: "Annual sports day participation", amount: 500, category: "Sports Event", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "trip-item-007", name: "Swimming Competition", description: "Inter-school swimming competition", amount: 800, category: "Sports Event", isActive: true, applicableGrades: ["Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "trip-item-008", name: "Cultural Festival", description: "Annual cultural festival participation", amount: 600, category: "Cultural Event", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "trip-item-009", name: "Music Concert", description: "School music concert and performance", amount: 450, category: "Cultural Event", isActive: true, applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "trip-item-010", name: "STEM Workshop", description: "Science and technology workshop", amount: 950, category: "Workshop", isActive: true, applicableGrades: ["Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] }
+]
+
+const defaultTripTemplates: ItemTemplate[] = [
+  { id: "trip-template-001", name: "Primary Trip Package", description: "Field trips for primary students", items: ["trip-item-001", "trip-item-006", "trip-item-008"], applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"], isActive: true },
+  { id: "trip-template-002", name: "Secondary Trip Package", description: "Educational trips for secondary students", items: ["trip-item-002", "trip-item-003", "trip-item-005"], applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true }
+]
+
+// Default items for Exam Registration
+const defaultExamItems: PreCreatedItem[] = [
+  { id: "exam-item-001", name: "Cambridge IGCSE Registration", description: "IGCSE examination registration fee", amount: 12500, category: "International Exam", isActive: true, applicableGrades: ["Year 10", "Year 11"] },
+  { id: "exam-item-002", name: "Cambridge A-Level Registration", description: "A-Level examination registration fee", amount: 15000, category: "International Exam", isActive: true, applicableGrades: ["Year 12", "Year 13"] },
+  { id: "exam-item-003", name: "SAT Registration", description: "SAT examination registration fee", amount: 8500, category: "International Exam", isActive: true, applicableGrades: ["Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-004", name: "IELTS Registration", description: "IELTS examination registration fee", amount: 7500, category: "English Proficiency", isActive: true, applicableGrades: ["Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-005", name: "TOEFL Registration", description: "TOEFL examination registration fee", amount: 6500, category: "English Proficiency", isActive: true, applicableGrades: ["Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-006", name: "Cambridge English Certificate", description: "Cambridge English proficiency test", amount: 5500, category: "English Proficiency", isActive: true, applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-007", name: "Math Olympiad Registration", description: "International Math Olympiad registration", amount: 3500, category: "Competition", isActive: true, applicableGrades: ["Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-008", name: "Science Olympiad Registration", description: "International Science Olympiad registration", amount: 3500, category: "Competition", isActive: true, applicableGrades: ["Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-009", name: "Mid-term Exam Fee", description: "School mid-term examination fee", amount: 1500, category: "School Exam", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "exam-item-010", name: "Final Exam Fee", description: "School final examination fee", amount: 2000, category: "School Exam", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] }
+]
+
+const defaultExamTemplates: ItemTemplate[] = [
+  { id: "exam-template-001", name: "IGCSE Full Package", description: "Complete IGCSE exam registration", items: ["exam-item-001", "exam-item-006"], applicableGrades: ["Year 10", "Year 11"], isActive: true },
+  { id: "exam-template-002", name: "A-Level Full Package", description: "Complete A-Level exam registration", items: ["exam-item-002", "exam-item-003"], applicableGrades: ["Year 12", "Year 13"], isActive: true },
+  { id: "exam-template-003", name: "English Proficiency Bundle", description: "English proficiency exams", items: ["exam-item-004", "exam-item-006"], applicableGrades: ["Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true }
+]
+
+// Default items for School Bus
+const defaultBusItems: PreCreatedItem[] = [
+  { id: "bus-item-001", name: "Annual Bus Service - Zone 1", description: "Full year bus service for Zone 1 (0-5 km)", amount: 45000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-002", name: "Annual Bus Service - Zone 2", description: "Full year bus service for Zone 2 (5-10 km)", amount: 55000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-003", name: "Annual Bus Service - Zone 3", description: "Full year bus service for Zone 3 (10-15 km)", amount: 65000, category: "Annual Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-004", name: "Term Bus Service - Zone 1", description: "One term bus service for Zone 1", amount: 16000, category: "Term Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-005", name: "Term Bus Service - Zone 2", description: "One term bus service for Zone 2", amount: 19000, category: "Term Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-006", name: "Term Bus Service - Zone 3", description: "One term bus service for Zone 3", amount: 22000, category: "Term Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-007", name: "Monthly Bus Pass - Zone 1", description: "Monthly bus pass for Zone 1", amount: 5500, category: "Monthly Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-008", name: "Monthly Bus Pass - Zone 2", description: "Monthly bus pass for Zone 2", amount: 6500, category: "Monthly Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-009", name: "Field Trip Transportation", description: "Transportation for field trips and events", amount: 350, category: "Special Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] },
+  { id: "bus-item-010", name: "Sports Event Transportation", description: "Transportation for sports events", amount: 450, category: "Special Service", isActive: true, applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"] }
+]
+
+const defaultBusTemplates: ItemTemplate[] = [
+  { id: "bus-template-001", name: "Annual Service Bundle", description: "Full year bus service packages", items: ["bus-item-001", "bus-item-002"], applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true },
+  { id: "bus-template-002", name: "Term Service Bundle", description: "Term-based bus service packages", items: ["bus-item-004", "bus-item-005"], applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"], isActive: true }
+]
+
 const formatCurrency = (amount: number): string => {
   return `₿${amount.toLocaleString()}`
 }
@@ -933,6 +1068,32 @@ const ecaItemCategories = [
   { id: "Other", label: "Other", icon: FileText, description: "Other ECA activities" }
 ]
 
+// Item categories for Trip & Activities
+const tripItemCategories = [
+  { id: "Field Trip", label: "Field Trip", icon: MapPin, description: "Educational trips and tours" },
+  { id: "Camp", label: "Camp", icon: MapPin, description: "Camping and outdoor activities" },
+  { id: "Sports Event", label: "Sports Event", icon: Zap, description: "Sports competitions and events" },
+  { id: "Cultural Event", label: "Cultural Event", icon: FileText, description: "Arts, music, and cultural activities" },
+  { id: "Workshop", label: "Workshop", icon: GraduationCap, description: "Workshops and training sessions" }
+]
+
+// Item categories for Exam Registration
+const examItemCategories = [
+  { id: "International Exam", label: "International Exam", icon: GraduationCap, description: "Cambridge, SAT, and other international exams" },
+  { id: "English Proficiency", label: "English Proficiency", icon: FileText, description: "IELTS, TOEFL, and English tests" },
+  { id: "Competition", label: "Competition", icon: Zap, description: "Academic competitions and olympiads" },
+  { id: "School Exam", label: "School Exam", icon: GraduationCap, description: "Internal school examinations" },
+  { id: "Certification", label: "Certification", icon: FileText, description: "Professional certifications" }
+]
+
+// Item categories for School Bus
+const busItemCategories = [
+  { id: "Annual Service", label: "Annual Service", icon: MapPin, description: "Full year bus service packages" },
+  { id: "Term Service", label: "Term Service", icon: MapPin, description: "Term-based bus service" },
+  { id: "Monthly Service", label: "Monthly Service", icon: MapPin, description: "Monthly bus passes" },
+  { id: "Special Service", label: "Special Service", icon: Zap, description: "Special trips and events transportation" }
+]
+
 // Get item categories based on invoice type
 const getItemCategories = (invoiceType: string) => {
   switch (invoiceType) {
@@ -944,6 +1105,14 @@ const getItemCategories = (invoiceType: string) => {
       return summerItemCategories
     case "eca":
       return ecaItemCategories
+    case "trip":
+      return tripItemCategories
+    case "exam":
+      return examItemCategories
+    case "bus":
+      return busItemCategories
+    case "tuition":
+    case "student":
     default:
       return itemCategories
   }
@@ -953,13 +1122,18 @@ const getItemCategories = (invoiceType: string) => {
 const getPageTitle = (invoiceType: string, t: (key: string) => string): string => {
   switch (invoiceType) {
     case "afterschool":
+    case "trip":
       return t('invoiceCreation.createTripInvoice')
     case "event":
+    case "exam":
       return t('invoiceCreation.createExamInvoice')
     case "summer":
+    case "bus":
       return t('invoiceCreation.createBusInvoice')
     case "eca":
       return "Create ECA Invoice"
+    case "tuition":
+    case "student":
     default:
       return t('invoiceCreation.createStudentInvoice')
   }
@@ -969,13 +1143,18 @@ const getPageTitle = (invoiceType: string, t: (key: string) => string): string =
 const getCardTitle = (invoiceType: string, t: (key: string) => string): string => {
   switch (invoiceType) {
     case "afterschool":
+    case "trip":
       return t('invoiceCreation.tripInvoiceDetails')
     case "event":
+    case "exam":
       return t('invoiceCreation.examInvoiceDetails')
     case "summer":
+    case "bus":
       return t('invoiceCreation.busInvoiceDetails')
     case "eca":
       return "ECA Invoice Details"
+    case "tuition":
+    case "student":
     default:
       return t('invoiceCreation.studentInvoiceDetails')
   }
@@ -985,13 +1164,18 @@ const getCardTitle = (invoiceType: string, t: (key: string) => string): string =
 const getCardIcon = (invoiceType: string) => {
   switch (invoiceType) {
     case "afterschool":
+    case "trip":
       return MapPin
     case "event":
+    case "exam":
       return FileText
     case "summer":
+    case "bus":
       return MapPin
     case "eca":
       return Zap
+    case "tuition":
+    case "student":
     default:
       return GraduationCap
   }
@@ -1044,6 +1228,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Get translated grades and rooms
   const grades = getGrades(t)
   const rooms = getRooms(t)
+  const gradeIdMap = getGradeIdMap(t) // Map translated labels to grade IDs for TuitionByYear lookup
 
   // Check if this is edit mode
   const isEditMode = !!editInvoice
@@ -1117,8 +1302,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const childOrder = student.childOrder || 1
       const siblingDiscount = getSiblingDiscountPercentage(childOrder, student.academicYear || effectiveAcademicYear, effectiveTerm)
 
-      // Get student group discounts
-      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+      // Get student group discounts (only for tuition and bus categories)
+      const groupDiscounts = getStudentGroupDiscounts(student.studentId, category)
 
       // Check for special discounts from localStorage records
       // Fallback to notes-based detection for backward compatibility
@@ -1291,9 +1476,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         }
         setSelectedStudents([student])
       }
-
-      // Go to preview mode immediately
-      setIsPreviewMode(true)
     }
   }, [editInvoice, isEditMode])
 
@@ -1409,9 +1591,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     }
   }, [isSimplifiedView, invoiceType])
 
-  // Load items when grades are selected for Trip & Activity (afterschool)
+  // Load items when grades are selected for Trip & Activity (afterschool/trip/bus)
   useEffect(() => {
-    if (invoiceType === "afterschool" && selectedGrades.length > 0) {
+    if ((invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") && selectedGrades.length > 0) {
       const allItems = loadItemsFromStorage(invoiceType)
       // Afterschool items don't filter by grade - load all active items
       const filteredItems = allItems.filter(item => item.isActive)
@@ -1437,7 +1619,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setSelectedTemplate("")
     // Set correct category based on invoice type
     setSelectedCategory(invoiceType === "eca" ? "ECA" : (defaultCategory || "Tuition"))
-    setPaymentDeadline("")
+    setPaymentDeadline(undefined)
     setIsPreviewMode(false)
 
     // Load items from localStorage
@@ -1485,12 +1667,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setSelectedStudents([])
     setCsvStudents([])
     setCsvFile(null)
-    setPaymentDeadline("")
+    setPaymentDeadline(undefined)
     setIsPreviewMode(false)
 
     // Auto-select tuition fee from Tuition By Year data (for student/tuition invoices)
     // Now we have: selectedAcademicYear, selectedGrade, and term (just selected)
-    if (invoiceType === "student" && selectedAcademicYear && selectedGrade) {
+    if ((invoiceType === "student" || invoiceType === "tuition" || !invoiceType) && selectedAcademicYear && selectedGrade) {
       try {
         // Load tuition data from localStorage
         const tuitionData = localStorage.getItem("tuitionByYearData")
@@ -1499,13 +1681,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           const yearData = parsedData[selectedAcademicYear]
 
           if (yearData && Array.isArray(yearData) && selectedGrade) {
-            // Convert grade to lowercase format (e.g., "Year 1" -> "year1")
-            const gradeId = selectedGrade.toLowerCase().replace(/\s+/g, '')
+            // Use gradeIdMap to convert translated label to grade ID
+            // This works correctly for both English and Thai languages
+            const gradeId = gradeIdMap[selectedGrade] || selectedGrade.toLowerCase().replace(/\s+/g, '')
 
-            // Find the tuition fees for this grade
-            const gradeTuition = yearData.find((item: any) =>
-              item.gradeLevel === gradeId || item.id === gradeId
-            )
+            // Find the tuition fees for this grade by ID
+            const gradeTuition = yearData.find((item: any) => item.id === gradeId)
 
             if (gradeTuition) {
               // Determine which term amount to use
@@ -1528,6 +1709,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   id: `tuition-${gradeId}-${term}`,
                   name: `${termName} Tuition Fee - ${selectedGrade}`,
                   description: `${termName} tuition payment for ${selectedGrade}`,
+                  category: "Tuition",
                   quantity: 1,
                   amount: termAmount
                 }])
@@ -1584,14 +1766,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       return matchesSearch && notAlreadySelected
     }
 
-    // For Trip & Activity (afterschool), filter by multiple selected grades
-    if (invoiceType === "afterschool") {
+    // For Trip & Activity (afterschool/trip) and School Bus (bus), filter by multiple selected grades
+    if (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") {
       return matchesSearch &&
              selectedGrades.includes(student.grade) &&
              notAlreadySelected
     }
 
-    // For School Bus (summer), filter by single grade (no room filter)
+    // For Summer Activities (summer), filter by single grade (no room filter)
     if (invoiceType === "summer") {
       return matchesSearch &&
              student.grade === selectedGrade &&
@@ -1606,9 +1788,18 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   })
 
   // Calculate discounts for a student
-  const calculateStudentDiscounts = (student: InvoiceStudent, subtotal: number) => {
+  const calculateStudentDiscounts = (student: InvoiceStudent, subtotal: number, invoiceTypeParam: string = "student") => {
     const discountItems: { name: string, amount: number, percentage?: number }[] = []
     let totalDiscountAmount = 0
+
+    // No discounts for ECA, Trip & Activity (afterschool), Exam, and Bus
+    if (invoiceTypeParam === "eca" || invoiceTypeParam === "afterschool" || invoiceTypeParam === "exam" || invoiceTypeParam === "trip" || invoiceTypeParam === "bus") {
+      return {
+        discountItems,
+        totalDiscountAmount,
+        netAmount: subtotal
+      }
+    }
 
     // Ensure discounts object exists
     const discounts = student.discounts || {
@@ -1723,14 +1914,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     // For simplified views, select all available students
     if (isSimplifiedView) {
       setSelectedStudents(availableStudents)
-    } else if (invoiceType === "afterschool") {
-      // For Trip & Activity, select all students from selected grades
+    } else if (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") {
+      // For Trip & Activity and School Bus, select all students from selected grades
       const gradeStudents = availableStudents.filter(s =>
         selectedGrades.includes(s.grade)
       )
       setSelectedStudents(gradeStudents)
     } else if (invoiceType === "summer") {
-      // For School Bus, select all students from selected grade (no room filter)
+      // For Summer Activities, select all students from selected grade (no room filter)
       const gradeStudents = availableStudents.filter(s =>
         s.grade === selectedGrade
       )
@@ -1938,7 +2129,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         (item.description || '').toLowerCase().includes(searchLower)
       const matchesCategory = addItemCategory === "all" || item.category === addItemCategory
       const notAlreadySelected = !selectedItems.find(s => s.id === item.id)
-      return item.isActive && matchesSearch && matchesCategory && notAlreadySelected
+
+      // Filter items based on allowed categories for this invoice type
+      const allowedCategories = getAllowedCategories(invoiceType)
+      const matchesInvoiceType = allowedCategories === null || allowedCategories.includes(item.category)
+
+      return item.isActive && matchesSearch && matchesCategory && notAlreadySelected && matchesInvoiceType
     })
   }
 
@@ -2074,7 +2270,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     selectedStudents.forEach((student) => {
       const invoiceStudent = student as InvoiceStudent
       const subtotal = getTotalAmount()
-      const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal)
+      const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
       const invoiceNumber = generateInvoiceNumber(student.id)
 
       // Calculate registration fees for new students
@@ -2102,6 +2298,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           ? fees.securityDeposit
           : 0
 
+      // Calculate ID Charges (3%)
+      const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
+      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+
       // Add line numbers and itemCode to items
       const itemsWithLineNumbers = selectedItems.map((item, index) => ({
         ...item,
@@ -2117,7 +2317,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         invoiceNumber: invoiceNumber,
         studentName: student.name || '',
         studentId: student.id || '',
-        studentGrade: selectedGrade || '',
+        studentGrade: student.grade || selectedGrade || '',
         studentRoom: student.room || '',
         parentName: student.parentName || '',
         parentEmail: student.email || '',
@@ -2126,20 +2326,22 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         discounts: discountCalc.discountItems,
         totalDiscount: discountCalc.totalDiscountAmount,
         netAmount: discountCalc.netAmount,
-        dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
-        issueDate: now.toISOString().split('T')[0],
+        dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
+        issueDate: format(now, 'yyyy-MM-dd'),
         status: "sent",
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
         invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
         category: category, // Category for filtering by menu type
-        // Event/Trip/Activity name for afterschool/event/summer/eca invoices
-        eventName: (invoiceType === "event" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
+        // Event/Trip/Activity name for afterschool/event/summer/eca/exam invoices
+        eventName: (invoiceType === "exam" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
         // New student data
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
         securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
+        // ID Charges
+        idCharges: idCharges,
         // Excel export fields
         familyCode: invoiceStudent.originalStudent?.familyCode || '',
         adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
@@ -2186,7 +2388,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setAvailableItems([])
     setAvailableTemplates([])
     setSelectedTemplate("")
-    setPaymentDeadline("")
+    setPaymentDeadline(undefined)
     setIsPreviewMode(false)
     setIsConfirmationOpen(false)
   }
@@ -2210,7 +2412,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         console.log("Processing student:", student.name)
       const invoiceStudent = student as InvoiceStudent
       const subtotal = getTotalAmount()
-      const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal)
+      const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
       // Use existing invoice number if editing, otherwise create draft number
       const invoiceNumber = isEditMode && editInvoice?.invoiceNumber
         ? editInvoice.invoiceNumber
@@ -2241,6 +2443,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           ? fees.securityDeposit
           : 0
 
+      // Calculate ID Charges (3%)
+      const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
+      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+
       // Add line numbers and itemCode to items
       const itemsWithLineNumbers = selectedItems.map((item, index) => ({
         ...item,
@@ -2256,7 +2462,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         invoiceNumber: invoiceNumber,
         studentName: student.name || '',
         studentId: student.id || '',
-        studentGrade: selectedGrade || '',
+        studentGrade: student.grade || selectedGrade || '',
         studentRoom: student.room || '',
         parentName: student.parentName || '',
         parentEmail: student.email || '',
@@ -2265,20 +2471,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         discounts: discountCalc.discountItems,
         totalDiscount: discountCalc.totalDiscountAmount,
         netAmount: discountCalc.netAmount,
-        dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
+        dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
         issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : now.toISOString().split('T')[0],
         status: "pending_approval", // Pending approval status
+        approvalStatus: editInvoice?.approvalStatus || "wait",
         term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
         invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
         category: category, // Category for filtering by menu type
-        // Event/Trip/Activity name for afterschool/event/summer/eca invoices
-        eventName: (invoiceType === "event" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
+        // Event/Trip/Activity name for afterschool/event/summer/eca/exam invoices
+        eventName: (invoiceType === "exam" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
         // New student data
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
         securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
+        // ID Charges
+        idCharges: idCharges,
         // Excel export fields
         familyCode: invoiceStudent.originalStudent?.familyCode || '',
         adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
@@ -2297,6 +2506,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       toast.success(isEditMode
         ? `Invoice ${editInvoice?.invoiceNumber} updated successfully`
         : `Submitted ${selectedStudents.length} invoice(s) for approval`)
+      logActivity({
+        action: isEditMode
+          ? `Updated invoice ${editInvoice?.invoiceNumber || ""}`
+          : "Created invoices",
+        module: "Invoices",
+        detail: isEditMode
+          ? `Updated invoice ${editInvoice?.invoiceNumber || "-"}`
+          : `Submitted ${selectedStudents.length} invoice(s) for approval`
+      })
       setIsPreviewDialogOpen(false)
 
       // Navigate back to Invoice Management
@@ -2317,7 +2535,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       setAvailableItems([])
       setAvailableTemplates([])
       setSelectedTemplate("")
-      setPaymentDeadline("")
+      setPaymentDeadline(undefined)
       setIsPreviewMode(false)
 
       console.log("=== Draft saved successfully ===")
@@ -2336,14 +2554,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
   return (
     <div className="space-y-6">
-      {/* Header with Back button */}
+      {/* Header */}
       <div className="flex items-center gap-4">
-        {onNavigateBack && (
-          <Button variant="ghost" onClick={onNavigateBack} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            {t('common.back')}
-          </Button>
-        )}
         <h1 className="text-xl font-semibold">
           {isEditMode ? `Edit Invoice - ${editInvoice?.invoiceNumber || ''}` : getPageTitle(invoiceType, t)}
         </h1>
@@ -2382,10 +2594,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </div>
             )}
 
-            {/* Step 2: Select Term (for Trip & Activity and School Bus) or Grade (for others) */}
+            {/* Step 2: Select Term (for Trip & Activity, Summer, and School Bus) or Grade (for others) */}
             {!isSimplifiedView && selectedAcademicYear && (
-              (invoiceType === "afterschool" || invoiceType === "summer") ? (
-                // Step 2 for Trip & Activity and School Bus: Select Term first
+              (invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? (
+                // Step 2 for Trip & Activity, Summer, and School Bus: Select Term first
                 <div className="space-y-3">
                   <h3 className="font-medium">2. {t("invoiceCreate.selectTerm")}</h3>
                   <Select value={selectedTerm} onValueChange={handleTermChange}>
@@ -2419,8 +2631,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
             {/* Step 3: Select Grade (for Trip & Activity/School Bus) or Term (for others) */}
             {!isSimplifiedView && selectedAcademicYear && (
-              invoiceType === "afterschool" ? (
-                // Step 3 for Trip & Activity: Multi-select Grades
+              (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") ? (
+                // Step 3 for Trip & Activity and School Bus: Multi-select Grades
                 selectedTerm && (
                   <div className="space-y-3">
                     <h3 className="font-medium">
@@ -2529,8 +2741,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </div>
                   <h3 className="font-semibold text-base">
                     {invoiceType === "afterschool" && "Trip & Activity Information"}
-                    {invoiceType === "event" && "Exam Information"}
-                    {invoiceType === "summer" && "School Bus Information"}
+                    {invoiceType === "exam" && "Exam Information"}
+                    {invoiceType === "bus" && "School Bus Information"}
                     {invoiceType === "eca" && "ECA Information"}
                   </h3>
                 </div>
@@ -2582,7 +2794,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 )}
 
                 {/* Exam Fields */}
-                {invoiceType === "event" && (
+                {invoiceType === "exam" && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">
@@ -2671,7 +2883,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 )}
 
                 {/* School Bus Fields */}
-                {invoiceType === "summer" && (
+                {invoiceType === "bus" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">
@@ -2709,9 +2921,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             )}
 
             {/* Step 4 (or Step 2 for simplified views): Select Items */}
-            {(isSimplifiedView || (selectedAcademicYear && selectedTerm && (invoiceType === "afterschool" ? selectedGrades.length > 0 : invoiceType === "summer" ? selectedGrade : selectedGrade))) && (
+            {(isSimplifiedView || (selectedAcademicYear && selectedTerm && ((invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") ? selectedGrades.length > 0 : invoiceType === "summer" ? selectedGrade : selectedGrade))) && (
               <div className="space-y-4">
-                <h3 className="font-medium">{isSimplifiedView ? "2" : ((invoiceType === "afterschool" || invoiceType === "summer") ? "4" : "5")}. {t("invoiceCreate.selectItems")}</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "2" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "4" : "5")}. {t("invoiceCreate.selectItems")}</h3>
 
                 {/* Template Selection */}
                 {availableTemplates.length > 0 && (
@@ -3010,7 +3222,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Step 5 (or Step 3 for simplified views): Set Payment Deadline */}
             {selectedItems.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-medium">{isSimplifiedView ? "3" : ((invoiceType === "afterschool" || invoiceType === "summer") ? "5" : "6")}. Set Payment Deadline</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "3" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "5" : "6")}. Set Payment Deadline</h3>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -3041,7 +3253,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Step 6 (or Step 4 for simplified views): Select Students/Payer */}
             {selectedItems.length > 0 && paymentDeadline && (
               <div className="space-y-4">
-                <h3 className="font-medium">{isSimplifiedView ? "4" : ((invoiceType === "afterschool" || invoiceType === "summer") ? "6" : "7")}. {isSimplifiedView ? "Select Payer" : "Select Students"}</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "4" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "6" : "7")}. {isSimplifiedView ? "Select Payer" : "Select Students"}</h3>
 
                 {/* Payer Selection Type for Simplified Views */}
                 {isSimplifiedView && (
@@ -3329,14 +3541,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                       <p className="text-sm text-blue-700 mb-2">
                         Select all students
-                        {!isSimplifiedView && invoiceType === "afterschool" && selectedGrades.length > 0 && ` in ${selectedGrades.join(", ")}`}
+                        {!isSimplifiedView && (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") && selectedGrades.length > 0 && ` in ${selectedGrades.join(", ")}`}
                         {!isSimplifiedView && invoiceType === "summer" && selectedGrade && ` in ${selectedGrade}`}
-                        {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "summer" && selectedGrade && ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}`}
+                        {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "trip" && invoiceType !== "bus" && invoiceType !== "summer" && selectedGrade && ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}`}
                       </p>
                       <p className="text-sm text-blue-600 mb-3">
                         {isSimplifiedView
                           ? availableStudents.length
-                          : invoiceType === "afterschool"
+                          : (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus")
                             ? availableStudents.filter(s => selectedGrades.includes(s.grade)).length
                             : invoiceType === "summer"
                               ? availableStudents.filter(s => s.grade === selectedGrade).length
@@ -3527,7 +3739,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Step 8 (or Step 5 for simplified views): Preview and Create Invoice */}
             {((selectedStudents.length > 0 || (isSimplifiedView && payerSelectionType === "manual" && manualClientName && manualClientEmail)) && selectedItems.length > 0 && paymentDeadline) && (
               <div className="space-y-4">
-                <h3 className="font-medium">{isSimplifiedView ? "5" : "8"}. {isPreviewMode ? "Confirm and Send" : "Preview Invoice"}</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "5" : "8"}. {isPreviewMode ? "Confirm" : "Preview Invoice"}</h3>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 mb-2">Invoice Summary</h4>
@@ -3569,23 +3781,90 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-2 pt-4 justify-end">
                   {!isPreviewMode ? (
-                    <Button 
-                      onClick={handlePreviewInvoice}
-                      className="flex-1 flex items-center justify-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Preview Invoice
-                    </Button>
+                    <>
+                      <Button
+                        onClick={handlePreviewInvoice}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1.5"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Preview
+                      </Button>
+                      {isEditMode ? (
+                        <>
+                          <Button
+                            onClick={handleSaveAsDraft}
+                            size="sm"
+                            className="flex items-center gap-1.5"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            Save
+                          </Button>
+                          <Button
+                            onClick={handleConfirmAndSendEmail}
+                            size="sm"
+                            className="flex items-center gap-1.5"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            Confirm
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={handleSaveAsDraft}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1.5"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            Draft
+                          </Button>
+                          <Button
+                            onClick={handleConfirmAndSendEmail}
+                            size="sm"
+                            className="flex items-center gap-1.5"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            Confirm
+                          </Button>
+                        </>
+                      )}
+                    </>
                   ) : (
-                    <Button 
-                      onClick={handleConfirmAndSendEmail}
-                      className="flex-1 flex items-center justify-center gap-2"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Confirm & Send Email
-                    </Button>
+                    <>
+                      <Button
+                        onClick={() => setIsPreviewMode(false)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1.5"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </Button>
+                      {isEditMode ? (
+                        <Button
+                          onClick={handleSaveAsDraft}
+                          size="sm"
+                          className="flex items-center gap-1.5"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Save
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleConfirmAndSendEmail}
+                          size="sm"
+                          className="flex items-center gap-1.5"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          Confirm
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -3848,7 +4127,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 onClick={handleFinalConfirmation}
                 className="flex-1"
               >
-                Send Invoices
+                Create Invoices
               </Button>
             </div>
           </div>
@@ -3868,6 +4147,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               {isSimplifiedView && payerSelectionType === "manual" && manualClientName ? (
                 (() => {
                   const subtotal = getTotalAmount()
+                  const idCharges = Math.round(subtotal * 0.03)
+                  const finalTotal = subtotal + idCharges
                   const invoiceNumber = generateInvoiceNumber("MANUAL")
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
@@ -3879,7 +4160,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <img
                           src={SchoolLogo}
                           alt="King's College International School Bangkok"
-                          style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
+                          style={{ height: '140px', margin: '0 auto 8px auto', display: 'block' }}
                         />
                         <p className="text-xs text-gray-600">
                           {SCHOOL_INFO.address}
@@ -3929,7 +4210,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   <span>{tripName}</span>
                                 </div>
                               )}
-                              {invoiceType === "event" && examName && (
+                              {invoiceType === "exam" && examName && (
                                 <div className="flex py-1">
                                   <span style={{ width: '110px' }}>Exam</span>
                                   <span>{examName}</span>
@@ -3941,7 +4222,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   <span>{examName}</span>
                                 </div>
                               )}
-                              {invoiceType === "summer" && busRoute && (
+                              {invoiceType === "bus" && busRoute && (
                                 <div className="flex py-1">
                                   <span style={{ width: '110px' }}>Bus Route</span>
                                   <span>{busRoute}</span>
@@ -3952,7 +4233,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <div style={{ width: '45%' }}>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Invoice no.</span>
-                                <span className="flex-1 text-right">{invoiceNumber}</span>
+                                <span className="flex-1 text-right">Pending Approval</span>
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Invoice date</span>
@@ -3968,7 +4249,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   <span className="flex-1 text-right">{tripDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                 </div>
                               )}
-                              {invoiceType === "event" && examDate && (
+                              {invoiceType === "exam" && examDate && (
                                 <div className="flex py-1">
                                   <span style={{ width: '90px' }}>Exam date</span>
                                   <span className="flex-1 text-right">{examDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
@@ -3986,7 +4267,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   <span className="flex-1 text-right">{tripLocation}</span>
                                 </div>
                               )}
-                              {invoiceType === "summer" && busServiceType && (
+                              {invoiceType === "bus" && busServiceType && (
                                 <div className="flex py-1">
                                   <span style={{ width: '90px' }}>Service type</span>
                                   <span className="flex-1 text-right">{busServiceTypes.find(t => t.value === busServiceType)?.label || busServiceType}</span>
@@ -4020,15 +4301,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
                               </tr>
                             ))}
+                            {/* ID Charges (3%) - Purple */}
+                            {idCharges > 0 && (
+                              <tr className="border-b border-gray-200 text-purple-600">
+                                <td className="py-1.5 px-2 align-top">{selectedItems.length + 1}</td>
+                                <td className="py-1.5 px-2">ID Charges (3%)</td>
+                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(idCharges)}</td>
+                              </tr>
+                            )}
                             {/* Total Row */}
                             <tr className="border-t border-black bg-gray-100">
                               <td colSpan={2} className="py-2 px-2">
                                 <div className="flex justify-between items-center">
-                                  <span style={{ fontSize: '10px' }}>{numberToWords(subtotal)}</span>
+                                  <span style={{ fontSize: '10px' }}>{numberToWords(finalTotal)}</span>
                                   <span className="font-bold ml-4">TOTAL</span>
                                 </div>
                               </td>
-                              <td className="py-2 px-2 text-right font-bold">{formatCurrency(subtotal)}</td>
+                              <td className="py-2 px-2 text-right font-bold">{formatCurrency(finalTotal)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -4131,7 +4420,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
                   const registrationFeesTotal = registrationFeeItems.reduce((sum, item) => sum + item.amount, 0)
                   const subtotal = getTotalAmount() + registrationFeesTotal
-                  const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount()) // Discounts apply only to regular items
+                  const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount(), invoiceType) // Discounts apply only to regular items
                   const invoiceNumber = generateInvoiceNumber(currentStudent.id)
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
@@ -4143,8 +4432,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     ? fees.securityDeposit
                     : 0
 
+                  // Calculate ID Charges (3%)
+                  const subtotalBeforeIdCharges = Math.max(0, discountCalc.netAmount + registrationFeesTotal - securityDepositWaiver)
+                  const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+
                   // Calculate final total
-                  const finalTotal = Math.max(0, discountCalc.netAmount + registrationFeesTotal - securityDepositWaiver)
+                  const finalTotal = subtotalBeforeIdCharges + idCharges
 
                   return (
                     <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
@@ -4153,7 +4446,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <img
                           src={SchoolLogo}
                           alt="King's College International School Bangkok"
-                          style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
+                          style={{ height: '140px', margin: '0 auto 8px auto', display: 'block' }}
                         />
                         <p className="text-xs text-gray-600">
                           {SCHOOL_INFO.address}
@@ -4180,7 +4473,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '110px' }}>Year group</span>
-                                <span>{selectedGrade}</span>
+                                <span>{currentStudent.grade || selectedGrade || '-'}</span>
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '110px' }}>Contact name</span>
@@ -4195,7 +4488,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <div style={{ width: '45%' }}>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Invoice no.</span>
-                                <span className="flex-1 text-right">{invoiceNumber}</span>
+                                <span className="flex-1 text-right">Pending Approval</span>
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Invoice date</span>
@@ -4270,6 +4563,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(discount.amount)}</td>
                               </tr>
                             ))}
+                            {/* ID Charges (3%) - Purple */}
+                            {idCharges > 0 && (
+                              <tr className="border-b border-gray-200 text-purple-600">
+                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + (securityDepositWaiver > 0 ? 1 : 0) + discountCalc.discountItems.length + 1}</td>
+                                <td className="py-1.5 px-2">ID Charges (3%)</td>
+                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(idCharges)}</td>
+                              </tr>
+                            )}
                             {/* Total Row */}
                             <tr className="border-t border-black bg-gray-100">
                               <td colSpan={2} className="py-2 px-2">
@@ -4355,7 +4656,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   </tr>
                                   <tr>
                                     <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Reference no. (Ref 2)</td>
-                                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{invoiceNumber}</td>
+                                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>-</td>
                                   </tr>
                                 </tbody>
                               </table>
@@ -4428,21 +4729,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               ) : <div />}
               <div className="flex gap-3">
                 <Button
-                  variant="outline"
                   onClick={() => setIsPreviewDialogOpen(false)}
                 >
-                  Edit
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleSaveAsDraft}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Draft
-                </Button>
-                <Button onClick={handleConfirmFromPreview}>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Confirm & Send
+                  OK
                 </Button>
               </div>
             </div>
@@ -4470,18 +4759,21 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 className=""
               />
             </div>
-            <Select value={addItemCategory} onValueChange={setAddItemCategory}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="Tuition">Tuition</SelectItem>
-                <SelectItem value="ECA">ECA</SelectItem>
-                <SelectItem value="Trip & Other Activity">Trip</SelectItem>
-                <SelectItem value="School Bus">Bus</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Only show category filter for non-tuition invoice types */}
+            {invoiceType !== "student" && invoiceType !== "tuition" && invoiceType && (
+              <Select value={addItemCategory} onValueChange={setAddItemCategory}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="Tuition">Tuition</SelectItem>
+                  <SelectItem value="ECA">ECA</SelectItem>
+                  <SelectItem value="Trip & Other Activity">Trip</SelectItem>
+                  <SelectItem value="School Bus">Bus</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Items List - Scrollable */}

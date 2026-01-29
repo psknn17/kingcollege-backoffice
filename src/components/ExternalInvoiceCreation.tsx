@@ -1,346 +1,418 @@
-import { useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Badge } from "./ui/badge"
+import { Separator } from "./ui/separator"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
-import { Separator } from "./ui/separator"
-import { Badge } from "./ui/badge"
-import { Search, Plus, CheckCircle, Trash2, Eye, Mail, Package, Save, Building, Calendar, FileText, ArrowLeft, Pencil } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
+import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
-import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
+import { logActivity } from "@/lib/activityLog"
 
-interface PreCreatedItem {
+interface ExternalItem {
   id: string
+  itemCode: string
   name: string
   description: string
   amount: number
   category: string
+  nominalCode?: string
   isActive: boolean
-  applicableGrades: string[]
 }
 
-// localStorage keys
-const ITEMS_STORAGE_KEY = "invoiceItems"
-const CREATED_INVOICES_STORAGE_KEY = "externalInvoices"
-
-// Interface for saved invoice
-interface SavedInvoice {
+interface InvoiceLineItem {
   id: string
-  invoiceNumber: string
-  studentName: string
-  studentId: string
-  studentGrade: string
-  studentRoom: string
-  parentName: string
-  parentEmail: string
-  items: PreCreatedItem[]
-  subtotal: number
-  discounts: { name: string, amount: number, percentage?: number }[]
-  totalDiscount: number
-  netAmount: number
-  dueDate: string
-  issueDate: string
-  status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "partial" | "unpaid" | "overdue" | "cancelled"
-  term: string
-  paymentType: "termly"
-  createdAt: string
-  invoiceType?: "student" | "external"
-  recipientName?: string
-  recipientAddress?: string
-  eventName?: string
-  notes?: string
-}
-
-// Load created invoices from localStorage
-const loadCreatedInvoices = (): SavedInvoice[] => {
-  try {
-    const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch (error) {
-    console.error("Failed to load created invoices:", error)
-  }
-  return []
-}
-
-// Save invoice to localStorage
-const saveInvoiceToStorage = (invoice: SavedInvoice) => {
-  try {
-    const existing = loadCreatedInvoices()
-    const existingIndex = existing.findIndex(inv => inv.invoiceNumber === invoice.invoiceNumber)
-    if (existingIndex >= 0) {
-      existing[existingIndex] = invoice
-    } else {
-      existing.push(invoice)
-    }
-    localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(existing))
-    window.dispatchEvent(new CustomEvent('invoicesUpdated'))
-  } catch (error) {
-    console.error("Failed to save invoice:", error)
-  }
-}
-
-// Load items from localStorage
-const loadItemsFromStorage = (): PreCreatedItem[] => {
-  try {
-    const stored = localStorage.getItem(ITEMS_STORAGE_KEY)
-    if (stored) {
-      const items = JSON.parse(stored)
-      return items.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        amount: item.amount,
-        category: item.category,
-        isActive: item.isActive,
-        applicableGrades: item.applicableGrades
-      }))
-    }
-  } catch (error) {
-    console.error("Failed to load items from localStorage:", error)
-  }
-  return []
+  itemId?: string
+  description: string
+  details?: string
+  amount: number
 }
 
 interface ExternalInvoiceCreationProps {
   onNavigateBack?: () => void
+  editInvoice?: any
 }
 
-export function ExternalInvoiceCreation({ onNavigateBack }: ExternalInvoiceCreationProps) {
+// Load external items from localStorage
+const loadExternalItems = (): ExternalItem[] => {
+  try {
+    const stored = localStorage.getItem("externalItems")
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error("Failed to load external items:", error)
+  }
+  return []
+}
+
+
+export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: ExternalInvoiceCreationProps) {
   const { t } = useLanguage()
+  const isEditMode = !!editInvoice
 
-  // Load items from localStorage
-  const [availableItems] = useState<PreCreatedItem[]>(() => loadItemsFromStorage())
+  // Client information
+  const [clientName, setClientName] = useState("")
+  const [contactName, setContactName] = useState("")
+  const [address, setAddress] = useState("")
 
-  // External invoice state
-  const [recipientName, setRecipientName] = useState("")
-  const [recipientEmail, setRecipientEmail] = useState("")
-  const [recipientAddress, setRecipientAddress] = useState("")
-  const [eventName, setEventName] = useState("")
-  const [selectedItems, setSelectedItems] = useState<PreCreatedItem[]>([])
-  const [paymentDeadline, setPaymentDeadline] = useState<Date | undefined>(undefined)
-  const [notes, setNotes] = useState("")
+  // Invoice details (invoice number will be assigned on approval)
+  const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
 
-  // Dialog states
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false)
-  const [addItemSearchTerm, setAddItemSearchTerm] = useState("")
-  const [addItemCategory, setAddItemCategory] = useState("all")
+  // Line items
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([])
+  const [availableItems, setAvailableItems] = useState<ExternalItem[]>([])
 
-  // Edit item state
-  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<PreCreatedItem | null>(null)
-  const [editItemDescription, setEditItemDescription] = useState("")
-  const [editItemAmount, setEditItemAmount] = useState<number>(0)
+  // UI states
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
 
-  // Get unique categories from items
-  const categories = useMemo(() => {
-    const cats = new Set(availableItems.map(item => item.category))
-    return Array.from(cats)
-  }, [availableItems])
+  // Load available items
+  useEffect(() => {
+    const items = loadExternalItems()
+    setAvailableItems(items)
+  }, [])
 
-  // Filter items for add dialog
-  const filteredAddItems = useMemo(() => {
-    return availableItems.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(addItemSearchTerm.toLowerCase()) ||
-                           item.description.toLowerCase().includes(addItemSearchTerm.toLowerCase())
-      const matchesCategory = addItemCategory === "all" || item.category === addItemCategory
-      const notAlreadySelected = !selectedItems.some(si => si.id === item.id)
-      return matchesSearch && matchesCategory && item.isActive && notAlreadySelected
-    })
-  }, [availableItems, addItemSearchTerm, addItemCategory, selectedItems])
+  // Load edit data
+  useEffect(() => {
+    if (editInvoice) {
+      setClientName(editInvoice.clientName || "")
+      setContactName(editInvoice.contactName || "")
+      setAddress(editInvoice.address || "")
+      setInvoiceDate(new Date(editInvoice.invoiceDate))
+      setDueDate(editInvoice.dueDate ? new Date(editInvoice.dueDate) : undefined)
+      if (editInvoice.items) {
+        setLineItems(editInvoice.items.map((item: any, index: number) => ({
+          id: `item-${index}`,
+          itemId: item.itemId,
+          description: item.description || item.name,
+          details: item.details || "",
+          amount: item.amount
+        })))
+      }
+    }
+  }, [editInvoice])
 
-  // Generate invoice number
-  const generateInvoiceNumber = () => {
-    const year = new Date().getFullYear()
-    const existingInvoices = loadCreatedInvoices()
-    const count = existingInvoices.filter(inv => inv.invoiceNumber.includes(`EXT-${year}`)).length + 1
-    return `EXT-${year}-${count.toString().padStart(6, '0')}`
+  // Filter items
+  const filteredItems = availableItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.itemCode?.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesSearch && item.isActive
+  })
+
+  // Add item to invoice
+  const addItem = (item: ExternalItem) => {
+    const newLineItem: InvoiceLineItem = {
+      id: `line-${Date.now()}`,
+      itemId: item.id,
+      description: item.name,
+      details: "",
+      amount: item.amount
+    }
+    setLineItems([...lineItems, newLineItem])
+    toast.success(`Added: ${item.name}`)
   }
 
-  // Get total amount
-  const getTotalAmount = () => {
-    return selectedItems.reduce((sum, item) => sum + item.amount, 0)
+  // Add custom item
+  const addCustomItem = () => {
+    const newLineItem: InvoiceLineItem = {
+      id: `line-${Date.now()}`,
+      description: "",
+      details: "",
+      amount: 0
+    }
+    setLineItems([...lineItems, newLineItem])
   }
 
-  // Reset form
-  const resetForm = () => {
-    setRecipientName("")
-    setRecipientEmail("")
-    setRecipientAddress("")
-    setEventName("")
-    setSelectedItems([])
-    setPaymentDeadline(undefined)
-    setNotes("")
+  // Update line item
+  const updateLineItem = (id: string, field: keyof InvoiceLineItem, value: any) => {
+    setLineItems(lineItems.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: value }
+      }
+      return item
+    }))
   }
 
-  // Add item to selection
-  const handleAddItem = (item: PreCreatedItem) => {
-    setSelectedItems([...selectedItems, item])
-    setIsAddItemDialogOpen(false)
+  // Remove line item
+  const removeLineItem = (id: string) => {
+    setLineItems(lineItems.filter(item => item.id !== id))
   }
 
-  // Remove item from selection
-  const handleRemoveItem = (index: number) => {
-    setSelectedItems(prev => prev.filter((_, i) => i !== index))
-  }
+  // Calculate subtotal and ID charges
+  const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0)
+  const idCharges = Math.round(subtotal * 0.03)
+  const total = subtotal + idCharges
 
-  // Edit item
-  const handleEditItem = (item: PreCreatedItem) => {
-    setEditingItem(item)
-    setEditItemDescription(item.description)
-    setEditItemAmount(item.amount)
-    setIsEditItemDialogOpen(true)
-  }
+  // Validate form
+  const isValid = clientName && lineItems.length > 0 && lineItems.every(item => item.description && item.amount > 0)
 
-  // Save edited item
-  const handleSaveEditItem = () => {
-    if (!editingItem) return
-    setSelectedItems(prev => prev.map(item =>
-      item.id === editingItem.id
-        ? { ...item, description: editItemDescription, amount: editItemAmount }
-        : item
-    ))
-    setIsEditItemDialogOpen(false)
-    setEditingItem(null)
-    toast.success("Item updated")
-  }
-
-  // Save as Draft
-  const handleSaveAsDraft = () => {
-    if (!recipientName || !recipientEmail) {
-      toast.error("Please fill in recipient name and email")
+  // Save invoice
+  const handleSave = (status: "draft" | "pending") => {
+    if (!isValid && status !== "draft") {
+      toast.error("Please fill in all required fields")
       return
     }
 
-    const subtotal = getTotalAmount()
-    // Use temporary draft number - real invoice number will be generated on approval
-    const draftNumber = `DRAFT-EXT-${Date.now()}`
-    const invoice: SavedInvoice = {
-      id: Date.now().toString(),
-      invoiceNumber: draftNumber,
-      studentName: recipientName,
-      studentId: "EXTERNAL",
-      studentGrade: "-",
-      studentRoom: "-",
-      parentName: recipientName,
-      parentEmail: recipientEmail,
-      items: selectedItems,
-      subtotal,
-      discounts: [],
-      totalDiscount: 0,
-      netAmount: subtotal,
-      dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
-      issueDate: new Date().toISOString().split('T')[0],
-      status: "draft",
-      term: eventName || "External",
-      paymentType: "termly",
-      createdAt: new Date().toISOString(),
+    const invoice = {
+      id: editInvoice?.id || `ext-inv-${Date.now()}`,
+      invoiceNumber: editInvoice?.invoiceNumber || null, // Will be assigned on approval
+      category: "external",
       invoiceType: "external",
-      recipientName: recipientName,
-      recipientAddress: recipientAddress,
-      eventName: eventName,
-      notes: notes
+      studentId: "EXTERNAL",
+      studentName: clientName,
+      parentName: contactName,
+      status,
+      approvalStatus: editInvoice?.approvalStatus || "wait",
+      clientName,
+      contactName,
+      address,
+      invoiceDate: format(invoiceDate, 'yyyy-MM-dd'),
+      dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
+      term: "External",
+      items: lineItems.map(item => ({
+        itemId: item.itemId,
+        name: item.description,
+        description: item.details,
+        amount: item.amount
+      })),
+      subtotal,
+      idCharges,
+      total,
+      createdAt: editInvoice?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
 
-    saveInvoiceToStorage(invoice)
-    toast.success("External invoice saved as draft")
-    resetForm()
-    if (onNavigateBack) onNavigateBack()
+    // Save to localStorage
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      const invoices = stored ? JSON.parse(stored) : []
+
+      if (isEditMode) {
+        const index = invoices.findIndex((inv: any) => inv.id === editInvoice.id)
+        if (index !== -1) {
+          invoices[index] = invoice
+        } else {
+          invoices.push(invoice)
+        }
+      } else {
+        invoices.push(invoice)
+      }
+
+      localStorage.setItem("createdInvoices", JSON.stringify(invoices))
+
+      // Dispatch event to notify InvoiceManagement to refresh
+      window.dispatchEvent(new CustomEvent('invoicesUpdated'))
+
+      toast.success(isEditMode ? "Invoice updated successfully" : "Invoice created successfully")
+      logActivity({
+        action: isEditMode
+          ? `Updated external invoice ${invoice.invoiceNumber || invoice.id}`
+          : `Created external invoice ${invoice.invoiceNumber || invoice.id}`,
+        module: "External Invoices",
+        detail: `Client: ${clientName || "-"}, Amount: ₿${total.toLocaleString()}`
+      })
+
+      // Close preview dialog
+      setIsPreviewDialogOpen(false)
+
+      if (onNavigateBack) {
+        onNavigateBack()
+      }
+    } catch (error) {
+      toast.error("Failed to save invoice")
+      console.error(error)
+    }
   }
 
-  // Create Invoice
-  const handleCreateInvoice = () => {
-    if (!recipientName || !recipientEmail || selectedItems.length === 0) {
-      toast.error("Please fill in recipient details and add at least one item")
-      return
-    }
+  // Render invoice preview (matching the sample format)
+  const renderPreview = () => (
+    <div className="bg-white text-black p-8 max-w-[794px] mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
+      {/* School Header */}
+      <div className="text-center mb-2">
+        <img src={SchoolLogo} alt="School Logo" className="mx-auto mb-1" style={{ height: '180px' }} />
+        <p className="text-xs font-bold tracking-wider">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
+        <p className="text-[10px] text-gray-600 tracking-wide">BANGKOK</p>
+        <p className="text-[9px] text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
+        <p className="text-[9px] text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+      </div>
 
-    const subtotal = getTotalAmount()
-    // Use temporary draft number - real invoice number will be generated on approval
-    const draftNumber = `DRAFT-EXT-${Date.now()}`
-    const invoice: SavedInvoice = {
-      id: Date.now().toString(),
-      invoiceNumber: draftNumber,
-      studentName: recipientName,
-      studentId: "EXTERNAL",
-      studentGrade: "-",
-      studentRoom: "-",
-      parentName: recipientName,
-      parentEmail: recipientEmail,
-      items: selectedItems,
-      subtotal,
-      discounts: [],
-      totalDiscount: 0,
-      netAmount: subtotal,
-      dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
-      issueDate: new Date().toISOString().split('T')[0],
-      status: "pending_approval",
-      term: eventName || "External",
-      paymentType: "termly",
-      createdAt: new Date().toISOString(),
-      invoiceType: "external",
-      recipientName: recipientName,
-      recipientAddress: recipientAddress,
-      eventName: eventName,
-      notes: notes
-    }
+      {/* Invoice Title */}
+      <h1 className="font-black text-center my-6" style={{ fontSize: '32px' }}>INVOICE</h1>
 
-    saveInvoiceToStorage(invoice)
-    toast.success("External invoice created successfully")
-    resetForm()
-    if (onNavigateBack) onNavigateBack()
-  }
+      {/* Client & Invoice Info */}
+      <div className="border border-black p-4 mb-6" style={{ fontSize: '12px' }}>
+        <div className="flex justify-between">
+          {/* Left side - Client Info (ชิดซ้าย) */}
+          <table>
+            <tbody>
+              <tr>
+                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client no.</td>
+                <td className="py-1">000000</td>
+              </tr>
+              <tr>
+                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client name</td>
+                <td className="py-1">{clientName}</td>
+              </tr>
+              <tr>
+                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Contact name</td>
+                <td className="py-1">{contactName || '-'}</td>
+              </tr>
+              <tr>
+                <td className="py-1 font-bold align-top" style={{ paddingRight: '24px' }}>Address</td>
+                <td className="py-1 whitespace-pre-line">{address || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+          {/* Right side - Invoice Info (ชิดขวา) */}
+          <table>
+            <tbody>
+              <tr>
+                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice no.</td>
+                <td className="py-1">
+                  {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
+                    ? editInvoice.invoiceNumber
+                    : isEditMode ? "Pending Approval" : "-"}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice date</td>
+                <td className="py-1">{format(invoiceDate, 'd MMMM yyyy')}</td>
+              </tr>
+              <tr>
+                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>
+                <td className="py-1">{dueDate ? format(dueDate, 'd MMMM yyyy') : '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-  // Create and Send Email
-  const handleCreateAndSendEmail = () => {
-    if (!recipientName || !recipientEmail || selectedItems.length === 0) {
-      toast.error("Please fill in recipient details and add at least one item")
-      return
-    }
+      {/* Items Table */}
+      <table className="w-full border border-black mb-6" style={{ borderCollapse: 'collapse', fontSize: '12px' }}>
+        <thead>
+          <tr className="border-b border-black">
+            <th className="py-2 px-4 text-center font-bold border-r border-black">Description</th>
+            <th className="py-2 px-4 text-center font-bold" style={{ width: '100px' }}>Amount<br/>(THB)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lineItems.map((item) => (
+            <tr key={item.id}>
+              <td className="py-3 px-4 align-top border-r border-black">
+                <div>{item.description}</div>
+                {item.details && (
+                  <div className="text-gray-600">{item.details}</div>
+                )}
+              </td>
+              <td className="py-3 px-4 text-right align-top">
+                {item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          ))}
+          {/* ID Charges row */}
+          {idCharges > 0 && (
+            <tr className="border-t border-black">
+              <td className="py-3 px-4 border-r border-black">
+                <span className="text-purple-600">ID Charges (3%)</span>
+              </td>
+              <td className="py-3 px-4 text-right text-purple-600">
+                {idCharges.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          )}
+          {/* Total row */}
+          <tr className="border-t border-black">
+            <td className="py-3 px-4 border-r border-black">
+              <div className="flex justify-between items-center">
+                <span>{numberToWords(total)}</span>
+                <span className="font-bold">Total</span>
+              </div>
+            </td>
+            <td className="py-3 px-4 text-right font-bold">
+              {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-    const subtotal = getTotalAmount()
-    const invoice: SavedInvoice = {
-      id: Date.now().toString(),
-      invoiceNumber: generateInvoiceNumber(),
-      studentName: recipientName,
-      studentId: "EXTERNAL",
-      studentGrade: "-",
-      studentRoom: "-",
-      parentName: recipientName,
-      parentEmail: recipientEmail,
-      items: selectedItems,
-      subtotal,
-      discounts: [],
-      totalDiscount: 0,
-      netAmount: subtotal,
-      dueDate: paymentDeadline ? paymentDeadline.toISOString().split('T')[0] : "",
-      issueDate: new Date().toISOString().split('T')[0],
-      status: "sent",
-      term: eventName || "External",
-      paymentType: "termly",
-      createdAt: new Date().toISOString(),
-      invoiceType: "external",
-      recipientName: recipientName,
-      recipientAddress: recipientAddress,
-      eventName: eventName,
-      notes: notes
-    }
+      {/* Payment Methods */}
+      <div className="mb-6" style={{ fontSize: '10px', lineHeight: '1.5' }}>
+        <p className="font-bold mb-2">Payment methods</p>
+        <div className="space-y-2">
+          <div className="flex">
+            <span className="mr-2">-</span>
+            <div>
+              <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+            </div>
+          </div>
+          <div className="flex">
+            <span className="mr-2">-</span>
+            <div>
+              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {SCHOOL_INFO.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
+              <table className="mt-2 ml-6">
+                <tbody>
+                  <tr><td className="pr-6 py-0.5">Account name</td><td>{BANK_DETAILS.accountName}</td></tr>
+                  <tr><td className="pr-6 py-0.5">Account number</td><td>{BANK_DETAILS.accountNumber}</td></tr>
+                  <tr><td className="pr-6 py-0.5">Bank name</td><td>{BANK_DETAILS.bankName}</td></tr>
+                  <tr><td className="pr-6 py-0.5">Branch</td><td>{BANK_DETAILS.branch}</td></tr>
+                  <tr><td className="pr-6 py-0.5">Swift code</td><td>KASITHBK</td></tr>
+                  <tr><td className="pr-6 py-0.5">Bank address</td><td>1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="flex">
+            <span className="mr-2">-</span>
+            <div className="flex-1">
+              <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+              <div className="flex justify-between items-start mt-2">
+                <table className="ml-6">
+                  <tbody>
+                    <tr><td className="pr-6 py-0.5">Biller ID no.</td><td>099-4-00259063-3</td></tr>
+                    <tr><td className="pr-6 py-0.5">Reference no. (Ref 1)</td><td>700002</td></tr>
+                    <tr><td className="pr-6 py-0.5">Reference no. (Ref 2)</td><td>
+                      {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
+                        ? editInvoice.invoiceNumber
+                        : "-"}
+                    </td></tr>
+                  </tbody>
+                </table>
+                {/* QR Code */}
+                <div className="w-16 h-16 border border-black flex items-center justify-center bg-gray-100">
+                  <span className="text-[8px] text-gray-500">QR</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    saveInvoiceToStorage(invoice)
-    toast.success("External invoice created and email sent")
-    resetForm()
-    if (onNavigateBack) onNavigateBack()
-  }
+      {/* Signatures */}
+      <div className="flex justify-between mt-8 px-8">
+        <div className="text-center">
+          <p className="mb-4" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattana</p>
+          <div className="border-t border-black w-40 mx-auto"></div>
+          <p className="mt-1" style={{ fontSize: '10px' }}>Prepared by</p>
+        </div>
+        <div className="text-center">
+          <p className="mb-4" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+          <div className="border-t border-black w-40 mx-auto"></div>
+          <p className="mt-1" style={{ fontSize: '10px' }}>Authorised officer</p>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -352,575 +424,327 @@ export function ExternalInvoiceCreation({ onNavigateBack }: ExternalInvoiceCreat
             Back
           </Button>
         )}
-        <h1 className="text-xl font-semibold">Create External Invoice</h1>
+        <h1 className="text-xl font-semibold">
+          {isEditMode ? "Edit External Invoice" : "Create External Invoice"}
+        </h1>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="w-5 h-5" />
-            External Invoice Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {/* Recipient Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                1. Recipient Information
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Recipient Name / Organization *</Label>
-                  <Input
-                    placeholder="Enter recipient name or organization"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input
-                    type="email"
-                    placeholder="Enter email address"
-                    value={recipientEmail}
-                    onChange={(e) => setRecipientEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Address (Optional)</Label>
-                <Textarea
-                  placeholder="Enter address"
-                  value={recipientAddress}
-                  onChange={(e) => setRecipientAddress(e.target.value)}
-                  rows={2}
-                />
-              </div>
-            </div>
-
-            {/* Event Selection */}
-            <div className="space-y-3">
-              <h3 className="font-medium flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                2. Event (Optional)
-              </h3>
-              <Input
-                placeholder="Enter event name (e.g., Summer Camp 2025, Sports Day)"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-              />
-            </div>
-
-            {/* Item Selection */}
-            <div className="space-y-4">
-              <h3 className="font-medium flex items-center gap-2">
-                <Package className="w-4 h-4" />
-                3. Select Items
-              </h3>
-
-              <Button
-                variant="outline"
-                onClick={() => setIsAddItemDialogOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Item
-              </Button>
-
-              {selectedItems.length > 0 && (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="bg-muted px-4 py-2.5 border-b">
-                    <h4 className="font-medium text-sm">Selected Items ({selectedItems.length})</h4>
-                    <p className="text-xs text-muted-foreground">Total: ฿{getTotalAmount().toLocaleString()}</p>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="w-5 h-5" />
+              External Invoice
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-10">
+              {/* Step 1: Client Information */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+                    1
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2">Item</th>
-                          <th className="text-right text-xs font-medium text-muted-foreground px-4 py-2">Category</th>
-                          <th className="text-right text-xs font-medium text-muted-foreground px-4 py-2">Amount</th>
-                          <th className="text-right text-xs font-medium text-muted-foreground px-4 py-2">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedItems.map((item, index) => (
-                          <tr key={`${item.id}-${index}`} className="border-b last:border-0 hover:bg-muted/30">
-                            <td className="px-4 py-3">
-                              <p className="font-medium text-sm">{item.name}</p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {item.category ? (
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    item.category.toLowerCase() === 'tuition'
-                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                      : item.category.toLowerCase() === 'activities'
-                                      ? 'bg-purple-100 text-purple-800 border-purple-200'
-                                      : item.category.toLowerCase() === 'uniform'
-                                      ? 'bg-green-100 text-green-800 border-green-200'
-                                      : 'bg-gray-100 text-gray-800 border-gray-200'
-                                  }
-                                >
-                                  {item.category}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="font-medium">฿{item.amount.toLocaleString()}</span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditItem(item)}
-                                >
-                                  <Pencil className="w-4 h-4 text-blue-500" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveItem(index)}
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
+                  <h3 className="font-semibold">Client Information</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-9">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">
+                      Client name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="Company or individual name"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Contact name</Label>
+                    <Input
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="Mr./Mrs. Contact Person"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Address</Label>
+                    <Input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Full address"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Invoice date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                          {format(invoiceDate, 'dd/MM/yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={invoiceDate}
+                          onSelect={(date) => date && setInvoiceDate(date)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Select Items */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+                    2
+                  </div>
+                  <h3 className="font-semibold">Select Items</h3>
+                </div>
+                <div className="ml-9 space-y-3">
+                  {/* Available Items */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Available Items ({filteredItems.length})</span>
+                    <div className="relative max-w-xs">
+                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 h-8 text-sm w-48"
+                      />
+                    </div>
+                  </div>
+
+                  {filteredItems.length === 0 ? (
+                    <div className="p-6 text-center text-muted-foreground border rounded-lg border-dashed">
+                      <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No items found</p>
+                      <p className="text-xs">Add items from External Invoice &gt; Items & Templates</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredItems.map(item => {
+                        const isAdded = lineItems.some(li => li.itemId === item.id)
+                        return (
+                          <Card
+                            key={item.id}
+                            className={`cursor-pointer transition-all hover:shadow-md ${isAdded ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                            onClick={() => !isAdded && addItem(item)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                                  <p className="text-lg font-semibold text-primary mt-1">
+                                    {formatCurrency(item.amount)}
+                                  </p>
+                                </div>
+                                <div className="ml-2">
+                                  {isAdded ? (
+                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </div>
+                                  ) : (
+                                    <Plus className="w-5 h-5 text-muted-foreground" />
+                                  )}
+                                </div>
                               </div>
-                            </td>
-                          </tr>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <Button variant="outline" onClick={addCustomItem} className="border-dashed border-2">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Custom Line Item
+                  </Button>
+                </div>
+              </div>
+
+              {/* Step 3: Invoice Items & Summary */}
+              {lineItems.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-600 font-semibold text-sm">
+                      3
+                    </div>
+                    <h3 className="font-semibold">Invoice Items ({lineItems.length})</h3>
+                  </div>
+                  <div className="ml-9">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="w-[160px]">Amount (THB)</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lineItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="space-y-2">
+                                {item.itemId ? (
+                                  <span className="font-medium">{item.description}</span>
+                                ) : (
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                                    placeholder="Item description"
+                                    className="h-9"
+                                  />
+                                )}
+                                <Input
+                                  value={item.details || ""}
+                                  onChange={(e) => updateLineItem(item.id, "details", e.target.value)}
+                                  placeholder="Additional details (optional)"
+                                  className="h-8 text-sm text-muted-foreground"
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.amount}
+                                onChange={(e) => updateLineItem(item.id, "amount", parseFloat(e.target.value) || 0)}
+                                className="h-9"
+                              />
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeLineItem(item.id)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                        {/* Subtotal Row */}
+                        {subtotal > 0 && (
+                          <TableRow>
+                            <TableCell className="font-medium">Subtotal</TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(subtotal)}
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        )}
+                        {/* ID Charges Row */}
+                        {idCharges > 0 && (
+                          <TableRow>
+                            <TableCell className="text-purple-600 font-medium">ID Charges (3%)</TableCell>
+                            <TableCell className="text-purple-600 font-medium">
+                              +{formatCurrency(idCharges)}
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        )}
+                        {/* Total Row */}
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-semibold">Total</TableCell>
+                          <TableCell className="font-bold text-lg text-primary">
+                            {formatCurrency(total)}
+                          </TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                    {total > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {numberToWords(total)}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* Payment Deadline */}
-            <div className="space-y-3">
-              <h3 className="font-medium">4. Set Payment Deadline</h3>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="max-w-xs justify-start text-left font-normal"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {paymentDeadline ? format(paymentDeadline, "dd/MM/yyyy") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={paymentDeadline}
-                    onSelect={setPaymentDeadline}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              {paymentDeadline && (
-                <p className="text-sm text-green-600">
-                  Payment deadline set for {format(paymentDeadline, "dd/MM/yyyy")}
-                </p>
+              {/* Step 4: Due Date */}
+              {lineItems.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+                      4
+                    </div>
+                    <h3 className="font-semibold">Payment Due Date</h3>
+                  </div>
+                  <div className="ml-9">
+                    <div className="max-w-[220px] space-y-1.5">
+                      <Label className="text-sm font-medium">Due date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                            {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Select date'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dueDate}
+                            onSelect={(date) => date && setDueDate(date)}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
 
-            {/* Notes */}
-            <div className="space-y-3">
-              <h3 className="font-medium flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                5. Notes (Optional)
-              </h3>
-              <Textarea
-                placeholder="Additional notes for this invoice"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
+              {/* Action Buttons */}
+              <Separator className="my-4" />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsPreviewDialogOpen(true)} disabled={lineItems.length === 0}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </Button>
+                <Button variant="outline" onClick={() => handleSave("draft")}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Draft
+                </Button>
+                <Button onClick={() => handleSave("pending")} disabled={!isValid}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Create Invoice
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsPreviewOpen(true)}
-                className="flex items-center justify-center gap-2"
-                disabled={!recipientName || selectedItems.length === 0}
-              >
-                <Eye className="w-4 h-4" />
-                Preview Invoice
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSaveAsDraft}
-                className="flex items-center justify-center gap-2"
-                disabled={!recipientName || !recipientEmail}
-              >
-                <Save className="w-4 h-4" />
-                Save Draft
-              </Button>
-              <Button
-                onClick={handleCreateInvoice}
-                className="flex items-center justify-center gap-2"
-                disabled={!recipientName || !recipientEmail || selectedItems.length === 0}
-              >
-                <CheckCircle className="w-4 h-4" />
-                Create Invoice
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleCreateAndSendEmail}
-                className="flex items-center justify-center gap-2"
-                disabled={!recipientName || !recipientEmail || selectedItems.length === 0}
-              >
-                <Mail className="w-4 h-4" />
-                Create & Send Email
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview Dialog */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+      {/* Invoice Preview Dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>External Invoice Preview</DialogTitle>
+            <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogDescription>Preview of the external invoice</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col">
-            <div className="p-6 pb-2 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 80px)' }}>
-              {(() => {
-                const issueDate = new Date()
-                const invoiceNumber = generateInvoiceNumber()
-                const finalTotal = getTotalAmount()
-
-                return (
-                  <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
-                    {/* School Header */}
-                    <div className="text-center py-4 border-b border-gray-300 mb-3">
-                      <img
-                        src={SchoolLogo}
-                        alt="King's College International School Bangkok"
-                        style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
-                      />
-                      <p className="text-xs text-gray-600">
-                        {SCHOOL_INFO.address}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
-                      </p>
-                      <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
-                    </div>
-
-                    {/* Recipient & Invoice Info */}
-                    <div className="px-4 py-3">
-                      <div className="border border-black p-4" style={{ fontSize: '11px' }}>
-                        <div className="flex justify-between">
-                          <div style={{ width: '45%' }}>
-                            <div className="flex py-1">
-                              <span style={{ width: '110px' }}>Recipient</span>
-                              <span>{recipientName || '-'}</span>
-                            </div>
-                            <div className="flex py-1">
-                              <span style={{ width: '110px' }}>Email</span>
-                              <span>{recipientEmail || '-'}</span>
-                            </div>
-                            <div className="flex py-1">
-                              <span style={{ width: '110px' }}>Address</span>
-                              <span>{recipientAddress || '-'}</span>
-                            </div>
-                            {eventName && (
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Event</span>
-                                <span>{eventName}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ width: '45%' }}>
-                            <div className="flex py-1">
-                              <span style={{ width: '90px' }}>Invoice no.</span>
-                              <span className="flex-1 text-right">{invoiceNumber}</span>
-                            </div>
-                            <div className="flex py-1">
-                              <span style={{ width: '90px' }}>Invoice date</span>
-                              <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                            </div>
-                            <div className="flex py-1">
-                              <span style={{ width: '90px' }}>Due date</span>
-                              <span className="flex-1 text-right">{paymentDeadline ? paymentDeadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Invoice Items Table */}
-                    <div className="px-4 py-2">
-                      <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
-                        <thead>
-                          <tr className="border-b border-black bg-gray-50">
-                            <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
-                            <th className="py-1.5 px-2 text-left font-semibold">Description</th>
-                            <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedItems.map((item, index) => (
-                            <tr key={item.id} className="border-b border-gray-200">
-                              <td className="py-1.5 px-2 align-top">{index + 1}</td>
-                              <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
-                                <div>{item.name}</div>
-                                {item.description && (
-                                  <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
-                                )}
-                              </td>
-                              <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
-                            </tr>
-                          ))}
-                          <tr className="border-t border-black bg-gray-100">
-                            <td colSpan={2} className="py-2 px-2">
-                              <div className="flex justify-between items-center">
-                                <span style={{ fontSize: '10px' }}>{numberToWords(finalTotal)}</span>
-                                <span className="font-bold ml-4">TOTAL</span>
-                              </div>
-                            </td>
-                            <td className="py-2 px-2 text-right font-bold">{formatCurrency(finalTotal)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Notes Section */}
-                    <div className="px-4 py-2">
-                      <p className="text-gray-400 text-xs">
-                        Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
-                      </p>
-                      {notes && (
-                        <p className="text-gray-600 mt-2">
-                          <strong>Notes:</strong> {notes}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Payment Methods */}
-                    <div className="px-4 py-2" style={{ fontSize: '11px' }}>
-                      <h3 className="font-bold mb-3">Payment methods</h3>
-                      <div className="space-y-3">
-                        <div>
-                          <span>- </span>
-                          <span className="font-medium">Cheque:</span>
-                          <span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only.</span>
-                        </div>
-                        <div>
-                          <span>- </span>
-                          <span className="font-medium">Bank Transfer:</span>
-                          <span> Please email proof of payment to finance@kingsbangkok.ac.th</span>
-                          <table className="mt-3 ml-8">
-                            <tbody>
-                              <tr>
-                                <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account name</td>
-                                <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountName}</td>
-                              </tr>
-                              <tr>
-                                <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account number</td>
-                                <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountNumber}</td>
-                              </tr>
-                              <tr>
-                                <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Bank name</td>
-                                <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.bankName}</td>
-                              </tr>
-                              <tr>
-                                <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Branch</td>
-                                <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.branch}</td>
-                              </tr>
-                              <tr>
-                                <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Swift code</td>
-                                <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.swiftCode}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Signature Section */}
-                    <div className="px-4 py-4">
-                      <div className="flex justify-between px-6">
-                        <div className="text-center">
-                          <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
-                          <div className="w-40 border-t border-black mb-1"></div>
-                          <p style={{ fontSize: '10px' }}>Prepared by</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
-                          <div className="w-40 border-t border-black mb-1"></div>
-                          <p style={{ fontSize: '10px' }}>Authorised officer</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })()}
+            {/* Content */}
+            <div className="flex-1 p-6">
+              {renderPreview()}
             </div>
 
             {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 px-8 py-4 border-t bg-gray-50">
               <Button
-                variant="outline"
-                onClick={() => setIsPreviewOpen(false)}
+                onClick={() => setIsPreviewDialogOpen(false)}
               >
-                Edit
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setIsPreviewOpen(false)
-                  handleSaveAsDraft()
-                }}
-                disabled={!recipientName || !recipientEmail}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save Draft
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsPreviewOpen(false)
-                  handleCreateInvoice()
-                }}
-                disabled={!recipientName || !recipientEmail || selectedItems.length === 0}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Create Invoice
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsPreviewOpen(false)
-                  handleCreateAndSendEmail()
-                }}
-                disabled={!recipientName || !recipientEmail || selectedItems.length === 0}
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Create & Send Email
+                OK
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent className="max-w-md flex flex-col p-6" style={{ maxHeight: '65vh' }}>
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Add Item from List</DialogTitle>
-            <DialogDescription>
-              Select items to add to this invoice
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex gap-2 flex-shrink-0 pb-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={addItemSearchTerm}
-                onChange={(e) => setAddItemSearchTerm(e.target.value)}
-                className="pl-8 h-9"
-              />
-            </div>
-            <Select value={addItemCategory} onValueChange={setAddItemCategory}>
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
-            {filteredAddItems.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No items found</p>
-            ) : (
-              filteredAddItems.map(item => (
-                <div
-                  key={item.id}
-                  className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => handleAddItem(item)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                      <Badge variant="outline" className="mt-1 text-xs">{item.category}</Badge>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-semibold">฿{item.amount.toLocaleString()}</p>
-                      <Button size="sm" variant="ghost" className="mt-1 h-7">
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Item Dialog */}
-      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
-            <DialogDescription>
-              Modify the description and amount for this item
-            </DialogDescription>
-          </DialogHeader>
-          {editingItem && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Item Name</Label>
-                <Input value={editingItem.name} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={editItemDescription}
-                  onChange={(e) => setEditItemDescription(e.target.value)}
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Amount (THB)</Label>
-                <Input
-                  type="number"
-                  value={editItemAmount}
-                  onChange={(e) => setEditItemAmount(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex gap-3 justify-end">
-                <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveEditItem}>
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>

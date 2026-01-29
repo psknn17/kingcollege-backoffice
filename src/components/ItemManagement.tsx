@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -137,222 +137,222 @@ const mockItems: Item[] = [
 const mockECAItems: Item[] = [
   // Piano
   {
-    id: "item-005",
+    id: "eca-item-001",
     itemCode: "ECA-001",
     name: "Piano - Term 1",
     description: "Piano lessons for Term 1 including practice materials",
     amount: 8000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150001",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-006",
+    id: "eca-item-002",
     itemCode: "ECA-002",
     name: "Piano - Term 2",
     description: "Piano lessons for Term 2 including practice materials",
     amount: 8000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150001",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-007",
+    id: "eca-item-003",
     itemCode: "ECA-003",
     name: "Piano - Term 3",
     description: "Piano lessons for Term 3 including practice materials",
     amount: 8000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150001",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   // Guitar
   {
-    id: "item-008",
+    id: "eca-item-004",
     itemCode: "ECA-004",
     name: "Guitar - Term 1",
     description: "Guitar lessons for Term 1 including practice materials",
     amount: 6000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150002",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-009",
+    id: "eca-item-005",
     itemCode: "ECA-005",
     name: "Guitar - Term 2",
     description: "Guitar lessons for Term 2 including practice materials",
     amount: 6000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150002",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-010",
+    id: "eca-item-006",
     itemCode: "ECA-006",
     name: "Guitar - Term 3",
     description: "Guitar lessons for Term 3 including practice materials",
     amount: 6000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150002",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   // Violin
   {
-    id: "item-011",
+    id: "eca-item-007",
     itemCode: "ECA-007",
     name: "Violin - Term 1",
     description: "Violin lessons for Term 1 including practice materials",
     amount: 7500,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150003",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-012",
+    id: "eca-item-008",
     itemCode: "ECA-008",
     name: "Violin - Term 2",
     description: "Violin lessons for Term 2 including practice materials",
     amount: 7500,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150003",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-013",
+    id: "eca-item-009",
     itemCode: "ECA-009",
     name: "Violin - Term 3",
     description: "Violin lessons for Term 3 including practice materials",
     amount: 7500,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150003",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   // Drums
   {
-    id: "item-014",
+    id: "eca-item-010",
     itemCode: "ECA-010",
     name: "Drums - Term 1",
     description: "Drum lessons for Term 1 including practice materials",
     amount: 7000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150004",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-015",
+    id: "eca-item-011",
     itemCode: "ECA-011",
     name: "Drums - Term 2",
     description: "Drum lessons for Term 2 including practice materials",
     amount: 7000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150004",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-016",
+    id: "eca-item-012",
     itemCode: "ECA-012",
     name: "Drums - Term 3",
     description: "Drum lessons for Term 3 including practice materials",
     amount: 7000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150004",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   // Voice/Singing
   {
-    id: "item-017",
+    id: "eca-item-013",
     itemCode: "ECA-013",
     name: "Voice - Term 1",
     description: "Voice and singing lessons for Term 1",
     amount: 5000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150005",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-018",
+    id: "eca-item-014",
     itemCode: "ECA-014",
     name: "Voice - Term 2",
     description: "Voice and singing lessons for Term 2",
     amount: 5000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150005",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-019",
+    id: "eca-item-015",
     itemCode: "ECA-015",
     name: "Voice - Term 3",
     description: "Voice and singing lessons for Term 3",
     amount: 5000,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150005",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   // Music Theory
   {
-    id: "item-020",
+    id: "eca-item-016",
     itemCode: "ECA-016",
     name: "Music Theory - Term 1",
     description: "Music theory and composition lessons for Term 1",
     amount: 4500,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150006",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-021",
+    id: "eca-item-017",
     itemCode: "ECA-017",
     name: "Music Theory - Term 2",
     description: "Music theory and composition lessons for Term 2",
     amount: 4500,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150006",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
   },
   {
-    id: "item-022",
+    id: "eca-item-018",
     itemCode: "ECA-018",
     name: "Music Theory - Term 3",
     description: "Music theory and composition lessons for Term 3",
     amount: 4500,
     category: "ECA",
-    nominalCode: "2130001",
+    nominalCode: "4150006",
     documentType: "SI",
     isActive: true,
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"]
@@ -808,6 +808,7 @@ const mockExternalItems: Item[] = [
     description: "Full day conference room rental with AV equipment",
     amount: 15000,
     category: "Rental",
+    nominalCode: "4210001",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -819,6 +820,7 @@ const mockExternalItems: Item[] = [
     description: "Standard catering package per person",
     amount: 350,
     category: "Catering",
+    nominalCode: "4220001",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -830,6 +832,7 @@ const mockExternalItems: Item[] = [
     description: "Premium catering package per person",
     amount: 550,
     category: "Catering",
+    nominalCode: "4220002",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -841,6 +844,7 @@ const mockExternalItems: Item[] = [
     description: "Auditorium rental for 4 hours with basic setup",
     amount: 25000,
     category: "Rental",
+    nominalCode: "4210002",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -852,6 +856,7 @@ const mockExternalItems: Item[] = [
     description: "Auditorium rental for 8 hours with full setup",
     amount: 45000,
     category: "Rental",
+    nominalCode: "4210003",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -863,6 +868,7 @@ const mockExternalItems: Item[] = [
     description: "Sports field rental per hour",
     amount: 5000,
     category: "Rental",
+    nominalCode: "4210004",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -874,6 +880,7 @@ const mockExternalItems: Item[] = [
     description: "Swimming pool rental per hour",
     amount: 8000,
     category: "Rental",
+    nominalCode: "4210005",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -885,6 +892,7 @@ const mockExternalItems: Item[] = [
     description: "Event parking fee per vehicle",
     amount: 200,
     category: "Service",
+    nominalCode: "4230001",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -896,6 +904,7 @@ const mockExternalItems: Item[] = [
     description: "On-site technical support per hour",
     amount: 1500,
     category: "Service",
+    nominalCode: "4230002",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -907,6 +916,7 @@ const mockExternalItems: Item[] = [
     description: "Event coordination and management fee",
     amount: 10000,
     category: "Service",
+    nominalCode: "4230003",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -918,6 +928,7 @@ const mockExternalItems: Item[] = [
     description: "Complete holiday camp program including activities, meals, and materials",
     amount: 15000,
     category: "Event",
+    nominalCode: "4240001",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -929,6 +940,7 @@ const mockExternalItems: Item[] = [
     description: "Half day holiday camp program (morning or afternoon session)",
     amount: 8000,
     category: "Event",
+    nominalCode: "4240002",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -940,6 +952,7 @@ const mockExternalItems: Item[] = [
     description: "Professional development training course for educators and staff",
     amount: 12000,
     category: "Service",
+    nominalCode: "4230004",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -951,6 +964,7 @@ const mockExternalItems: Item[] = [
     description: "Specialized skills training workshop (per participant)",
     amount: 5000,
     category: "Service",
+    nominalCode: "4230005",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -962,6 +976,7 @@ const mockExternalItems: Item[] = [
     description: "SAT examination fee for gap year students",
     amount: 18000,
     category: "Event",
+    nominalCode: "4240003",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -973,6 +988,7 @@ const mockExternalItems: Item[] = [
     description: "IELTS examination fee for gap year students",
     amount: 7500,
     category: "Event",
+    nominalCode: "4240004",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -984,6 +1000,7 @@ const mockExternalItems: Item[] = [
     description: "TOEFL examination fee for gap year students",
     amount: 6500,
     category: "Event",
+    nominalCode: "4240005",
     isActive: true,
     applicableGrades: [],
     invoiceType: "external"
@@ -1473,8 +1490,24 @@ const mockECATemplates: ItemTemplate[] = [
     id: "eca-template-001",
     name: "Primary ECA Music Bundle - Term 1",
     description: "Popular music courses for primary students - Term 1",
-    items: ["item-005", "item-008", "item-011"],
+    items: ["eca-item-001", "eca-item-004", "eca-item-007"],
     applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    isActive: true
+  },
+  {
+    id: "eca-template-002",
+    name: "Full Year Piano Course",
+    description: "Complete piano lessons for all 3 terms",
+    items: ["eca-item-001", "eca-item-002", "eca-item-003"],
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"],
+    isActive: true
+  },
+  {
+    id: "eca-template-003",
+    name: "Full Year Guitar Course",
+    description: "Complete guitar lessons for all 3 terms",
+    items: ["eca-item-004", "eca-item-005", "eca-item-006"],
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12"],
     isActive: true
   }
 ]
@@ -1610,6 +1643,22 @@ const getTemplatesStorageKey = (category: string): string => {
   }
 }
 
+// Data version for tracking - no longer clears data on version change
+const DATA_VERSION = "2.0.0"
+
+// Update version marker without clearing existing data
+const updateVersionMarker = () => {
+  const storedVersion = localStorage.getItem("itemManagementDataVersion")
+  if (storedVersion !== DATA_VERSION) {
+    // Just update the version marker - DO NOT delete user data
+    localStorage.setItem("itemManagementDataVersion", DATA_VERSION)
+    console.log("ItemManagement: Version marker updated to", DATA_VERSION, "(data preserved)")
+  }
+}
+
+// Run version update on module load
+updateVersionMarker()
+
 // Generate item code based on category
 const generateItemCode = (category: string, index: number): string => {
   const prefix = category === "Tuition" ? "TUI" :
@@ -1632,54 +1681,118 @@ const generateItemCode = (category: string, index: number): string => {
 const isValidStoredData = (storedItems: Item[], invoiceCategory: string): boolean => {
   if (storedItems.length === 0) return false
 
-  // Check if items have correct invoiceType or correct ID prefix
-  if (invoiceCategory === "external") {
-    // External items should have IDs starting with "ext-" or invoiceType="external"
-    return storedItems.some(item => item.id.startsWith("ext-") || item.invoiceType === "external")
-  }
+  // Check if items have correct ID prefix based on category
+  switch (invoiceCategory) {
+    case "external":
+      // External items should have IDs starting with "ext-"
+      return storedItems.some(item => item.id.startsWith("ext-") || item.invoiceType === "external")
 
-  // For afterschool/Trip & Activity, check for "trip-" prefix
-  if (invoiceCategory === "afterschool") {
-    return storedItems.some(item => item.id.startsWith("trip-"))
-  }
+    case "eca":
+      // ECA items should have IDs starting with "eca-item-"
+      return storedItems.some(item => item.id.startsWith("eca-item-"))
 
-  // For event/Exam, check for "exam-" prefix
-  if (invoiceCategory === "event") {
-    return storedItems.some(item => item.id.startsWith("exam-"))
-  }
+    case "trip":
+      // Trip items should have IDs starting with "trip-item-"
+      return storedItems.some(item => item.id.startsWith("trip-item-"))
 
-  // For summer/School Bus, check for "bus-" prefix
-  if (invoiceCategory === "summer") {
-    return storedItems.some(item => item.id.startsWith("bus-"))
-  }
+    case "exam":
+      // Exam items should have IDs starting with "exam-item-"
+      return storedItems.some(item => item.id.startsWith("exam-item-"))
 
-  // For student, check if items have standard item IDs (not ext-, trip-, exam-, bus-)
-  if (invoiceCategory === "student") {
-    return storedItems.some(item =>
-      !item.id.startsWith("ext-") &&
-      !item.id.startsWith("trip-") &&
-      !item.id.startsWith("exam-") &&
-      !item.id.startsWith("bus-")
-    )
-  }
+    case "bus":
+      // Bus items should have IDs starting with "bus-item-"
+      return storedItems.some(item => item.id.startsWith("bus-item-"))
 
-  return true
+    case "tuition":
+    case "student":
+      // Tuition/Student items should have IDs starting with "item-" (not eca-, trip-, exam-, bus-, ext-)
+      return storedItems.some(item =>
+        item.id.startsWith("item-") &&
+        !item.id.startsWith("eca-item-") &&
+        !item.id.startsWith("trip-item-") &&
+        !item.id.startsWith("exam-item-") &&
+        !item.id.startsWith("bus-item-") &&
+        !item.id.startsWith("ext-item-")
+      )
+
+    // Legacy categories (kept for backwards compatibility)
+    case "afterschool":
+      return storedItems.some(item => item.id.startsWith("trip-"))
+    case "event":
+      return storedItems.some(item => item.id.startsWith("exam-"))
+    case "summer":
+      return storedItems.some(item => item.id.startsWith("bus-"))
+
+    default:
+      return true
+  }
+}
+
+// Get storage key for deleted items
+const getDeletedItemsStorageKey = (category: string) => `deletedItems_${category}`
+
+// Load deleted item IDs from localStorage
+const loadDeletedItemIds = (invoiceCategory: string = "student"): Set<string> => {
+  try {
+    const stored = localStorage.getItem(getDeletedItemsStorageKey(invoiceCategory))
+    if (stored) {
+      return new Set(JSON.parse(stored))
+    }
+  } catch (error) {
+    console.error("Failed to load deleted items:", error)
+  }
+  return new Set()
+}
+
+// Save deleted item IDs to localStorage
+const saveDeletedItemIds = (deletedIds: Set<string>, invoiceCategory: string = "student") => {
+  try {
+    localStorage.setItem(getDeletedItemsStorageKey(invoiceCategory), JSON.stringify(Array.from(deletedIds)))
+  } catch (error) {
+    console.error("Failed to save deleted items:", error)
+  }
 }
 
 // Load items from localStorage and merge with category-specific mock items
 const loadItemsFromStorage = (invoiceCategory: string = "student"): Item[] => {
   const categoryMockItems = getMockItems(invoiceCategory)
+  const storageKey = getItemsStorageKey(invoiceCategory)
+  const deletedItemIds = loadDeletedItemIds(invoiceCategory)
+
+  // Define allowed categories for each invoice type
+  const getAllowedCategories = (category: string): string[] | null => {
+    switch (category) {
+      case "student":
+      case "tuition":
+        return ["Tuition"] // Only Tuition items for student/tuition invoices
+      case "eca":
+        return ["ECA", "Music", "Arts", "Sports", "Academic", "Other"]
+      case "trip":
+      case "afterschool":
+        return ["Trip & Other Activity", "Field Trip", "Camp", "Sports Event", "Cultural Event", "Workshop"]
+      case "exam":
+      case "event":
+        return ["Exam", "International Exam", "English Proficiency", "Competition", "School Exam", "Certification"]
+      case "bus":
+      case "summer":
+        return ["School Bus", "Annual Service", "Term Service", "Monthly Service", "Special Service"]
+      default:
+        return null // No filter for external and other types
+    }
+  }
+
+  const allowedCategories = getAllowedCategories(invoiceCategory)
 
   try {
-    const stored = localStorage.getItem(getItemsStorageKey(invoiceCategory))
+    const stored = localStorage.getItem(storageKey)
     if (stored) {
       const storedItems = JSON.parse(stored)
 
       // Validate stored data belongs to correct category
       if (!isValidStoredData(storedItems, invoiceCategory)) {
-        // Invalid data - clear and return mock items
+        // Invalid data - clear and return mock items (excluding deleted ones)
         localStorage.removeItem(getItemsStorageKey(invoiceCategory))
-        return categoryMockItems
+        return categoryMockItems.filter(item => !deletedItemIds.has(item.id))
       }
 
       // Ensure all items have itemCode
@@ -1707,19 +1820,26 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): Item[] => {
         return item;
       });
 
-      // Merge: add any mockItems that don't exist in stored items
+      // Merge: add any mockItems that don't exist in stored items AND haven't been deleted
       const updatedIds = new Set(updatedItems.map((item: Item) => item.id))
-      const newMockItems = categoryMockItems.filter(mockItem => !updatedIds.has(mockItem.id))
+      const newMockItems = categoryMockItems.filter(mockItem =>
+        !updatedIds.has(mockItem.id) && !deletedItemIds.has(mockItem.id)
+      )
 
-      if (newMockItems.length > 0) {
-        return [...updatedItems, ...newMockItems]
+      let finalItems = newMockItems.length > 0 ? [...updatedItems, ...newMockItems] : updatedItems
+
+      // Filter by allowed categories if applicable
+      if (allowedCategories) {
+        finalItems = finalItems.filter(item => allowedCategories.includes(item.category || ""))
       }
-      return updatedItems
+
+      return finalItems
     }
   } catch (error) {
     console.error("Failed to load items from localStorage:", error)
   }
-  return categoryMockItems
+  // Filter out deleted items from mock items before returning
+  return categoryMockItems.filter(item => !deletedItemIds.has(item.id))
 }
 
 // Save items to localStorage
@@ -1983,8 +2103,27 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   }
 
   const handleDeleteItem = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId))
-    toast.success("Item deleted successfully")
+    // Remove item from items list
+    const updatedItems = items.filter(item => item.id !== itemId)
+    setItems(updatedItems)
+
+    // Remove item from all templates that contain it
+    const updatedTemplates = templates.map(template => ({
+      ...template,
+      items: template.items.filter(item => item.itemId !== itemId)
+    }))
+    setTemplates(updatedTemplates)
+
+    // Add to deleted items list to prevent it from being re-added on reload
+    const deletedIds = loadDeletedItemIds(invoiceType)
+    deletedIds.add(itemId)
+    saveDeletedItemIds(deletedIds, invoiceType)
+
+    // Save to localStorage immediately
+    saveItemsToStorage(updatedItems, invoiceType)
+    saveTemplatesToStorage(updatedTemplates, invoiceType)
+
+    toast.success("Item deleted successfully from all templates")
   }
 
   const handleToggleGrade = (grade: string) => {
@@ -2229,10 +2368,30 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <CardTitle>{isExternalView ? "External Items" : isSimplifiedView ? "Activity Items" : "Manage Items"}</CardTitle>
                 <p className="text-muted-foreground">{isSimplifiedView ? "Create and manage items for activities and events" : "Create and manage invoice items"}</p>
               </div>
-              <Button onClick={openCreateItemModal}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Item
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const input = document.createElement('input')
+                    input.type = 'file'
+                    input.accept = '.csv,.xlsx,.xls'
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0]
+                      if (file) {
+                        toast.success(`Importing ${file.name}...`)
+                      }
+                    }
+                    input.click()
+                  }}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import
+                </Button>
+                <Button onClick={openCreateItemModal}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Item
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -2529,16 +2688,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
             <div className="space-y-2">
               <label className="font-medium">Amount (Thai Baht) *</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">฿</span>
-                <Input
-                  type="number"
-                  placeholder="50000"
-                  value={newItem.amount}
-                  onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
-                  className=""
-                />
-              </div>
+              <Input
+                type="number"
+                placeholder="50000"
+                value={newItem.amount}
+                onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
+              />
               {newItem.amount && !isNaN(parseFloat(newItem.amount)) && (
                 <p className="text-sm text-muted-foreground">
                   Amount: {formatCurrency(parseFloat(newItem.amount))}
@@ -2586,6 +2741,27 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-medium">Applicable Grades *</label>
+              <div className="flex flex-wrap gap-2">
+                {grades.map((grade) => (
+                  <Badge
+                    key={grade}
+                    variant={newTemplate.applicableGrades.includes(grade) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => handleToggleGradeForTemplate(grade)}
+                  >
+                    {grade}
+                  </Badge>
+                ))}
+              </div>
+              {newTemplate.applicableGrades.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {newTemplate.applicableGrades.length} grades selected
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

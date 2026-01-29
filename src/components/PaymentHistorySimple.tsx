@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -67,7 +67,7 @@ const mockPayments: PaymentRecord[] = [
 
 export function PaymentHistorySimple() {
   const { t } = useLanguage()
-  const [payments] = useState<PaymentRecord[]>(mockPayments)
+  const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
@@ -75,6 +75,31 @@ export function PaymentHistorySimple() {
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+
+  useEffect(() => {
+    const loadPayments = () => {
+      try {
+        const stored = localStorage.getItem("paymentRecords")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          const normalized = parsed.map((p: any) => ({
+            ...p,
+            transactionDate: p.transactionDate ? new Date(p.transactionDate) : new Date()
+          }))
+          setPayments(normalized)
+          return
+        }
+      } catch (error) {
+        console.error("Failed to load payment records:", error)
+      }
+      setPayments(mockPayments)
+    }
+
+    loadPayments()
+    const handlePaymentsUpdated = () => loadPayments()
+    window.addEventListener("paymentsUpdated", handlePaymentsUpdated)
+    return () => window.removeEventListener("paymentsUpdated", handlePaymentsUpdated)
+  }, [])
 
   const filteredPayments = payments.filter(payment => {
     const matchesSearch =

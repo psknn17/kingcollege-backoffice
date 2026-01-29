@@ -75,7 +75,7 @@ const STUDENTS_STORAGE_KEY = "students_v3" // เปลี่ยนชื่อ 
 const FAMILIES_STORAGE_KEY = "families_v3"
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const STUDENT_DATA_VERSION_KEY = "student_data_version_v3"
-const CURRENT_DATA_VERSION = "3.1" // เวอร์ชันใหม่ล่าสุด - Force reload mock data
+const CURRENT_DATA_VERSION = "3.1" // เวอร์ชันข้อมูล - ไม่ reset ข้อมูลเมื่อเปลี่ยน version
 
 // Helper to load discount options from localStorage
 const loadDiscountOptions = (academicYear: string, term: string) => {
@@ -337,32 +337,23 @@ const generateMockData = () => {
 const sampleData = generateMockData()
 
 export function StudentProvider({ children }: { children: ReactNode }) {
-  // ตรวจสอบเวอร์ชันข้อมูลก่อนเริ่มต้น State
-  const savedVersion = localStorage.getItem(STUDENT_DATA_VERSION_KEY)
-  const shouldReset = savedVersion !== CURRENT_DATA_VERSION
+  // โหลดข้อมูลจาก localStorage ก่อน ถ้าไม่มีค่อยใช้ mock data
+  // ไม่ reset ข้อมูลเมื่อ version เปลี่ยน - เก็บข้อมูลที่มีอยู่
 
   const [students, setStudentsState] = useState<Student[]>(() => {
-    if (shouldReset) {
-      return sampleData.students
-    }
     return loadStudentsFromStorage() || sampleData.students
   })
 
   const [families, setFamiliesState] = useState<Family[]>(() => {
-    if (shouldReset) {
-      return sampleData.families
-    }
     return loadFamiliesFromStorage() || sampleData.families
   })
 
-  // บันทึกเวอร์ชันใหม่หลังจากโหลดข้อมูลเสร็จ
+  // อัปเดต version marker เท่านั้น ไม่ reset ข้อมูล
   useEffect(() => {
-    if (shouldReset) {
+    const savedVersion = localStorage.getItem(STUDENT_DATA_VERSION_KEY)
+    if (savedVersion !== CURRENT_DATA_VERSION) {
       localStorage.setItem(STUDENT_DATA_VERSION_KEY, CURRENT_DATA_VERSION)
-      saveStudentsToStorage(sampleData.students)
-      saveFamiliesToStorage(sampleData.families)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Save to localStorage whenever data changes

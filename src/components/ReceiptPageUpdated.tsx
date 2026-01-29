@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
-import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload } from "lucide-react"
+import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer } from "lucide-react"
 import { PaymentChannel } from "./StatusFilter"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Checkbox } from "./ui/checkbox"
@@ -20,6 +20,8 @@ import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "../contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { ReceiptManagementFlow } from "./ReceiptManagementFlow"
+import { SCHOOL_INFO, numberToWords } from "@/lib/invoiceUtils"
+import SchoolLogo from "@/assets/Logo.png"
 
 // Student data matching StudentContext
 const studentData = [
@@ -42,13 +44,23 @@ interface Receipt {
   studentName: string
   studentId: string
   studentGrade: string
-  amount: number
+  contactName: string
+  address: string
+  invoiceDate: Date
+  invoiceAmount: number
+  amount: number // received amount
+  outstandingAmount: number
   paymentMethod: string
   paymentChannel: "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank"
   transactionDate: Date
   academicYear: string
   term: string
   downloadCount: number
+  bankName?: string
+  bankBranch?: string
+  chequeNo?: string
+  chequeDate?: Date
+  collectorName?: string
 }
 
 interface CreditNote {
@@ -69,103 +81,143 @@ interface CreditNote {
 const mockReceipts: Receipt[] = [
   {
     id: "1",
-    receiptNumber: "RCP-2025-001234",
-    invoiceNumber: "INV-2025-001234",
+    receiptNumber: "R2026-00281",
+    invoiceNumber: "202509614",
     studentName: studentData[0].name,
     studentId: studentData[0].id,
     studentGrade: studentData[0].grade,
-    amount: 125000,
-    paymentMethod: "Credit Card",
-    paymentChannel: "credit_card",
-    transactionDate: new Date("2025-08-15"),
-    academicYear: "2025-2026",
+    contactName: "Khun Parent Smith",
+    address: "123 Sukhumvit Road, Bangkok 10110",
+    invoiceDate: new Date("2025-11-24"),
+    invoiceAmount: 297000,
+    amount: 297000,
+    outstandingAmount: 0,
+    paymentMethod: "BANK",
+    paymentChannel: "counter_bank",
+    transactionDate: new Date("2026-01-07"),
+    academicYear: "2025/2026",
     term: "Term 1",
-    downloadCount: 3
+    downloadCount: 3,
+    collectorName: "Thananchaya Chalorkpunrattana"
   },
   {
     id: "2",
-    receiptNumber: "RCP-2025-001235",
-    invoiceNumber: "INV-2025-001235",
+    receiptNumber: "R2026-00282",
+    invoiceNumber: "202509615",
     studentName: studentData[1].name,
     studentId: studentData[1].id,
     studentGrade: studentData[1].grade,
-    amount: 42000,
-    paymentMethod: "PromptPay",
-    paymentChannel: "qr_payment",
-    transactionDate: new Date("2025-08-14"),
-    academicYear: "2025-2026",
+    contactName: "Khun Parent Smith",
+    address: "456 Silom Road, Bangkok 10500",
+    invoiceDate: new Date("2025-11-20"),
+    invoiceAmount: 115000,
+    amount: 115000,
+    outstandingAmount: 0,
+    paymentMethod: "Credit Card",
+    paymentChannel: "credit_card",
+    transactionDate: new Date("2026-01-06"),
+    academicYear: "2025/2026",
     term: "Term 1",
-    downloadCount: 1
+    downloadCount: 1,
+    collectorName: "Thananchaya Chalorkpunrattana"
   },
   {
     id: "3",
-    receiptNumber: "RCP-2025-001236",
-    invoiceNumber: "INV-2025-001236",
+    receiptNumber: "R2026-00283",
+    invoiceNumber: "202509616",
     studentName: studentData[2].name,
     studentId: studentData[2].id,
     studentGrade: studentData[2].grade,
-    amount: 125000,
-    paymentMethod: "Bank Counter",
+    contactName: "Khun Parent Johnson",
+    address: "789 Sathorn Road, Bangkok 10120",
+    invoiceDate: new Date("2025-11-18"),
+    invoiceAmount: 200000,
+    amount: 200000,
+    outstandingAmount: 0,
+    paymentMethod: "BANK",
     paymentChannel: "counter_bank",
-    transactionDate: new Date("2025-08-13"),
-    academicYear: "2024-2025",
+    transactionDate: new Date("2026-01-05"),
+    academicYear: "2025/2026",
     term: "Term 2",
-    downloadCount: 0
+    downloadCount: 0,
+    collectorName: "Thananchaya Chalorkpunrattana"
   },
   {
     id: "4",
-    receiptNumber: "RCP-2025-001237",
-    invoiceNumber: "INV-2025-001237",
+    receiptNumber: "R2026-00284",
+    invoiceNumber: "202509617",
     studentName: studentData[3].name,
     studentId: studentData[3].id,
     studentGrade: studentData[3].grade,
-    amount: 42000,
-    paymentMethod: "WeChat Pay",
-    paymentChannel: "wechat_pay",
-    transactionDate: new Date("2025-08-12"),
-    academicYear: "2025-2026",
+    contactName: "Khun Parent Williams",
+    address: "321 Rama IV Road, Bangkok 10110",
+    invoiceDate: new Date("2025-11-15"),
+    invoiceAmount: 230000,
+    amount: 115000,
+    outstandingAmount: 115000,
+    paymentMethod: "PromptPay",
+    paymentChannel: "qr_payment",
+    transactionDate: new Date("2026-01-04"),
+    academicYear: "2025/2026",
     term: "Term 2",
-    downloadCount: 2
+    downloadCount: 2,
+    collectorName: "Thananchaya Chalorkpunrattana"
   },
   {
     id: "5",
-    receiptNumber: "RCP-2025-001238",
-    invoiceNumber: "INV-2025-001238",
+    receiptNumber: "R2026-00285",
+    invoiceNumber: "202509618",
     studentName: studentData[4].name,
     studentId: studentData[4].id,
     studentGrade: studentData[4].grade,
-    amount: 125000,
-    paymentMethod: "Credit Card",
-    paymentChannel: "credit_card",
-    transactionDate: new Date("2025-08-11"),
-    academicYear: "2024-2025",
+    contactName: "Khun Parent Brown",
+    address: "654 Petchburi Road, Bangkok 10400",
+    invoiceDate: new Date("2025-11-10"),
+    invoiceAmount: 165000,
+    amount: 165000,
+    outstandingAmount: 0,
+    paymentMethod: "BANK",
+    paymentChannel: "counter_bank",
+    transactionDate: new Date("2026-01-03"),
+    academicYear: "2025/2026",
     term: "Term 3",
-    downloadCount: 0
+    downloadCount: 0,
+    bankName: "Kasikorn Bank",
+    bankBranch: "Sathu Pradit",
+    collectorName: "Thananchaya Chalorkpunrattana"
   }
 ]
 
 // Add more mock data for pagination testing
 for (let i = 6; i <= 120; i++) {
   const student = studentData[i % studentData.length]
-  const paymentMethods = ["Credit Card", "PromptPay", "Bank Counter", "WeChat Pay", "Alipay", "Cash"]
+  const paymentMethods = ["BANK", "Credit Card", "PromptPay", "Cash"]
   const paymentChannels: ("credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank")[] = ["credit_card", "wechat_pay", "alipay", "qr_payment", "counter_bank"]
-  const academicYears = ["2024-2025", "2025-2026"]
+  const academicYears = ["2024/2025", "2025/2026"]
   const terms = ["Term 1", "Term 2", "Term 3"]
+  const invoiceAmount = Math.floor(Math.random() * 200000) + 50000
+  const receivedAmount = invoiceAmount
 
   mockReceipts.push({
     id: i.toString(),
-    receiptNumber: `RCP-2025-${String(1234 + i).padStart(6, '0')}`,
-    invoiceNumber: `INV-2025-${String(1234 + i).padStart(6, '0')}`,
+    receiptNumber: `R2026-${String(280 + i).padStart(5, '0')}`,
+    invoiceNumber: `20250${String(9614 + i)}`,
     studentName: student.name,
     studentId: student.id,
     studentGrade: student.grade,
-    amount: Math.floor(Math.random() * 100000) + 25000,
+    contactName: `Khun Parent ${student.name.split(' ')[1] || 'Contact'}`,
+    address: `${100 + i} Sample Road, Bangkok 10${String(100 + (i % 9)).slice(0, 3)}`,
+    invoiceDate: new Date(2025, 10 + Math.floor(i / 40), Math.floor(Math.random() * 28) + 1),
+    invoiceAmount: invoiceAmount,
+    amount: receivedAmount,
+    outstandingAmount: 0,
     paymentMethod: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
     paymentChannel: paymentChannels[Math.floor(Math.random() * paymentChannels.length)],
-    transactionDate: new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
+    transactionDate: new Date(2026, 0, Math.floor(Math.random() * 28) + 1),
     academicYear: academicYears[Math.floor(Math.random() * academicYears.length)],
     term: terms[Math.floor(Math.random() * terms.length)],
-    downloadCount: Math.floor(Math.random() * 10)
+    downloadCount: Math.floor(Math.random() * 10),
+    collectorName: "Thananchaya Chalorkpunrattana"
   })
 }
 
@@ -247,6 +299,9 @@ interface ReceiptPageProps {
 export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps) {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
+
+  // Categories that should NOT show credit notes
+  const hideCreditNotes = ['eca', 'trip', 'exam', 'bus', 'external'].includes(category || '')
 
   // Tab state
   const [activeTab, setActiveTab] = useState("receipts")
@@ -810,35 +865,35 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
       {/* Tabs with Buttons in same row */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between gap-4 mb-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="receipts">Receipts</TabsTrigger>
-            <TabsTrigger value="credit-notes">Credit Notes</TabsTrigger>
-          </TabsList>
+          {!hideCreditNotes && (
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="receipts">Receipts</TabsTrigger>
+              <TabsTrigger value="credit-notes">Credit Notes</TabsTrigger>
+            </TabsList>
+          )}
 
-          <div className="flex gap-2 shrink-0">
-            {activeTab === "credit-notes" && (
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={() => {
-                  // Create hidden file input
-                  const input = document.createElement('input')
-                  input.type = 'file'
-                  input.accept = '.csv,.xlsx,.xls'
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0]
-                    if (file) {
-                      toast.success(`Importing ${file.name}...`)
-                      // Here you would handle the file upload
-                    }
+          <div className="flex gap-2 shrink-0 ml-auto">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                // Create hidden file input
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.csv,.xlsx,.xls'
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0]
+                  if (file) {
+                    toast.success(`Importing ${file.name}...`)
+                    // Here you would handle the file upload
                   }
-                  input.click()
-                }}
-              >
-                <Upload className="w-4 h-4" />
-                Import
-              </Button>
-            )}
+                }
+                input.click()
+              }}
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
             <Button
               variant="outline"
               className="flex items-center gap-2"
@@ -1294,79 +1349,200 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
         </div>
       )}
 
-      {/* View Receipt Dialog */}
+      {/* View Receipt Dialog - Official Receipt Template */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
             <DialogTitle>Receipt Details</DialogTitle>
           </DialogHeader>
           {viewingReceipt && (
-            <div className="space-y-6">
-              {/* Receipt Header */}
-              <div className="border-b pb-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Receipt Number</p>
-                    <p className="font-mono font-semibold text-lg">{viewingReceipt.receiptNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Invoice Number</p>
-                    <p className="font-mono font-semibold text-lg">{viewingReceipt.invoiceNumber}</p>
+            <div className="bg-white">
+              {/* Receipt Document - A4 style */}
+              <div id="receipt-print-area" className="p-8" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12px', lineHeight: '1.4' }}>
+                {/* School Header */}
+                <div className="text-center mb-4">
+                  <img src={SchoolLogo} alt="King's College International School" className="mx-auto mb-2" style={{ height: '60px' }} />
+                  <p className="text-xs tracking-wider">BANGKOK</p>
+                  <p className="text-xs mt-1">{SCHOOL_INFO.address}</p>
+                  <p className="text-xs">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+                </div>
+
+                {/* RECEIPT Title */}
+                <h1 className="text-center text-2xl font-bold my-6 tracking-wide">RECEIPT</h1>
+
+                {/* Student & Receipt Info Section */}
+                <div className="border border-black p-4 mb-4">
+                  <div className="flex justify-between">
+                    {/* Left Column - Student Info */}
+                    <div className="space-y-1">
+                      <div className="flex">
+                        <span className="w-28">Student ID no.</span>
+                        <span>{viewingReceipt.studentId}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-28">Student name</span>
+                        <span>{viewingReceipt.studentName}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-28">Contact name</span>
+                        <span>{viewingReceipt.contactName}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-28">Address</span>
+                        <span>{viewingReceipt.address}</span>
+                      </div>
+                    </div>
+                    {/* Right Column - Receipt Info */}
+                    <div className="space-y-1 text-right">
+                      <div className="flex justify-end">
+                        <span className="w-24 text-left">Receipt no.</span>
+                        <span className="w-28 text-right">{viewingReceipt.receiptNumber}</span>
+                      </div>
+                      <div className="flex justify-end">
+                        <span className="w-24 text-left">Receipt date</span>
+                        <span className="w-28 text-right">{format(viewingReceipt.transactionDate, "dd MMMM yyyy")}</span>
+                      </div>
+                      <div className="flex justify-end">
+                        <span className="w-24 text-left">Year group</span>
+                        <span className="w-28 text-right">{viewingReceipt.studentGrade}</span>
+                      </div>
+                      <div className="flex justify-end">
+                        <span className="w-24 text-left">School year</span>
+                        <span className="w-28 text-right">{viewingReceipt.academicYear}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Student Information */}
-              <div>
-                <h3 className="font-semibold mb-3">Student Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Student Name</p>
-                    <p className="font-medium">{viewingReceipt.studentName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Student ID</p>
-                    <p className="font-medium">{viewingReceipt.studentId}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Year Group</p>
-                    <Badge variant="secondary">{viewingReceipt.studentGrade}</Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Academic Year</p>
-                    <p className="font-medium">{viewingReceipt.academicYear}</p>
+                {/* Invoice Table */}
+                <table className="w-full border-collapse border border-black mb-4" style={{ fontSize: '11px' }}>
+                  <thead>
+                    <tr className="border-b border-black">
+                      <th className="border-r border-black p-2 text-left w-10">No.</th>
+                      <th className="border-r border-black p-2 text-left w-28">Invoice no.</th>
+                      <th className="border-r border-black p-2 text-left w-32">Invoice date</th>
+                      <th className="border-r border-black p-2 text-right">Invoice amount<br/>(THB)</th>
+                      <th className="border-r border-black p-2 text-right">Received amount<br/>(THB)</th>
+                      <th className="p-2 text-right">Outstanding amount<br/>(THB)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-black">
+                      <td className="border-r border-black p-2">1</td>
+                      <td className="border-r border-black p-2">{viewingReceipt.invoiceNumber}</td>
+                      <td className="border-r border-black p-2">{format(viewingReceipt.invoiceDate, "dd MMMM yyyy")}</td>
+                      <td className="border-r border-black p-2 text-right">{viewingReceipt.invoiceAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="border-r border-black p-2 text-right">{viewingReceipt.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="p-2 text-right">{viewingReceipt.outstandingAmount > 0 ? viewingReceipt.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                    </tr>
+                    {/* Empty rows for spacing */}
+                    <tr className="border-b border-black h-8">
+                      <td className="border-r border-black p-2"></td>
+                      <td className="border-r border-black p-2"></td>
+                      <td className="border-r border-black p-2"></td>
+                      <td className="border-r border-black p-2"></td>
+                      <td className="border-r border-black p-2"></td>
+                      <td className="p-2"></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Total Row */}
+                <div className="border border-black p-2 mb-6 flex">
+                  <div className="flex-1 uppercase text-xs">{numberToWords(viewingReceipt.amount)}</div>
+                  <div className="w-20 text-center font-bold border-l border-r border-black px-2">TOTAL</div>
+                  <div className="w-28 text-right font-bold">{viewingReceipt.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="w-28 text-right">{viewingReceipt.outstandingAmount > 0 ? viewingReceipt.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</div>
+                </div>
+
+                {/* Payment Method Table */}
+                <table className="w-full border-collapse border border-black mb-6" style={{ fontSize: '11px' }}>
+                  <thead>
+                    <tr className="border-b border-black">
+                      <th className="border-r border-black p-2 text-center">Payment method</th>
+                      <th className="border-r border-black p-2 text-center">Bank name</th>
+                      <th className="border-r border-black p-2 text-center">Bank branch</th>
+                      <th className="border-r border-black p-2 text-center">Cheque no.</th>
+                      <th className="p-2 text-center">Cheque date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border-r border-black p-2 text-center">{viewingReceipt.paymentMethod}</td>
+                      <td className="border-r border-black p-2 text-center">{viewingReceipt.bankName || '-'}</td>
+                      <td className="border-r border-black p-2 text-center">{viewingReceipt.bankBranch || '-'}</td>
+                      <td className="border-r border-black p-2 text-center">{viewingReceipt.chequeNo || '-'}</td>
+                      <td className="p-2 text-center">{viewingReceipt.chequeDate ? format(viewingReceipt.chequeDate, "dd/MM/yyyy") : '-'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Signature Section */}
+                <div className="mt-8 mb-4">
+                  <div className="border border-black">
+                    <div className="flex">
+                      <div className="flex-1 p-4 border-r border-black text-center">
+                        <p className="mb-8">{viewingReceipt.collectorName || 'Thananchaya Chalorkpunrattana'}</p>
+                        <div className="border-t border-black pt-2">
+                          <p className="font-semibold">Collector</p>
+                        </div>
+                      </div>
+                      <div className="flex-1 p-4 text-center">
+                        <p className="mb-8 italic text-blue-800">Porntip Jarusintrangkul</p>
+                        <div className="border-t border-black pt-2">
+                          <p className="font-semibold">Authorised signature</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Footer Note */}
+                <p className="text-xs text-center italic mt-4">
+                  In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.
+                </p>
               </div>
 
-              {/* Payment Information */}
-              <div>
-                <h3 className="font-semibold mb-3">Payment Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Amount Paid</p>
-                    <p className="font-semibold text-2xl text-green-600">
-                      ฿{viewingReceipt.amount.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Payment Method</p>
-                    <p className="font-medium">{viewingReceipt.paymentMethod}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Transaction Date</p>
-                    <p className="font-medium">{format(viewingReceipt.transactionDate, "dd MMMM yyyy")}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Term</p>
-                    <p className="font-medium">{viewingReceipt.term}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-4 border-t">
+              {/* Action Buttons - Outside print area */}
+              <div className="flex gap-2 p-4 border-t bg-gray-50">
                 <Button
+                  onClick={() => {
+                    // Print functionality
+                    const printContent = document.getElementById('receipt-print-area')
+                    if (printContent) {
+                      const printWindow = window.open('', '_blank')
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Receipt - ${viewingReceipt.receiptNumber}</title>
+                              <style>
+                                body { font-family: 'Times New Roman', serif; font-size: 12px; line-height: 1.4; margin: 20px; }
+                                table { border-collapse: collapse; width: 100%; }
+                                th, td { border: 1px solid black; padding: 8px; }
+                                .text-center { text-align: center; }
+                                .text-right { text-align: right; }
+                                .text-left { text-align: left; }
+                                .font-bold { font-weight: bold; }
+                                .uppercase { text-transform: uppercase; }
+                                @media print { body { margin: 0; } }
+                              </style>
+                            </head>
+                            <body>${printContent.innerHTML}</body>
+                          </html>
+                        `)
+                        printWindow.document.close()
+                        printWindow.print()
+                      }
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => {
                     downloadReceipt(viewingReceipt.id)
                     setIsViewDialogOpen(false)
@@ -1400,8 +1576,8 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
       </Dialog>
         </TabsContent>
 
-        {/* Credit Notes Tab */}
-        <TabsContent value="credit-notes" className="space-y-6 mt-6">
+        {/* Credit Notes Tab - Hidden for ECA, Trip, Exam, Bus */}
+        {!hideCreditNotes && <TabsContent value="credit-notes" className="space-y-6 mt-6">
           {/* Filters for Credit Notes */}
           <Card>
             <CardHeader className="pb-4">
@@ -1814,80 +1990,82 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
 
           {/* View Credit Note Dialog */}
           <Dialog open={isViewDialogOpen && viewingCreditNote !== null} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Credit Note Details</DialogTitle>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+              <DialogHeader className="px-6 pt-8 pb-6 border-b border-border/50">
+                <DialogTitle className="text-2xl font-bold">Credit Note Details</DialogTitle>
               </DialogHeader>
               {viewingCreditNote && (
-                <div className="space-y-6">
+                <div className="px-6 py-6 space-y-10">
                   {/* Credit Note Header */}
-                  <div className="border-b pb-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted/30 rounded-lg p-5">
+                    <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <p className="text-sm text-muted-foreground">Credit Note Number</p>
-                        <p className="font-mono font-semibold text-lg">{viewingCreditNote.creditNoteNumber}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Credit Note Number</p>
+                        <p className="font-mono font-bold text-lg">{viewingCreditNote.creditNoteNumber}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Invoice Number</p>
-                        <p className="font-mono font-semibold text-lg">{viewingCreditNote.invoiceNumber}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Invoice Number</p>
+                        <p className="font-mono font-bold text-lg">{viewingCreditNote.invoiceNumber}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Student Information */}
                   <div>
-                    <h3 className="font-semibold mb-3">Student Information</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <h3 className="text-base font-semibold text-foreground mb-5">Student Information</h3>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-8">
                       <div>
-                        <p className="text-sm text-muted-foreground">Student Name</p>
-                        <p className="font-medium">{viewingCreditNote.studentName}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Student Name</p>
+                        <p className="text-base font-semibold">{viewingCreditNote.studentName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Student ID</p>
-                        <p className="font-medium">{viewingCreditNote.studentId}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Student ID</p>
+                        <p className="text-base font-semibold">{viewingCreditNote.studentId}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Year Group</p>
-                        <Badge variant="secondary">{viewingCreditNote.studentGrade}</Badge>
+                        <p className="text-sm text-muted-foreground mb-2">Year Group</p>
+                        <p className="text-base font-semibold">{viewingCreditNote.studentGrade}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Academic Year</p>
-                        <p className="font-medium">{viewingCreditNote.academicYear}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Academic Year</p>
+                        <p className="text-base font-semibold">{viewingCreditNote.academicYear}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Credit Note Information */}
                   <div>
-                    <h3 className="font-semibold mb-3">Credit Note Information</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <h3 className="text-base font-semibold text-foreground mb-5">Credit Note Information</h3>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-8">
                       <div>
-                        <p className="text-sm text-muted-foreground">Refund Amount</p>
-                        <p className="font-semibold text-2xl text-green-600">
+                        <p className="text-sm text-muted-foreground mb-2">Refund Amount</p>
+                        <p className="text-4xl font-bold text-green-600">
                           ฿{viewingCreditNote.amount.toLocaleString()}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        {getStatusBadge(viewingCreditNote.status)}
+                        <p className="text-sm text-muted-foreground mb-2">Status</p>
+                        <div className="mt-1">
+                          {getStatusBadge(viewingCreditNote.status)}
+                        </div>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Issue Date</p>
-                        <p className="font-medium">{format(viewingCreditNote.issueDate, "dd MMMM yyyy")}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Issue Date</p>
+                        <p className="text-base font-semibold">{format(viewingCreditNote.issueDate, "dd MMMM yyyy")}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Term</p>
-                        <p className="font-medium">{viewingCreditNote.term}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Term</p>
+                        <p className="text-base font-semibold">{viewingCreditNote.term}</p>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-sm text-muted-foreground">Reason</p>
-                        <p className="font-medium">{viewingCreditNote.reason}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Reason</p>
+                        <p className="text-base font-semibold">{viewingCreditNote.reason}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-4 border-t">
+                  <div className="flex gap-3 pt-8 pb-2 border-t border-border/50">
                     <Button
                       onClick={() => {
                         downloadCreditNote(viewingCreditNote.id)
@@ -1898,9 +2076,9 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                       <Download className="w-4 h-4" />
                       Download PDF
                     </Button>
-                    {viewingCreditNote.status !== "cancelled" && (
+                    {viewingCreditNote.status === "pending" && (
                       <Button
-                        variant="outline"
+                        variant="destructive"
                         onClick={() => {
                           cancelCreditNote(viewingCreditNote.id)
                           setIsViewDialogOpen(false)
@@ -1912,7 +2090,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                       </Button>
                     )}
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       onClick={() => setIsViewDialogOpen(false)}
                     >
                       Close
@@ -1922,7 +2100,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
               )}
             </DialogContent>
           </Dialog>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
 
       {/* Create Receipt Dialog - Use ReceiptManagementFlow with dialog only */}
@@ -1935,8 +2113,8 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
         />
       )}
 
-      {/* Create Credit Note Dialog */}
-      <Dialog open={isCreateCreditNoteOpen} onOpenChange={setIsCreateCreditNoteOpen}>
+      {/* Create Credit Note Dialog - Hidden for ECA, Trip, Exam, Bus */}
+      {!hideCreditNotes && <Dialog open={isCreateCreditNoteOpen} onOpenChange={setIsCreateCreditNoteOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>Create Credit Note</DialogTitle>
@@ -2080,7 +2258,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
     </div>
   )
 }

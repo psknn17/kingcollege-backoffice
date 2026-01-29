@@ -1,10 +1,12 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Separator } from "./ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
   X,
@@ -21,7 +23,10 @@ import {
   Download,
   Printer,
   Eye,
-  Edit
+  Edit,
+  Save,
+  Plus,
+  Trash2
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency as formatCurrencyUtil } from "@/lib/invoiceUtils"
@@ -33,8 +38,17 @@ interface ViewModalProps {
   type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template"
   data: any
   onEdit?: (data: any) => void
+  onSave?: (data: any) => void
   onDownload?: (data: any) => void
   onPrint?: (data: any) => void
+  defaultPreview?: boolean
+  previewOnly?: boolean
+}
+
+// Helper function to check if invoice can be edited (not yet approved)
+const canEditInvoice = (status: string): boolean => {
+  const nonEditableStatuses = ["approved", "sent", "paid", "overdue", "cancelled"]
+  return !nonEditableStatuses.includes(status?.toLowerCase() || "")
 }
 
 const formatCurrency = (amount: number): string => {
@@ -69,11 +83,89 @@ const getStatusBadge = (status: string) => {
   )
 }
 
-export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onPrint }: ViewModalProps) {
+export function ViewModal({
+  isOpen,
+  onClose,
+  type,
+  data,
+  onEdit,
+  onSave,
+  onDownload,
+  onPrint,
+  defaultPreview = false,
+  previewOnly = false
+}: ViewModalProps) {
   const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState("details")
 
+  // Track if user manually switched to preview mode
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
+
+  // Editable fields state
+  const [editedData, setEditedData] = useState<any>(null)
+
+  // Reset preview mode and update data when modal opens
+  useEffect(() => {
+    if (isOpen && data) {
+      setEditedData({
+        ...data,
+        items: data.items ? [...data.items] : []
+      })
+      setIsPreviewMode(previewOnly || defaultPreview)
+    }
+  }, [isOpen, data, type, defaultPreview, previewOnly])
+
   if (!data) return null
+
+  // Handle item changes
+  const handleItemChange = (index: number, field: string, value: any) => {
+    if (!editedData) return
+    const newItems = [...editedData.items]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setEditedData({ ...editedData, items: newItems })
+  }
+
+  // Add new item
+  const handleAddItem = () => {
+    if (!editedData) return
+    const newItem = {
+      id: `item-${Date.now()}`,
+      name: "",
+      description: "",
+      amount: 0,
+      discountedAmount: 0
+    }
+    setEditedData({ ...editedData, items: [...editedData.items, newItem] })
+  }
+
+  // Remove item
+  const handleRemoveItem = (index: number) => {
+    if (!editedData) return
+    const newItems = editedData.items.filter((_: any, i: number) => i !== index)
+    setEditedData({ ...editedData, items: newItems })
+  }
+
+  // Handle field change
+  const handleFieldChange = (field: string, value: any) => {
+    if (!editedData) return
+    setEditedData({ ...editedData, [field]: value })
+  }
+
+  // Save changes
+  const handleSaveChanges = () => {
+    if (onSave && editedData) {
+      onSave(editedData)
+      setIsPreviewMode(false)
+      toast.success("Invoice saved successfully")
+      onClose()
+    }
+  }
+
+  // Calculate total
+  const calculateTotal = () => {
+    if (!editedData?.items) return 0
+    return editedData.items.reduce((sum: number, item: any) => sum + (Number(item.discountedAmount) || Number(item.amount) || 0), 0)
+  }
 
   const renderInvoiceView = () => {
     const total = data.total || data.amount || data.items?.reduce((sum: number, item: any) => sum + (item.discountedAmount || item.amount || 0), 0) || 0
@@ -342,7 +434,7 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
   )
 
   const renderItemView = () => (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="flex-1">
@@ -351,39 +443,62 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
             {getStatusBadge(data.isActive ? "active" : "inactive")}
           </div>
           {data.description && (
-            <p className="text-sm text-muted-foreground">{data.description}</p>
+            <p className="text-sm text-muted-foreground mt-1">{data.description}</p>
           )}
         </div>
-        <p className="text-xl font-bold text-primary">{formatCurrency(data.amount)}</p>
+        <p className="text-2xl font-bold text-primary">{formatCurrency(data.amount)}</p>
       </div>
 
       {/* Item Details - Compact Table */}
-      <div className="bg-muted/50 rounded-lg p-3">
-        <table className="w-full text-sm">
-          <tbody>
-            <tr>
-              <td className="text-muted-foreground py-1 w-32">Item Code</td>
-              <td className="font-mono py-1">{data.itemCode || '-'}</td>
-              <td className="text-muted-foreground py-1 w-32">Category</td>
-              <td className="py-1"><Badge variant="outline" className="text-xs">{data.category}</Badge></td>
-            </tr>
-            <tr>
-              <td className="text-muted-foreground py-1">Nominal Code</td>
-              <td className="font-mono py-1">{data.nominalCode || '-'}</td>
-              <td className="text-muted-foreground py-1">Doc Type</td>
-              <td className="py-1">{data.documentType || 'SI'}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div className="bg-muted/50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Item Information</h4>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Item ID</span>
+            <span className="font-mono text-gray-900">{data.id || '-'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Item Code</span>
+            <span className="font-mono text-gray-900">{data.itemCode || '-'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Category</span>
+            <Badge variant="outline" className="text-xs">{data.category || '-'}</Badge>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Nominal Code</span>
+            <span className="font-mono text-gray-900">{data.nominalCode || '-'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Document Type</span>
+            <span className="text-gray-900">{data.documentType === 'SI' ? 'Sales Invoice (SI)' : data.documentType === 'CI' ? 'Credit Invoice (CI)' : data.documentType || 'SI'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Invoice Type</span>
+            <span className="text-gray-900 capitalize">{data.invoiceType || 'Student'}</span>
+          </div>
+          {data.appointmentDate && (
+            <div className="flex justify-between col-span-2">
+              <span className="text-muted-foreground">Appointment Date</span>
+              <span className="text-gray-900">{formatDate(data.appointmentDate)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Applicable Grades - Compact */}
+      {/* Applicable Grades */}
       {data.applicableGrades && data.applicableGrades.length > 0 && (
-        <div>
-          <label className="text-xs text-muted-foreground">Applicable: </label>
-          <span className="text-xs text-gray-700">
-            {data.applicableGrades.length === 16 ? "All Grades" : data.applicableGrades.join(", ")}
-          </span>
+        <div className="bg-muted/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Applicable Grades</h4>
+          {data.applicableGrades.length === 16 ? (
+            <Badge variant="secondary" className="text-xs">All Grades (Pre-Nursery - Year 13)</Badge>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {data.applicableGrades.map((grade: string, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs">{grade}</Badge>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -580,18 +695,191 @@ export function ViewModal({ isOpen, onClose, type, data, onEdit, onDownload, onP
 
   // Special layout for invoice type
   if (type === "invoice") {
+    const invoiceCanBeEdited = canEditInvoice(data?.status)
+    const showPreview = previewOnly || isPreviewMode
+
+    // Render editable invoice view
+    const renderEditableInvoiceView = () => {
+      if (!editedData) return null
+
+      return (
+        <div className="space-y-4 p-4">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b pb-3">
+            <h2 className="text-lg font-semibold">Edit Invoice - {editedData.invoiceNumber || editedData.id}</h2>
+            <Badge variant="outline">{editedData.status}</Badge>
+          </div>
+
+          {/* Student Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm text-gray-600">Student Information</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Student Name</Label>
+                  <Input
+                    value={editedData.studentName || ""}
+                    onChange={(e) => handleFieldChange("studentName", e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Student ID</Label>
+                  <Input
+                    value={editedData.studentId || ""}
+                    onChange={(e) => handleFieldChange("studentId", e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Grade</Label>
+                  <Input
+                    value={editedData.grade || editedData.studentGrade || ""}
+                    onChange={(e) => handleFieldChange("grade", e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm text-gray-600">Invoice Details</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Due Date</Label>
+                  <Input
+                    type="date"
+                    value={editedData.dueDate ? new Date(editedData.dueDate).toISOString().split('T')[0] : ""}
+                    onChange={(e) => handleFieldChange("dueDate", e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Parent Email</Label>
+                  <Input
+                    value={editedData.parentEmail || ""}
+                    onChange={(e) => handleFieldChange("parentEmail", e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Items */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-sm text-gray-600">Invoice Items</h3>
+              <Button size="sm" variant="outline" onClick={handleAddItem} className="h-7 text-xs">
+                <Plus className="w-3 h-3 mr-1" />
+                Add Item
+              </Button>
+            </div>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-xs">Description</th>
+                    <th className="px-3 py-2 text-right font-medium text-xs w-32">Amount</th>
+                    <th className="px-3 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editedData.items?.map((item: any, index: number) => (
+                    <tr key={item.id || index} className="border-t">
+                      <td className="px-3 py-2">
+                        <Input
+                          value={item.name || item.description || ""}
+                          onChange={(e) => handleItemChange(index, "name", e.target.value)}
+                          className="h-7 text-sm"
+                          placeholder="Item description"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          type="number"
+                          value={item.discountedAmount || item.amount || 0}
+                          onChange={(e) => {
+                            const val = Number(e.target.value)
+                            handleItemChange(index, "amount", val)
+                            handleItemChange(index, "discountedAmount", val)
+                          }}
+                          className="h-7 text-sm text-right"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveItem(index)}
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50 border-t">
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-sm">Total</td>
+                    <td className="px-3 py-2 text-right font-bold text-sm">฿{calculateTotal().toLocaleString()}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsPreviewMode(false)
+        }
+        onClose()
+      }}>
         <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogTitle>{!isPreviewMode ? "Edit Invoice" : "Invoice Preview"}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col">
             <div className="flex-1 p-6">
-              {renderInvoiceView()}
+              {showPreview ? renderInvoiceView() : renderEditableInvoiceView()}
             </div>
-            <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
-              <Button variant="outline" onClick={onClose}>
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+              {invoiceCanBeEdited && !previewOnly && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsPreviewMode(!isPreviewMode)}
+                    className="flex items-center gap-1.5"
+                  >
+                    {!isPreviewMode ? (
+                      <>
+                        <Eye className="w-3.5 h-3.5" />
+                        Preview
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-3.5 h-3.5" />
+                        Edit
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveChanges}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Save
+                  </Button>
+                </>
+              )}
+              <Button variant="outline" size="sm" onClick={onClose}>
                 {t("common.close")}
               </Button>
             </div>

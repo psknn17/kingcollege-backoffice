@@ -125,6 +125,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
   const [termFilter, setTermFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<PaymentStatus>("all")
   const [gradeFilter, setGradeFilter] = useState("all")
+  const [paymentChannelFilter, setPaymentChannelFilter] = useState<string>("all")
+  const [amountMin, setAmountMin] = useState<string>("")
+  const [amountMax, setAmountMax] = useState<string>("")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null)
@@ -207,7 +210,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       filtered = filtered.filter(payment =>
         payment.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+        payment.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.payerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (payment.referenceNumber && payment.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     }
 
@@ -221,6 +226,24 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
     if (gradeFilter !== "all") {
       filtered = filtered.filter(payment => payment.studentGrade === gradeFilter)
+    }
+
+    if (paymentChannelFilter !== "all") {
+      filtered = filtered.filter(payment => payment.paymentChannel === paymentChannelFilter)
+    }
+
+    if (amountMin) {
+      const minAmount = parseFloat(amountMin)
+      if (!isNaN(minAmount)) {
+        filtered = filtered.filter(payment => payment.amount >= minAmount)
+      }
+    }
+
+    if (amountMax) {
+      const maxAmount = parseFloat(amountMax)
+      if (!isNaN(maxAmount)) {
+        filtered = filtered.filter(payment => payment.amount <= maxAmount)
+      }
     }
 
     if (dateFrom) {
@@ -241,6 +264,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     setTermFilter("all")
     setStatusFilter("all")
     setGradeFilter("all")
+    setPaymentChannelFilter("all")
+    setAmountMin("")
+    setAmountMax("")
     setDateFrom(null)
     setDateTo(null)
     setFilteredPayments(payments)
@@ -497,23 +523,80 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                  <SelectItem value="paid">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("common.paid")}</Badge>
+                  <SelectItem value="paid" className="text-green-800">
+                    <span className="inline-flex items-center rounded-md bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+                      {t("common.paid")}
+                    </span>
                   </SelectItem>
-                  <SelectItem value="partial">
-                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("payment.partial")}</Badge>
+                  <SelectItem value="partial" className="text-yellow-800">
+                    <span className="inline-flex items-center rounded-md bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-800">
+                      {t("payment.partial")}
+                    </span>
                   </SelectItem>
-                  <SelectItem value="unpaid">
-                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t("common.unpaid")}</Badge>
+                  <SelectItem value="unpaid" className="text-gray-800">
+                    <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-800">
+                      {t("common.unpaid")}
+                    </span>
                   </SelectItem>
-                  <SelectItem value="overdue">
-                    <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">{t("common.overdue")}</Badge>
+                  <SelectItem value="overdue" className="text-orange-800">
+                    <span className="inline-flex items-center rounded-md bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800">
+                      {t("common.overdue")}
+                    </span>
                   </SelectItem>
-                  <SelectItem value="cancelled">
-                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.cancelled")}</Badge>
+                  <SelectItem value="cancelled" className="text-red-800">
+                    <span className="inline-flex items-center rounded-md bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
+                      {t("common.cancelled")}
+                    </span>
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Payment Channel */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.paymentChannel")}</label>
+              <Select value={paymentChannelFilter} onValueChange={setPaymentChannelFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={t("payment.allChannels")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("payment.allChannels")}</SelectItem>
+                  <SelectItem value="credit_card">{t("paymentChannel.creditCard")}</SelectItem>
+                  <SelectItem value="wechat_pay">{t("paymentChannel.wechatPay")}</SelectItem>
+                  <SelectItem value="alipay">{t("paymentChannel.alipay")}</SelectItem>
+                  <SelectItem value="qr_payment">{t("paymentChannel.qrPayment")}</SelectItem>
+                  <SelectItem value="counter_bank">{t("paymentChannel.counterBank")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Amount Min */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.amountMin")}</label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={amountMin}
+                onChange={(e) => setAmountMin(e.target.value)}
+                className="h-9"
+                min="0"
+              />
+            </div>
+
+            {/* Amount Max */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.amountMax")}</label>
+              <Input
+                type="number"
+                placeholder="999999"
+                value={amountMax}
+                onChange={(e) => setAmountMax(e.target.value)}
+                className="h-9"
+                min="0"
+              />
             </div>
 
             {/* Date Range */}
@@ -664,7 +747,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                   <TableCell>
                     <Badge variant="outline">Term {payment.term}</Badge>
                   </TableCell>
-                  <TableCell>{getPaymentChannelLabel(payment.paymentChannel)}</TableCell>
+                  <TableCell>{getPaymentChannelLabel(payment.paymentChannel, t)}</TableCell>
                   {type === "afterschool" && (
                     <TableCell>
                       <Badge variant={payment.parentType === "external" ? "secondary" : "outline"}>
@@ -672,7 +755,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                       </Badge>
                     </TableCell>
                   )}
-                  <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                  <TableCell>{getStatusBadge(payment.status, t)}</TableCell>
                   <TableCell>{format(payment.transactionDate, "MMM dd, yyyy", { locale })}</TableCell>
                   <TableCell>
                     <Dialog>

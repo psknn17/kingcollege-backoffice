@@ -26,8 +26,8 @@ const STANDARD_YEAR_GROUPS = [
   "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
-// Storage keys
-const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
+// Storage keys - Use Tuition-specific key since Reports are only in Tuition menu
+const STUDENT_GROUPS_STORAGE_KEY = "studentGroups_tuition"
 const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
 const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
 const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"

@@ -78,6 +78,7 @@ const mockTuitionFees: Record<string, { term1: number; term2: number; term3: num
   year10: { term1: 260000, term2: 255000, term3: 250000 },
   year11: { term1: 290000, term2: 285000, term3: 280000 },
   year12: { term1: 320000, term2: 315000, term3: 310000 },
+  year13: { term1: 350000, term2: 345000, term3: 340000 },
 }
 
 const createDefaultGrades = (): GradeLevelTuition[] => {
@@ -221,6 +222,9 @@ export function TuitionByYear() {
     }
   }, [availableYears, selectedYear])
 
+  // Years that should have mock data pre-populated
+  const yearsWithMockData = ["2024-2025"]
+
   // Initialize tuition data for new academic years
   useEffect(() => {
     setTuitionData(prev => {
@@ -228,9 +232,15 @@ export function TuitionByYear() {
       let hasChanges = false
       for (const year of availableYears) {
         if (!updated[year]) {
-          updated[year] = createEmptyGrades() // Use empty grades (all 0) for new years
+          // Use mock data for specified years, empty grades for others
+          if (yearsWithMockData.includes(year)) {
+            updated[year] = createDefaultGrades()
+            console.log(`[TuitionByYear] Created default grades with mock data for year: ${year}`)
+          } else {
+            updated[year] = createEmptyGrades()
+            console.log(`[TuitionByYear] Created empty grades for new year: ${year}`)
+          }
           hasChanges = true
-          console.log(`[TuitionByYear] Created empty grades for new year: ${year}`)
         }
       }
       // Remove years that no longer exist in Term Settings

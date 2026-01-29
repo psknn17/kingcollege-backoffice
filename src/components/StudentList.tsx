@@ -81,7 +81,6 @@ const getTermOptions = (t: (key: string) => string) => [
 ]
 
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
-const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
 const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
 const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
 const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
@@ -156,26 +155,36 @@ const getRegistrationFees = (academicYear: string, term: string): { applicationF
   }
 }
 
-// Get Student Groups that a student belongs to
+// Get Student Groups that a student belongs to (from all categories)
 const getStudentGroupDiscounts = (studentId: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number; departments: string[] }[] => {
-  try {
-    const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
-    if (stored) {
-      const groups = JSON.parse(stored)
-      return groups
-        .filter((group: any) => group.students?.some((s: any) => s.id === studentId))
-        .map((group: any) => ({
-          name: group.name,
-          discountType: group.discountType,
-          discountPercentage: group.discountPercentage || 0,
-          fixedAmount: group.fixedAmount || 0,
-          departments: group.departments || []
-        }))
+  const allGroups: { name: string; discountType: string; discountPercentage: number; fixedAmount: number; departments: string[] }[] = []
+
+  // Load from both tuition and bus categories
+  const categories = ['tuition', 'bus']
+
+  categories.forEach(category => {
+    try {
+      const storageKey = `studentGroups_${category}`
+      const stored = localStorage.getItem(storageKey)
+      if (stored) {
+        const groups = JSON.parse(stored)
+        const matchingGroups = groups
+          .filter((group: any) => group.students?.some((s: any) => s.id === studentId))
+          .map((group: any) => ({
+            name: group.name,
+            discountType: group.discountType,
+            discountPercentage: group.discountPercentage || 0,
+            fixedAmount: group.fixedAmount || 0,
+            departments: group.departments || []
+          }))
+        allGroups.push(...matchingGroups)
+      }
+    } catch (error) {
+      console.error(`Failed to load student groups from ${category}:`, error)
     }
-  } catch (error) {
-    console.error("Failed to load student groups:", error)
-  }
-  return []
+  })
+
+  return allGroups
 }
 
 
