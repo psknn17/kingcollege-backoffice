@@ -202,7 +202,11 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           term: inv.term || "",
           academicYear: inv.academicYear || "",
           paymentMethod: inv.paymentMethod,
-          paymentProofs: inv.paymentProofs
+          paymentProofs: inv.paymentProofs,
+          // Cancellation info
+          cancelledAt: inv.cancelledAt,
+          cancelReason: inv.cancelReason,
+          cancelledBy: inv.cancelledBy
         }
       })
     }
