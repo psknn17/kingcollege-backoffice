@@ -236,7 +236,6 @@ const en: Record<string, string> = {
   "invoice.markAsPaid": "Mark as Paid",
   "invoice.printInvoice": "Print Invoice",
   "invoice.downloadPdf": "Download PDF",
-  "invoice.invoiceDetails": "Invoice Details",
   "invoice.items": "Items",
   "invoice.quantity": "Quantity",
   "invoice.unitPrice": "Unit Price",
@@ -1574,7 +1573,6 @@ const en: Record<string, string> = {
   "common.filteredFrom": "filtered from",
   "common.from": "From",
   "common.to": "To",
-  "common.dateRange": "Date Range",
   "common.exportAll": "Export All",
   "common.avg": "Avg",
 
@@ -2105,81 +2103,29 @@ const en: Record<string, string> = {
   "externalParent.toast.reminderEmailResent": "Reminder email resent to {parentName} ({email})",
 
   // Receipt Management
-  "receipt.receipts": "receipts",
-  "receipt.receiptNumber": "Receipt Number",
   "receipt.receiptDetails": "Receipt Details",
-  "receipt.paymentMethod": "Payment Method",
   "receipt.transactionDate": "Transaction Date",
   "receipt.resendEmail": "Resend Email",
   "receipt.downloadSuccess": "Receipt downloaded:",
   "receipt.resendSuccess": "Receipt resent to",
-  "receipt.issued": "Issued",
-  "receipt.resent": "Resent",
-  "receipt.failed": "Failed",
-  "receipt.management": "Receipt Management",
 
   // Trip & Activity Receipts
-  "tripActivity.receipts.title": "Trip & Activity Receipts",
-  "tripActivity.receipts.description": "Create and manage receipts for trips and activities",
 
   // Exam Receipts
-  "exam.receipts.title": "Exam Receipts",
-  "exam.receipts.description": "Create and manage receipts for exams and competitions",
 
   // School Bus Receipts
-  "schoolBus.receipts.title": "School Bus Receipts",
-  "schoolBus.receipts.description": "Create and manage receipts for school bus services",
-  "receipt.internalEmailWhitelist": "Internal Email Whitelist",
-  "receipt.viewAndDownload": "View and download receipts",
-  "receipt.bulkResend": "Bulk Resend",
-  "receipt.exportAll": "Export All",
-  "receipt.totalReceipts": "Total Receipts",
-  "receipt.fromExternalParents": "from external parents",
-  "receipt.fromAfterSchool": "from after school activities",
-  "receipt.externalParents": "External Parents",
-  "receipt.ofTotal": "of total",
-  "receipt.totalDownloads": "Total Downloads",
-  "receipt.avgPerReceipt": "Avg {avg} per receipt",
-  "receipt.searchPlaceholder": "Search by receipt, student, or parent...",
-  "receipt.paymentType": "Payment Type",
-  "receipt.allTypes": "All Types",
-  "receipt.singleActivity": "Single Activity",
-  "receipt.completePackage": "Complete Package",
-  "receipt.parentType": "Parent Type",
-  "receipt.allParents": "All Parents",
-  "receipt.sisbParents": "SISB Parents",
-  "receipt.showingRange": "Showing {from} to {to} of {total}",
-  "receipt.filteredFrom": "filtered from {total}",
-  "receipt.page": "Page",
-  "receipt.of": "of",
-  "receipt.parentAndStudent": "Parent & Student",
-  "receipt.activities": "Activities",
-  "receipt.afterSchoolTitle": "Trip & Activity Receipts",
-  "receipt.afterSchoolSubtitle": "View and manage receipts for trips and activities",
 
   // Discount Management
-  "discount.title": "Discount Management",
-  "discount.subtitle": "Manage discounts, promotions, and fee waivers",
-  "discount.overview": "Discount Overview",
   "discount.activeDiscounts": "Active Discounts",
   "discount.totalSavings": "Total Savings",
   "discount.studentsWithDiscount": "Students with Discount",
   "discount.createDiscount": "Create Discount",
-  "discount.editDiscount": "Edit Discount",
-  "discount.deleteDiscount": "Delete Discount",
-  "discount.discountName": "Discount Name",
-  "discount.discountType": "Discount Type",
-  "discount.percentage": "Percentage",
-  "discount.fixedAmount": "Fixed Amount",
-  "discount.applicableTo": "Applicable To",
   "discount.validFrom": "Valid From",
   "discount.validTo": "Valid To",
   "discount.maxUsage": "Max Usage",
   "discount.currentUsage": "Current Usage",
 
   // Waive Fee Management
-  "waiveFee.title": "Waive Fee Management",
-  "waiveFee.subtitle": "Manage fee waivers for students",
   "waiveFee.createWaiver": "Create Waiver",
   "waiveFee.editWaiver": "Edit Waiver",
   "waiveFee.deleteWaiver": "Delete Waiver",
@@ -2376,14 +2322,7 @@ const en: Record<string, string> = {
   "viewModal.changesDiscarded": "Changes discarded",
 
   // Credit Note
-  "creditNote.draft": "Draft",
-  "creditNote.issued": "Issued",
-  "creditNote.applied": "Applied",
   "creditNote.cancelled": "Cancelled",
-  "creditNote.refund": "Refund",
-  "creditNote.adjustment": "Adjustment",
-  "creditNote.cancellation": "Cancellation",
-  "creditNote.discount": "Discount",
 
   // User Roles
   "role.admin": "Admin",
@@ -2484,9 +2423,7 @@ const en: Record<string, string> = {
   // Common UI Actions (additional)
   "common.show": "Show",
   "common.entries": "entries",
-  "common.apply": "Apply",
   "common.createUser": "Create User",
-  "common.saveChanges": "Save Changes",
   "common.savePermissions": "Save Permissions",
 
   // Table Headers
@@ -3382,7 +3319,6 @@ const th: Record<string, string> = {
   "common.filteredFrom": "กรองจาก",
   "common.from": "จาก",
   "common.to": "ถึง",
-  "common.dateRange": "ช่วงวันที่",
   "common.exportAll": "ส่งออกทั้งหมด",
   "common.avg": "เฉลี่ย",
 
@@ -3467,7 +3403,6 @@ const th: Record<string, string> = {
   "invoice.markAsPaid": "บันทึกการชำระเงิน",
   "invoice.printInvoice": "พิมพ์ใบแจ้งหนี้",
   "invoice.downloadPdf": "ดาวน์โหลด PDF",
-  "invoice.invoiceDetails": "รายละเอียดใบแจ้งหนี้",
   "invoice.items": "รายการ",
   "invoice.quantity": "จำนวน",
   "invoice.unitPrice": "ราคาต่อหน่วย",
@@ -5378,14 +5313,7 @@ const th: Record<string, string> = {
   "summerPayment.activityPlaceholder": "รายละเอียดตามกิจกรรมจะมาเร็วๆ นี้",
 
   // Credit Note
-  "creditNote.draft": "ร่าง",
-  "creditNote.issued": "ออกแล้ว",
-  "creditNote.applied": "นำไปใช้แล้ว",
   "creditNote.cancelled": "ยกเลิกแล้ว",
-  "creditNote.refund": "คืนเงิน",
-  "creditNote.adjustment": "ปรับยอด",
-  "creditNote.cancellation": "ยกเลิก",
-  "creditNote.discount": "ส่วนลด",
 
   // User Roles
   "role.admin": "ผู้ดูแลระบบ",
