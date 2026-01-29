@@ -833,8 +833,8 @@ export function DiscountReports() {
               {t("discountReports.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button className="h-9">{t("discountReports.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("discountReports.clear")}</Button>
+              <Button className="h-9">{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>

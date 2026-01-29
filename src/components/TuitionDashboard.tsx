@@ -236,81 +236,14 @@ export function TuitionDashboard() {
             </div>
           </div>
 
-          {/* Quick Actions Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">{t("dashboard.quickActions")}</h3>
-              <div className="flex-1 h-px bg-border"></div>
-            </div>
-
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              {/* Quick Filter Buttons */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date()
-                    setDateRange({
-                      from: subDays(today, 30),
-                      to: today
-                    })
-                  }}
-                  className="h-9 text-xs"
-                >
-                  <CalendarIcon className="w-3 h-3 mr-1.5" />
-                  {t("dashboard.last30Days")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date()
-                    setDateRange({
-                      from: startOfYear(today),
-                      to: endOfYear(today)
-                    })
-                  }}
-                  className="h-9 text-xs"
-                >
-                  <CalendarIcon className="w-3 h-3 mr-1.5" />
-                  {t("dashboard.thisYear")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedYear(currentYear)
-                    setSelectedTerm("")
-                  }}
-                  className="h-9 text-xs"
-                >
-                  <GraduationCap className="w-3 h-3 mr-1.5" />
-                  {t("dashboard.currentAcademicYear")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedTerm("term1")
-                  }}
-                  className="h-9 text-xs"
-                >
-                  {t("dashboard.termOnly").replace("{term}", "1")}
-                </Button>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <Button onClick={applyFilters} className="h-9 px-6">
-                  {t("dashboard.applyFilters")}
-                </Button>
-                <Button variant="outline" onClick={resetFilters} className="h-9 px-4">
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  {t("common.reset")}
-                </Button>
-              </div>
-            </div>
+          {/* Filter Action Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button onClick={applyFilters}>
+              {t("common.apply")}
+            </Button>
+            <Button variant="outline" onClick={resetFilters}>
+              {t("common.clear")}
+            </Button>
           </div>
 
           {/* Active Filters Display */}

@@ -205,8 +205,15 @@ export function PaymentHistorySimple() {
             {/* Action Buttons */}
             <div className="flex gap-2">
               <Button
+                onClick={() => {
+                  // Filters are already applied automatically
+                  // This button can be used for future manual apply logic if needed
+                }}
+              >
+                {t("common.apply")}
+              </Button>
+              <Button
                 variant="outline"
-                size="sm"
                 onClick={() => {
                   setSearchTerm("")
                   setStatusFilter("all")
@@ -218,16 +225,7 @@ export function PaymentHistorySimple() {
                   setDateTo(undefined)
                 }}
               >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  // Filters are already applied automatically
-                  // This button can be used for future manual apply logic if needed
-                }}
-              >
-                Apply
+                {t("common.clear")}
               </Button>
             </div>
           </div>

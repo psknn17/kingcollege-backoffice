@@ -356,10 +356,24 @@ export function EventRegistrationReports() {
           {/* Filters */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                {t("common.filter")}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  {t("common.filter")}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button onClick={() => {}} className="h-9">{t("common.apply")}</Button>
+                  <Button variant="outline" onClick={() => {
+                    setSearchTerm("")
+                    setSelectedEvent("all")
+                    setSelectedYearGroup("all")
+                    setSelectedPaymentStatus("all")
+                    setSelectedPaymentChannel("all")
+                    setDateFrom(null)
+                    setDateTo(null)
+                  }} className="h-9">{t("common.clear")}</Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-7">

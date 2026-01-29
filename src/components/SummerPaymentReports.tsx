@@ -472,10 +472,24 @@ export function SummerPaymentReports() {
           {/* Filters */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                {t("summerPayment.paymentFilters")}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  {t("summerPayment.paymentFilters")}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button onClick={() => {}} className="h-9">{t("common.apply")}</Button>
+                  <Button variant="outline" onClick={() => {
+                    setSearchTerm("")
+                    setSelectedActivity("all")
+                    setSelectedCategory("all")
+                    setSelectedStatus("all")
+                    setSelectedPaymentMethod("all")
+                    setDateFrom(null)
+                    setDateTo(null)
+                  }} className="h-9">{t("common.clear")}</Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-7">
