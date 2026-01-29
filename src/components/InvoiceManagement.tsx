@@ -3181,7 +3181,7 @@ export function InvoiceManagement({
 
                 {/* Cancellation Information - Full Width */}
                 {selectedInvoice.status === "cancelled" && (
-                  <div className="mt-6 bg-red-50 border border-red-200 rounded-md p-3">
+                  <div className="my-6 bg-red-50 border border-red-200 rounded-md p-4">
                     <div className="flex items-start gap-2">
                       <div className="flex-shrink-0 mt-0.5">
                         <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
