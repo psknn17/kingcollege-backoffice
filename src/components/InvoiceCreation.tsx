@@ -2218,6 +2218,13 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     return `INV-${year}${month}-${studentId.slice(-4)}`
   }
 
+  const displayInvoiceNumber = (invoiceNumber: string | undefined) => {
+    if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+      return ""
+    }
+    return invoiceNumber
+  }
+
   // Get account code (Nominal Code) based on item name/category
   const getAccountCode = (item: PreCreatedItem): string => {
     const name = (item.name || '').toLowerCase()
@@ -2271,7 +2278,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const invoiceStudent = student as InvoiceStudent
       const subtotal = getTotalAmount()
       const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
-      const invoiceNumber = generateInvoiceNumber(student.id)
+      // Use DRAFT number - real invoice number will be generated when approved
+      const invoiceNumber = `DRAFT-${Date.now()}-${student.id.slice(-4)}`
 
       // Calculate registration fees for new students
       const registrationFeesList: { name: string, amount: number }[] = []
@@ -2557,7 +2565,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       {/* Header */}
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-semibold">
-          {isEditMode ? `Edit Invoice - ${editInvoice?.invoiceNumber || ''}` : getPageTitle(invoiceType, t)}
+          {isEditMode ? `Edit Invoice - ${displayInvoiceNumber(editInvoice?.invoiceNumber)}` : getPageTitle(invoiceType, t)}
         </h1>
       </div>
 
@@ -3573,11 +3581,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     <div className="flex justify-between items-center">
                       <div>
                         <label className="font-medium">Selected Students ({selectedStudents.length})</label>
-                        {selectedStudents.some(s => (s as InvoiceStudent).isNewStudent) && (
-                          <span className="text-xs text-amber-600 ml-2">
-                            ({selectedStudents.filter(s => (s as InvoiceStudent).isNewStudent).length} new students)
-                          </span>
-                        )}
                         {selectedStudents.some(s => hasDiscounts(s as InvoiceStudent)) && (
                           <span className="text-xs text-green-600 ml-2">
                             ({selectedStudents.filter(s => hasDiscounts(s as InvoiceStudent)).length} with discounts)
@@ -3603,11 +3606,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{student.name}</span>
                                 <span className="text-muted-foreground">({student.id} - {student.room})</span>
-                                {isNew && (
-                                  <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                    New Student
-                                  </Badge>
-                                )}
                               </div>
                               {(studentHasDiscounts || isNew) && (
                                 <div className="flex flex-wrap gap-1 mt-1">
@@ -3667,12 +3665,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="flex items-center gap-2 mb-3">
                         <FileText className="w-5 h-5 text-amber-600" />
                         <h4 className="font-medium text-amber-900">Application & Registration Fees</h4>
-                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
-                          {newStudents.length} New Student{newStudents.length > 1 ? 's' : ''}
-                        </Badge>
                       </div>
                       <p className="text-sm text-amber-700 mb-3">
-                        The following fees will be automatically applied to new students:
+                        The following fees will be automatically applied:
                       </p>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {newStudents.map(s => (
@@ -3721,7 +3716,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       </div>
                       <div className="mt-3 pt-3 border-t border-amber-200">
                         <div className="flex justify-between text-sm font-medium text-amber-900">
-                          <span>Registration Fees Total (per new student):</span>
+                          <span>Registration Fees Total:</span>
                           <span>฿{totalFees.toLocaleString()}</span>
                         </div>
                       </div>
@@ -4149,7 +4144,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const subtotal = getTotalAmount()
                   const idCharges = Math.round(subtotal * 0.03)
                   const finalTotal = subtotal + idCharges
-                  const invoiceNumber = generateInvoiceNumber("MANUAL")
+                  const invoiceNumber = `DRAFT-${Date.now()}-MANUAL`
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
 
@@ -4421,7 +4416,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const registrationFeesTotal = registrationFeeItems.reduce((sum, item) => sum + item.amount, 0)
                   const subtotal = getTotalAmount() + registrationFeesTotal
                   const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount(), invoiceType) // Discounts apply only to regular items
-                  const invoiceNumber = generateInvoiceNumber(currentStudent.id)
+                  const invoiceNumber = `DRAFT-${Date.now()}-${currentStudent.id.slice(-4)}`
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
 
@@ -4540,7 +4535,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               <tr key={item.id} className="border-b border-gray-200 text-orange-600">
                                 <td className="py-1.5 px-2 align-top">{selectedItems.length + idx + 1}</td>
                                 <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
-                                  {item.name} <span className="text-xs">(New Student)</span>
+                                  {item.name}
                                 </td>
                                 <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
                               </tr>
@@ -4549,7 +4544,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             {securityDepositWaiver > 0 && (
                               <tr className="border-b border-gray-200 text-purple-700">
                                 <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + 1}</td>
-                                <td className="py-1.5 px-2">Security Deposit Waiver <span className="text-xs">(New Student)</span></td>
+                                <td className="py-1.5 px-2">Security Deposit Waiver</td>
                                 <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(securityDepositWaiver)}</td>
                               </tr>
                             )}

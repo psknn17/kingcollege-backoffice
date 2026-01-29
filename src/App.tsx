@@ -111,7 +111,6 @@ const menuItems = {
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
     { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
     { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
-    { id: "waive-fee", labelKey: "menu.waiveFees", icon: TrendingDown },
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
@@ -306,7 +305,6 @@ export default function App() {
         return <DiscountManagement activeTab="student-groups" category="tuition" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "student-groups":
       case "promotional-campaigns":
-      case "waive-fee":
         return <DiscountManagement activeTab={activeSection} category="tuition" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "discount-reports":
         return <DiscountReports />

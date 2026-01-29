@@ -73,32 +73,48 @@ export function PaymentHistorySimple() {
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
 
   useEffect(() => {
     const loadPayments = () => {
       try {
-        const stored = localStorage.getItem("paymentRecords")
+        // Load from invoices instead of paymentRecords
+        const stored = localStorage.getItem("createdInvoices")
         if (stored) {
-          const parsed = JSON.parse(stored)
-          const normalized = parsed.map((p: any) => ({
-            ...p,
-            transactionDate: p.transactionDate ? new Date(p.transactionDate) : new Date()
-          }))
-          setPayments(normalized)
-          return
+          const invoices = JSON.parse(stored)
+          // Filter only paid invoices and transform to PaymentRecord format
+          const paidInvoices = invoices
+            .filter((inv: any) => inv.status === "paid")
+            .map((inv: any) => ({
+              id: inv.id,
+              invoiceNumber: inv.invoiceNumber,
+              studentName: inv.studentName,
+              studentId: inv.studentId,
+              studentGrade: inv.studentGrade,
+              amount: inv.netAmount || inv.finalAmount || inv.subtotal || 0,
+              term: inv.term || "-",
+              paymentMethod: inv.paymentMethod || "-",
+              status: "paid" as const,
+              transactionDate: inv.paidDate ? new Date(inv.paidDate) : new Date()
+            }))
+
+          if (paidInvoices.length > 0) {
+            setPayments(paidInvoices)
+            return
+          }
         }
       } catch (error) {
-        console.error("Failed to load payment records:", error)
+        console.error("Failed to load invoices:", error)
       }
       setPayments(mockPayments)
     }
 
     loadPayments()
-    const handlePaymentsUpdated = () => loadPayments()
-    window.addEventListener("paymentsUpdated", handlePaymentsUpdated)
-    return () => window.removeEventListener("paymentsUpdated", handlePaymentsUpdated)
+    const handleInvoicesUpdated = () => loadPayments()
+    window.addEventListener("invoicesUpdated", handleInvoicesUpdated)
+    return () => window.removeEventListener("invoicesUpdated", handleInvoicesUpdated)
   }, [])
 
   const filteredPayments = payments.filter(payment => {
@@ -109,13 +125,14 @@ export function PaymentHistorySimple() {
 
     const matchesStatus = statusFilter === "all" || payment.status === statusFilter
     const matchesYearGroup = yearGroupFilter === "all" || payment.studentGrade === yearGroupFilter
-    const matchesTerm = termFilter === "all" || payment.term === termFilter
+    const matchesTerm = termFilter === "all" || payment.term.includes(termFilter)
     const matchesAcademicYear = academicYearFilter === "all" || true // Would need academic year field
+    const matchesPaymentMethod = paymentMethodFilter === "all" || payment.paymentMethod === paymentMethodFilter
 
     const matchesDateFrom = !dateFrom || payment.transactionDate >= dateFrom
     const matchesDateTo = !dateTo || payment.transactionDate <= dateTo
 
-    return matchesSearch && matchesStatus && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesDateFrom && matchesDateTo
+    return matchesSearch && matchesStatus && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesDateFrom && matchesDateTo
   })
 
   const getStatusBadge = (status: string) => {
@@ -196,6 +213,7 @@ export function PaymentHistorySimple() {
                   setYearGroupFilter("all")
                   setTermFilter("all")
                   setAcademicYearFilter("all")
+                  setPaymentMethodFilter("all")
                   setDateFrom(undefined)
                   setDateTo(undefined)
                 }}
@@ -216,9 +234,9 @@ export function PaymentHistorySimple() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Row 1: Search, Status, Year Group */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -304,8 +322,8 @@ export function PaymentHistorySimple() {
             </div>
           </div>
 
-          {/* Row 2: Term, Academic Year, Date From, Date To */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Row 2: Term, Academic Year, Payment Method */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Term */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("payment.term")}</label>
@@ -338,6 +356,27 @@ export function PaymentHistorySimple() {
               </Select>
             </div>
 
+            {/* Payment Method */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">{t("paymentMethod.label")}</label>
+              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Methods" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Methods</SelectItem>
+                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="cashier-check">Cashier's Cheque</SelectItem>
+                  <SelectItem value="qr">QR Payment</SelectItem>
+                  <SelectItem value="bank-counter">Bank Counter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3: Date From, Date To */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date From */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Date From</label>
@@ -351,7 +390,7 @@ export function PaymentHistorySimple() {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "PPP") : <span>Pick a date</span>}
+                    {dateFrom ? format(dateFrom, "dd/MM/yy") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -378,7 +417,7 @@ export function PaymentHistorySimple() {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "PPP") : <span>Pick a date</span>}
+                    {dateTo ? format(dateTo, "dd/MM/yy") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -416,6 +455,7 @@ export function PaymentHistorySimple() {
                 <TableHead>{t("student.yearGroup")}</TableHead>
                 <TableHead>{t("common.amount")}</TableHead>
                 <TableHead>{t("payment.term")}</TableHead>
+                <TableHead>{t("paymentMethod.label")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
                 <TableHead>{t("common.date")}</TableHead>
                 <TableHead>{t("common.actions")}</TableHead>
@@ -424,7 +464,7 @@ export function PaymentHistorySimple() {
             <TableBody>
               {filteredPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No records found
                   </TableCell>
                 </TableRow>
@@ -449,6 +489,7 @@ export function PaymentHistorySimple() {
                         {payment.term}
                       </Badge>
                     </TableCell>
+                    <TableCell>{payment.paymentMethod}</TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
                     <TableCell>{format(payment.transactionDate, "MMM dd, yyyy")}</TableCell>
                     <TableCell>

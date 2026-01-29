@@ -41,6 +41,7 @@ interface ViewModalProps {
   onSave?: (data: any) => void
   onDownload?: (data: any) => void
   onPrint?: (data: any) => void
+  onCancel?: (data: any, reason: string) => void
   defaultPreview?: boolean
   previewOnly?: boolean
 }
@@ -68,7 +69,7 @@ const getStatusBadge = (status: string) => {
     'paid': { variant: 'default' as const, color: 'bg-green-100 text-green-700 border-green-300' },
     'pending': { variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
     'overdue': { variant: 'destructive' as const, color: 'bg-red-100 text-red-700 border-red-300' },
-    'cancelled': { variant: 'outline' as const, color: 'bg-gray-100 text-gray-700 border-gray-300' },
+    'cancelled': { variant: 'destructive' as const, color: 'bg-red-100 text-red-700 border-red-300' },
     'active': { variant: 'default' as const, color: 'bg-green-100 text-green-700 border-green-300' },
     'inactive': { variant: 'secondary' as const, color: 'bg-gray-100 text-gray-700 border-gray-300' },
     'draft': { variant: 'outline' as const, color: 'bg-blue-100 text-blue-700 border-blue-300' }
@@ -92,6 +93,7 @@ export function ViewModal({
   onSave,
   onDownload,
   onPrint,
+  onCancel,
   defaultPreview = false,
   previewOnly = false
 }: ViewModalProps) {
@@ -100,6 +102,10 @@ export function ViewModal({
 
   // Track if user manually switched to preview mode
   const [isPreviewMode, setIsPreviewMode] = useState(false)
+
+  // Cancel invoice state
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
 
   // Editable fields state
   const [editedData, setEditedData] = useState<any>(null)
@@ -157,6 +163,20 @@ export function ViewModal({
       onSave(editedData)
       setIsPreviewMode(false)
       toast.success("Invoice saved successfully")
+      onClose()
+    }
+  }
+
+  // Cancel invoice
+  const handleCancelInvoice = () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a cancellation reason")
+      return
+    }
+    if (onCancel && data) {
+      onCancel(data, cancelReason.trim())
+      setIsCancelDialogOpen(false)
+      setCancelReason("")
       onClose()
     }
   }
@@ -241,6 +261,56 @@ export function ViewModal({
             </div>
           </div>
         </div>
+
+        {/* Cancellation Information */}
+        {(() => {
+          console.log('[ViewModal] Cancellation Check:', {
+            status: data.status,
+            cancelReason: data.cancelReason,
+            cancelledBy: data.cancelledBy,
+            cancelledAt: data.cancelledAt,
+            shouldShow: data.status === "cancelled"
+          })
+          return null
+        })()}
+        {data.status === "cancelled" && (
+          <div className="px-4 my-6">
+            <div className="bg-red-50 border-2 border-red-300 rounded p-3">
+              <div className="flex items-start gap-2">
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-red-800 text-sm mb-1">INVOICE CANCELLED</p>
+                  <p className="text-sm text-red-700">
+                    <span className="font-semibold">Reason:</span> {data.cancelReason || "No reason recorded"}
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    {data.cancelledBy && <>Cancelled by {data.cancelledBy}</>}
+                    {data.cancelledAt ? (
+                      <>
+                        {data.cancelledBy && <> on </>}
+                        {new Date(data.cancelledAt).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })} at {new Date(data.cancelledAt).toLocaleTimeString('en-GB', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                        })}
+                      </>
+                    ) : (
+                      "Date and time not recorded"
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Invoice Items Table */}
         <div className="px-4 py-2">
@@ -834,11 +904,12 @@ export function ViewModal({
     }
 
     return (
-      <Dialog open={isOpen} onOpenChange={(open) => {
+      <>
+        <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
           setIsPreviewMode(false)
+          onClose()
         }
-        onClose()
       }}>
         <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="sr-only">
@@ -879,13 +950,65 @@ export function ViewModal({
                   </Button>
                 </>
               )}
+              {/* Cancel Invoice button - only for approved, non-cancelled invoices */}
+              {type === "invoice" && data?.approvalStatus === "approved" && data?.status !== "cancelled" && onCancel && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setIsCancelDialogOpen(true)}
+                  className="flex items-center gap-1.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel Invoice
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={onClose}>
                 {t("common.close")}
               </Button>
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+
+        {/* Cancel Invoice Dialog */}
+        <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Cancel Invoice</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this invoice? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Cancellation Reason *</Label>
+              <textarea
+                id="cancel-reason"
+                className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Please provide a reason for cancellation..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => {
+              setIsCancelDialogOpen(false)
+              setCancelReason("")
+            }}>
+              Back
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelInvoice}
+              disabled={!cancelReason.trim()}
+            >
+              Confirm Cancel
+            </Button>
+          </div>
+        </DialogContent>
+        </Dialog>
+      </>
     )
   }
 

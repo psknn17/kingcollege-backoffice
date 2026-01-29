@@ -176,6 +176,10 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
           aVal = a.term
           bVal = b.term
           break
+        case "paymentMethod":
+          aVal = a.paymentMethod
+          bVal = b.paymentMethod
+          break
         case "paymentChannel":
           aVal = a.paymentChannel
           bVal = b.paymentChannel
@@ -706,6 +710,12 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
+                  <div className="flex items-center gap-1">
+                    {t("paymentMethod.label")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentChannel")}>
                   <div className="flex items-center gap-1">
                     {t("payment.channel")}
@@ -747,6 +757,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                   <TableCell>
                     <Badge variant="outline">Term {payment.term}</Badge>
                   </TableCell>
+                  <TableCell>{payment.paymentMethod}</TableCell>
                   <TableCell>{getPaymentChannelLabel(payment.paymentChannel, t)}</TableCell>
                   {type === "afterschool" && (
                     <TableCell>

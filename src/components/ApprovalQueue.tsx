@@ -14,7 +14,7 @@ import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Eye, Filter, X } from "lucide-react"
+import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { logActivity } from "@/lib/activityLog"
 
@@ -68,6 +68,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
     const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
     if (stored) {
       const savedInvoices = JSON.parse(stored)
+      console.log('[ApprovalQueue] Loading invoices from storage:', savedInvoices.length, 'invoices')
       return savedInvoices.map((inv: any) => {
         let issueDate = new Date()
         if (inv.issueDate) {
@@ -137,13 +138,28 @@ const generateInvoiceNumber = (studentId: string) => {
   return `INV-${year}${month}-${idSuffix}`
 }
 
+const displayInvoiceNumber = (invoiceNumber: string | undefined) => {
+  if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+    return ""
+  }
+  return invoiceNumber
+}
+
 export function ApprovalQueue() {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
-  const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
-  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
+  const [invoices, setInvoices] = useState<Invoice[]>(() => {
+    const loaded = loadCreatedInvoicesFromStorage()
+    console.log('[ApprovalQueue] Initial invoices:', loaded.length)
+    return loaded
+  })
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => {
+    const loaded = loadCreatedInvoicesFromStorage()
+    console.log('[ApprovalQueue] Initial filteredInvoices:', loaded.length)
+    return loaded
+  })
   const [searchTerm, setSearchTerm] = useState("")
-  const [academicYearFilter, setAcademicYearFilter] = useState("2024-2025")
+  const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
@@ -174,7 +190,8 @@ export function ApprovalQueue() {
   const reloadInvoices = () => {
     const loaded = loadCreatedInvoicesFromStorage()
     setInvoices(loaded)
-    setFilteredInvoices(loaded)
+    // Apply current filters
+    applyFilters(loaded)
   }
 
   useEffect(() => {
@@ -193,6 +210,13 @@ export function ApprovalQueue() {
   }, [])
 
   const applyFilters = (source = invoices) => {
+    // Safety check: ensure source is an array
+    if (!Array.isArray(source)) {
+      console.error("applyFilters: source is not an array", source)
+      setFilteredInvoices([])
+      return
+    }
+
     let filtered = source
 
     if (searchTerm) {
@@ -244,7 +268,7 @@ export function ApprovalQueue() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    setAcademicYearFilter("2024-2025")
+    setAcademicYearFilter("all")
     setTermFilter("all")
     setInvoiceStatusFilter("all")
     setGradeFilter("all")
@@ -264,6 +288,12 @@ export function ApprovalQueue() {
   }
 
   const sortedInvoices = useMemo(() => {
+    console.log('[ApprovalQueue] Rendering with:', {
+      totalInvoices: invoices.length,
+      filteredInvoices: filteredInvoices.length,
+      academicYearFilter,
+      invoiceStatusFilter
+    })
     if (!sortKey) return filteredInvoices
     const sorted = [...filteredInvoices]
     sorted.sort((a, b) => {
@@ -547,6 +577,11 @@ export function ApprovalQueue() {
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
 
+  const totalInvoices = filteredInvoices.length
+  const waitCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "wait").length
+  const approvedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length
+  const rejectedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length
+
   return (
     <div className="space-y-6">
       <div>
@@ -554,6 +589,65 @@ export function ApprovalQueue() {
         <p className="text-sm text-muted-foreground">
           Review and approve pending invoices.
         </p>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Invoices</p>
+                <p className="text-2xl font-bold">{totalInvoices}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-full">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Wait</p>
+                <p className="text-2xl font-bold">{waitCount}</p>
+              </div>
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-2xl font-bold">{approvedCount}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
+                <p className="text-2xl font-bold">{rejectedCount}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <X className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex items-center justify-between">
@@ -744,7 +838,7 @@ export function ApprovalQueue() {
                     />
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    {invoice.invoiceNumber || "DRAFT"}
+                    {displayInvoiceNumber(invoice.invoiceNumber)}
                   </TableCell>
                   <TableCell>
                     <div>
@@ -768,11 +862,13 @@ export function ApprovalQueue() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      {getApprovalStatus(invoice) === "approved" ? (
+                      {invoice.status === "cancelled" ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
+                      ) : getApprovalStatus(invoice) === "approved" ? (
                         <Badge className="bg-green-100 text-green-800">Approved</Badge>
                       ) : getApprovalStatus(invoice) === "rejected" ? (
                         <Badge className="bg-red-100 text-red-800">Rejected</Badge>
-                      ) : !["cancelled"].includes(invoice.status) ? (
+                      ) : (
                         <>
                           <Button
                             size="sm"
@@ -793,8 +889,6 @@ export function ApprovalQueue() {
                             <X className="w-4 h-4" />
                           </Button>
                         </>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </div>
                   </TableCell>

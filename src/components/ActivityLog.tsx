@@ -82,9 +82,12 @@ export function ActivityLog() {
   const [logs, setLogs] = useState<ActivityLogEntry[]>([])
 
   const filteredLogs = useMemo(() => {
-    if (!searchTerm) return logs
+    // Filter out "Viewed" actions
+    const logsWithoutViewed = logs.filter(log => !log.action.toLowerCase().startsWith("viewed"))
+
+    if (!searchTerm) return logsWithoutViewed
     const needle = searchTerm.toLowerCase()
-    return logs.filter(log =>
+    return logsWithoutViewed.filter(log =>
       log.user.toLowerCase().includes(needle) ||
       log.action.toLowerCase().includes(needle) ||
       log.module.toLowerCase().includes(needle) ||

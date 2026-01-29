@@ -380,7 +380,7 @@ export function InvoiceManagement({
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState("")
-  const [academicYearFilter, setAcademicYearFilter] = useState("2024-2025")
+  const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
@@ -430,7 +430,7 @@ export function InvoiceManagement({
   const reloadInvoices = () => {
     const loaded = loadCreatedInvoicesFromStorage()
     setInvoices(loaded)
-    setFilteredInvoices(loaded)
+    // Don't set filteredInvoices directly - let the useEffect apply filters
   }
 
   // Listen for invoice updates
@@ -513,6 +513,10 @@ export function InvoiceManagement({
   const [paymentMethod, setPaymentMethod] = useState("")
   const [paymentFiles, setPaymentFiles] = useState<File[]>([])
   const [isSavingPayment, setIsSavingPayment] = useState(false)
+  const [edcBank, setEdcBank] = useState("")
+  const [edcAccountNumber, setEdcAccountNumber] = useState("")
+  const [isSendEmailConfirmOpen, setIsSendEmailConfirmOpen] = useState(false)
+  const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
 
   const applyFilters = (tabType?: "student" | "external") => {
     const currentTab = tabType || invoiceTypeTab
@@ -656,7 +660,7 @@ export function InvoiceManagement({
 
   const clearFilters = () => {
     setSearchTerm("")
-    setAcademicYearFilter("2024-2025")
+    setAcademicYearFilter("all")
     setTermFilter("all")
     setStatusFilter("all")
     setInvoiceStatusFilter("all")
@@ -692,6 +696,15 @@ export function InvoiceManagement({
   }
 
   const openViewModal = (invoice: Invoice) => {
+    console.log('[InvoiceManagement] Opening view modal for invoice:', {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      cancelReason: invoice.cancelReason,
+      cancelledBy: invoice.cancelledBy,
+      cancelledAt: invoice.cancelledAt
+    })
+
     const modalData = {
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
@@ -702,6 +715,10 @@ export function InvoiceManagement({
       amount: invoice.finalAmount,
       total: invoice.finalAmount,
       status: invoice.status,
+      approvalStatus: invoice.approvalStatus,
+      cancelReason: invoice.cancelReason,
+      cancelledBy: invoice.cancelledBy,
+      cancelledAt: invoice.cancelledAt,
       issueDate: invoice.issueDate.toISOString(),
       dueDate: invoice.dueDate.toISOString(),
       category: "Invoice",
@@ -720,6 +737,13 @@ export function InvoiceManagement({
         parentName: invoice.parentName
       }
     }
+
+    console.log('[InvoiceManagement] modalData being passed:', {
+      status: modalData.status,
+      cancelReason: modalData.cancelReason,
+      cancelledBy: modalData.cancelledBy,
+      cancelledAt: modalData.cancelledAt
+    })
 
     // Use new navigation instead of modal
     if (onNavigateToView) {
@@ -965,8 +989,15 @@ export function InvoiceManagement({
       return
     }
 
+    // Check if invoice is cancelled
+    if (selectedInvoice.status === "cancelled") {
+      toast.error(`Cannot send email. Invoice ${selectedInvoice.invoiceNumber} has been cancelled.`)
+      return
+    }
+
     const previousInvoice = selectedInvoice
     const emailSentAt = new Date().toISOString()
+    console.log('[saveAndSendInvoice] Sending email at:', emailSentAt, new Date(emailSentAt))
 
     const updatedInvoices = invoices.map(inv =>
       inv.id === selectedInvoice.id
@@ -1227,7 +1258,7 @@ export function InvoiceManagement({
     closeCreateModal()
   }
 
-  const sendInvoice = (invoiceId: string) => {
+  const openSendEmailConfirm = (invoiceId: string) => {
     const invoice = invoices.find(inv => inv.id === invoiceId)
     if (!invoice) return
 
@@ -1237,10 +1268,25 @@ export function InvoiceManagement({
       return
     }
 
+    // Check if invoice is cancelled
+    if (invoice.status === "cancelled") {
+      toast.error(`Cannot send email. Invoice ${invoice.invoiceNumber} has been cancelled.`)
+      return
+    }
+
+    // Open confirmation dialog
+    setInvoiceToSend(invoice)
+    setIsSendEmailConfirmOpen(true)
+  }
+
+  const sendInvoice = () => {
+    if (!invoiceToSend) return
+
     // Update invoice status to "sent" and record email sent timestamp
     const emailSentAt = new Date().toISOString()
+    console.log('[sendInvoice] Sending email at:', emailSentAt, new Date(emailSentAt))
     const updatedInvoices = invoices.map(inv =>
-      inv.id === invoiceId ? { ...inv, status: "sent" as const, emailSentAt } : inv
+      inv.id === invoiceToSend.id ? { ...inv, status: "sent" as const, emailSentAt } : inv
     )
     setInvoices(updatedInvoices)
 
@@ -1250,7 +1296,7 @@ export function InvoiceManagement({
       if (stored) {
         const savedInvoices = JSON.parse(stored)
         const updatedSavedInvoices = savedInvoices.map((inv: any) =>
-          inv.id === invoiceId ? { ...inv, status: "sent", emailSentAt } : inv
+          inv.id === invoiceToSend.id ? { ...inv, status: "sent", emailSentAt } : inv
         )
         localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
       }
@@ -1258,12 +1304,16 @@ export function InvoiceManagement({
       console.error("Failed to update invoice status in localStorage:", error)
     }
 
-    toast.success(`Invoice ${invoice.invoiceNumber} sent to ${invoice.parentEmail}`)
+    toast.success(`Invoice ${invoiceToSend.invoiceNumber} sent to ${invoiceToSend.parentEmail}`)
     logActivity({
-      action: `Sent invoice email ${invoice.invoiceNumber}`,
+      action: `Sent invoice email ${invoiceToSend.invoiceNumber}`,
       module: "Invoices",
-      detail: `Recipient: ${invoice.parentEmail}`
+      detail: `Recipient: ${invoiceToSend.parentEmail}`
     })
+
+    // Close dialog and reset
+    setIsSendEmailConfirmOpen(false)
+    setInvoiceToSend(null)
   }
 
   const downloadInvoiceData = (invoiceId: string) => {
@@ -1632,6 +1682,13 @@ export function InvoiceManagement({
     return `INV-${year}${month}-${idSuffix}`
   }
 
+  const displayInvoiceNumber = (invoiceNumber: string | undefined) => {
+    if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+      return ""
+    }
+    return invoiceNumber
+  }
+
   // Approval handlers
   const handleApproveInvoice = (invoice: Invoice) => {
     // Generate proper invoice number if it's a draft number
@@ -1728,6 +1785,66 @@ export function InvoiceManagement({
     setRejectionReason("")
   }
 
+  // Cancel invoice handler
+  const handleCancelInvoice = (invoiceData: any, reason: string) => {
+    const invoice = invoices.find(inv => inv.id === invoiceData.id)
+    if (!invoice) return
+
+    const cancelledDate = new Date()
+    console.log('[handleCancelInvoice] Cancelling invoice:', {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      reason: reason,
+      cancelledAt: cancelledDate.toISOString(),
+      cancelledBy: "Admin"
+    })
+
+    const updatedInvoices = invoices.map(inv =>
+      inv.id === invoice.id
+        ? {
+            ...inv,
+            status: "cancelled" as const,
+            cancelReason: reason,
+            cancelledAt: cancelledDate,
+            cancelledBy: "Admin"
+          }
+        : inv
+    )
+    setInvoices(updatedInvoices)
+
+    // Update localStorage
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      if (stored) {
+        const savedInvoices = JSON.parse(stored)
+        const updatedSavedInvoices = savedInvoices.map((inv: any) =>
+          inv.id === invoice.id
+            ? {
+                ...inv,
+                status: "cancelled",
+                cancelReason: reason,
+                cancelledAt: new Date().toISOString(),
+                cancelledBy: "Admin"
+              }
+            : inv
+        )
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
+      }
+    } catch (error) {
+      console.error("Failed to update invoice cancellation in localStorage:", error)
+    }
+
+    toast.success(`Invoice ${displayInvoiceNumber(invoice.invoiceNumber)} has been cancelled`)
+    logActivity({
+      action: `Cancelled invoice ${displayInvoiceNumber(invoice.invoiceNumber)}`,
+      module: "Invoices",
+      detail: `Status: approved → cancelled; Reason: ${reason}`
+    })
+
+    // Trigger custom event for cross-component sync
+    window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+  }
+
   const handleViewEmailDetails = (invoice: Invoice) => {
     setSelectedInvoiceForEmail(invoice)
     setIsEmailDetailDialogOpen(true)
@@ -1755,6 +1872,14 @@ export function InvoiceManagement({
       toast.error("Please select a payment method")
       return
     }
+    if (paymentMethod === "edc" && !edcBank) {
+      toast.error("Please select a bank for EDC payment")
+      return
+    }
+    if (paymentMethod === "edc" && !edcAccountNumber.trim()) {
+      toast.error("Please enter account number for EDC payment")
+      return
+    }
     if (paymentFiles.length === 0) {
       toast.error("Please upload at least 1 proof image (JPG/PNG)")
       return
@@ -1766,13 +1891,17 @@ export function InvoiceManagement({
       const paidAt = new Date()
       const isPartial = paymentMethod === "partial"
 
+      const paymentMethodDetail = paymentMethod === "edc"
+        ? `EDC - ${edcBank} (${edcAccountNumber})`
+        : paymentMethod
+
       const updatedInvoices = invoices.map(inv =>
         inv.id === markPaidInvoice.id
           ? {
               ...inv,
               status: isPartial ? inv.status : ("paid" as const),
               paidDate: isPartial ? inv.paidDate : paidAt,
-              paymentMethod,
+              paymentMethod: paymentMethodDetail,
               paymentProofs: proofs
             }
           : inv
@@ -1790,7 +1919,7 @@ export function InvoiceManagement({
                   ...inv,
                   status: isPartial ? inv.status : "paid",
                   paidDate: isPartial ? inv.paidDate : paidAt.toISOString(),
-                  paymentMethod,
+                  paymentMethod: paymentMethodDetail,
                   paymentProofs: proofs
                 }
               : inv
@@ -1815,7 +1944,7 @@ export function InvoiceManagement({
           studentGrade: markPaidInvoice.studentGrade,
           amount: markPaidInvoice.finalAmount,
           term: markPaidInvoice.term || "-",
-          paymentMethod,
+          paymentMethod: paymentMethodDetail,
           status: isPartial ? "partial" : "paid",
           transactionDate: paidAt.toISOString(),
           paymentProofs: proofs
@@ -1834,17 +1963,92 @@ export function InvoiceManagement({
         console.error("Failed to save payment record:", error)
       }
 
+      // Auto-generate receipt if not partial payment
+      if (!isPartial) {
+        try {
+          // Determine receipt storage key and prefix based on category
+          let receiptStorageKey = ""
+          let receiptPrefix = ""
+
+          const category = markPaidInvoice.category
+          if (category === "trip" || category === "eca") {
+            receiptStorageKey = "receiptRecords_afterschool"
+            receiptPrefix = "TRP"
+          } else if (category === "exam") {
+            receiptStorageKey = "receiptRecords_event"
+            receiptPrefix = "EXM"
+          } else if (category === "bus") {
+            receiptStorageKey = "receiptRecords_summer"
+            receiptPrefix = "BUS"
+          } else {
+            // For tuition and other categories, use general receipt storage
+            receiptStorageKey = "receiptRecords_tuition"
+            receiptPrefix = "TUI"
+          }
+
+          // Get existing receipts
+          const storedReceipts = localStorage.getItem(receiptStorageKey)
+          const receipts = storedReceipts ? JSON.parse(storedReceipts) : []
+
+          // Generate receipt number
+          const now = new Date()
+          const yearMonth = format(now, "yyMM")
+          const nextNumber = receipts.length + 1
+          const receiptNo = `${receiptPrefix}-${yearMonth}-${String(nextNumber).padStart(4, "0")}`
+
+          // Create receipt record
+          const receiptRecord = {
+            id: `receipt-${markPaidInvoice.id}`,
+            receiptNo: receiptNo,
+            receiptDate: paidAt.toISOString(),
+            clientType: markPaidInvoice.invoiceType === "external" ? "external" : "internal",
+            clientNo: markPaidInvoice.studentId,
+            clientName: markPaidInvoice.parentName || markPaidInvoice.studentName,
+            contactName: markPaidInvoice.studentName,
+            yearGroup: markPaidInvoice.studentGrade,
+            schoolYear: markPaidInvoice.term || "",
+            totalAmount: markPaidInvoice.finalAmount,
+            paymentMethod: paymentMethodDetail,
+            status: "generated",
+            createdAt: paidAt.toISOString(),
+            invoices: [
+              {
+                id: markPaidInvoice.id,
+                invoiceNo: markPaidInvoice.invoiceNumber,
+                invoiceDate: typeof markPaidInvoice.issueDate === 'string'
+                  ? markPaidInvoice.issueDate
+                  : markPaidInvoice.issueDate.toISOString(),
+                invoiceAmount: markPaidInvoice.finalAmount,
+                receivedAmount: markPaidInvoice.finalAmount,
+                outstandingAmount: 0
+              }
+            ]
+          }
+
+          // Add receipt to storage
+          receipts.push(receiptRecord)
+          localStorage.setItem(receiptStorageKey, JSON.stringify(receipts))
+
+          console.log(`Auto-generated receipt: ${receiptNo}`)
+        } catch (error) {
+          console.error("Failed to auto-generate receipt:", error)
+          // Don't show error to user, receipt generation is secondary
+        }
+      }
+
       window.dispatchEvent(new CustomEvent("invoicesUpdated"))
       logActivity({
         action: `${isPartial ? "Recorded partial payment" : "Marked invoice as paid"} ${markPaidInvoice.invoiceNumber}`,
         module: "Invoices",
-        detail: `Payment Method: ${paymentMethod}, Proofs: ${proofs.length}`
+        detail: `Payment Method: ${paymentMethodDetail}, Proofs: ${proofs.length}`
       })
-      toast.success(isPartial ? "Saved partial payment" : "Marked invoice as paid")
+      toast.success(isPartial ? "Saved partial payment" : "Marked invoice as paid and receipt generated")
       setIsMarkPaidOpen(false)
       setMarkPaidInvoice(null)
       setPaymentMethod("")
       setPaymentFiles([])
+      setEdcBank("")
+      setEdcAccountNumber("")
     } catch (error) {
       console.error("Failed to mark paid:", error)
       toast.error("Failed to mark invoice as paid")
@@ -1866,18 +2070,21 @@ export function InvoiceManagement({
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
       case "sent":
         return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
-      case "unsent":
-        return <Badge className="bg-gray-100 text-gray-800"><Mail className="w-3 h-3 mr-1" />Unsent</Badge>
+      case "cancelled":
+        return <span className="text-muted-foreground text-sm">—</span>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "unsent" => {
+  const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" => {
+    // If invoice is cancelled, return special status
+    if (invoice.status === "cancelled") return "cancelled"
+    // If email has been sent (status is sent or paid), show "sent"
     if (invoice.status === "paid") return "sent"
     if (invoice.status === "sent") return "sent"
-    if (invoice.status === "draft" || invoice.status === "pending_approval") return "wait"
-    return "unsent"
+    // Otherwise, email hasn't been sent yet, show "wait"
+    return "wait"
   }
 
   const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
@@ -2237,9 +2444,6 @@ export function InvoiceManagement({
                       <SelectItem value="sent">
                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge>
                       </SelectItem>
-                      <SelectItem value="unsent">
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unsent</Badge>
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2320,7 +2524,7 @@ export function InvoiceManagement({
                         />
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {invoice.invoiceNumber || "DRAFT"}
+                        {displayInvoiceNumber(invoice.invoiceNumber)}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -2343,12 +2547,18 @@ export function InvoiceManagement({
                       </TableCell>
                       <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
                       <TableCell
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleViewEmailDetails(invoice)}
+                        className={getEmailStatus(invoice) === "sent" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+                        onClick={getEmailStatus(invoice) === "sent" ? () => handleViewEmailDetails(invoice) : undefined}
                       >
                         {getStatusBadge(getEmailStatus(invoice))}
                       </TableCell>
-                      <TableCell>{getPaymentStatusBadge(getPaymentStatus(invoice))}</TableCell>
+                      <TableCell>
+                        {invoice.status === "cancelled" ? (
+                          <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
+                        ) : (
+                          getPaymentStatusBadge(getPaymentStatus(invoice))
+                        )}
+                      </TableCell>
                       <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
                       <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                       <TableCell>
@@ -2414,14 +2624,16 @@ export function InvoiceManagement({
                           >
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => sendInvoice(invoice.id)}
-                            title="Send Email"
-                          >
-                            <Mail className="w-4 h-4" />
-                          </Button>
+                          {getApprovalStatus(invoice) === "approved" && invoice.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openSendEmailConfirm(invoice.id)}
+                              title="Send Email"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                          )}
                           {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && (
                             <Button
                               size="sm"
@@ -2581,9 +2793,6 @@ export function InvoiceManagement({
                       <SelectItem value="sent">
                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge>
                       </SelectItem>
-                      <SelectItem value="unsent">
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unsent</Badge>
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2698,7 +2907,7 @@ export function InvoiceManagement({
                           />
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {invoice.invoiceNumber || "DRAFT"}
+                          {displayInvoiceNumber(invoice.invoiceNumber)}
                         </TableCell>
                         <TableCell>
                           <div>
@@ -2712,12 +2921,18 @@ export function InvoiceManagement({
                         <TableCell className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
                         <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
                         <TableCell
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleViewEmailDetails(invoice)}
+                          className={getEmailStatus(invoice) === "sent" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+                          onClick={getEmailStatus(invoice) === "sent" ? () => handleViewEmailDetails(invoice) : undefined}
                         >
                           {getStatusBadge(getEmailStatus(invoice))}
                         </TableCell>
-                        <TableCell>{getPaymentStatusBadge(getPaymentStatus(invoice))}</TableCell>
+                        <TableCell>
+                        {invoice.status === "cancelled" ? (
+                          <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
+                        ) : (
+                          getPaymentStatusBadge(getPaymentStatus(invoice))
+                        )}
+                      </TableCell>
                         <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
                         <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                         <TableCell>
@@ -2773,14 +2988,16 @@ export function InvoiceManagement({
                             >
                               <Download className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => sendInvoice(invoice.id)}
-                              title="Send Email"
-                            >
-                              <Mail className="w-4 h-4" />
-                            </Button>
+                            {getApprovalStatus(invoice) === "approved" && invoice.status !== "cancelled" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => sendInvoice(invoice.id)}
+                                title="Send Email"
+                              >
+                                <Mail className="w-4 h-4" />
+                              </Button>
+                            )}
                             {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && (
                               <Button
                                 size="sm"
@@ -2974,6 +3191,44 @@ export function InvoiceManagement({
                     </div>
                   </div>
                 </div>
+
+                {/* Cancellation Information - Full Width */}
+                {selectedInvoice.status === "cancelled" && (
+                  <div className="mt-6 bg-red-50 border border-red-200 rounded-md p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-red-800 mb-1">Invoice Cancelled</p>
+                        <p className="text-sm text-red-700">
+                          <span className="font-medium">Reason:</span> {selectedInvoice.cancelReason || "No reason recorded"}
+                        </p>
+                        <p className="text-xs text-red-600 mt-1">
+                          {selectedInvoice.cancelledBy && <>Cancelled by {selectedInvoice.cancelledBy}</>}
+                          {selectedInvoice.cancelledAt ? (
+                            <>
+                              {selectedInvoice.cancelledBy && <> on </>}
+                              {new Date(selectedInvoice.cancelledAt).toLocaleDateString('en-GB', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false
+                              })}
+                            </>
+                          ) : (
+                            "Date and time not recorded"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Invoice Items Table */}
@@ -3277,15 +3532,36 @@ export function InvoiceManagement({
                 <Button variant="outline" onClick={closeInvoiceModal}>
                   Close
                 </Button>
-                <Button
-                  onClick={() => {
-                    sendInvoice(selectedInvoice.id)
-                    closeInvoiceModal()
-                  }}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Email
-                </Button>
+                {(() => {
+                  const shouldShowCancelButton = getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
+                  console.log('[Cancel Button] Visibility check:', {
+                    approvalStatus: getApprovalStatus(selectedInvoice),
+                    invoiceStatus: selectedInvoice.status,
+                    shouldShow: shouldShowCancelButton
+                  })
+                  return shouldShowCancelButton ? (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        const modalData = {
+                          id: selectedInvoice.id,
+                          invoiceNumber: selectedInvoice.invoiceNumber,
+                          studentName: selectedInvoice.studentName,
+                          status: selectedInvoice.status
+                        }
+                        // Open cancel dialog
+                        const reason = prompt("Please specify the reason for cancellation:")
+                        if (reason && reason.trim()) {
+                          handleCancelInvoice(modalData, reason.trim())
+                          closeInvoiceModal()
+                        }
+                      }}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel Invoice
+                    </Button>
+                  ) : null
+                })()}
               </div>
             </div>
           </div>
@@ -3764,6 +4040,7 @@ export function InvoiceManagement({
         onSave={handleSaveInvoiceFromModal}
         onDownload={handleDownloadInvoice}
         onPrint={handlePrintInvoice}
+        onCancel={handleCancelInvoice}
       />
 
       {/* Import Excel Dialog */}
@@ -3931,11 +4208,41 @@ export function InvoiceManagement({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cashier-check">Cashier&apos;s cheque</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
                   <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="edc">EDC</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* EDC Details - Show only when EDC is selected */}
+            {paymentMethod === "edc" && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Bank</label>
+                  <Select value={edcBank} onValueChange={setEdcBank}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Kasikorn">Kasikorn</SelectItem>
+                      <SelectItem value="UOB">UOB</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Account Number</label>
+                  <input
+                    type="text"
+                    value={edcAccountNumber}
+                    onChange={(e) => setEdcAccountNumber(e.target.value)}
+                    placeholder="Enter account number"
+                    className="w-full h-9 px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Payment Proof (JPG/PNG)</label>
@@ -3999,7 +4306,7 @@ export function InvoiceManagement({
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Edit Invoice</h2>
-                    <p className="text-sm text-gray-500 mt-1">{selectedInvoice.invoiceNumber || 'DRAFT-XXXXXXXX'}</p>
+                    <p className="text-sm text-gray-500 mt-1">{displayInvoiceNumber(selectedInvoice.invoiceNumber)}</p>
                   </div>
                   <Badge variant={selectedInvoice.status === 'draft' ? 'secondary' : 'default'} className="text-sm px-4 py-1.5">
                     {selectedInvoice.status === 'draft' ? 'Draft' : 'Pending Approval'}
@@ -4307,7 +4614,7 @@ export function InvoiceManagement({
             <div className="bg-gray-50 rounded-md p-4 text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-500">{t("invoice.invoiceNumber")}</span>
-                <span className="font-medium text-right">{selectedInvoiceForApproval.invoiceNumber}</span>
+                <span className="font-medium text-right">{displayInvoiceNumber(selectedInvoiceForApproval.invoiceNumber)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">{(selectedInvoiceForApproval.invoiceType === 'external' || selectedInvoiceForApproval.studentId === 'EXTERNAL' || selectedInvoiceForApproval.term === "External") ? t("invoice.recipient") : t("invoice.student")}</span>
@@ -4448,7 +4755,7 @@ export function InvoiceManagement({
             <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Invoice Number</span>
-                <span className="font-medium">{selectedInvoice.invoiceNumber}</span>
+                <span className="font-medium">{displayInvoiceNumber(selectedInvoice.invoiceNumber)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Student</span>
@@ -4525,7 +4832,7 @@ export function InvoiceManagement({
                         <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice no.</td>
                         <td className="py-1">
                           {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                            ? (selectedInvoice.invoiceNumber || "-")
+                            ? (displayInvoiceNumber(selectedInvoice.invoiceNumber) || "-")
                             : "Pending Approval"}
                         </td>
                       </tr>
@@ -4616,7 +4923,7 @@ export function InvoiceManagement({
                             <tr><td className="pr-6 py-0.5">Reference no. (Ref 1)</td><td>700002</td></tr>
                             <tr><td className="pr-6 py-0.5">Reference no. (Ref 2)</td><td>
                               {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                                ? (selectedInvoice.invoiceNumber || "-")
+                                ? (displayInvoiceNumber(selectedInvoice.invoiceNumber) || "-")
                                 : "-"}
                             </td></tr>
                           </tbody>
@@ -4656,7 +4963,7 @@ export function InvoiceManagement({
 
       {/* Email Detail Dialog */}
       <Dialog open={isEmailDetailDialogOpen} onOpenChange={setIsEmailDetailDialogOpen}>
-        <DialogContent className="max-w-2xl p-0 gap-0">
+        <DialogContent className="p-0 gap-0" style={{ width: "50vw", maxWidth: "600px" }}>
           {/* Header */}
           <DialogHeader className="px-8 pt-5 pb-4 border-b bg-white">
             <DialogTitle className="flex items-center gap-2 text-base font-semibold">
@@ -4666,10 +4973,10 @@ export function InvoiceManagement({
           </DialogHeader>
 
           {selectedInvoiceForEmail && (() => {
-            // Get display date for email sent - use emailSentAt, or fallback to approvedAt or issueDate for "sent" status
+            // Get display date for email sent - ONLY use emailSentAt (actual send time)
             const emailStatus = getEmailStatus(selectedInvoiceForEmail)
             const displayEmailDate = selectedInvoiceForEmail.emailSentAt
-              || (emailStatus === "sent" ? (selectedInvoiceForEmail.approvedAt || selectedInvoiceForEmail.issueDate) : null)
+            console.log('[Email Status Modal] Invoice:', selectedInvoiceForEmail.invoiceNumber, 'emailSentAt:', selectedInvoiceForEmail.emailSentAt, 'Status:', emailStatus)
 
             return (
               <div className="px-8 pt-6 pb-6">
@@ -4677,7 +4984,7 @@ export function InvoiceManagement({
                 <div className="grid grid-cols-3 gap-8 mb-6 pb-4 border-b">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Invoice Number</p>
-                    <p className="text-base font-bold text-foreground">{selectedInvoiceForEmail.invoiceNumber}</p>
+                    <p className="text-base font-bold text-foreground">{displayInvoiceNumber(selectedInvoiceForEmail.invoiceNumber)}</p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Student Name</p>
@@ -4717,7 +5024,7 @@ export function InvoiceManagement({
                         <div>
                           <p className="text-xs text-muted-foreground font-medium">Time</p>
                           <p className="text-sm font-bold text-foreground">
-                            {format(new Date(displayEmailDate), "hh:mm a")}
+                            {format(new Date(displayEmailDate), "HH:mm")}
                           </p>
                         </div>
                       </div>
@@ -4773,6 +5080,51 @@ export function InvoiceManagement({
                 Close
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Email Confirmation Dialog */}
+      <Dialog open={isSendEmailConfirmOpen} onOpenChange={setIsSendEmailConfirmOpen}>
+        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+          <DialogHeader>
+            <DialogTitle>Confirm Send Email</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to send invoice email?
+            </DialogDescription>
+          </DialogHeader>
+          {invoiceToSend && (
+            <div className="py-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Invoice:</span>
+                  <span className="font-medium">{invoiceToSend.invoiceNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Student:</span>
+                  <span className="font-medium">{invoiceToSend.studentName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Send to:</span>
+                  <span className="font-medium">{invoiceToSend.parentEmail}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSendEmailConfirmOpen(false)
+                setInvoiceToSend(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={sendInvoice}>
+              <Mail className="w-4 h-4 mr-2" />
+              Send Email
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
