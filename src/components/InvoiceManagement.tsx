@@ -3254,11 +3254,6 @@ export function InvoiceManagement({
                             <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span>{item.description}</span>
-                                {isRegistrationFee && (
-                                  <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                    New Student Fee
-                                  </Badge>
-                                )}
                               </div>
                               {item.discountPercent > 0 && (
                                 <span className="text-gray-400 text-xs">(-{item.discountPercent}%)</span>
