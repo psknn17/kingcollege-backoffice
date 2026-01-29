@@ -5486,9 +5486,7 @@ const th: Record<string, string> = {
   // Common UI Actions (additional)
   "common.show": "แสดง",
   "common.entries": "รายการ",
-  "common.apply": "ใช้งาน",
   "common.createUser": "สร้างผู้ใช้",
-  "common.saveChanges": "บันทึกการเปลี่ยนแปลง",
   "common.savePermissions": "บันทึกสิทธิ์",
 
   // Table Headers
