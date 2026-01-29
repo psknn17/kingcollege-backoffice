@@ -726,7 +726,7 @@ export function ApprovalQueue() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Year Group */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("student.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allYearGroups")} />
@@ -764,7 +764,7 @@ export function ApprovalQueue() {
 
             {/* Date Range */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("invoice.dateRange")}</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.dateRange")}</label>
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -820,7 +820,7 @@ export function ApprovalQueue() {
                 <TableHead>{renderSortHeader("Student", "studentName")}</TableHead>
                 <TableHead>{renderSortHeader("Academic Year", "academicYear")}</TableHead>
                 <TableHead>{renderSortHeader("Term", "term")}</TableHead>
-                <TableHead>{renderSortHeader("Year Group", "studentGrade")}</TableHead>
+                <TableHead>{renderSortHeader(t("student.yearGroup"), "studentGrade")}</TableHead>
                 <TableHead>{renderSortHeader("Amount", "finalAmount")}</TableHead>
                 <TableHead>{renderSortHeader("Issue Date", "issueDate")}</TableHead>
                 <TableHead>{renderSortHeader("Due Date", "dueDate")}</TableHead>

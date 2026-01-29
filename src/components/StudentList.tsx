@@ -1491,7 +1491,7 @@ export function StudentList() {
             <Select value={filterGrade} onValueChange={setFilterGrade}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder={t("invoice.yearGroup")} />
+                <SelectValue placeholder={t("student.yearGroup")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>

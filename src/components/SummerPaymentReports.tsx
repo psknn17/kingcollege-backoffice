@@ -534,7 +534,7 @@ export function SummerPaymentReports() {
                 />
 
                 <div className="space-y-2">
-                  <Label>{t("payment.paymentMethod")}</Label>
+                  <Label>{t("payment.paymentChannel")}</Label>
                   <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                     <SelectTrigger>
                       <SelectValue />
@@ -650,7 +650,7 @@ export function SummerPaymentReports() {
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("summerPayment.method")}</TableHead>
+                    <TableHead>{t("payment.paymentChannel")}</TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                       <div className="flex items-center gap-1">
                         {t("common.status")}

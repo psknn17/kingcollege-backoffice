@@ -114,7 +114,7 @@ export function TuitionDashboard() {
     }
 
     if (selectedTerm) {
-      const termDisplay = selectedTerm === "term1" ? t("invoice.term") + " 1" : selectedTerm === "term2" ? t("invoice.term") + " 2" : t("invoice.term") + " 3"
+      const termDisplay = selectedTerm === "term1" ? t("payment.term") + " 1" : selectedTerm === "term2" ? t("payment.term") + " 2" : t("payment.term") + " 3"
       filters.push(termDisplay)
     }
 
@@ -186,15 +186,15 @@ export function TuitionDashboard() {
 
               {/* Term Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t("invoice.term")}</label>
+                <label className="text-sm font-medium text-foreground">{t("payment.term")}</label>
                 <Select value={selectedTerm} onValueChange={handleTermChange}>
                   <SelectTrigger className="h-10">
-                    <SelectValue placeholder={t("invoice.term")} />
+                    <SelectValue placeholder={t("payment.term")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="term1">{t("invoice.term")} 1</SelectItem>
-                    <SelectItem value="term2">{t("invoice.term")} 2</SelectItem>
-                    <SelectItem value="term3">{t("invoice.term")} 3</SelectItem>
+                    <SelectItem value="term1">{t("payment.term")} 1</SelectItem>
+                    <SelectItem value="term2">{t("payment.term")} 2</SelectItem>
+                    <SelectItem value="term3">{t("payment.term")} 3</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -342,8 +342,8 @@ export function TuitionDashboard() {
                   )}
                   {appliedFilters.term && (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-chart-2 text-white rounded-full text-sm">
-                      <span className="font-medium">{t("invoice.term")}:</span>
-                      <span>{appliedFilters.term === "term1" ? t("invoice.term") + " 1" : appliedFilters.term === "term2" ? t("invoice.term") + " 2" : t("invoice.term") + " 3"}</span>
+                      <span className="font-medium">{t("payment.term")}:</span>
+                      <span>{appliedFilters.term === "term1" ? t("payment.term") + " 1" : appliedFilters.term === "term2" ? t("payment.term") + " 2" : t("payment.term") + " 3"}</span>
                       <button
                         onClick={() => {
                           setSelectedTerm("")

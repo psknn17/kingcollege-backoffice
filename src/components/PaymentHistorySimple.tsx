@@ -358,7 +358,7 @@ export function PaymentHistorySimple() {
 
             {/* Payment Method */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("paymentMethod.label")}</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("payment.paymentChannel")}</label>
               <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="All Methods" />
@@ -379,7 +379,7 @@ export function PaymentHistorySimple() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date From */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Date From</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.from")}</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -406,7 +406,7 @@ export function PaymentHistorySimple() {
 
             {/* Date To */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Date To</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("common.to")}</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -455,7 +455,7 @@ export function PaymentHistorySimple() {
                 <TableHead>{t("student.yearGroup")}</TableHead>
                 <TableHead>{t("common.amount")}</TableHead>
                 <TableHead>{t("payment.term")}</TableHead>
-                <TableHead>{t("paymentMethod.label")}</TableHead>
+                <TableHead>{t("payment.paymentChannel")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
                 <TableHead>{t("common.date")}</TableHead>
                 <TableHead>{t("common.actions")}</TableHead>

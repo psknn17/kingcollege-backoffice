@@ -394,7 +394,7 @@ export function EventRegistrationReports() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t("eventReports.yearGroup")}</Label>
+                  <Label>{t("student.yearGroup")}</Label>
                   <Select value={selectedYearGroup} onValueChange={setSelectedYearGroup}>
                     <SelectTrigger>
                       <SelectValue />
@@ -527,7 +527,7 @@ export function EventRegistrationReports() {
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
                       <div className="flex items-center gap-1">
-                        {t("eventReports.yearGroup")}
+                        {t("student.yearGroup")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
