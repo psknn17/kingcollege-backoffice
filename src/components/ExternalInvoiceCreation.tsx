@@ -10,7 +10,7 @@ import { Textarea } from "./ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package } from "lucide-react"
+import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package, CheckCircle } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -527,30 +527,35 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                       <p className="text-xs">Add items from External Invoice &gt; Items & Templates</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       {filteredItems.map(item => {
                         const isAdded = lineItems.some(li => li.itemId === item.id)
                         return (
                           <Card
                             key={item.id}
-                            className={`cursor-pointer transition-all hover:shadow-md ${isAdded ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                            className={`cursor-pointer transition-all ${isAdded ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
                             onClick={() => !isAdded && addItem(item)}
                           >
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start">
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                                  <p className="text-lg font-semibold text-primary mt-1">
-                                    {formatCurrency(item.amount)}
-                                  </p>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-medium">{item.name}</h4>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs border-orange-300 text-orange-700"
+                                    >
+                                      External
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mb-2">{item.description || "External invoice item"}</p>
+                                  <div className="flex items-center gap-4">
+                                    <p className="font-medium text-lg">₿{item.amount.toLocaleString()}</p>
+                                  </div>
                                 </div>
-                                <div className="ml-2">
+                                <div className="flex items-center">
                                   {isAdded ? (
-                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    </div>
+                                    <CheckCircle className="w-5 h-5 text-primary" />
                                   ) : (
                                     <Plus className="w-5 h-5 text-muted-foreground" />
                                   )}
