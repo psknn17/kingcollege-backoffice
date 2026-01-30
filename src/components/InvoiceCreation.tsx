@@ -1650,17 +1650,27 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   useEffect(() => {
     if (selectedGrade && invoiceType !== "summer" && invoiceType !== "afterschool") {
       const allItems = loadItemsFromStorage(invoiceType)
-      const filteredItems = allItems.filter(item =>
-        item.isActive &&
-        item.applicableGrades.includes(selectedGrade) &&
-        item.category === selectedCategory
-      )
+
+      // For exam invoices, don't filter by grade (exams can apply to any grade)
+      const filteredItems = invoiceType === "exam"
+        ? allItems.filter(item =>
+            item.isActive &&
+            item.category === selectedCategory
+          )
+        : allItems.filter(item =>
+            item.isActive &&
+            item.applicableGrades.includes(selectedGrade) &&
+            item.category === selectedCategory
+          )
       setAvailableItems(filteredItems)
 
       const allTemplates = loadTemplatesFromStorage(invoiceType)
-      const filteredTemplates = allTemplates.filter(template =>
-        template.isActive && template.applicableGrades.includes(selectedGrade)
-      )
+      // For exam templates, also don't filter by grade
+      const filteredTemplates = invoiceType === "exam"
+        ? allTemplates.filter(template => template.isActive)
+        : allTemplates.filter(template =>
+            template.isActive && template.applicableGrades.includes(selectedGrade)
+          )
       setAvailableTemplates(filteredTemplates)
     }
   }, [selectedGrade, selectedCategory, invoiceType])
@@ -1811,24 +1821,26 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
     // Filter available items for this grade
     // For School Bus (summer), load all items (not grade-specific)
+    // For Exam, load all items (exams can apply to any grade)
     // For ECA, include all items (Music, Arts, Sports, Academic, Other categories)
     // For other types, filter by specific category
     const gradeItems = invoiceType === "summer"
       ? allItems.filter(item => item.isActive)
-      : invoiceType === "eca"
+      : invoiceType === "exam"
         ? allItems.filter(item =>
             item.isActive &&
-            item.applicableGrades.includes(grade)
+            item.category === "International Exam"
           )
-        : allItems.filter(item =>
-            item.isActive &&
-            item.applicableGrades.includes(grade) &&
-            item.category === (
-              invoiceType === "eca" ? "ECA" :
-              invoiceType === "exam" ? "International Exam" :
-              (defaultCategory || "Tuition")
+        : invoiceType === "eca"
+          ? allItems.filter(item =>
+              item.isActive &&
+              item.applicableGrades.includes(grade)
             )
-          )
+          : allItems.filter(item =>
+              item.isActive &&
+              item.applicableGrades.includes(grade) &&
+              item.category === (defaultCategory || "Tuition")
+            )
     console.log(`[${invoiceType}] Filtered to ${gradeItems.length} items for grade ${grade}`)
     setAvailableItems(gradeItems)
 
