@@ -184,7 +184,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const departmentType = category === "bus" ? "School Bus" : "Tuition"
 
   // Use category-specific localStorage key
-  const STORAGE_KEY = `studentGroups_${category}`
+  // For tuition, use "studentGroups" for backward compatibility
+  // For bus, use "studentGroups_bus"
+  const STORAGE_KEY = category === "tuition" ? "studentGroups" : `studentGroups_${category}`
 
   // Convert students from context to local format
   const availableStudents = useMemo(() =>
