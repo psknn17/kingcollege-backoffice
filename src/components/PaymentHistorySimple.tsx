@@ -525,7 +525,7 @@ export function PaymentHistorySimple() {
 
       {/* Payment Proof Viewer Dialog */}
       <Dialog open={!!viewingPaymentProof} onOpenChange={() => setViewingPaymentProof(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4">
             <DialogTitle className="text-xl">Payment Proof - {viewingPaymentProof?.invoiceNumber}</DialogTitle>
           </DialogHeader>
@@ -586,7 +586,7 @@ export function PaymentHistorySimple() {
                           <img
                             src={proof.dataUrl}
                             alt={`Payment proof ${index + 1}`}
-                            className="max-w-2xl w-full h-auto rounded border shadow-sm"
+                            className="max-w-xl w-full h-auto rounded border shadow-sm"
                           />
                         </div>
                       </CardContent>
