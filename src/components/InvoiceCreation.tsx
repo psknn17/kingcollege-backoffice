@@ -344,8 +344,90 @@ const saveInvoiceToStorage = (invoice: SavedInvoice, invoiceType: string = "stud
     localStorage.setItem(storageKey, JSON.stringify(existing))
     // Dispatch custom event to notify Invoice Overview
     window.dispatchEvent(new CustomEvent('invoicesUpdated'))
+
+    // Auto-generate receipt if invoice status is "paid"
+    if (invoice.status === "paid") {
+      generateReceiptForPaidInvoice(invoice)
+    }
   } catch (error) {
     console.error("Failed to save invoice:", error)
+  }
+}
+
+// Auto-generate receipt for paid invoice
+const generateReceiptForPaidInvoice = (invoice: SavedInvoice) => {
+  try {
+    // Determine receipt storage key and prefix based on category
+    let receiptStorageKey = ""
+    let receiptPrefix = ""
+
+    const category = invoice.category
+    if (category === "trip" || category === "eca") {
+      receiptStorageKey = "receiptRecords_afterschool"
+      receiptPrefix = "TRP"
+    } else if (category === "exam") {
+      receiptStorageKey = "receiptRecords_event"
+      receiptPrefix = "EXM"
+    } else if (category === "bus") {
+      receiptStorageKey = "receiptRecords_summer"
+      receiptPrefix = "BUS"
+    } else {
+      // For tuition and other categories
+      receiptStorageKey = "receiptRecords_tuition"
+      receiptPrefix = "TUI"
+    }
+
+    // Get existing receipts
+    const storedReceipts = localStorage.getItem(receiptStorageKey)
+    const receipts = storedReceipts ? JSON.parse(storedReceipts) : []
+
+    // Check if receipt already exists for this invoice
+    const existingReceipt = receipts.find((r: any) => r.id === `receipt-${invoice.id}`)
+    if (existingReceipt) {
+      console.log(`Receipt already exists for invoice ${invoice.invoiceNumber}`)
+      return
+    }
+
+    // Generate receipt number
+    const now = new Date()
+    const yearMonth = format(now, "yyMM")
+    const nextNumber = receipts.length + 1
+    const receiptNo = `${receiptPrefix}-${yearMonth}-${String(nextNumber).padStart(4, "0")}`
+
+    // Create receipt record
+    const receiptRecord = {
+      id: `receipt-${invoice.id}`,
+      receiptNo: receiptNo,
+      receiptDate: now.toISOString(),
+      clientType: invoice.invoiceType === "external" ? "external" : "internal",
+      clientNo: invoice.studentId,
+      clientName: invoice.parentName || invoice.studentName,
+      contactName: invoice.studentName,
+      yearGroup: invoice.studentGrade,
+      schoolYear: invoice.term || "",
+      totalAmount: invoice.netAmount,
+      paymentMethod: "N/A",
+      status: "generated",
+      createdAt: now.toISOString(),
+      invoices: [
+        {
+          id: invoice.id,
+          invoiceNo: invoice.invoiceNumber,
+          invoiceDate: invoice.issueDate,
+          invoiceAmount: invoice.netAmount,
+          receivedAmount: invoice.netAmount,
+          outstandingAmount: 0
+        }
+      ]
+    }
+
+    // Add receipt to storage
+    receipts.push(receiptRecord)
+    localStorage.setItem(receiptStorageKey, JSON.stringify(receipts))
+
+    console.log(`Auto-generated receipt: ${receiptNo} for invoice ${invoice.invoiceNumber}`)
+  } catch (error) {
+    console.error("Failed to auto-generate receipt:", error)
   }
 }
 
