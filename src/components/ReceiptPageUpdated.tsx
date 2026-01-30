@@ -779,9 +779,9 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
   return (
     <div className="space-y-6">
       <div className="mb-4">
-        <h3 className="text-lg font-medium">Receipt & Credit Notes</h3>
+        <h3 className="text-lg font-medium">{category === "external" ? "Receipt" : "Receipt & Credit Notes"}</h3>
         <p className="text-sm text-muted-foreground">
-          View and manage payment receipts and credit notes
+          {category === "external" ? "View and manage payment receipts" : "View and manage payment receipts and credit notes"}
         </p>
       </div>
 
@@ -1097,28 +1097,32 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
-                    {t("common.student")}
+                    {category === "external" ? "Client" : t("common.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
-                  <div className="flex items-center gap-1">
-                    {t("common.yearGroup")}
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")}>
-                  <div className="flex items-center gap-1">
-                    {t("common.academicYear")}
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
-                  <div className="flex items-center gap-1">
-                    {t("common.term")}
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
+                {category !== "external" && (
+                  <>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
+                      <div className="flex items-center gap-1">
+                        {t("common.yearGroup")}
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")}>
+                      <div className="flex items-center gap-1">
+                        {t("common.academicYear")}
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
+                      <div className="flex items-center gap-1">
+                        {t("common.term")}
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                  </>
+                )}
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                   <div className="flex items-center gap-1">
                     {t("common.amount")}
@@ -1161,11 +1165,15 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                       <div className="text-sm text-muted-foreground">{receipt.studentId}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{receipt.studentGrade}</Badge>
-                  </TableCell>
-                  <TableCell>{receipt.academicYear}</TableCell>
-                  <TableCell>{receipt.term}</TableCell>
+                  {category !== "external" && (
+                    <>
+                      <TableCell>
+                        <Badge variant="secondary">{receipt.studentGrade}</Badge>
+                      </TableCell>
+                      <TableCell>{receipt.academicYear}</TableCell>
+                      <TableCell>{receipt.term}</TableCell>
+                    </>
+                  )}
                   <TableCell>₿{receipt.amount.toLocaleString()}</TableCell>
                   <TableCell>{receipt.paymentMethod}</TableCell>
                   <TableCell>{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>

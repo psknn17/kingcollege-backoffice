@@ -4012,58 +4012,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 </div>
 
                 <div className="flex gap-2 pt-4 justify-end">
-                  {!isPreviewMode ? (
-                    <>
-                      <Button
-                        onClick={handlePreviewInvoice}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1.5"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Preview
-                      </Button>
-                      {isEditMode ? (
-                        <Button
-                          onClick={handleSaveAsDraft}
-                          size="sm"
-                          className="flex items-center gap-1.5"
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                          Save
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={handleSaveAsDraft}
-                          size="sm"
-                          className="flex items-center gap-1.5"
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                          Draft
-                        </Button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={() => setIsPreviewMode(false)}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1.5"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={handleSaveAsDraft}
-                        size="sm"
-                        className="flex items-center gap-1.5"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        {isEditMode ? "Save" : "Draft"}
-                      </Button>
-                    </>
-                  )}
+                  <Button
+                    onClick={handlePreviewInvoice}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Preview
+                  </Button>
+                  <Button
+                    onClick={handleSaveAsDraft}
+                    size="sm"
+                    className="flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    {isEditMode ? "Save" : "Draft"}
+                  </Button>
                 </div>
               </div>
             )}

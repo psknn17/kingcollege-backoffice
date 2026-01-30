@@ -711,17 +711,13 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               {/* Action Buttons */}
               <Separator className="my-4" />
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsPreviewDialogOpen(true)} disabled={lineItems.length === 0}>
-                  <Eye className="w-4 h-4 mr-2" />
+                <Button variant="outline" size="sm" onClick={() => setIsPreviewDialogOpen(true)} disabled={lineItems.length === 0} className="flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" />
                   Preview
                 </Button>
-                <Button variant="outline" onClick={() => handleSave("draft")}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Draft
-                </Button>
-                <Button onClick={() => handleSave("pending")} disabled={!isValid}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Create Invoice
+                <Button size="sm" onClick={() => handleSave("draft")} className="flex items-center gap-1.5">
+                  <Save className="w-3.5 h-3.5" />
+                  {isEditMode ? "Save" : "Draft"}
                 </Button>
               </div>
             </div>

@@ -1994,6 +1994,9 @@ export function InvoiceManagement({
           } else if (category === "bus") {
             receiptStorageKey = "receiptRecords_summer"
             receiptPrefix = "BUS"
+          } else if (category === "external") {
+            receiptStorageKey = "receiptRecords_external"
+            receiptPrefix = "EXT"
           } else {
             // For tuition and other categories, use general receipt storage
             receiptStorageKey = "receiptRecords_tuition"
@@ -3006,7 +3009,7 @@ export function InvoiceManagement({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => sendInvoice(invoice.id)}
+                                onClick={() => openSendEmailConfirm(invoice.id)}
                                 title="Send Email"
                               >
                                 <Mail className="w-4 h-4" />
