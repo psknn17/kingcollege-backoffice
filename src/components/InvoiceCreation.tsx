@@ -1689,6 +1689,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     }
   }, [selectedGrades, invoiceType])
 
+  // Track if tuition fee has been loaded for current selection
+  const [tuitionFeeLoaded, setTuitionFeeLoaded] = useState<string>("")
+
   // Auto-load tuition fee when Academic Year, Grade, and Term are all selected (for Tuition invoices)
   useEffect(() => {
     // Only for tuition category and student invoice type
@@ -1706,25 +1709,28 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       return
     }
 
+    // Create a unique key for this selection to track if already loaded
+    const selectionKey = `${selectedAcademicYear}-${selectedGrade}-${selectedTerm}`
+
+    // Skip if already loaded for this selection
+    if (tuitionFeeLoaded === selectionKey) {
+      return
+    }
+
     try {
       // Load tuition data from localStorage
       const tuitionData = localStorage.getItem("tuitionByYearData")
-      console.log("[Tuition Fee Load] Academic Year:", selectedAcademicYear, "Grade:", selectedGrade, "Term:", selectedTerm)
-      console.log("[Tuition Fee Load] localStorage data exists:", !!tuitionData)
 
       if (tuitionData) {
         const parsedData = JSON.parse(tuitionData)
         const yearData = parsedData[selectedAcademicYear]
-        console.log("[Tuition Fee Load] Year data exists:", !!yearData)
 
         if (yearData && Array.isArray(yearData)) {
           // Use gradeIdMap to convert translated label to grade ID
           const gradeId = gradeIdMap[selectedGrade] || selectedGrade.toLowerCase().replace(/\s+/g, '')
-          console.log("[Tuition Fee Load] Looking for grade ID:", gradeId)
 
           // Find the tuition fees for this grade by ID
           const gradeTuition = yearData.find((item: any) => item.id === gradeId)
-          console.log("[Tuition Fee Load] Found grade tuition:", gradeTuition)
 
           if (gradeTuition) {
             // Determine which term amount to use
@@ -1742,39 +1748,36 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               termName = "Term 3"
             }
 
-            console.log("[Tuition Fee Load] Term amount:", termAmount, "for", termName)
-
             if (termAmount > 0) {
-              setSelectedItems([{
+              const tuitionItem = {
                 id: `tuition-${gradeId}-${selectedTerm}`,
                 name: `${termName} Tuition Fee - ${selectedGrade}`,
                 description: `${termName} tuition payment for ${selectedGrade}`,
                 category: "Tuition",
                 quantity: 1,
                 amount: termAmount
-              }])
-              console.log("[Tuition Fee Load] Set tuition item:", termAmount)
-            } else {
-              console.log("[Tuition Fee Load] Term amount is 0, clearing items")
-              setSelectedItems([])
+              }
+
+              // Only add if not already in selectedItems
+              setSelectedItems(prev => {
+                const alreadyHasTuition = prev.some(item => item.id.startsWith('tuition-'))
+                if (alreadyHasTuition) {
+                  // Replace existing tuition item
+                  return prev.map(item => item.id.startsWith('tuition-') ? tuitionItem : item)
+                } else {
+                  // Add new tuition item at the beginning
+                  return [tuitionItem, ...prev]
+                }
+              })
+              setTuitionFeeLoaded(selectionKey)
             }
-          } else {
-            console.log("[Tuition Fee Load] Grade not found in tuition data")
-            setSelectedItems([])
           }
-        } else {
-          console.log("[Tuition Fee Load] Year data not found or not an array")
-          setSelectedItems([])
         }
-      } else {
-        console.log("[Tuition Fee Load] No tuition data in localStorage")
-        setSelectedItems([])
       }
     } catch (error) {
       console.error("[Tuition Fee Load] Error loading tuition fees:", error)
-      setSelectedItems([])
     }
-  }, [selectedAcademicYear, selectedGrade, selectedTerm, category, invoiceType, isEditMode, gradeIdMap])
+  }, [selectedAcademicYear, selectedGrade, selectedTerm, category, invoiceType, isEditMode, gradeIdMap, tuitionFeeLoaded])
 
   const handleGradeChange = (grade: string) => {
     setSelectedGrade(grade)
@@ -1792,6 +1795,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setSelectedCategory(invoiceType === "eca" ? "ECA" : (defaultCategory || "Tuition"))
     setPaymentDeadline(undefined)
     setIsPreviewMode(false)
+    setTuitionFeeLoaded("") // Reset tuition fee loaded flag
+    setSelectedItems([]) // Clear selected items when grade changes
 
     // Load items from localStorage
     const allItems = loadItemsFromStorage(invoiceType)
