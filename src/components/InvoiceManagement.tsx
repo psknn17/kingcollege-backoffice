@@ -2100,8 +2100,14 @@ export function InvoiceManagement({
   const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" => {
     // If invoice is cancelled, return special status
     if (invoice.status === "cancelled") return "cancelled"
-    // If email has been sent (status is sent or paid), show "sent"
-    if (invoice.status === "paid") return "sent"
+    // If invoice is paid, check if email was actually sent
+    if (invoice.status === "paid") {
+      // If email was never sent, show "-" (use cancelled status to display dash)
+      if (!invoice.emailSentAt) return "cancelled"
+      // If email was sent before payment, show "sent"
+      return "sent"
+    }
+    // If status is sent, email has been sent
     if (invoice.status === "sent") return "sent"
     // Otherwise, email hasn't been sent yet, show "wait"
     return "wait"
