@@ -108,7 +108,9 @@ const getStudentGroupDiscounts = (studentId: string, category: string): { name: 
     }
 
     // Get storage key based on category
-    const storageKey = `studentGroups_${category}`
+    // For tuition, use "studentGroups" (legacy key from TuitionDiscountGroups)
+    // For other categories, use "studentGroups_${category}"
+    const storageKey = category === "tuition" ? "studentGroups" : `studentGroups_${category}`
     const stored = localStorage.getItem(storageKey)
     if (!stored) return []
 
@@ -1842,6 +1844,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const matchesSearch = (student.id || '').toLowerCase().includes(searchLower) ||
                          (student.name || '').toLowerCase().includes(searchLower)
     const notAlreadySelected = !selectedStudents.find(s => s.id === student.id)
+
+    // For Tuition invoices only: exclude students with 100% discount from Discount Groups
+    if (invoiceType === "student" && category === "tuition") {
+      const studentDiscounts = (student as InvoiceStudent).discounts?.studentGroupDiscounts || []
+      const totalDiscountPercent = studentDiscounts.reduce((sum, d) => sum + (d.percentage || 0), 0)
+      if (totalDiscountPercent >= 100) {
+        return false // Exclude students with 100% or more discount
+      }
+    }
 
     // For simplified views (event only), don't filter by grade/room
     if (isSimplifiedView) {
