@@ -1846,7 +1846,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const notAlreadySelected = !selectedStudents.find(s => s.id === student.id)
 
     // For Tuition invoices only: exclude students with 100% discount from Discount Groups
-    if (invoiceType === "student" && category === "tuition") {
+    if (invoiceType === "student" && selectedCategory.toLowerCase() === "tuition") {
       const studentDiscounts = (student as InvoiceStudent).discounts?.studentGroupDiscounts || []
       const totalDiscountPercent = studentDiscounts.reduce((sum, d) => sum + (d.percentage || 0), 0)
       if (totalDiscountPercent >= 100) {
