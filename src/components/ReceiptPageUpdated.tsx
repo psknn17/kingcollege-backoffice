@@ -83,8 +83,10 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
   try {
     let storageKey = "receiptRecords_tuition"
 
-    if (category === "eca" || category === "trip") {
-      storageKey = "receiptRecords_afterschool"
+    if (category === "eca") {
+      storageKey = "receiptRecords_eca"
+    } else if (category === "trip") {
+      storageKey = "receiptRecords_trip"
     } else if (category === "exam") {
       storageKey = "receiptRecords_event"
     } else if (category === "bus") {

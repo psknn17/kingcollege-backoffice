@@ -1985,8 +1985,11 @@ export function InvoiceManagement({
           let receiptPrefix = ""
 
           const category = markPaidInvoice.category
-          if (category === "trip" || category === "eca") {
-            receiptStorageKey = "receiptRecords_afterschool"
+          if (category === "eca") {
+            receiptStorageKey = "receiptRecords_eca"
+            receiptPrefix = "ECA"
+          } else if (category === "trip") {
+            receiptStorageKey = "receiptRecords_trip"
             receiptPrefix = "TRP"
           } else if (category === "exam") {
             receiptStorageKey = "receiptRecords_event"
