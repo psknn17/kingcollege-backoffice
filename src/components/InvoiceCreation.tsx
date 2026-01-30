@@ -1839,42 +1839,35 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setAvailableItems(categoryItems)
   }
 
-  // Get student IDs with 100% discount from Discount Groups (for Tuition only)
-  const studentsWithFullDiscount = useMemo(() => {
-    const fullDiscountStudentIds = new Set<string>()
-
-    if (invoiceType === "student" && selectedCategory.toLowerCase() === "tuition") {
-      try {
-        const stored = localStorage.getItem("studentGroups")
-        if (stored) {
-          const groups = JSON.parse(stored)
-          // Calculate total discount for each student
-          const studentDiscounts: Record<string, number> = {}
-
-          groups.forEach((group: any) => {
-            if (group.students && group.discountType === "percentage" && group.discountPercentage > 0) {
-              group.students.forEach((s: any) => {
-                if (s.id) {
-                  studentDiscounts[s.id] = (studentDiscounts[s.id] || 0) + (group.discountPercentage || 0)
-                }
-              })
-            }
-          })
-
-          // Add students with >= 100% discount to the Set
-          Object.entries(studentDiscounts).forEach(([studentId, totalDiscount]) => {
-            if (totalDiscount >= 100) {
-              fullDiscountStudentIds.add(studentId)
-            }
-          })
-        }
-      } catch (error) {
-        console.error("Error loading discount groups:", error)
-      }
+  // Helper function to check if a student has 100% discount (for Tuition invoices only)
+  const hasFullDiscount = (studentId: string): boolean => {
+    // Only check for tuition category
+    if (category !== "tuition") {
+      return false
     }
 
-    return fullDiscountStudentIds
-  }, [invoiceType, selectedCategory])
+    try {
+      const stored = localStorage.getItem("studentGroups")
+      if (!stored) return false
+
+      const groups = JSON.parse(stored)
+      let totalDiscount = 0
+
+      groups.forEach((group: any) => {
+        if (group.students && group.discountType === "percentage" && Number(group.discountPercentage) > 0) {
+          const studentInGroup = group.students.find((s: any) => s.id === studentId)
+          if (studentInGroup) {
+            totalDiscount += Number(group.discountPercentage) || 0
+          }
+        }
+      })
+
+      return totalDiscount >= 100
+    } catch (error) {
+      console.error("Error checking full discount:", error)
+      return false
+    }
+  }
 
   const filteredStudents = availableStudents.filter(student => {
     const searchLower = (searchStudentTerm || '').toLowerCase()
@@ -1883,7 +1876,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const notAlreadySelected = !selectedStudents.find(s => s.id === student.id)
 
     // For Tuition invoices only: exclude students with 100% discount from Discount Groups
-    if (studentsWithFullDiscount.has(student.id)) {
+    if (hasFullDiscount(student.id)) {
       return false // Exclude students with 100% or more discount
     }
 
