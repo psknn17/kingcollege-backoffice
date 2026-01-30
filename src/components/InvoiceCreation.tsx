@@ -1439,7 +1439,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         } : undefined
       } as InvoiceStudent
     })
-  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, checkFeePrivilegeEligibility, getSiblingDiscountPercentage, getStudentGroupDiscounts])
+  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, checkFeePrivilegeEligibility, getSiblingDiscountPercentage, getStudentGroupDiscounts, category])
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
@@ -1847,10 +1847,25 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
     // For Tuition invoices only: exclude students with 100% discount from Discount Groups
     if (invoiceType === "student" && selectedCategory.toLowerCase() === "tuition") {
-      const studentDiscounts = (student as InvoiceStudent).discounts?.studentGroupDiscounts || []
-      const totalDiscountPercent = studentDiscounts.reduce((sum, d) => sum + (d.percentage || 0), 0)
-      if (totalDiscountPercent >= 100) {
-        return false // Exclude students with 100% or more discount
+      // Read discount groups directly from localStorage to ensure we have the latest data
+      try {
+        const stored = localStorage.getItem("studentGroups")
+        if (stored) {
+          const groups = JSON.parse(stored)
+          let totalDiscountPercent = 0
+          groups.forEach((group: any) => {
+            if (group.students && group.students.some((s: any) => s.id === student.id)) {
+              if (group.discountType === "percentage") {
+                totalDiscountPercent += group.discountPercentage || 0
+              }
+            }
+          })
+          if (totalDiscountPercent >= 100) {
+            return false // Exclude students with 100% or more discount
+          }
+        }
+      } catch (error) {
+        console.error("Error checking discount groups:", error)
       }
     }
 
