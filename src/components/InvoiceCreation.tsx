@@ -1839,6 +1839,43 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setAvailableItems(categoryItems)
   }
 
+  // Get student IDs with 100% discount from Discount Groups (for Tuition only)
+  const studentsWithFullDiscount = useMemo(() => {
+    const fullDiscountStudentIds = new Set<string>()
+
+    if (invoiceType === "student" && selectedCategory.toLowerCase() === "tuition") {
+      try {
+        const stored = localStorage.getItem("studentGroups")
+        if (stored) {
+          const groups = JSON.parse(stored)
+          // Calculate total discount for each student
+          const studentDiscounts: Record<string, number> = {}
+
+          groups.forEach((group: any) => {
+            if (group.students && group.discountType === "percentage" && group.discountPercentage > 0) {
+              group.students.forEach((s: any) => {
+                if (s.id) {
+                  studentDiscounts[s.id] = (studentDiscounts[s.id] || 0) + (group.discountPercentage || 0)
+                }
+              })
+            }
+          })
+
+          // Add students with >= 100% discount to the Set
+          Object.entries(studentDiscounts).forEach(([studentId, totalDiscount]) => {
+            if (totalDiscount >= 100) {
+              fullDiscountStudentIds.add(studentId)
+            }
+          })
+        }
+      } catch (error) {
+        console.error("Error loading discount groups:", error)
+      }
+    }
+
+    return fullDiscountStudentIds
+  }, [invoiceType, selectedCategory])
+
   const filteredStudents = availableStudents.filter(student => {
     const searchLower = (searchStudentTerm || '').toLowerCase()
     const matchesSearch = (student.id || '').toLowerCase().includes(searchLower) ||
@@ -1846,27 +1883,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const notAlreadySelected = !selectedStudents.find(s => s.id === student.id)
 
     // For Tuition invoices only: exclude students with 100% discount from Discount Groups
-    if (invoiceType === "student" && selectedCategory.toLowerCase() === "tuition") {
-      // Read discount groups directly from localStorage to ensure we have the latest data
-      try {
-        const stored = localStorage.getItem("studentGroups")
-        if (stored) {
-          const groups = JSON.parse(stored)
-          let totalDiscountPercent = 0
-          groups.forEach((group: any) => {
-            if (group.students && group.students.some((s: any) => s.id === student.id)) {
-              if (group.discountType === "percentage") {
-                totalDiscountPercent += group.discountPercentage || 0
-              }
-            }
-          })
-          if (totalDiscountPercent >= 100) {
-            return false // Exclude students with 100% or more discount
-          }
-        }
-      } catch (error) {
-        console.error("Error checking discount groups:", error)
-      }
+    if (studentsWithFullDiscount.has(student.id)) {
+      return false // Exclude students with 100% or more discount
     }
 
     // For simplified views (event only), don't filter by grade/room
