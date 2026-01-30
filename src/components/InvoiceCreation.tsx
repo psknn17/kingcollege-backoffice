@@ -1689,6 +1689,93 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     }
   }, [selectedGrades, invoiceType])
 
+  // Auto-load tuition fee when Academic Year, Grade, and Term are all selected (for Tuition invoices)
+  useEffect(() => {
+    // Only for tuition category and student invoice type
+    if (category !== "tuition" || (invoiceType !== "student" && invoiceType !== "tuition" && invoiceType)) {
+      return
+    }
+
+    // Need all three: academic year, grade, and term
+    if (!selectedAcademicYear || !selectedGrade || !selectedTerm) {
+      return
+    }
+
+    // Skip if in edit mode (items are loaded from the invoice being edited)
+    if (isEditMode) {
+      return
+    }
+
+    try {
+      // Load tuition data from localStorage
+      const tuitionData = localStorage.getItem("tuitionByYearData")
+      console.log("[Tuition Fee Load] Academic Year:", selectedAcademicYear, "Grade:", selectedGrade, "Term:", selectedTerm)
+      console.log("[Tuition Fee Load] localStorage data exists:", !!tuitionData)
+
+      if (tuitionData) {
+        const parsedData = JSON.parse(tuitionData)
+        const yearData = parsedData[selectedAcademicYear]
+        console.log("[Tuition Fee Load] Year data exists:", !!yearData)
+
+        if (yearData && Array.isArray(yearData)) {
+          // Use gradeIdMap to convert translated label to grade ID
+          const gradeId = gradeIdMap[selectedGrade] || selectedGrade.toLowerCase().replace(/\s+/g, '')
+          console.log("[Tuition Fee Load] Looking for grade ID:", gradeId)
+
+          // Find the tuition fees for this grade by ID
+          const gradeTuition = yearData.find((item: any) => item.id === gradeId)
+          console.log("[Tuition Fee Load] Found grade tuition:", gradeTuition)
+
+          if (gradeTuition) {
+            // Determine which term amount to use
+            let termAmount = 0
+            let termName = ""
+
+            if (selectedTerm.includes("Term 1") || selectedTerm.includes("term1") || selectedTerm === "term1") {
+              termAmount = gradeTuition.term1Amount || 0
+              termName = "Term 1"
+            } else if (selectedTerm.includes("Term 2") || selectedTerm.includes("term2") || selectedTerm === "term2") {
+              termAmount = gradeTuition.term2Amount || 0
+              termName = "Term 2"
+            } else if (selectedTerm.includes("Term 3") || selectedTerm.includes("term3") || selectedTerm === "term3") {
+              termAmount = gradeTuition.term3Amount || 0
+              termName = "Term 3"
+            }
+
+            console.log("[Tuition Fee Load] Term amount:", termAmount, "for", termName)
+
+            if (termAmount > 0) {
+              setSelectedItems([{
+                id: `tuition-${gradeId}-${selectedTerm}`,
+                name: `${termName} Tuition Fee - ${selectedGrade}`,
+                description: `${termName} tuition payment for ${selectedGrade}`,
+                category: "Tuition",
+                quantity: 1,
+                amount: termAmount
+              }])
+              console.log("[Tuition Fee Load] Set tuition item:", termAmount)
+            } else {
+              console.log("[Tuition Fee Load] Term amount is 0, clearing items")
+              setSelectedItems([])
+            }
+          } else {
+            console.log("[Tuition Fee Load] Grade not found in tuition data")
+            setSelectedItems([])
+          }
+        } else {
+          console.log("[Tuition Fee Load] Year data not found or not an array")
+          setSelectedItems([])
+        }
+      } else {
+        console.log("[Tuition Fee Load] No tuition data in localStorage")
+        setSelectedItems([])
+      }
+    } catch (error) {
+      console.error("[Tuition Fee Load] Error loading tuition fees:", error)
+      setSelectedItems([])
+    }
+  }, [selectedAcademicYear, selectedGrade, selectedTerm, category, invoiceType, isEditMode, gradeIdMap])
+
   const handleGradeChange = (grade: string) => {
     setSelectedGrade(grade)
     // For summer and afterschool, term is selected BEFORE grade, so don't reset it
