@@ -1317,9 +1317,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Check if this is edit mode
   const isEditMode = !!editInvoice
 
-  // Check if this is a simplified category view (event only)
+  // Check if this is a simplified category view (event and exam)
   // ECA, afterschool, and summer are NOT simplified - they follow the full flow like Tuition
-  const isCategoryView = ["event"].includes(invoiceType)
+  const isCategoryView = ["event", "exam"].includes(invoiceType)
   const isSimplifiedView = isCategoryView
 
   // Get the appropriate item categories for this invoice type
