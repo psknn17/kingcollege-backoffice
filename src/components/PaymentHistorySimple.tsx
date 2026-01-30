@@ -525,55 +525,80 @@ export function PaymentHistorySimple() {
 
       {/* Payment Proof Viewer Dialog */}
       <Dialog open={!!viewingPaymentProof} onOpenChange={() => setViewingPaymentProof(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Payment Proof - {viewingPaymentProof?.invoiceNumber}</DialogTitle>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl">Payment Proof - {viewingPaymentProof?.invoiceNumber}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Student:</span> {viewingPaymentProof?.studentName}
-              </div>
-              <div>
-                <span className="font-medium">Student ID:</span> {viewingPaymentProof?.studentId}
-              </div>
-              <div>
-                <span className="font-medium">Amount:</span> ฿{viewingPaymentProof?.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <div>
-                <span className="font-medium">Payment Method:</span> {viewingPaymentProof?.paymentMethod}
-              </div>
-              <div>
-                <span className="font-medium">Transaction Date:</span> {viewingPaymentProof?.transactionDate && format(viewingPaymentProof.transactionDate, "dd/MM/yyyy HH:mm")}
-              </div>
-            </div>
+          <div className="space-y-6">
+            {/* Payment Details Card */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Student</span>
+                    <span className="font-medium">{viewingPaymentProof?.studentName}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Student ID</span>
+                    <span className="font-medium">{viewingPaymentProof?.studentId}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Amount</span>
+                    <span className="font-medium text-lg text-green-600">฿{viewingPaymentProof?.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Payment Method</span>
+                    <span className="font-medium">{viewingPaymentProof?.paymentMethod}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Transaction Date</span>
+                    <span className="font-medium">{viewingPaymentProof?.transactionDate && format(viewingPaymentProof.transactionDate, "dd/MM/yyyy HH:mm")}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Payment Proof Images:</h4>
+            {/* Payment Proof Images */}
+            <div>
+              <h4 className="font-semibold mb-4 text-base">Payment Proof Images</h4>
               {viewingPaymentProof?.paymentProofs && viewingPaymentProof.paymentProofs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-6">
                   {viewingPaymentProof.paymentProofs.map((proof, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">{proof.name}</span>
-                        <a
-                          href={proof.dataUrl}
-                          download={proof.name}
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          Download
-                        </a>
-                      </div>
-                      <img
-                        src={proof.dataUrl}
-                        alt={`Payment proof ${index + 1}`}
-                        className="w-full h-auto rounded border"
-                      />
-                    </div>
+                    <Card key={index}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="font-medium text-sm">{proof.name}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <a
+                              href={proof.dataUrl}
+                              download={proof.name}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                        <div className="flex justify-center bg-gray-50 rounded-lg p-4">
+                          <img
+                            src={proof.dataUrl}
+                            alt={`Payment proof ${index + 1}`}
+                            className="max-w-2xl w-full h-auto rounded border shadow-sm"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-sm">No payment proof images available</p>
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground">No payment proof images available</p>
+                  </CardContent>
+                </Card>
               )}
             </div>
           </div>
