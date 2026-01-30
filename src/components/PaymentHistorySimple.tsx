@@ -16,9 +16,11 @@ import { cn } from "./ui/utils"
 interface PaymentRecord {
   id: string
   invoiceNumber: string
+  referenceOrder: string
   studentName: string
   studentId: string
   studentGrade: string
+  email: string
   amount: number
   term: string
   paymentMethod: string
@@ -31,38 +33,44 @@ const mockPayments: PaymentRecord[] = [
   {
     id: "1",
     invoiceNumber: "INV-2025-000001",
+    referenceOrder: "REF-KC2024001-20250815093425",
     studentName: "James Smith",
     studentId: "KC2024001",
     studentGrade: "Year 4",
+    email: "james.parent@email.com",
     amount: 42000,
     term: "Term 1",
     paymentMethod: "Credit Card",
     status: "paid",
-    transactionDate: new Date("2025-08-15")
+    transactionDate: new Date("2025-08-15T09:34:25")
   },
   {
     id: "2",
     invoiceNumber: "INV-2025-000002",
+    referenceOrder: "REF-KC2024002-20250816101530",
     studentName: "Emily Smith",
     studentId: "KC2024002",
     studentGrade: "Reception",
+    email: "emily.parent@email.com",
     amount: 42000,
     term: "Term 1",
     paymentMethod: "Bank Transfer",
     status: "paid",
-    transactionDate: new Date("2025-08-16")
+    transactionDate: new Date("2025-08-16T10:15:30")
   },
   {
     id: "3",
     invoiceNumber: "INV-2025-000003",
+    referenceOrder: "REF-KC2024003-20250817143022",
     studentName: "Michael Johnson",
     studentId: "KC2024003",
     studentGrade: "Year 7",
+    email: "michael.parent@email.com",
     amount: 42000,
     term: "Term 1",
     paymentMethod: "Cash",
     status: "partial",
-    transactionDate: new Date("2025-08-17")
+    transactionDate: new Date("2025-08-17T14:30:22")
   }
 ]
 
@@ -88,18 +96,24 @@ export function PaymentHistorySimple() {
           // Filter only paid invoices and transform to PaymentRecord format
           const paidInvoices = invoices
             .filter((inv: any) => inv.status === "paid")
-            .map((inv: any) => ({
-              id: inv.id,
-              invoiceNumber: inv.invoiceNumber,
-              studentName: inv.studentName,
-              studentId: inv.studentId,
-              studentGrade: inv.studentGrade,
-              amount: inv.netAmount || inv.finalAmount || inv.subtotal || 0,
-              term: inv.term || "-",
-              paymentMethod: inv.paymentMethod || "-",
-              status: "paid" as const,
-              transactionDate: inv.paidDate ? new Date(inv.paidDate) : new Date()
-            }))
+            .map((inv: any) => {
+              const paidDate = inv.paidDate ? new Date(inv.paidDate) : new Date()
+              const refTimestamp = format(paidDate, "yyyyMMddHHmmss")
+              return {
+                id: inv.id,
+                invoiceNumber: inv.invoiceNumber,
+                referenceOrder: `REF-${inv.studentId || "NA"}-${refTimestamp}`,
+                studentName: inv.studentName,
+                studentId: inv.studentId,
+                studentGrade: inv.studentGrade,
+                email: inv.parentEmail || "-",
+                amount: inv.netAmount || inv.finalAmount || inv.subtotal || 0,
+                term: inv.term || "-",
+                paymentMethod: inv.paymentMethod || "-",
+                status: "paid" as const,
+                transactionDate: paidDate
+              }
+            })
 
           if (paidInvoices.length > 0) {
             setPayments(paidInvoices)
@@ -121,8 +135,10 @@ export function PaymentHistorySimple() {
   const filteredPayments = payments.filter(payment => {
     const matchesSearch =
       payment.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.referenceOrder.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+      payment.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.email.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || payment.status === statusFilter
     const matchesYearGroup = yearGroupFilter === "all" || payment.studentGrade === yearGroupFilter
@@ -238,7 +254,7 @@ export function PaymentHistorySimple() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder={t("payment.searchPlaceholder")}
+                  placeholder="Search by Student ID/Email/Reference No."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 h-9"
@@ -447,14 +463,14 @@ export function PaymentHistorySimple() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("payment.invoiceNumber")}</TableHead>
+                <TableHead>Timestamp</TableHead>
+                <TableHead>Reference Order</TableHead>
                 <TableHead>{t("payment.student")}</TableHead>
                 <TableHead>{t("student.yearGroup")}</TableHead>
-                <TableHead>{t("common.amount")}</TableHead>
-                <TableHead>{t("payment.term")}</TableHead>
-                <TableHead>{t("payment.paymentChannel")}</TableHead>
+                <TableHead>{t("common.amount")} (THB)</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
-                <TableHead>{t("common.date")}</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -468,7 +484,8 @@ export function PaymentHistorySimple() {
               ) : (
                 filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-mono text-sm">{payment.invoiceNumber}</TableCell>
+                    <TableCell className="text-sm">{format(payment.transactionDate, "dd-MM-yyyy HH:mm:ss")}</TableCell>
+                    <TableCell className="font-mono text-sm">{payment.referenceOrder}</TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{payment.studentName}</div>
@@ -480,15 +497,10 @@ export function PaymentHistorySimple() {
                         {payment.studentGrade}
                       </Badge>
                     </TableCell>
-                    <TableCell>฿{payment.amount.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-100">
-                        {payment.term}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{payment.paymentMethod}</TableCell>
+                    <TableCell className="text-right">{payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                    <TableCell>{format(payment.transactionDate, "MMM dd, yyyy")}</TableCell>
+                    <TableCell>{payment.paymentMethod}</TableCell>
+                    <TableCell className="text-sm">{payment.email}</TableCell>
                     <TableCell>
                       <Button size="sm" variant="ghost">
                         <Eye className="w-4 h-4" />

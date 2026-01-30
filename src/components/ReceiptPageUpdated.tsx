@@ -78,147 +78,63 @@ interface CreditNote {
   status: "issued" | "cancelled" | "pending"
 }
 
-const mockReceipts: Receipt[] = [
-  {
-    id: "1",
-    receiptNumber: "R2026-00281",
-    invoiceNumber: "202509614",
-    studentName: studentData[0].name,
-    studentId: studentData[0].id,
-    studentGrade: studentData[0].grade,
-    contactName: "Khun Parent Smith",
-    address: "123 Sukhumvit Road, Bangkok 10110",
-    invoiceDate: new Date("2025-11-24"),
-    invoiceAmount: 297000,
-    amount: 297000,
-    outstandingAmount: 0,
-    paymentMethod: "BANK",
-    paymentChannel: "counter_bank",
-    transactionDate: new Date("2026-01-07"),
-    academicYear: "2025/2026",
-    term: "Term 1",
-    downloadCount: 3,
-    collectorName: "Thananchaya Chalorkpunrattana"
-  },
-  {
-    id: "2",
-    receiptNumber: "R2026-00282",
-    invoiceNumber: "202509615",
-    studentName: studentData[1].name,
-    studentId: studentData[1].id,
-    studentGrade: studentData[1].grade,
-    contactName: "Khun Parent Smith",
-    address: "456 Silom Road, Bangkok 10500",
-    invoiceDate: new Date("2025-11-20"),
-    invoiceAmount: 115000,
-    amount: 115000,
-    outstandingAmount: 0,
-    paymentMethod: "Credit Card",
-    paymentChannel: "credit_card",
-    transactionDate: new Date("2026-01-06"),
-    academicYear: "2025/2026",
-    term: "Term 1",
-    downloadCount: 1,
-    collectorName: "Thananchaya Chalorkpunrattana"
-  },
-  {
-    id: "3",
-    receiptNumber: "R2026-00283",
-    invoiceNumber: "202509616",
-    studentName: studentData[2].name,
-    studentId: studentData[2].id,
-    studentGrade: studentData[2].grade,
-    contactName: "Khun Parent Johnson",
-    address: "789 Sathorn Road, Bangkok 10120",
-    invoiceDate: new Date("2025-11-18"),
-    invoiceAmount: 200000,
-    amount: 200000,
-    outstandingAmount: 0,
-    paymentMethod: "BANK",
-    paymentChannel: "counter_bank",
-    transactionDate: new Date("2026-01-05"),
-    academicYear: "2025/2026",
-    term: "Term 2",
-    downloadCount: 0,
-    collectorName: "Thananchaya Chalorkpunrattana"
-  },
-  {
-    id: "4",
-    receiptNumber: "R2026-00284",
-    invoiceNumber: "202509617",
-    studentName: studentData[3].name,
-    studentId: studentData[3].id,
-    studentGrade: studentData[3].grade,
-    contactName: "Khun Parent Williams",
-    address: "321 Rama IV Road, Bangkok 10110",
-    invoiceDate: new Date("2025-11-15"),
-    invoiceAmount: 230000,
-    amount: 115000,
-    outstandingAmount: 115000,
-    paymentMethod: "PromptPay",
-    paymentChannel: "qr_payment",
-    transactionDate: new Date("2026-01-04"),
-    academicYear: "2025/2026",
-    term: "Term 2",
-    downloadCount: 2,
-    collectorName: "Thananchaya Chalorkpunrattana"
-  },
-  {
-    id: "5",
-    receiptNumber: "R2026-00285",
-    invoiceNumber: "202509618",
-    studentName: studentData[4].name,
-    studentId: studentData[4].id,
-    studentGrade: studentData[4].grade,
-    contactName: "Khun Parent Brown",
-    address: "654 Petchburi Road, Bangkok 10400",
-    invoiceDate: new Date("2025-11-10"),
-    invoiceAmount: 165000,
-    amount: 165000,
-    outstandingAmount: 0,
-    paymentMethod: "BANK",
-    paymentChannel: "counter_bank",
-    transactionDate: new Date("2026-01-03"),
-    academicYear: "2025/2026",
-    term: "Term 3",
-    downloadCount: 0,
-    bankName: "Kasikorn Bank",
-    bankBranch: "Sathu Pradit",
-    collectorName: "Thananchaya Chalorkpunrattana"
+// Function to load receipts from localStorage based on category
+const loadReceiptsFromStorage = (category?: string): Receipt[] => {
+  try {
+    let storageKey = "receiptRecords_tuition"
+
+    if (category === "eca" || category === "trip") {
+      storageKey = "receiptRecords_afterschool"
+    } else if (category === "exam") {
+      storageKey = "receiptRecords_event"
+    } else if (category === "bus") {
+      storageKey = "receiptRecords_summer"
+    } else if (category === "external") {
+      storageKey = "receiptRecords_external"
+    }
+
+    const stored = localStorage.getItem(storageKey)
+    if (!stored) return []
+
+    const records = JSON.parse(stored)
+    return records.map((r: any) => {
+      // Parse schoolYear to separate academicYear and term
+      // Format: "2025-2026 - Term 2 (January - March)" or just "2025-2026"
+      let academicYear = ""
+      let term = ""
+
+      if (r.schoolYear) {
+        const parts = r.schoolYear.split(" - ")
+        academicYear = parts[0] || "" // "2025-2026"
+        term = parts.slice(1).join(" - ") || "" // "Term 2 (January - March)"
+      }
+
+      return {
+        id: r.id,
+        receiptNumber: r.receiptNo,
+        invoiceNumber: r.invoices?.[0]?.invoiceNo || "",
+        studentName: r.contactName || r.clientName,
+        studentId: r.clientNo || "",
+        studentGrade: r.yearGroup || "",
+        contactName: r.clientName || "",
+        address: "",
+        invoiceDate: r.invoices?.[0]?.invoiceDate ? new Date(r.invoices[0].invoiceDate) : new Date(r.createdAt),
+        invoiceAmount: r.invoices?.[0]?.invoiceAmount || r.totalAmount,
+        amount: r.totalAmount,
+        outstandingAmount: r.invoices?.[0]?.outstandingAmount || 0,
+        paymentMethod: r.paymentMethod || "N/A",
+        paymentChannel: "counter_bank" as const,
+        transactionDate: new Date(r.receiptDate || r.createdAt),
+        academicYear: academicYear,
+        term: term,
+        downloadCount: 0,
+        collectorName: "System"
+      }
+    })
+  } catch (error) {
+    console.error("Failed to load receipts from storage:", error)
+    return []
   }
-]
-
-// Add more mock data for pagination testing
-for (let i = 6; i <= 120; i++) {
-  const student = studentData[i % studentData.length]
-  const paymentMethods = ["BANK", "Credit Card", "PromptPay", "Cash"]
-  const paymentChannels: ("credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank")[] = ["credit_card", "wechat_pay", "alipay", "qr_payment", "counter_bank"]
-  const academicYears = ["2024/2025", "2025/2026"]
-  const terms = ["Term 1", "Term 2", "Term 3"]
-  const invoiceAmount = Math.floor(Math.random() * 200000) + 50000
-  const receivedAmount = invoiceAmount
-
-  mockReceipts.push({
-    id: i.toString(),
-    receiptNumber: `R2026-${String(280 + i).padStart(5, '0')}`,
-    invoiceNumber: `20250${String(9614 + i)}`,
-    studentName: student.name,
-    studentId: student.id,
-    studentGrade: student.grade,
-    contactName: `Khun Parent ${student.name.split(' ')[1] || 'Contact'}`,
-    address: `${100 + i} Sample Road, Bangkok 10${String(100 + (i % 9)).slice(0, 3)}`,
-    invoiceDate: new Date(2025, 10 + Math.floor(i / 40), Math.floor(Math.random() * 28) + 1),
-    invoiceAmount: invoiceAmount,
-    amount: receivedAmount,
-    outstandingAmount: 0,
-    paymentMethod: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
-    paymentChannel: paymentChannels[Math.floor(Math.random() * paymentChannels.length)],
-    transactionDate: new Date(2026, 0, Math.floor(Math.random() * 28) + 1),
-    academicYear: academicYears[Math.floor(Math.random() * academicYears.length)],
-    term: terms[Math.floor(Math.random() * terms.length)],
-    downloadCount: Math.floor(Math.random() * 10),
-    collectorName: "Thananchaya Chalorkpunrattana"
-  })
 }
 
 // Mock Credit Notes data
@@ -306,9 +222,16 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
   // Tab state
   const [activeTab, setActiveTab] = useState("receipts")
 
-  // Receipt states
-  const [receipts, setReceipts] = useState<Receipt[]>(mockReceipts)
-  const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>(mockReceipts)
+  // Receipt states - load from localStorage
+  const [receipts, setReceipts] = useState<Receipt[]>([])
+  const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>([])
+
+  // Load receipts from localStorage on mount
+  useEffect(() => {
+    const loadedReceipts = loadReceiptsFromStorage(category)
+    setReceipts(loadedReceipts)
+    setFilteredReceipts(loadedReceipts)
+  }, [category])
 
   // Credit Note states
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(mockCreditNotes)

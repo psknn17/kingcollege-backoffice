@@ -58,6 +58,12 @@ interface Invoice {
   approvedBy?: string
   approvedAt?: Date
   rejectedReason?: string
+  rejectedAt?: string
+  rejectedBy?: string
+  // Cancellation fields
+  cancelledAt?: string
+  cancelReason?: string
+  cancelledBy?: string
   // Payment fields
   paymentMethod?: string
   paymentProofs?: { name: string; dataUrl: string }[]
@@ -206,7 +212,11 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           // Cancellation info
           cancelledAt: inv.cancelledAt,
           cancelReason: inv.cancelReason,
-          cancelledBy: inv.cancelledBy
+          cancelledBy: inv.cancelledBy,
+          // Rejection info
+          rejectedAt: inv.rejectedAt,
+          rejectedReason: inv.rejectedReason,
+          rejectedBy: inv.rejectedBy
         }
       })
     }
@@ -2638,7 +2648,7 @@ export function InvoiceManagement({
                               <Mail className="w-4 h-4" />
                             </Button>
                           )}
-                          {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && (
+                          {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && invoice.status !== "cancelled" && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -3002,7 +3012,7 @@ export function InvoiceManagement({
                                 <Mail className="w-4 h-4" />
                               </Button>
                             )}
-                            {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && (
+                            {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && invoice.status !== "cancelled" && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -3207,6 +3217,44 @@ export function InvoiceManagement({
                                 month: 'short',
                                 year: 'numeric'
                               })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false
+                              })}
+                            </>
+                          ) : (
+                            "Date and time not recorded"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejection Information - Full Width */}
+                {selectedInvoice.approvalStatus === "rejected" && (
+                  <div className="my-6 bg-orange-50 border border-orange-200 rounded-md p-4">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-orange-800 mb-1">Invoice Rejected</p>
+                        <p className="text-sm text-orange-700">
+                          <span className="font-medium">Reason:</span> {selectedInvoice.rejectedReason || "No reason recorded"}
+                        </p>
+                        <p className="text-xs text-orange-600 mt-1">
+                          {selectedInvoice.rejectedBy && <>Rejected by {selectedInvoice.rejectedBy}</>}
+                          {selectedInvoice.rejectedAt ? (
+                            <>
+                              {selectedInvoice.rejectedBy && <> on </>}
+                              {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', {
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 hour12: false

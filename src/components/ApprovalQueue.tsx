@@ -167,6 +167,7 @@ export function ApprovalQueue() {
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
@@ -532,6 +533,18 @@ export function ApprovalQueue() {
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
 
+  const openApproveDialog = (invoice: Invoice) => {
+    setSelectedInvoice(invoice)
+    setIsApproveDialogOpen(true)
+  }
+
+  const confirmApprove = () => {
+    if (!selectedInvoice) return
+    approveInvoice(selectedInvoice)
+    setIsApproveDialogOpen(false)
+    setSelectedInvoice(null)
+  }
+
   const openRejectDialog = (invoice: Invoice) => {
     setSelectedInvoice(invoice)
     setRejectReason("")
@@ -545,12 +558,16 @@ export function ApprovalQueue() {
       return
     }
 
+    const rejectedAt = new Date()
+
     const updatedInvoices = invoices.map(inv =>
       inv.id === selectedInvoice.id
         ? {
             ...inv,
             approvalStatus: "rejected",
             rejectedReason: rejectReason.trim(),
+            rejectedAt: rejectedAt,
+            rejectedBy: "Admin",
           }
         : inv
     )
@@ -559,8 +576,10 @@ export function ApprovalQueue() {
     updateLocalStorage(
       selectedInvoice,
       {
-      approvalStatus: "rejected",
-      rejectedReason: rejectReason.trim(),
+        approvalStatus: "rejected",
+        rejectedReason: rejectReason.trim(),
+        rejectedAt: rejectedAt.toISOString(),
+        rejectedBy: "Admin",
       },
       selectedInvoice.invoiceNumber
     )
@@ -874,7 +893,7 @@ export function ApprovalQueue() {
                             size="sm"
                             variant="ghost"
                             className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => approveInvoice(invoice)}
+                            onClick={() => openApproveDialog(invoice)}
                             title="Approve"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -905,6 +924,26 @@ export function ApprovalQueue() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Approve Confirmation Dialog */}
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+          <DialogHeader>
+            <DialogTitle>Confirm Approval</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve invoice {selectedInvoice?.invoiceNumber}?
+            </DialogDescription>
+          </DialogHeader>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button style={{ backgroundColor: "#16a34a", color: "white" }} onClick={confirmApprove}>
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
