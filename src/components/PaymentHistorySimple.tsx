@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "./ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
-import { Download, Search, Filter, Eye, CalendarIcon } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Download, Search, Filter, Eye, CalendarIcon, X } from "lucide-react"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
@@ -26,6 +27,7 @@ interface PaymentRecord {
   paymentMethod: string
   status: "paid" | "partial" | "unpaid" | "cancelled" | "overdue"
   transactionDate: Date
+  paymentProofs?: { name: string; dataUrl: string }[]
 }
 
 // Mock data
@@ -85,6 +87,7 @@ export function PaymentHistorySimple() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+  const [viewingPaymentProof, setViewingPaymentProof] = useState<PaymentRecord | null>(null)
 
   useEffect(() => {
     const loadPayments = () => {
@@ -111,7 +114,8 @@ export function PaymentHistorySimple() {
                 term: inv.term || "-",
                 paymentMethod: inv.paymentMethod || "-",
                 status: "paid" as const,
-                transactionDate: paidDate
+                transactionDate: paidDate,
+                paymentProofs: inv.paymentProofs || []
               }
             })
 
@@ -502,7 +506,12 @@ export function PaymentHistorySimple() {
                     <TableCell>{payment.paymentMethod}</TableCell>
                     <TableCell className="text-sm">{payment.email}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="ghost">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setViewingPaymentProof(payment)}
+                        disabled={!payment.paymentProofs || payment.paymentProofs.length === 0}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -513,6 +522,63 @@ export function PaymentHistorySimple() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Payment Proof Viewer Dialog */}
+      <Dialog open={!!viewingPaymentProof} onOpenChange={() => setViewingPaymentProof(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Payment Proof - {viewingPaymentProof?.invoiceNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Student:</span> {viewingPaymentProof?.studentName}
+              </div>
+              <div>
+                <span className="font-medium">Student ID:</span> {viewingPaymentProof?.studentId}
+              </div>
+              <div>
+                <span className="font-medium">Amount:</span> ฿{viewingPaymentProof?.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div>
+                <span className="font-medium">Payment Method:</span> {viewingPaymentProof?.paymentMethod}
+              </div>
+              <div>
+                <span className="font-medium">Transaction Date:</span> {viewingPaymentProof?.transactionDate && format(viewingPaymentProof.transactionDate, "dd/MM/yyyy HH:mm")}
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">Payment Proof Images:</h4>
+              {viewingPaymentProof?.paymentProofs && viewingPaymentProof.paymentProofs.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {viewingPaymentProof.paymentProofs.map((proof, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">{proof.name}</span>
+                        <a
+                          href={proof.dataUrl}
+                          download={proof.name}
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          Download
+                        </a>
+                      </div>
+                      <img
+                        src={proof.dataUrl}
+                        alt={`Payment proof ${index + 1}`}
+                        className="w-full h-auto rounded border"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm">No payment proof images available</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
