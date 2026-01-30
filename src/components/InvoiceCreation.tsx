@@ -1317,9 +1317,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Check if this is edit mode
   const isEditMode = !!editInvoice
 
-  // Check if this is a simplified category view (event and exam)
-  // ECA, afterschool, and summer are NOT simplified - they follow the full flow like Tuition
-  const isCategoryView = ["event", "exam"].includes(invoiceType)
+  // Check if this is a simplified category view (event only)
+  // ECA, afterschool, summer, and exam are NOT simplified - they follow the full flow like Tuition
+  const isCategoryView = ["event"].includes(invoiceType)
   const isSimplifiedView = isCategoryView
 
   // Get the appropriate item categories for this invoice type
@@ -1474,7 +1474,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const [availableTemplates, setAvailableTemplates] = useState<ItemTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    defaultCategory || (invoiceType === "eca" ? "ECA" : "Tuition")
+    defaultCategory ||
+    (invoiceType === "eca" ? "ECA" :
+     invoiceType === "exam" ? "International Exam" :
+     "Tuition")
   )
 
   // Update selected students' feeWaiver and discounts when term/year changes
@@ -1792,7 +1795,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setCsvFile(null)
     setSelectedTemplate("")
     // Set correct category based on invoice type
-    setSelectedCategory(invoiceType === "eca" ? "ECA" : (defaultCategory || "Tuition"))
+    setSelectedCategory(
+      invoiceType === "eca" ? "ECA" :
+      invoiceType === "exam" ? "International Exam" :
+      (defaultCategory || "Tuition")
+    )
     setPaymentDeadline(undefined)
     setIsPreviewMode(false)
     setTuitionFeeLoaded("") // Reset tuition fee loaded flag
@@ -1816,7 +1823,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         : allItems.filter(item =>
             item.isActive &&
             item.applicableGrades.includes(grade) &&
-            item.category === (defaultCategory || "Tuition")
+            item.category === (
+              invoiceType === "eca" ? "ECA" :
+              invoiceType === "exam" ? "International Exam" :
+              (defaultCategory || "Tuition")
+            )
           )
     console.log(`[${invoiceType}] Filtered to ${gradeItems.length} items for grade ${grade}`)
     setAvailableItems(gradeItems)
