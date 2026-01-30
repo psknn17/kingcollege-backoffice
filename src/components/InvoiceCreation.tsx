@@ -3871,44 +3871,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         Preview
                       </Button>
                       {isEditMode ? (
-                        <>
-                          <Button
-                            onClick={handleSaveAsDraft}
-                            size="sm"
-                            className="flex items-center gap-1.5"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            Save
-                          </Button>
-                          <Button
-                            onClick={handleConfirmAndSendEmail}
-                            size="sm"
-                            className="flex items-center gap-1.5"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            Confirm
-                          </Button>
-                        </>
+                        <Button
+                          onClick={handleSaveAsDraft}
+                          size="sm"
+                          className="flex items-center gap-1.5"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Save
+                        </Button>
                       ) : (
-                        <>
-                          <Button
-                            onClick={handleSaveAsDraft}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1.5"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            Draft
-                          </Button>
-                          <Button
-                            onClick={handleConfirmAndSendEmail}
-                            size="sm"
-                            className="flex items-center gap-1.5"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            Confirm
-                          </Button>
-                        </>
+                        <Button
+                          onClick={handleSaveAsDraft}
+                          size="sm"
+                          className="flex items-center gap-1.5"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Draft
+                        </Button>
                       )}
                     </>
                   ) : (
@@ -3922,25 +3901,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <Pencil className="w-3.5 h-3.5" />
                         Edit
                       </Button>
-                      {isEditMode ? (
-                        <Button
-                          onClick={handleSaveAsDraft}
-                          size="sm"
-                          className="flex items-center gap-1.5"
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                          Save
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={handleConfirmAndSendEmail}
-                          size="sm"
-                          className="flex items-center gap-1.5"
-                        >
-                          <Mail className="w-3.5 h-3.5" />
-                          Confirm
-                        </Button>
-                      )}
+                      <Button
+                        onClick={handleSaveAsDraft}
+                        size="sm"
+                        className="flex items-center gap-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        {isEditMode ? "Save" : "Draft"}
+                      </Button>
                     </>
                   )}
                 </div>
