@@ -2026,8 +2026,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const discountItems: { name: string, amount: number, percentage?: number }[] = []
     let totalDiscountAmount = 0
 
-    // No discounts for ECA, Trip & Activity (afterschool), Exam, and Bus
-    if (invoiceTypeParam === "eca" || invoiceTypeParam === "afterschool" || invoiceTypeParam === "exam" || invoiceTypeParam === "trip" || invoiceTypeParam === "bus") {
+    // No discounts for ECA, Trip & Activity (afterschool), and Exam
+    // Bus and Tuition DO have discounts
+    if (invoiceTypeParam === "eca" || invoiceTypeParam === "afterschool" || invoiceTypeParam === "exam" || invoiceTypeParam === "trip") {
       return {
         discountItems,
         totalDiscountAmount,
