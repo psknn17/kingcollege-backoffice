@@ -1650,6 +1650,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   useEffect(() => {
     if (selectedGrade && invoiceType !== "summer" && invoiceType !== "afterschool") {
       const allItems = loadItemsFromStorage(invoiceType)
+      console.log(`[${invoiceType}] Loaded ${allItems.length} items, selectedCategory: ${selectedCategory}, selectedGrade: ${selectedGrade}`)
 
       // For exam invoices, don't filter by grade (exams can apply to any grade)
       const filteredItems = invoiceType === "exam"
@@ -1662,6 +1663,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             item.applicableGrades.includes(selectedGrade) &&
             item.category === selectedCategory
           )
+      console.log(`[${invoiceType}] Filtered to ${filteredItems.length} items`)
       setAvailableItems(filteredItems)
 
       const allTemplates = loadTemplatesFromStorage(invoiceType)
