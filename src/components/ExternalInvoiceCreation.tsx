@@ -10,7 +10,7 @@ import { Textarea } from "./ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package, CheckCircle } from "lucide-react"
+import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package, CheckCircle, Pencil } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -76,6 +76,11 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   // UI states
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<InvoiceLineItem | null>(null)
+  const [editItemDescription, setEditItemDescription] = useState("")
+  const [editItemDetails, setEditItemDetails] = useState("")
+  const [editItemAmount, setEditItemAmount] = useState<number>(0)
 
   // Load available items
   useEffect(() => {
@@ -147,6 +152,34 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   // Remove line item
   const removeLineItem = (id: string) => {
     setLineItems(lineItems.filter(item => item.id !== id))
+  }
+
+  // Edit line item
+  const handleEditItem = (item: InvoiceLineItem) => {
+    setEditingItem(item)
+    setEditItemDescription(item.description)
+    setEditItemDetails(item.details || "")
+    setEditItemAmount(item.amount)
+    setIsEditItemDialogOpen(true)
+  }
+
+  const handleSaveEditItem = () => {
+    if (!editingItem) return
+
+    setLineItems(lineItems.map(item => {
+      if (item.id === editingItem.id) {
+        return {
+          ...item,
+          description: editItemDescription,
+          details: editItemDetails,
+          amount: editItemAmount
+        }
+      }
+      return item
+    }))
+
+    setIsEditItemDialogOpen(false)
+    setEditingItem(null)
   }
 
   // Calculate subtotal and ID charges
@@ -575,11 +608,16 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 </div>
               </div>
 
-              {/* Step 3: Invoice Items & Summary */}
+              {/* Step 3: Selected Items */}
               {lineItems.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <label className="font-medium">Invoice Items ({lineItems.length})</label>
+                    <div>
+                      <label className="font-medium">Selected Items ({lineItems.length})</label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(total)}
+                      </p>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
@@ -593,83 +631,61 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="w-[160px]">Amount (THB)</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {lineItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <div className="space-y-2">
-                                {item.itemId ? (
-                                  <span className="font-medium">{item.description}</span>
-                                ) : (
-                                  <Input
-                                    value={item.description}
-                                    onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
-                                    placeholder="Item description"
-                                    className="h-9"
-                                  />
-                                )}
-                                <Input
-                                  value={item.details || ""}
-                                  onChange={(e) => updateLineItem(item.id, "details", e.target.value)}
-                                  placeholder="Additional details (optional)"
-                                  className="h-8 text-sm text-muted-foreground"
-                                />
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <Input
-                                type="number"
-                                min="0"
-                                value={item.amount}
-                                onChange={(e) => updateLineItem(item.id, "amount", parseFloat(e.target.value) || 0)}
-                                className="h-9"
-                              />
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeLineItem(item.id)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {/* Subtotal Row */}
-                        {subtotal > 0 && (
-                          <TableRow>
-                            <TableCell className="font-medium">Subtotal</TableCell>
-                            <TableCell className="font-medium">
-                              {formatCurrency(subtotal)}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        )}
-                        {/* ID Charges Row */}
-                        {idCharges > 0 && (
-                          <TableRow>
-                            <TableCell className="text-purple-600 font-medium">ID Charges (3%)</TableCell>
-                            <TableCell className="text-purple-600 font-medium">
-                              +{formatCurrency(idCharges)}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        )}
-                        {/* Total Row */}
-                        <TableRow className="bg-muted/50">
-                          <TableCell className="font-semibold">Total</TableCell>
-                          <TableCell className="font-bold text-lg text-primary">
-                            {formatCurrency(total)}
-                          </TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
+                        {lineItems.map((item) => {
+                          // Get item name from master if it exists
+                          const masterItem = item.itemId ? availableItems.find(ai => ai.id === item.itemId) : null
+                          const itemName = masterItem ? masterItem.name : item.description
+                          const itemDescription = item.details || (masterItem ? item.description : "")
+
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{itemName}</p>
+                                  {itemDescription && (
+                                    <p className="text-sm text-muted-foreground">{itemDescription}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className="border-orange-300 text-orange-700"
+                                >
+                                  External
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                ₿{item.amount.toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditItem(item)}
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeLineItem(item.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -751,6 +767,94 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 OK
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+            <DialogDescription>
+              Edit the description and amount for this item
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingItem && (
+            <div className="space-y-4 py-4">
+              {/* Item Name (Read-only for master items) */}
+              {editingItem.itemId && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Item Name</Label>
+                  <div className="p-3 bg-muted rounded-md">
+                    <p className="font-medium">{availableItems.find(i => i.id === editingItem.itemId)?.name || editingItem.description}</p>
+                    <Badge
+                      variant="outline"
+                      className="mt-1 text-xs border-orange-300 text-orange-700"
+                    >
+                      External
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Description (Editable) */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">
+                  {editingItem.itemId ? "Description (Optional)" : "Item Name"}
+                </Label>
+                <Textarea
+                  id="edit-description"
+                  value={editItemDescription}
+                  onChange={(e) => setEditItemDescription(e.target.value)}
+                  placeholder={editingItem.itemId ? "Additional description" : "Enter item name"}
+                  rows={2}
+                />
+              </div>
+
+              {/* Additional Details */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-details">Additional Details (Optional)</Label>
+                <Textarea
+                  id="edit-details"
+                  value={editItemDetails}
+                  onChange={(e) => setEditItemDetails(e.target.value)}
+                  placeholder="Additional details"
+                  rows={2}
+                />
+              </div>
+
+              {/* Amount (Editable) */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount (THB)</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  value={editItemAmount}
+                  onChange={(e) => setEditItemAmount(Number(e.target.value))}
+                  min={0}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditItemDialogOpen(false)
+                setEditingItem(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEditItem}
+              disabled={!editItemDescription || editItemAmount <= 0}
+            >
+              Save Changes
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
