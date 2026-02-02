@@ -3281,76 +3281,67 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 {/* Available Items */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="font-medium">
-                      {isSimplifiedView
-                        ? t('invoiceCreation.availableItems')
-                        : invoiceType === "exam"
-                        ? `Available ${selectedCategory} Items`
-                        : t('invoiceCreation.availableItemsForGrade', { category: selectedCategory, grade: selectedGrade })}
-                    </label>
-                    <span className="text-sm text-muted-foreground">{t('invoiceCreation.itemsAvailableCount', { count: availableItems.length })}</span>
+                    <span className="text-sm text-muted-foreground">Available Items ({availableItems.length})</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddItemDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add More Items
+                    </Button>
                   </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    {availableItems.map((item) => {
+                  <div className="space-y-0 border rounded-lg">
+                    {availableItems.slice(0, 5).map((item, index) => {
                       const isSelected = selectedItems.find(i => i.id === item.id)
                       const isFromTemplate = selectedTemplate && availableTemplates.find(t => t.id === selectedTemplate)?.items.includes(item.id)
                       return (
-                        <Card 
-                          key={item.id} 
-                          className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                            index !== 0 ? 'border-t' : ''
+                          } ${isSelected ? 'bg-primary/5' : ''}`}
                           onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
                         >
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-medium">{item.name}</h4>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`text-xs ${
-                                      item.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                                      item.category === "ECA" ? "border-green-300 text-green-700" :
-                                      "border-orange-300 text-orange-700"
-                                    }`}
-                                  >
-                                    {item.category}
-                                  </Badge>
-                                  {isFromTemplate && (
-                                    <Badge variant="default" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
-                                      From Template
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                                <div className="flex items-center gap-4">
-                                  <p className="font-medium text-lg">₿{item.amount.toLocaleString()}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center">
-                                {isSelected ? (
-                                  <CheckCircle className="w-5 h-5 text-primary" />
-                                ) : (
-                                  <Plus className="w-5 h-5 text-muted-foreground" />
-                                )}
-                              </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-medium">{item.name}</span>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                                  item.category === "ECA" ? "border-green-300 text-green-700" :
+                                  "border-orange-300 text-orange-700"
+                                }`}
+                              >
+                                {item.category}
+                              </Badge>
+                              {isFromTemplate && (
+                                <Badge variant="default" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                                  From Template
+                                </Badge>
+                              )}
                             </div>
-                          </CardContent>
-                        </Card>
+                            <p className="text-sm text-muted-foreground mb-1">{item.description}</p>
+                            <p className="font-medium">₿{item.amount.toLocaleString()}</p>
+                          </div>
+                          <div className="flex-shrink-0 ml-4">
+                            {isSelected ? (
+                              <CheckCircle className="w-5 h-5 text-primary" />
+                            ) : (
+                              <Plus className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
                       )
                     })}
                   </div>
-                </div>
-
-                {/* Add Item from List Button */}
-                <div className="flex justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddItemDialogOpen(true)}
-                    className="w-full max-w-md border-dashed border-2"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Item from List
-                  </Button>
+                  {availableItems.length > 5 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Showing 5 of {availableItems.length} items. Click "+ Add More Items" to see all.
+                    </p>
+                  )}
                 </div>
 
                 {/* Selected Items Summary */}
@@ -4952,42 +4943,46 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           </div>
 
           {/* Items List - Scrollable */}
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
+          <div className="flex-1 overflow-y-auto min-h-0 pr-1">
             {getItemsForDialog().length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No items found</p>
               </div>
             ) : (
-              getItemsForDialog().map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => handleAddItemFromList(item)}
-                >
-                  <div className="flex-1 min-w-0 mr-3">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-medium text-sm truncate">{item.name}</span>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs flex-shrink-0 ${
-                          item.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                          item.category === "ECA" ? "border-green-300 text-green-700" :
-                          item.category === "School Bus" ? "border-yellow-300 text-yellow-700" :
-                          "border-orange-300 text-orange-700"
-                        }`}
-                      >
-                        {item.category}
-                      </Badge>
+              <div className="border rounded-lg">
+                {getItemsForDialog().map((item, index) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
+                      index !== 0 ? 'border-t' : ''
+                    }`}
+                    onClick={() => handleAddItemFromList(item)}
+                  >
+                    <div className="flex-1 min-w-0 mr-3">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-medium text-sm">{item.name}</span>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs flex-shrink-0 ${
+                            item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                            item.category === "ECA" ? "border-green-300 text-green-700" :
+                            item.category === "School Bus" ? "border-yellow-300 text-yellow-700" :
+                            "border-orange-300 text-orange-700"
+                          }`}
+                        >
+                          {item.category}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
+                      <span className="font-medium text-sm">฿{item.amount.toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                    <div className="flex-shrink-0">
+                      <Plus className="w-5 h-5 text-muted-foreground" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-medium">฿{item.amount.toLocaleString()}</span>
-                    <Plus className="w-4 h-4 text-primary" />
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 

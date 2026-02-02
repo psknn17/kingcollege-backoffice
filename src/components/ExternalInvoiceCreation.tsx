@@ -83,6 +83,8 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   const [editItemDetails, setEditItemDetails] = useState("")
   const [editItemAmount, setEditItemAmount] = useState<number>(0)
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
+  const [isAddItemsDialogOpen, setIsAddItemsDialogOpen] = useState(false)
+  const [itemSearchQuery, setItemSearchQuery] = useState("")
 
   // Load available items
   useEffect(() => {
@@ -590,16 +592,16 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 <div className="ml-9 space-y-3">
                   {/* Available Items */}
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Available Items ({filteredItems.length})</span>
-                    <div className="relative max-w-xs">
-                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3" />
-                      <Input
-                        placeholder="Search..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 h-8 text-sm w-48"
-                      />
-                    </div>
+                    <span className="text-sm text-muted-foreground">Available Items ({filteredItems.length})</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddItemsDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add More Items
+                    </Button>
                   </div>
 
                   {filteredItems.length === 0 ? (
@@ -609,8 +611,9 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                       <p className="text-xs">Add items from External Invoice &gt; Items & Templates</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-3">
-                      {filteredItems.map(item => {
+                    <>
+                      <div className="grid grid-cols-1 gap-3">
+                        {filteredItems.slice(0, 5).map(item => {
                         const isAdded = lineItems.some(li => li.itemId === item.id)
                         return (
                           <Card
@@ -647,7 +650,13 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                           </Card>
                         )
                       })}
-                    </div>
+                      </div>
+                      {filteredItems.length > 5 && (
+                        <p className="text-sm text-muted-foreground text-center">
+                          Showing 5 of {filteredItems.length} items. Click "+ Add More Items" to see all.
+                        </p>
+                      )}
+                    </>
                   )}
 
                   <Button variant="outline" onClick={addCustomItem} className="border-dashed border-2">
@@ -921,6 +930,90 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               disabled={!editItemDescription || editItemAmount <= 0}
             >
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add More Items Dialog */}
+      <Dialog open={isAddItemsDialogOpen} onOpenChange={setIsAddItemsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add More Items
+            </DialogTitle>
+            <DialogDescription>
+              Search and select items to add to the invoice
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items by name or description..."
+                value={itemSearchQuery}
+                onChange={(e) => setItemSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Items List */}
+            <div className="max-h-[50vh] overflow-y-auto space-y-2 border rounded-lg p-4">
+              {filteredItems
+                .filter(item =>
+                  item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+                  (item.description && item.description.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                )
+                .map((item) => {
+                  const isAdded = lineItems.some(li => li.itemId === item.id)
+                  return (
+                    <Card
+                      key={item.id}
+                      className={`cursor-pointer transition-all ${isAdded ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                      onClick={() => !isAdded && addItem(item)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-sm">{item.name}</h4>
+                              <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                                External
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2">{item.description || "External invoice item"}</p>
+                            <p className="font-medium">₿{item.amount.toLocaleString()}</p>
+                          </div>
+                          <div className="flex items-center">
+                            {isAdded ? (
+                              <CheckCircle className="w-5 h-5 text-primary" />
+                            ) : (
+                              <Plus className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              {filteredItems.filter(item =>
+                item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+                (item.description && item.description.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+              ).length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No items found</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddItemsDialogOpen(false)}>
+              Close
             </Button>
           </div>
         </DialogContent>

@@ -116,6 +116,7 @@ const menuItems = {
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "email-jobs", labelKey: "menu.emailJobs", icon: Send },
   ],
   eca: [
     { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },

@@ -534,6 +534,10 @@ export function InvoiceManagement({
   const [isSendEmailConfirmOpen, setIsSendEmailConfirmOpen] = useState(false)
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
 
+  // Add Items dialog state
+  const [isAddItemsDialogOpen, setIsAddItemsDialogOpen] = useState(false)
+  const [itemSearchQuery, setItemSearchQuery] = useState("")
+
   const applyFilters = (tabType?: "student" | "external") => {
     const currentTab = tabType || invoiceTypeTab
     let filtered = invoices
@@ -3810,44 +3814,64 @@ export function InvoiceManagement({
 
                 {/* Available Items */}
                 <div className="space-y-3">
-                  <label className="font-medium">Available Items for {selectedGrade}</label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {availableItems.map((item) => {
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Available Items ({availableItems.length})</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddItemsDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add More Items
+                    </Button>
+                  </div>
+                  <div className="space-y-0 border rounded-lg">
+                    {availableItems.slice(0, 5).map((item, index) => {
                       const isSelected = selectedItems.find(i => i.id === item.id)
                       return (
-                        <Card
+                        <div
                           key={item.id}
-                          className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                            index !== 0 ? 'border-t' : ''
+                          } ${isSelected ? 'bg-primary/5' : ''}`}
                           onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
                         >
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-medium">{item.name}</h4>
-                                  <Badge variant="outline" className="text-xs">{item.category}</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                                <div className="flex items-center gap-4">
-                                  <p className="font-medium text-lg">₿{item.amount.toLocaleString()}</p>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {item.applicableGrades.length} grades
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="flex items-center">
-                                {isSelected ? (
-                                  <CheckCircle className="w-5 h-5 text-primary" />
-                                ) : (
-                                  <Plus className="w-5 h-5 text-muted-foreground" />
-                                )}
-                              </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{item.name}</span>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                                  item.category === "ECA" ? "border-green-300 text-green-700" :
+                                  item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                                  item.category === "School Bus" ? "border-purple-300 text-purple-700" :
+                                  "border-gray-300 text-gray-700"
+                                }`}
+                              >
+                                {item.category}
+                              </Badge>
                             </div>
-                          </CardContent>
-                        </Card>
+                            <p className="text-sm text-muted-foreground mb-1">{item.description}</p>
+                            <p className="font-medium">₿{item.amount.toLocaleString()}</p>
+                          </div>
+                          <div className="flex-shrink-0 ml-4">
+                            {isSelected ? (
+                              <CheckCircle className="w-5 h-5 text-primary" />
+                            ) : (
+                              <Plus className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
                       )
                     })}
                   </div>
+                  {availableItems.length > 5 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Showing 5 of {availableItems.length} items. Click "+ Add More Items" to see all.
+                    </p>
+                  )}
                 </div>
 
                 {/* Selected Items Summary */}
@@ -4233,6 +4257,97 @@ export function InvoiceManagement({
               Cancel
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add More Items Dialog */}
+      <Dialog open={isAddItemsDialogOpen} onOpenChange={setIsAddItemsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add More Items
+            </DialogTitle>
+            <DialogDescription>
+              Search and select items to add to the invoice
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items by name or description..."
+                value={itemSearchQuery}
+                onChange={(e) => setItemSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Items List */}
+            <div className="max-h-[50vh] overflow-y-auto border rounded-lg">
+              {availableItems
+                .filter(item =>
+                  item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+                  item.description.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                )
+                .map((item, index) => {
+                  const isSelected = selectedItems.find(i => i.id === item.id)
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                        index !== 0 ? 'border-t' : ''
+                      } ${isSelected ? 'bg-primary/5' : ''}`}
+                      onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{item.name}</span>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                              item.category === "ECA" ? "border-green-300 text-green-700" :
+                              item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                              item.category === "School Bus" ? "border-purple-300 text-purple-700" :
+                              "border-gray-300 text-gray-700"
+                            }`}
+                          >
+                            {item.category}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
+                        <p className="font-medium text-sm">₿{item.amount.toLocaleString()}</p>
+                      </div>
+                      <div className="flex-shrink-0 ml-4">
+                        {isSelected ? (
+                          <CheckCircle className="w-5 h-5 text-primary" />
+                        ) : (
+                          <Plus className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              {availableItems.filter(item =>
+                item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+                item.description.toLowerCase().includes(itemSearchQuery.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No items found</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddItemsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
