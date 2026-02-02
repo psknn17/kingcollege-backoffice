@@ -151,7 +151,7 @@ export const STUDENT_TYPES = {
       "Application Fee",
       "Registration Fee",
       "Security Deposit",
-      "ID Charges (1.3%)",
+      "ID Charges (3%)",
     ],
     eligibleWaivers: [
       "Security Deposit Waiver (ถ้ามีสิทธิ์ Fee Waiver)",
@@ -160,7 +160,7 @@ export const STUDENT_TYPES = {
   existingStudent: {
     // เด็กเก่า - เลือกจากรายชื่อนักเรียน
     fees: [
-      "ID Charges (1.3%)",  // เก็บทุกคน
+      "ID Charges (3%)",  // เก็บทุกคน
     ],
     eligibleWaivers: [],
   },
@@ -174,7 +174,7 @@ export const INVOICE_ITEM_ORDER = [
   "2. ค่าธรรมเนียมเด็กใหม่ (Application, Registration, Security Deposit) - สีส้ม",
   "3. Security Deposit Waiver (ถ้ามีสิทธิ์) - สีม่วง",
   "4. ส่วนลดทั้งหมด (Sibling, Registration Fee Waiver, Group, Scholarship, Staff, Early Bird) - สีเขียว",
-  "5. ID Charges (1.3%) - ทุกคน - สีดำ",
+  "5. ID Charges (3%) - ทุกคน - สีดำ",
   "6. TOTAL",
 ]
 

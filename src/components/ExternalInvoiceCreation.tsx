@@ -10,11 +10,12 @@ import { Textarea } from "./ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package, CheckCircle, Pencil } from "lucide-react"
+import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package, CheckCircle, Pencil, Download, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
+import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 
@@ -81,6 +82,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   const [editItemDescription, setEditItemDescription] = useState("")
   const [editItemDetails, setEditItemDetails] = useState("")
   const [editItemAmount, setEditItemAmount] = useState<number>(0)
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
   // Load available items
   useEffect(() => {
@@ -265,6 +267,53 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
     } catch (error) {
       toast.error("Failed to save invoice")
       console.error(error)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    if (lineItems.length === 0) {
+      toast.error("Please add at least one item to the invoice")
+      return
+    }
+
+    try {
+      setIsDownloadingPDF(true)
+
+      // Convert local state to Invoice object format
+      const invoice = {
+        id: editInvoice?.id || `DRAFT-${Date.now()}`,
+        invoiceNumber: editInvoice?.invoiceNumber || `DRAFT-${Date.now()}`,
+        studentName: clientName,
+        studentId: "EXTERNAL",
+        studentGrade: "-",
+        parentName: contactName,
+        parentEmail: editInvoice?.parentEmail || "",
+        totalAmount: total,
+        discountAmount: 0,
+        finalAmount: total,
+        status: "draft" as const,
+        issueDate: invoiceDate,
+        dueDate: dueDate || new Date(),
+        items: lineItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          amount: item.amount,
+          discountPercent: 0,
+          discountedAmount: item.amount,
+          notes: item.details || ""
+        })),
+        invoiceType: "external" as const,
+        recipientName: clientName,
+        recipientAddress: address
+      }
+
+      await downloadInvoicePDF(invoice)
+      toast.success("Invoice PDF downloaded successfully")
+    } catch (error) {
+      console.error("Failed to download invoice PDF:", error)
+      toast.error("Failed to download invoice PDF")
+    } finally {
+      setIsDownloadingPDF(false)
     }
   }
 
@@ -762,9 +811,27 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
             {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 px-8 py-4 border-t bg-gray-50">
               <Button
+                variant="outline"
                 onClick={() => setIsPreviewDialogOpen(false)}
               >
-                OK
+                Close
+              </Button>
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={isDownloadingPDF}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isDownloadingPDF ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </>
+                )}
               </Button>
             </div>
           </div>

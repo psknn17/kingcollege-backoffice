@@ -23,6 +23,7 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 
@@ -486,6 +487,7 @@ export function InvoiceManagement({
 
   // External invoice preview dialog state
   const [isExternalPreviewOpen, setIsExternalPreviewOpen] = useState(false)
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
   // Import Excel state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
@@ -1684,6 +1686,141 @@ export function InvoiceManagement({
 
   const downloadInvoice = (invoiceId: string) => {
     downloadInvoiceData(invoiceId)
+  }
+
+  const downloadSingleInvoicePDF = async (invoice: Invoice) => {
+    if (!invoice) {
+      toast.error("No invoice to download")
+      return
+    }
+
+    try {
+      setIsDownloadingPDF(true)
+
+      // Calculate additional details for PDF (same logic as preview)
+      const isNonDiscountableInvoice = invoice.category === "bus"
+      const student = students.find(s => s.id === invoice.studentId)
+
+      // Calculate discounts
+      const discountLines: Array<{ name: string; amount: number; percent?: number }> = []
+      const subtotal = invoice.items.reduce((sum, item) => sum + item.amount, 0)
+
+      // Add all discount types (same as preview)
+      if (!isNonDiscountableInvoice && invoice.invoiceType !== "external" && invoice.studentId !== "EXTERNAL") {
+        // 1. Sibling discount
+        const siblingCount = students.filter(s =>
+          s.parentEmail?.toLowerCase() === student?.parentEmail?.toLowerCase() &&
+          s.id !== invoice.studentId
+        ).length
+        if (siblingCount > 0) {
+          const siblingPercent = Math.min(siblingCount * 5, 20)
+          const siblingAmount = Math.round(subtotal * siblingPercent / 100)
+          if (siblingAmount > 0) {
+            discountLines.push({
+              name: `Sibling Discount (${siblingCount} sibling${siblingCount > 1 ? 's' : ''})`,
+              amount: siblingAmount,
+              percent: siblingPercent
+            })
+          }
+        }
+
+        // 2. Student group discounts
+        const invoiceCategory = invoice.category || category
+        const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoiceCategory)
+        groupDiscounts.forEach(group => {
+          const groupAmount = group.discountType === "percentage"
+            ? Math.round(subtotal * group.discountPercentage / 100)
+            : group.fixedAmount
+          if (groupAmount > 0) {
+            discountLines.push({
+              name: group.name,
+              amount: groupAmount,
+              percent: group.discountType === "percentage" ? group.discountPercentage : undefined
+            })
+          }
+        })
+
+        // 3. Fee Waiver Program
+        if (student) {
+          const feeWaiverEligibility = checkFeePrivilegeEligibility(
+            student,
+            student.academicYear || invoice.academicYear,
+            student.enrollmentTerm || "term1"
+          )
+          if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
+            discountLines.push({
+              name: `Registration Fee Waiver (฿${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term)`,
+              amount: feeWaiverEligibility.creditPerTerm
+            })
+          }
+        }
+
+        // 4. Staff Child discount
+        if (student && student.notes?.toLowerCase().includes('staff')) {
+          const staffAmount = Math.round(subtotal * 50 / 100)
+          if (staffAmount > 0) {
+            discountLines.push({
+              name: "Staff Child Discount",
+              amount: staffAmount,
+              percent: 50
+            })
+          }
+        }
+
+        // 5. Scholarship
+        if (student && student.notes?.toLowerCase().includes('scholarship')) {
+          discountLines.push({
+            name: "Scholarship",
+            amount: subtotal,
+            percent: 100
+          })
+        }
+
+        // 6. Early Bird discount
+        if (student && student.notes?.toLowerCase().includes('early bird')) {
+          const earlyBirdAmount = Math.round(subtotal * 5 / 100)
+          if (earlyBirdAmount > 0) {
+            discountLines.push({
+              name: "Early Bird Discount",
+              amount: earlyBirdAmount,
+              percent: 5
+            })
+          }
+        }
+      }
+
+      // Calculate late fee
+      const today = new Date()
+      const dueDate = new Date(invoice.dueDate)
+      const isOverdue = today > dueDate && invoice.status !== "paid"
+      const lateFeePercent = 1.5
+      const lateFeeAmount = isOverdue ? Math.round(subtotal * lateFeePercent / 100) : 0
+
+      // Calculate ID Charges (3% of subtotal after discounts and fees)
+      const totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
+      const registrationFeesTotal = (invoice as any).registrationFees?.reduce((sum: number, fee: any) => sum + fee.amount, 0) || 0
+      const subtotalBeforeIdCharges = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
+      const calculatedIdCharges = Math.round(subtotalBeforeIdCharges * 0.03)
+      const finalIdCharges = (invoice as any).idCharges > 0 ? (invoice as any).idCharges : calculatedIdCharges
+
+      // Prepare invoice with additional details
+      const invoiceWithDetails = {
+        ...invoice,
+        discounts: discountLines.length > 0 ? discountLines : undefined,
+        registrationFees: (invoice as any).registrationFees || undefined,
+        idCharges: finalIdCharges > 0 ? finalIdCharges : undefined,
+        securityDepositWaiver: (invoice as any).securityDepositWaiver || undefined,
+        lateFee: lateFeeAmount > 0 ? { amount: lateFeeAmount, percent: lateFeePercent } : undefined
+      }
+
+      await downloadInvoicePDF(invoiceWithDetails)
+      toast.success("Invoice PDF downloaded successfully")
+    } catch (error) {
+      console.error("Failed to download invoice PDF:", error)
+      toast.error("Failed to download invoice PDF")
+    } finally {
+      setIsDownloadingPDF(false)
+    }
   }
 
   // Generate proper invoice number (INV-YYYYMM-XXXX format)
@@ -3583,6 +3720,23 @@ export function InvoiceManagement({
                 <Button variant="outline" onClick={closeInvoiceModal}>
                   Close
                 </Button>
+                <Button
+                  onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
+                  disabled={isDownloadingPDF}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isDownloadingPDF ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
                 {(() => {
                   const shouldShowCancelButton = getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
                   console.log('[Cancel Button] Visibility check:', {
@@ -5007,6 +5161,23 @@ export function InvoiceManagement({
           <div className="flex justify-end gap-3 p-4 border-t">
             <Button variant="outline" onClick={() => setIsExternalPreviewOpen(false)}>
               Close
+            </Button>
+            <Button
+              onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
+              disabled={isDownloadingPDF}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isDownloadingPDF ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
