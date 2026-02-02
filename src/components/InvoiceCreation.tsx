@@ -1476,7 +1476,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const [selectedCategory, setSelectedCategory] = useState<string>(
     defaultCategory ||
     (invoiceType === "eca" ? "ECA" :
-     invoiceType === "exam" ? "International Exam" :
+     invoiceType === "exam" ? "Exam" :
      "Tuition")
   )
 
@@ -1815,7 +1815,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     // Set correct category based on invoice type
     setSelectedCategory(
       invoiceType === "eca" ? "ECA" :
-      invoiceType === "exam" ? "International Exam" :
+      invoiceType === "exam" ? "Exam" :
       (defaultCategory || "Tuition")
     )
     setPaymentDeadline(undefined)
