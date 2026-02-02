@@ -578,13 +578,23 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               {/* Step 3: Invoice Items & Summary */}
               {lineItems.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-600 font-semibold text-sm">
-                      3
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="font-medium">Invoice Items ({lineItems.length})</label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(total)}
+                      </p>
                     </div>
-                    <h3 className="font-semibold">Invoice Items ({lineItems.length})</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLineItems([])}
+                    >
+                      Clear All Items
+                    </Button>
                   </div>
-                  <div className="ml-9">
+
+                  <div className="border rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -667,12 +677,13 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                         </TableRow>
                       </TableBody>
                     </Table>
-                    {total > 0 && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {numberToWords(total)}
-                      </p>
-                    )}
                   </div>
+
+                  {total > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {numberToWords(total)}
+                    </p>
+                  )}
                 </div>
               )}
 
