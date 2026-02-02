@@ -1652,6 +1652,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const allItems = loadItemsFromStorage(invoiceType)
       console.log(`[${invoiceType}] Loaded ${allItems.length} items, selectedCategory: ${selectedCategory}, selectedGrade: ${selectedGrade}`)
 
+      if (invoiceType === "exam") {
+        const categories = [...new Set(allItems.map(item => item.category))]
+        console.log(`[exam] Available categories:`, categories)
+        console.log(`[exam] Looking for category:`, selectedCategory)
+      }
+
       // For exam invoices, don't filter by grade (exams can apply to any grade)
       const filteredItems = invoiceType === "exam"
         ? allItems.filter(item =>
