@@ -3276,6 +3276,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     <label className="font-medium">
                       {isSimplifiedView
                         ? t('invoiceCreation.availableItems')
+                        : invoiceType === "exam"
+                        ? `Available ${selectedCategory} Items`
                         : t('invoiceCreation.availableItemsForGrade', { category: selectedCategory, grade: selectedGrade })}
                     </label>
                     <span className="text-sm text-muted-foreground">{t('invoiceCreation.itemsAvailableCount', { count: availableItems.length })}</span>
@@ -3450,10 +3452,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             ? "No school bus items available"
                             : invoiceType === "eca"
                               ? "No ECA items available"
-                              : `No ${selectedCategory.toLowerCase()} items available for ${selectedGrade}`}
+                              : invoiceType === "exam"
+                                ? `No ${selectedCategory.toLowerCase()} items available`
+                                : `No ${selectedCategory.toLowerCase()} items available for ${selectedGrade}`}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {isSimplifiedView || invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "eca"
+                      {isSimplifiedView || invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "eca" || invoiceType === "exam"
                         ? "Contact admin to add items"
                         : "Try selecting a different category or contact admin to add items"}
                     </p>
