@@ -3444,7 +3444,12 @@ export function InvoiceManagement({
                     const lateFeeAmount = isOverdue ? Math.round(subtotal * lateFeePercent / 100) : 0
 
                     // Calculate total discounts
-                    const totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
+                    let totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
+
+                    // Cap total discounts at subtotal to prevent negative amounts
+                    if (totalDiscounts > subtotal) {
+                      totalDiscounts = subtotal
+                    }
 
                     // Calculate subtotal before ID Charges
                     const subtotalBeforeIdCharges = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
