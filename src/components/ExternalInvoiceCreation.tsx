@@ -579,12 +579,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               {lineItems.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <div>
-                      <label className="font-medium">Invoice Items ({lineItems.length})</label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Total: {formatCurrency(total)}
-                      </p>
-                    </div>
+                    <label className="font-medium">Invoice Items ({lineItems.length})</label>
                     <Button
                       variant="outline"
                       size="sm"
