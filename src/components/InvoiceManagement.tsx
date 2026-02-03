@@ -4528,8 +4528,26 @@ export function InvoiceManagement({
                       <SelectValue placeholder="Select bank" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Kasikorn">Kasikorn</SelectItem>
-                      <SelectItem value="UOB">UOB</SelectItem>
+                      <SelectItem value="Bangkok Bank">Bangkok Bank</SelectItem>
+                      <SelectItem value="Kasikorn Bank">Kasikorn Bank</SelectItem>
+                      <SelectItem value="Siam Commercial Bank">Siam Commercial Bank</SelectItem>
+                      <SelectItem value="Krung Thai Bank">Krung Thai Bank</SelectItem>
+                      <SelectItem value="Bank of Ayudhya (Krungsri)">Bank of Ayudhya (Krungsri)</SelectItem>
+                      <SelectItem value="TMBThanachart Bank">TMBThanachart Bank</SelectItem>
+                      <SelectItem value="Government Savings Bank">Government Savings Bank</SelectItem>
+                      <SelectItem value="CIMB Thai Bank">CIMB Thai Bank</SelectItem>
+                      <SelectItem value="United Overseas Bank (UOB)">United Overseas Bank (UOB)</SelectItem>
+                      <SelectItem value="Standard Chartered Thailand">Standard Chartered Thailand</SelectItem>
+                      <SelectItem value="Kiatnakin Phatra Bank">Kiatnakin Phatra Bank</SelectItem>
+                      <SelectItem value="TISCO Bank">TISCO Bank</SelectItem>
+                      <SelectItem value="Land and Houses Bank">Land and Houses Bank</SelectItem>
+                      <SelectItem value="ICBC (Thai)">ICBC (Thai)</SelectItem>
+                      <SelectItem value="Bank for Agriculture and Agricultural Cooperatives">Bank for Agriculture and Agricultural Cooperatives</SelectItem>
+                      <SelectItem value="Islamic Bank of Thailand">Islamic Bank of Thailand</SelectItem>
+                      <SelectItem value="Government Housing Bank">Government Housing Bank</SelectItem>
+                      <SelectItem value="SME Development Bank">SME Development Bank</SelectItem>
+                      <SelectItem value="Export-Import Bank of Thailand">Export-Import Bank of Thailand</SelectItem>
+                      <SelectItem value="Mizuho Bank">Mizuho Bank</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
