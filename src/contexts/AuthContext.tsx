@@ -81,7 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      return false
+      // Allow any email/password for demo/testing
+      const userData: User = {
+        id: `user-${Date.now()}`,
+        email: email,
+        name: email.split('@')[0] || 'User',
+        role: 'User'
+      }
+      setUser(userData)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+      return true
     } catch (error) {
       console.error("Login error:", error)
       return false
