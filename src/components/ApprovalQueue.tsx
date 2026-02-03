@@ -297,9 +297,16 @@ export function ApprovalQueue() {
     })
     const sorted = [...filteredInvoices]
 
-    // If no sortKey is set, default to sorting by ID descending (newest first)
+    // If no sortKey is set, default to sorting by timestamp descending (newest first)
     if (!sortKey) {
-      sorted.sort((a, b) => b.id.localeCompare(a.id))
+      sorted.sort((a, b) => {
+        // Extract timestamp from ID format: inv-{studentId}-{timestamp}
+        const getTimestamp = (id: string) => {
+          const parts = id.split('-')
+          return parseInt(parts[parts.length - 1]) || 0
+        }
+        return getTimestamp(b.id) - getTimestamp(a.id)
+      })
       return sorted
     }
 
