@@ -354,31 +354,75 @@ export function ViewModal({
         </div>
 
         {/* Payment Methods */}
-        <div className="px-4 py-2" style={{ fontSize: '11px' }}>
-          <h3 className="font-bold mb-3">Payment methods</h3>
-          <div className="space-y-3">
-            {/* Bank Transfer */}
-            <div>
-              <span>- </span>
-              <span className="font-medium">Bank Transfer:</span>
-              <span> Please transfer to the account below and email proof of payment to finance@kingsbangkok.ac.th</span>
-              <table className="mt-3 ml-8">
+        <div className="px-4 py-2" style={{ fontSize: '11px', lineHeight: '1.5' }}>
+          <p className="font-bold mb-2">Payment methods</p>
+          <div className="space-y-2">
+            <div className="flex">
+              <span className="mr-2">-</span>
+              <div>
+                <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+              </div>
+            </div>
+
+            <div className="flex">
+              <span className="mr-2">-</span>
+              <div className="flex-1">
+                <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to finance@kingsbangkok.ac.th with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
+              </div>
+            </div>
+
+            <div className="mt-2 flex justify-center">
+              <table>
                 <tbody>
                   <tr>
-                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account name</td>
-                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountName}</td>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td>
+                    <td className="py-0.5 text-left">{BANK_DETAILS.accountName}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Account number</td>
-                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.accountNumber}</td>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td>
+                    <td className="py-0.5 text-left">{BANK_DETAILS.accountNumber}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Bank name</td>
-                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.bankName}</td>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td>
+                    <td className="py-0.5 text-left">{BANK_DETAILS.bankName}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: '150px', paddingTop: '4px', paddingBottom: '4px' }}>Branch</td>
-                    <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>{BANK_DETAILS.branch}</td>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td>
+                    <td className="py-0.5 text-left">{BANK_DETAILS.branch}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td>
+                    <td className="py-0.5 text-left">KASITHBK</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td>
+                    <td className="py-0.5 text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex mt-2">
+              <span className="mr-2">-</span>
+              <div className="flex-1">
+                <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+              </div>
+            </div>
+
+            <div className="mt-2" style={{ marginLeft: '138px' }}>
+              <table>
+                <tbody>
+                  <tr>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td>
+                    <td className="py-0.5 text-left">099-4-00259063-3</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td>
+                    <td className="py-0.5 text-left">700002</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td>
+                    <td className="py-0.5 text-left">-</td>
                   </tr>
                 </tbody>
               </table>

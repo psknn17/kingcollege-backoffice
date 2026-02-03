@@ -43,17 +43,72 @@ interface ExternalInvoiceCreationProps {
   editInvoice?: any
 }
 
+// Default external items
+const defaultExternalItems: ExternalItem[] = [
+  {
+    id: "ext-item-001",
+    itemCode: "EXT-001",
+    name: "Conference Room Rental",
+    description: "Full day conference room rental with AV equipment",
+    amount: 15000,
+    category: "Rental",
+    isActive: true
+  },
+  {
+    id: "ext-item-002",
+    itemCode: "EXT-002",
+    name: "Sports Facility Rental",
+    description: "Hourly sports facility rental",
+    amount: 2500,
+    category: "Rental",
+    isActive: true
+  },
+  {
+    id: "ext-item-003",
+    itemCode: "EXT-003",
+    name: "Event Catering Service",
+    description: "Catering service per person",
+    amount: 500,
+    category: "Catering",
+    isActive: true
+  },
+  {
+    id: "ext-item-004",
+    itemCode: "EXT-004",
+    name: "Equipment Rental",
+    description: "AV and technical equipment rental",
+    amount: 5000,
+    category: "Equipment",
+    isActive: true
+  },
+  {
+    id: "ext-item-005",
+    itemCode: "EXT-005",
+    name: "Professional Services",
+    description: "Consulting and professional services",
+    amount: 10000,
+    category: "Services",
+    isActive: true
+  }
+]
+
 // Load external items from localStorage
 const loadExternalItems = (): ExternalItem[] => {
   try {
     const stored = localStorage.getItem("externalItems")
     if (stored) {
-      return JSON.parse(stored)
+      const items = JSON.parse(stored)
+      // Return stored items if they exist and are valid
+      if (items && items.length > 0) {
+        return items
+      }
     }
+    // Return default items if localStorage is empty
+    return defaultExternalItems
   } catch (error) {
     console.error("Failed to load external items:", error)
+    return defaultExternalItems
   }
-  return []
 }
 
 
@@ -319,73 +374,69 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
 
   // Render invoice preview (matching the sample format)
   const renderPreview = () => (
-    <div className="bg-white text-black p-8 max-w-[794px] mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
+    <div className="bg-white text-black mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '794px', minHeight: '1123px', padding: '32px 48px' }}>
       {/* School Header */}
-      <div className="text-center mb-2">
-        <img src={SchoolLogo} alt="School Logo" className="mx-auto mb-1" style={{ height: '180px' }} />
-        <p className="text-xs font-bold tracking-wider">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
-        <p className="text-[10px] text-gray-600 tracking-wide">BANGKOK</p>
-        <p className="text-[9px] text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
-        <p className="text-[9px] text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+      <div className="text-center mb-4">
+        <img src={SchoolLogo} alt="School Logo" className="mx-auto mb-2" style={{ height: '100px' }} />
+        <p className="text-sm font-bold tracking-wider">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
+        <p className="text-xs text-gray-600 tracking-wide">BANGKOK</p>
+        <p className="text-[10px] text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
+        <p className="text-[10px] text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
       </div>
 
       {/* Invoice Title */}
-      <h1 className="font-black text-center my-6" style={{ fontSize: '32px' }}>INVOICE</h1>
+      <h1 className="font-black text-center mb-6" style={{ fontSize: '28px' }}>INVOICE</h1>
 
       {/* Client & Invoice Info */}
-      <div className="border border-black p-4 mb-6" style={{ fontSize: '12px' }}>
+      <div className="border border-black p-4 mb-6" style={{ fontSize: '13px' }}>
         <div className="flex justify-between">
-          {/* Left side - Client Info (ชิดซ้าย) */}
-          <table>
-            <tbody>
-              <tr>
-                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client no.</td>
-                <td className="py-1">000000</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client name</td>
-                <td className="py-1">{clientName}</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Contact name</td>
-                <td className="py-1">{contactName || '-'}</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-bold align-top" style={{ paddingRight: '24px' }}>Address</td>
-                <td className="py-1 whitespace-pre-line">{address || '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-          {/* Right side - Invoice Info (ชิดขวา) */}
-          <table>
-            <tbody>
-              <tr>
-                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice no.</td>
-                <td className="py-1">
-                  {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
-                    ? editInvoice.invoiceNumber
-                    : isEditMode ? "Pending Approval" : "-"}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice date</td>
-                <td className="py-1">{format(invoiceDate, 'd MMMM yyyy')}</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>
-                <td className="py-1">{dueDate ? format(dueDate, 'd MMMM yyyy') : '-'}</td>
-              </tr>
-            </tbody>
-          </table>
+          {/* Left Column - Client Info */}
+          <div style={{ width: '45%' }}>
+            <div className="flex py-1">
+              <span style={{ width: '110px' }}>Client no.</span>
+              <span>000000</span>
+            </div>
+            <div className="flex py-1">
+              <span style={{ width: '110px' }}>Client name</span>
+              <span>{clientName}</span>
+            </div>
+            <div className="flex py-1">
+              <span style={{ width: '110px' }}>Contact name</span>
+              <span>{contactName || '-'}</span>
+            </div>
+            <div className="flex py-1">
+              <span style={{ width: '110px' }}>Address</span>
+              <span>{address || '-'}</span>
+            </div>
+          </div>
+          {/* Right Column - Invoice Info */}
+          <div style={{ width: '45%' }}>
+            <div className="flex py-1">
+              <span style={{ width: '90px' }}>Invoice no.</span>
+              <span className="flex-1 text-right">
+                {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
+                  ? editInvoice.invoiceNumber
+                  : isEditMode ? "Pending Approval" : "-"}
+              </span>
+            </div>
+            <div className="flex py-1">
+              <span style={{ width: '90px' }}>Invoice date</span>
+              <span className="flex-1 text-right">{format(invoiceDate, 'd MMMM yyyy')}</span>
+            </div>
+            <div className="flex py-1">
+              <span style={{ width: '90px' }}>Due date</span>
+              <span className="flex-1 text-right">{dueDate ? format(dueDate, 'd MMMM yyyy') : '-'}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Items Table */}
-      <table className="w-full border border-black mb-6" style={{ borderCollapse: 'collapse', fontSize: '12px' }}>
+      <table className="w-full border border-black mb-6" style={{ borderCollapse: 'collapse', fontSize: '13px' }}>
         <thead>
           <tr className="border-b border-black">
-            <th className="py-2 px-4 text-center font-bold border-r border-black">Description</th>
-            <th className="py-2 px-4 text-center font-bold" style={{ width: '100px' }}>Amount<br/>(THB)</th>
+            <th className="py-2 px-4 text-center font-semibold">Description</th>
+            <th className="py-2 px-4 text-center font-semibold" style={{ width: '150px' }}>Amount<br/>(THB)</th>
           </tr>
         </thead>
         <tbody>
@@ -394,7 +445,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               <td className="py-3 px-4 align-top border-r border-black">
                 <div>{item.description}</div>
                 {item.details && (
-                  <div className="text-gray-600">{item.details}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{item.details}</div>
                 )}
               </td>
               <td className="py-3 px-4 text-right align-top">
@@ -418,7 +469,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       </table>
 
       {/* Payment Methods */}
-      <div className="mb-6" style={{ fontSize: '10px', lineHeight: '1.5' }}>
+      <div className="mb-6" style={{ fontSize: '11px', lineHeight: '1.5' }}>
         <p className="font-bold mb-2">Payment methods</p>
         <div className="space-y-2">
           <div className="flex">
@@ -429,42 +480,40 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
           </div>
           <div className="flex">
             <span className="mr-2">-</span>
-            <div>
+            <div className="flex-1">
               <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {SCHOOL_INFO.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
-              <table className="mt-2 ml-6">
-                <tbody>
-                  <tr><td className="pr-6 py-0.5">Account name</td><td>{BANK_DETAILS.accountName}</td></tr>
-                  <tr><td className="pr-6 py-0.5">Account number</td><td>{BANK_DETAILS.accountNumber}</td></tr>
-                  <tr><td className="pr-6 py-0.5">Bank name</td><td>{BANK_DETAILS.bankName}</td></tr>
-                  <tr><td className="pr-6 py-0.5">Branch</td><td>{BANK_DETAILS.branch}</td></tr>
-                  <tr><td className="pr-6 py-0.5">Swift code</td><td>KASITHBK</td></tr>
-                  <tr><td className="pr-6 py-0.5">Bank address</td><td>1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
-                </tbody>
-              </table>
             </div>
           </div>
-          <div className="flex">
+          <div className="mt-2 flex justify-center">
+            <table>
+              <tbody>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td><td className="text-left">{BANK_DETAILS.accountName}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td><td className="text-left">{BANK_DETAILS.accountNumber}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td><td className="text-left">{BANK_DETAILS.bankName}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td><td className="text-left">{BANK_DETAILS.branch}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td><td className="text-left">KASITHBK</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td><td className="text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="flex mt-2">
             <span className="mr-2">-</span>
             <div className="flex-1">
               <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-              <div className="flex justify-between items-start mt-2">
-                <table className="ml-6">
-                  <tbody>
-                    <tr><td className="pr-6 py-0.5">Biller ID no.</td><td>099-4-00259063-3</td></tr>
-                    <tr><td className="pr-6 py-0.5">Reference no. (Ref 1)</td><td>700002</td></tr>
-                    <tr><td className="pr-6 py-0.5">Reference no. (Ref 2)</td><td>
-                      {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
-                        ? editInvoice.invoiceNumber
-                        : "-"}
-                    </td></tr>
-                  </tbody>
-                </table>
-                {/* QR Code */}
-                <div className="w-16 h-16 border border-black flex items-center justify-center bg-gray-100">
-                  <span className="text-[8px] text-gray-500">QR</span>
-                </div>
-              </div>
             </div>
+          </div>
+          <div className="mt-2" style={{ marginLeft: '138px' }}>
+            <table>
+              <tbody>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td><td className="text-left">099-4-00259063-3</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td><td className="text-left">700002</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td><td className="text-left">
+                  {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
+                    ? editInvoice.invoiceNumber
+                    : "-"}
+                </td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -753,11 +802,11 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                     <h3 className="font-semibold">Payment Due Date</h3>
                   </div>
                   <div className="ml-9">
-                    <div className="max-w-[220px] space-y-1.5">
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-medium">Due date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                          <Button variant="outline" className="w-[200px] h-9 justify-start font-normal">
                             <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                             {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Select date'}
                           </Button>
@@ -793,7 +842,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
 
       {/* Invoice Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-h-[90vh] overflow-y-auto p-0" style={{ width: "850px", maxWidth: "95vw" }}>
           <DialogHeader className="sr-only">
             <DialogTitle>Invoice Preview</DialogTitle>
             <DialogDescription>Preview of the external invoice</DialogDescription>

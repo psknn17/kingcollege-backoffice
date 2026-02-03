@@ -362,18 +362,50 @@ const mockECAItems: Item[] = [
 const mockTemplates: ItemTemplate[] = [
   {
     id: "template-001",
-    name: "Year 1 Complete Package",
-    description: "Full academic year package for Year 1 students",
+    name: "Complete Tuition Package",
+    description: "Full academic year tuition package for all students",
     items: ["item-001", "item-002", "item-003", "item-004"],
-    applicableGrades: ["Year 1"],
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"],
     isActive: true
   },
   {
     id: "template-002",
-    name: "Year 1 Basic Tuition",
-    description: "Essential tuition fees only for Year 1",
+    name: "Basic Tuition Only",
+    description: "Essential tuition fees only",
     items: ["item-001", "item-002", "item-003"],
-    applicableGrades: ["Year 1"],
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"],
+    isActive: true
+  },
+  {
+    id: "template-003",
+    name: "Early Years Package",
+    description: "Tuition package for Pre-Nursery to Reception",
+    items: ["item-001", "item-002"],
+    applicableGrades: ["Pre-Nursery", "Nursery", "Reception"],
+    isActive: true
+  },
+  {
+    id: "template-004",
+    name: "Primary School Package",
+    description: "Tuition package for Year 1 to Year 6",
+    items: ["item-001", "item-002", "item-003"],
+    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
+    isActive: true
+  },
+  {
+    id: "template-005",
+    name: "Secondary School Package",
+    description: "Tuition package for Year 7 to Year 11",
+    items: ["item-001", "item-002", "item-003", "item-004"],
+    applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11"],
+    isActive: true
+  },
+  {
+    id: "template-006",
+    name: "Sixth Form Package",
+    description: "Tuition package for Year 12 and Year 13",
+    items: ["item-001", "item-002", "item-003", "item-004"],
+    applicableGrades: ["Year 12", "Year 13"],
     isActive: true
   }
 ]
@@ -2368,13 +2400,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={handleSaveChanges}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </Button>
-                <Button
-                  variant="outline"
                   onClick={() => {
                     const input = document.createElement('input')
                     input.type = 'file'
@@ -2534,16 +2559,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <CardTitle>{isExternalView ? "External Templates" : isSimplifiedView ? "Activity Templates" : "Manage Templates"}</CardTitle>
                 <p className="text-muted-foreground">{isSimplifiedView ? "Create shortcuts for commonly used activity item combinations" : "Create shortcuts for commonly used item combinations"}</p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleSaveChanges}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </Button>
-                <Button onClick={openCreateTemplateModal}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Template
-                </Button>
-              </div>
+              <Button onClick={openCreateTemplateModal}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Template
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -2598,6 +2617,27 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     </div>
 
                     <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
+
+                    {/* Applicable Grades */}
+                    <div className="mb-3">
+                      <p className="text-sm font-medium mb-1">Applicable Grades:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {template.applicableGrades.length === grades.length ? (
+                          <Badge variant="secondary" className="text-xs">All Grades</Badge>
+                        ) : template.applicableGrades.length > 5 ? (
+                          <>
+                            {template.applicableGrades.slice(0, 3).map(grade => (
+                              <Badge key={grade} variant="outline" className="text-xs">{grade}</Badge>
+                            ))}
+                            <Badge variant="secondary" className="text-xs">+{template.applicableGrades.length - 3} more</Badge>
+                          </>
+                        ) : (
+                          template.applicableGrades.map(grade => (
+                            <Badge key={grade} variant="outline" className="text-xs">{grade}</Badge>
+                          ))
+                        )}
+                      </div>
+                    </div>
 
                     <div className="space-y-2">
                       <p className="text-sm font-medium">{template.items.length} items:</p>

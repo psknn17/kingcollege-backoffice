@@ -98,6 +98,10 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
     const stored = localStorage.getItem(storageKey)
     if (!stored) return []
 
+    // Load invoices to get parent information
+    const invoicesStored = localStorage.getItem("createdInvoices")
+    const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
+
     const records = JSON.parse(stored)
     return records.map((r: any) => {
       // Parse schoolYear to separate academicYear and term
@@ -111,15 +115,22 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         term = parts.slice(1).join(" - ") || "" // "Term 2 (January - March)"
       }
 
+      // Find matching invoice to get parent info
+      const invoiceNumber = r.invoices?.[0]?.invoiceNo || ""
+      const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === invoiceNumber)
+      const parentName = matchingInvoice?.parentName || r.clientName || ""
+      const studentName = matchingInvoice?.studentName || r.contactName || r.clientName
+      const address = matchingInvoice?.address || ""
+
       return {
         id: r.id,
         receiptNumber: r.receiptNo,
-        invoiceNumber: r.invoices?.[0]?.invoiceNo || "",
-        studentName: r.contactName || r.clientName,
+        invoiceNumber: invoiceNumber,
+        studentName: studentName,
         studentId: r.clientNo || "",
         studentGrade: r.yearGroup || "",
-        contactName: r.clientName || "",
-        address: "",
+        contactName: parentName,
+        address: address,
         invoiceDate: r.invoices?.[0]?.invoiceDate ? new Date(r.invoices[0].invoiceDate) : new Date(r.createdAt),
         invoiceAmount: r.invoices?.[0]?.invoiceAmount || r.totalAmount,
         amount: r.totalAmount,
@@ -1284,7 +1295,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
 
       {/* View Receipt Dialog - Official Receipt Template */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogContent className="max-h-[95vh] overflow-y-auto p-0" style={{ width: "794px", maxWidth: "90vw" }}>
           <DialogHeader className="sr-only">
             <DialogTitle>Receipt Details</DialogTitle>
           </DialogHeader>

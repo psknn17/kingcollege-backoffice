@@ -17,7 +17,8 @@ import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { EmptySearchResults, EmptyDataState } from "./ui/states"
 import { Checkbox } from "./ui/checkbox"
-import { Search, Filter, Eye, Plus, Download, Mail, Calendar as CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building } from "lucide-react"
+import { Search, Filter, Eye, Plus, Download, Mail, Calendar as CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building, MoreVertical, History } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -102,8 +103,21 @@ interface InvoiceTemplate {
   isDefault: boolean
 }
 
+// Email log entry interface
+interface EmailLogEntry {
+  id: string
+  invoiceId: string
+  invoiceNumber: string
+  recipientEmail: string
+  recipientName: string
+  sentAt: string
+  sentBy: string
+  status: "sent" | "failed"
+}
+
 // localStorage key for created invoices (same as InvoiceCreation)
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
+const EMAIL_LOGS_STORAGE_KEY = "invoiceEmailLogs"
 
 // Helper function to check if invoice can be edited (not yet approved)
 const canEditInvoice = (_status: string, approvalStatus?: ApprovalStatus): boolean => {
@@ -474,6 +488,18 @@ export function InvoiceManagement({
     applyFilters(invoiceTypeTab)
   }, [invoiceTypeTab, invoices, category])
 
+  // Load email logs from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(EMAIL_LOGS_STORAGE_KEY)
+      if (stored) {
+        setEmailLogs(JSON.parse(stored))
+      }
+    } catch (error) {
+      console.error("Failed to load email logs:", error)
+    }
+  }, [])
+
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
@@ -533,6 +559,11 @@ export function InvoiceManagement({
   const [edcAccountNumber, setEdcAccountNumber] = useState("")
   const [isSendEmailConfirmOpen, setIsSendEmailConfirmOpen] = useState(false)
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
+
+  // Email history state
+  const [emailLogs, setEmailLogs] = useState<EmailLogEntry[]>([])
+  const [isEmailHistoryOpen, setIsEmailHistoryOpen] = useState(false)
+  const [selectedInvoiceForEmailHistory, setSelectedInvoiceForEmailHistory] = useState<Invoice | null>(null)
 
   // Add Items dialog state
   const [isAddItemsDialogOpen, setIsAddItemsDialogOpen] = useState(false)
@@ -1324,6 +1355,25 @@ export function InvoiceManagement({
       console.error("Failed to update invoice status in localStorage:", error)
     }
 
+    // Save email log entry
+    const newEmailLog: EmailLogEntry = {
+      id: `email-${Date.now()}`,
+      invoiceId: invoiceToSend.id,
+      invoiceNumber: invoiceToSend.invoiceNumber,
+      recipientEmail: invoiceToSend.parentEmail,
+      recipientName: invoiceToSend.parentName,
+      sentAt: emailSentAt,
+      sentBy: "System",
+      status: "sent"
+    }
+    const updatedEmailLogs = [...emailLogs, newEmailLog]
+    setEmailLogs(updatedEmailLogs)
+    try {
+      localStorage.setItem(EMAIL_LOGS_STORAGE_KEY, JSON.stringify(updatedEmailLogs))
+    } catch (error) {
+      console.error("Failed to save email log:", error)
+    }
+
     toast.success(`Invoice ${invoiceToSend.invoiceNumber} sent to ${invoiceToSend.parentEmail}`)
     logActivity({
       action: `Sent invoice email ${invoiceToSend.invoiceNumber}`,
@@ -1334,6 +1384,17 @@ export function InvoiceManagement({
     // Close dialog and reset
     setIsSendEmailConfirmOpen(false)
     setInvoiceToSend(null)
+  }
+
+  // Get email logs for a specific invoice
+  const getInvoiceEmailLogs = (invoiceId: string): EmailLogEntry[] => {
+    return emailLogs.filter(log => log.invoiceId === invoiceId)
+  }
+
+  // Open email history dialog
+  const openEmailHistory = (invoice: Invoice) => {
+    setSelectedInvoiceForEmailHistory(invoice)
+    setIsEmailHistoryOpen(true)
   }
 
   const downloadInvoiceData = (invoiceId: string) => {
@@ -2738,11 +2799,7 @@ export function InvoiceManagement({
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
-                              // Open Modal (view only)
-                              setSelectedInvoice(invoice)
-                              setIsModalOpen(true)
-                            }}
+                            onClick={() => openInvoiceDetail(invoice)}
                             title="View"
                           >
                             <Eye className="w-4 h-4" />
@@ -2754,7 +2811,6 @@ export function InvoiceManagement({
                             className={!canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "opacity-30 cursor-not-allowed" : ""}
                             onClick={() => {
                               if (!canEditInvoice(invoice.status, getApprovalStatus(invoice))) return
-                              // Navigate to invoice-creation page for editing
                               const editInvoice = {
                                 id: invoice.id,
                                 invoiceNumber: invoice.invoiceNumber,
@@ -2817,6 +2873,19 @@ export function InvoiceManagement({
                               <DollarSign className="w-4 h-4" />
                             </Button>
                           )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEmailHistory(invoice)}>
+                                <History className="mr-2 h-4 w-4" />
+                                Email History ({getInvoiceEmailLogs(invoice.id).length})
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -3108,12 +3177,11 @@ export function InvoiceManagement({
                         <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                         <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 justify-center">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                // Open external preview dialog
                                 setSelectedInvoice(invoice)
                                 setIsExternalPreviewOpen(true)
                               }}
@@ -3128,7 +3196,6 @@ export function InvoiceManagement({
                               className={!canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "opacity-30 cursor-not-allowed" : ""}
                               onClick={() => {
                                 if (!canEditInvoice(invoice.status, getApprovalStatus(invoice))) return
-                                // Navigate to ExternalInvoiceCreation for editing
                                 const editInvoice = {
                                   id: invoice.id,
                                   invoiceNumber: invoice.invoiceNumber,
@@ -3181,6 +3248,19 @@ export function InvoiceManagement({
                                 <DollarSign className="w-4 h-4" />
                               </Button>
                             )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEmailHistory(invoice)}>
+                                  <History className="mr-2 h-4 w-4" />
+                                  Email History ({getInvoiceEmailLogs(invoice.id).length})
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -3333,7 +3413,7 @@ export function InvoiceManagement({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Due Date</span>
-                        <span className="text-sm font-medium text-red-600">{format(selectedInvoice.dueDate, "dd MMM yyyy")}</span>
+                        <span className="text-sm font-medium text-red-600">{selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">
@@ -4698,13 +4778,13 @@ export function InvoiceManagement({
                   <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Invoice Date</span>
-                      <span className="text-sm font-medium text-gray-900">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "-"}</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Due Date</span>
                       <Input
                         type="date"
-                        value={editingDueDate ? format(editingDueDate, "yyyy-MM-dd") : format(selectedInvoice.dueDate, "yyyy-MM-dd")}
+                        value={editingDueDate ? format(editingDueDate, "yyyy-MM-dd") : (selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "yyyy-MM-dd") : "")}
                         onChange={(e) => {
                           if (e.target.value) {
                             // Parse date correctly to avoid timezone issues
@@ -5166,7 +5246,7 @@ export function InvoiceManagement({
                       </tr>
                       <tr>
                         <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>
-                        <td className="py-1">{format(selectedInvoice.dueDate, 'd MMMM yyyy')}</td>
+                        <td className="py-1">{selectedInvoice.dueDate ? format(selectedInvoice.dueDate, 'd MMMM yyyy') : '-'}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -5211,7 +5291,7 @@ export function InvoiceManagement({
               </table>
 
               {/* Payment Methods */}
-              <div className="mb-6" style={{ fontSize: '10px', lineHeight: '1.5' }}>
+              <div className="mb-6" style={{ fontSize: '11px', lineHeight: '1.5' }}>
                 <p className="font-bold mb-2">Payment methods</p>
                 <div className="space-y-2">
                   <div className="flex">
@@ -5220,44 +5300,73 @@ export function InvoiceManagement({
                       <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
                     </div>
                   </div>
-                  <div className="flex">
-                    <span className="mr-2">-</span>
-                    <div>
-                      <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {SCHOOL_INFO.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
-                      <table className="mt-2 ml-6">
-                        <tbody>
-                          <tr><td className="pr-6 py-0.5">Account name</td><td>{BANK_DETAILS.accountName}</td></tr>
-                          <tr><td className="pr-6 py-0.5">Account number</td><td>{BANK_DETAILS.accountNumber}</td></tr>
-                          <tr><td className="pr-6 py-0.5">Bank name</td><td>{BANK_DETAILS.bankName}</td></tr>
-                          <tr><td className="pr-6 py-0.5">Branch</td><td>{BANK_DETAILS.branch}</td></tr>
-                          <tr><td className="pr-6 py-0.5">Swift code</td><td>KASITHBK</td></tr>
-                          <tr><td className="pr-6 py-0.5">Bank address</td><td>1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+
                   <div className="flex">
                     <span className="mr-2">-</span>
                     <div className="flex-1">
-                      <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-                      <div className="flex justify-between items-start mt-2">
-                        <table className="ml-6">
-                          <tbody>
-                            <tr><td className="pr-6 py-0.5">Biller ID no.</td><td>099-4-00259063-3</td></tr>
-                            <tr><td className="pr-6 py-0.5">Reference no. (Ref 1)</td><td>700002</td></tr>
-                            <tr><td className="pr-6 py-0.5">Reference no. (Ref 2)</td><td>
-                              {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                                ? (displayInvoiceNumber(selectedInvoice.invoiceNumber) || "-")
-                                : "-"}
-                            </td></tr>
-                          </tbody>
-                        </table>
-                        {/* QR Code */}
-                        <div className="w-16 h-16 border border-black flex items-center justify-center bg-gray-100">
-                          <span className="text-[8px] text-gray-500">QR</span>
-                        </div>
-                      </div>
+                      <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to {SCHOOL_INFO.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
                     </div>
+                  </div>
+
+                  <div className="mt-2 flex justify-center">
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td>
+                          <td className="py-0.5 text-left">{BANK_DETAILS.accountName}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td>
+                          <td className="py-0.5 text-left">{BANK_DETAILS.accountNumber}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td>
+                          <td className="py-0.5 text-left">{BANK_DETAILS.bankName}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td>
+                          <td className="py-0.5 text-left">{BANK_DETAILS.branch}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td>
+                          <td className="py-0.5 text-left">KASITHBK</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td>
+                          <td className="py-0.5 text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex mt-2">
+                    <span className="mr-2">-</span>
+                    <div className="flex-1">
+                      <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+                    </div>
+                  </div>
+
+                  <div className="mt-2" style={{ marginLeft: '138px' }}>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td>
+                          <td className="py-0.5 text-left">099-4-00259063-3</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td>
+                          <td className="py-0.5 text-left">700002</td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td>
+                          <td className="py-0.5 text-left">
+                            {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
+                              ? (displayInvoiceNumber(selectedInvoice.invoiceNumber) || "-")
+                              : "-"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -5465,6 +5574,74 @@ export function InvoiceManagement({
             <Button onClick={sendInvoice}>
               <Mail className="w-4 h-4 mr-2" />
               Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email History Dialog */}
+      <Dialog open={isEmailHistoryOpen} onOpenChange={setIsEmailHistoryOpen}>
+        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+          <DialogHeader>
+            <DialogTitle>Email History</DialogTitle>
+            <DialogDescription>
+              {selectedInvoiceForEmailHistory && (
+                <>Email sending history for invoice {selectedInvoiceForEmailHistory.invoiceNumber}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedInvoiceForEmailHistory && (
+            <div className="py-4">
+              {getInvoiceEmailLogs(selectedInvoiceForEmailHistory.id).length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p>No emails have been sent for this invoice yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {getInvoiceEmailLogs(selectedInvoiceForEmailHistory.id)
+                    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
+                    .map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-start justify-between p-3 border rounded-lg bg-muted/30"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={log.status === "sent" ? "default" : "destructive"} className="text-xs">
+                              {log.status === "sent" ? "Sent" : "Failed"}
+                            </Badge>
+                            <span className="text-sm font-medium">{log.recipientEmail}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Recipient: {log.recipientName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Sent by: {log.sentBy}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium">
+                            {format(new Date(log.sentAt), "MMM dd, yyyy")}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(log.sentAt), "HH:mm:ss")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEmailHistoryOpen(false)
+                setSelectedInvoiceForEmailHistory(null)
+              }}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

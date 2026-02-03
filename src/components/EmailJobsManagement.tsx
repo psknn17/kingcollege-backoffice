@@ -7,11 +7,11 @@ import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "./ui/dropdown-menu"
 import {
   Mail,
@@ -32,6 +32,7 @@ import {
   Save
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { format } from "date-fns"
 
 interface EmailJob {
   id: string
@@ -169,6 +170,64 @@ const getDefaultMockData = (jobType: string): EmailJob[] => {
   return jobType === "external" ? mockExternalEmailJobs : mockStudentEmailJobs
 }
 
+// Interface for invoice email logs
+interface InvoiceEmailLog {
+  id: string
+  invoiceId: string
+  invoiceNumber: string
+  recipientEmail: string
+  recipientName: string
+  sentAt: string
+  sentBy: string
+  status: "sent" | "failed"
+}
+
+// Load invoice email logs and convert to EmailJob format
+const loadInvoiceEmailLogs = (): EmailJob[] => {
+  try {
+    const stored = localStorage.getItem("invoiceEmailLogs")
+    if (!stored) return []
+
+    const logs: InvoiceEmailLog[] = JSON.parse(stored)
+
+    // Group by invoice and create batch entries
+    const groupedByInvoice = logs.reduce((acc, log) => {
+      if (!acc[log.invoiceNumber]) {
+        acc[log.invoiceNumber] = []
+      }
+      acc[log.invoiceNumber].push(log)
+      return acc
+    }, {} as Record<string, InvoiceEmailLog[]>)
+
+    // Convert to EmailJob format
+    return Object.entries(groupedByInvoice).map(([invoiceNumber, invoiceLogs]) => {
+      const sentCount = invoiceLogs.filter(l => l.status === "sent").length
+      const failedCount = invoiceLogs.filter(l => l.status === "failed").length
+      const firstLog = invoiceLogs[0]
+
+      return {
+        id: `INV-${invoiceNumber}`,
+        batchId: invoiceNumber,
+        invoiceType: "tuition",
+        yearGroup: "Invoice Email",
+        totalEmails: invoiceLogs.length,
+        sentCount,
+        failedCount,
+        pendingCount: 0,
+        status: failedCount > 0 ? "failed" : "completed" as "completed" | "failed",
+        createdAt: firstLog.sentAt,
+        completedAt: firstLog.sentAt,
+        createdBy: firstLog.sentBy,
+        description: `Invoice ${invoiceNumber} - ${firstLog.recipientName}`,
+        jobType: "student"
+      }
+    })
+  } catch (error) {
+    console.error("Failed to load invoice email logs:", error)
+    return []
+  }
+}
+
 interface EmailJobsManagementProps {
   onNavigateToSubPage?: (subPage: string, params?: any) => void
   jobType?: "student" | "external" | "afterschool" | "event" | "summer"
@@ -183,8 +242,22 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
   // Load email jobs from localStorage or use default mock data
   const [emailJobs, setEmailJobs] = useState<EmailJob[]>(() => {
     const stored = loadEmailJobsFromStorage(jobType)
-    return stored || getDefaultMockData(jobType)
+    const baseJobs = stored || getDefaultMockData(jobType)
+
+    // Merge with invoice email logs
+    const invoiceEmailJobs = loadInvoiceEmailLogs()
+
+    return [...baseJobs, ...invoiceEmailJobs]
   })
+
+  // Reload invoice email logs when component mounts or updates
+  useEffect(() => {
+    const stored = loadEmailJobsFromStorage(jobType)
+    const baseJobs = stored || getDefaultMockData(jobType)
+    const invoiceEmailJobs = loadInvoiceEmailLogs()
+
+    setEmailJobs([...baseJobs, ...invoiceEmailJobs])
+  }, [jobType])
 
   // Manual save function
   const handleSaveChanges = () => {

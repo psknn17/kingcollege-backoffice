@@ -12,6 +12,7 @@ import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, History, Settings, Trendi
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { toast } from "@/components/ui/sonner"
 
 // Preset email subject options based on system menus
 const PRESET_EMAIL_SUBJECTS = [
@@ -130,6 +131,43 @@ const mockHistory = [
   }
 ]
 
+// Interface for invoice email logs (shared with InvoiceManagement)
+interface InvoiceEmailLog {
+  id: string
+  invoiceId: string
+  invoiceNumber: string
+  recipientEmail: string
+  recipientName: string
+  sentAt: string
+  sentBy: string
+  status: "sent" | "failed"
+}
+
+// Save reminder email to shared email logs
+const saveReminderEmailLog = (subject: string, recipientCount: number) => {
+  try {
+    const existingLogs = localStorage.getItem("invoiceEmailLogs")
+    const logs: InvoiceEmailLog[] = existingLogs ? JSON.parse(existingLogs) : []
+
+    // Create log entry for the reminder email
+    const newLog: InvoiceEmailLog = {
+      id: `reminder-${Date.now()}`,
+      invoiceId: `reminder-${Date.now()}`,
+      invoiceNumber: `REMINDER-${Date.now()}`,
+      recipientEmail: "multiple@recipients.com",
+      recipientName: `${recipientCount} Recipients`,
+      sentAt: new Date().toISOString(),
+      sentBy: "admin@kingscollege.ac.th",
+      status: "sent"
+    }
+
+    logs.push(newLog)
+    localStorage.setItem("invoiceEmailLogs", JSON.stringify(logs))
+  } catch (error) {
+    console.error("Failed to save reminder email log:", error)
+  }
+}
+
 export function DebtReminderSettings() {
   const { t } = useLanguage()
   const { academicYears } = useAcademicYears()
@@ -169,6 +207,14 @@ export function DebtReminderSettings() {
   const saveSettings = () => {
     console.log("Saving reminder settings", { reminders, globalSettings })
     // In a real app, this would save to backend
+  }
+
+  const handleResendReminder = (historyItem: any) => {
+    // Save the resend to email logs
+    saveReminderEmailLog(historyItem.subject, historyItem.recipients)
+    toast.success(`Reminder email resent to ${historyItem.recipients} recipients`, {
+      description: `Subject: ${historyItem.subject}`
+    })
   }
 
   return (
@@ -532,7 +578,7 @@ export function DebtReminderSettings() {
                                   View Recipients
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleResendReminder(item)}>
                                   <Send className="w-4 h-4" />
                                   Resend
                                 </DropdownMenuItem>
