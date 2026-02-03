@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Save } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -1926,15 +1926,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     return loadTemplatesFromStorage(invoiceType, loadedItems) || getMockTemplates(invoiceType)
   })
 
-  // Save items to localStorage when changed
-  useEffect(() => {
+  // Manual save function
+  const handleSaveChanges = () => {
     saveItemsToStorage(items, invoiceType)
-  }, [items, invoiceType])
-
-  // Save templates to localStorage when changed
-  useEffect(() => {
     saveTemplatesToStorage(templates, invoiceType)
-  }, [templates, invoiceType])
+    toast.success("Changes saved successfully")
+  }
 
   // Items state
   const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false)
@@ -2371,6 +2368,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               <div className="flex gap-2">
                 <Button
                   variant="outline"
+                  onClick={handleSaveChanges}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => {
                     const input = document.createElement('input')
                     input.type = 'file'
@@ -2530,10 +2534,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <CardTitle>{isExternalView ? "External Templates" : isSimplifiedView ? "Activity Templates" : "Manage Templates"}</CardTitle>
                 <p className="text-muted-foreground">{isSimplifiedView ? "Create shortcuts for commonly used activity item combinations" : "Create shortcuts for commonly used item combinations"}</p>
               </div>
-              <Button onClick={openCreateTemplateModal}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Template
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleSaveChanges}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
+                <Button onClick={openCreateTemplateModal}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Template
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

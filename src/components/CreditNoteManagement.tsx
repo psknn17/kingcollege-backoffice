@@ -11,7 +11,7 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight, Receipt, Printer, Upload } from "lucide-react"
+import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight, Receipt, Printer, Upload, Save } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
@@ -146,12 +146,11 @@ export function CreditNoteManagement() {
     setFilteredCreditNotes(creditNotes)
   }, [creditNotes])
 
-  // Save credit notes to localStorage when changed
-  useEffect(() => {
-    if (creditNotes.length > 0) {
-      saveCreditNotesToStorage(creditNotes)
-    }
-  }, [creditNotes])
+  // Manual save function
+  const handleSaveChanges = () => {
+    saveCreditNotesToStorage(creditNotes)
+    toast.success("Credit notes saved successfully")
+  }
 
   // Create new credit note form state
   const [newCreditNote, setNewCreditNote] = useState({
@@ -447,6 +446,10 @@ export function CreditNoteManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-end items-center gap-2">
+        <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2">
+          <Save className="w-4 h-4" />
+          Save Changes
+        </Button>
         <Button variant="outline" className="flex items-center gap-2">
           <Download className="w-4 h-4" />
           {t("invoice.exportReport")}

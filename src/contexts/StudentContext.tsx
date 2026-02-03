@@ -67,6 +67,7 @@ interface StudentContextType {
     creditPerTerm?: number
     startsFromTerm?: string
   }
+  saveToLocalStorage: () => void
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined)
@@ -356,15 +357,6 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Save to localStorage whenever data changes
-  useEffect(() => {
-    saveStudentsToStorage(students)
-  }, [students])
-
-  useEffect(() => {
-    saveFamiliesToStorage(families)
-  }, [families])
-
   const setStudents = (newStudents: Student[]) => {
     setStudentsState(newStudents)
   }
@@ -423,6 +415,11 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     // Get discount from Discount Options settings
     const academicYear = student.academicYear || "2025-2026"
     return getSiblingDiscountFromSettings(student.childOrder, academicYear, term)
+  }
+
+  const saveToLocalStorage = () => {
+    saveStudentsToStorage(students)
+    saveFamiliesToStorage(families)
   }
 
   const checkFeePrivilegeEligibility = (
@@ -607,7 +604,8 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       deleteFamily,
       getStudentsByFamily,
       getSiblingDiscount,
-      checkFeePrivilegeEligibility
+      checkFeePrivilegeEligibility,
+      saveToLocalStorage
     }}>
       {children}
     </StudentContext.Provider>

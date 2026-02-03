@@ -28,8 +28,10 @@ import {
   FileSpreadsheet,
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Save
 } from "lucide-react"
+import { toast } from "@/components/ui/sonner"
 
 interface EmailJob {
   id: string
@@ -184,10 +186,11 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
     return stored || getDefaultMockData(jobType)
   })
 
-  // Save to localStorage when emailJobs change
-  useEffect(() => {
+  // Manual save function
+  const handleSaveChanges = () => {
     saveEmailJobsToStorage(emailJobs, jobType)
-  }, [emailJobs, jobType])
+    toast.success("Email jobs saved successfully")
+  }
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -352,10 +355,16 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
             {isSimplifiedView ? t("emailJobs.activitySubtitle") : t("emailJobs.subtitle")}
           </p>
         </div>
-        <Button onClick={() => window.location.reload()}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          {t("common.refresh")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleSaveChanges}>
+            <Save className="w-4 h-4 mr-2" />
+            Save Changes
+          </Button>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {t("common.refresh")}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}

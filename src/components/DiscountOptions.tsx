@@ -149,7 +149,6 @@ export function DiscountOptions() {
   const [allData, setAllData] = useState<Record<string, DiscountOptionsData>>(() => {
     return loadFromStorage() || {}
   })
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
 
   const availableYears = academicYears.map(y => y.id).sort((a, b) => b.localeCompare(a))
 
@@ -233,12 +232,13 @@ export function DiscountOptions() {
     }
   }, [storageKey, allData, selectedYear])
 
-  // Save to localStorage
-  useEffect(() => {
+  // Manual save function
+  const handleSaveChanges = () => {
     if (Object.keys(allData).length > 0) {
       saveToStorage(allData)
+      toast.success(t("discountOptions.savedSuccess").replace("{year}", selectedYear))
     }
-  }, [allData])
+  }
 
   const currentData = storageKey ? (allData[storageKey] || createDefaultData(selectedYear)) : createDefaultData(selectedYear)
 
@@ -262,12 +262,6 @@ export function DiscountOptions() {
     const newPrivileges = [...currentData.registrationPrivileges]
     newPrivileges[index] = { ...newPrivileges[index], ...updates }
     updateCurrentData({ registrationPrivileges: newPrivileges })
-  }
-
-  const handleSaveAll = () => {
-    saveToStorage(allData)
-    toast.success(t("discountOptions.savedSuccess").replace("{year}", selectedYear))
-    setIsSaveDialogOpen(false)
   }
 
   const formatCurrency = (amount: number) => {
@@ -305,7 +299,7 @@ export function DiscountOptions() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => setIsSaveDialogOpen(true)} className="flex items-center gap-2">
+          <Button onClick={handleSaveChanges} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
             {t("discountOptions.saveAllChanges")}
           </Button>
@@ -327,42 +321,6 @@ export function DiscountOptions() {
         </CardContent>
       </Card>
 
-
-      {/* Save Confirmation Dialog */}
-      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle>{t("discountOptions.confirmSaveTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              {t("discountOptions.confirmSaveMessage").replace("{year}", selectedYear)}
-            </p>
-            <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">{t("discountOptions.latePayment")}:</span>{" "}
-                {currentData.latePayment.enabled ? `${currentData.latePayment.chargePercentage}% ${t("discountOptions.per")} ${currentData.latePayment.chargeFrequency === "monthly" ? t("discountOptions.month") : t("discountOptions.week")}` : t("discountOptions.disabled")}
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">{t("discountOptions.totalInitialFees")}:</span>{" "}
-                {formatCurrency(
-                  currentData.registrationFees.applicationFee +
-                  currentData.registrationFees.registrationFee +
-                  currentData.registrationFees.securityDeposit
-                )}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
-              {t("discountOptions.cancel")}
-            </Button>
-            <Button onClick={handleSaveAll}>
-              {t("discountOptions.confirmSave")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
