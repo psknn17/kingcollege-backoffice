@@ -2719,7 +2719,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         totalDiscount: discountCalc.totalDiscountAmount,
         netAmount: discountCalc.netAmount,
         dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
-        issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : now.toISOString().split('T')[0],
+        issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : null,
         status: "pending_approval", // Pending approval status
         approvalStatus: editInvoice?.approvalStatus || "wait",
         term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
@@ -4309,7 +4309,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const subtotal = getTotalAmount()
                   const finalTotal = subtotal
                   const invoiceNumber = `DRAFT-${Date.now()}-MANUAL`
-                  const issueDate = new Date()
+                  const issueDate = null // Will be set on approval
                   const dueDate = paymentDeadline || null
 
                   return (
@@ -4396,7 +4396,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Invoice date</span>
-                                <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                <span className="flex-1 text-right">{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</span>
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Due date</span>
@@ -4573,7 +4573,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const subtotal = getTotalAmount() + registrationFeesTotal
                   const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount(), invoiceType) // Discounts apply only to regular items
                   const invoiceNumber = `DRAFT-${Date.now()}-${currentStudent.id.slice(-4)}`
-                  const issueDate = new Date()
+                  const issueDate = null // Will be set on approval
                   const dueDate = paymentDeadline || null
 
                   // Security Deposit Fee Waiver (for new students who are eligible for fee waiver)
@@ -4639,7 +4639,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Invoice date</span>
-                                <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                <span className="flex-1 text-right">{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</span>
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Due date</span>

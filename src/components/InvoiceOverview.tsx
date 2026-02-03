@@ -27,7 +27,7 @@ interface Invoice {
   studentGrade: string
   amount: number
   dueDate: Date
-  issueDate: Date
+  issueDate?: Date | null
   status: "paid" | "partial" | "unpaid" | "cancelled" | "overdue" | "sent" | "pending"
   term: string
   paymentType: "yearly" | "termly"
@@ -53,7 +53,7 @@ const loadCreatedInvoicesFromStorage = (onlyInternal: boolean = false): Invoice[
         studentGrade: inv.studentGrade,
         amount: inv.netAmount || inv.subtotal,
         dueDate: new Date(inv.dueDate),
-        issueDate: new Date(inv.issueDate),
+        issueDate: inv.issueDate ? new Date(inv.issueDate) : null,
         status: inv.status === "sent" ? "unpaid" : inv.status,
         term: inv.term,
         paymentType: inv.paymentType || "termly",
@@ -238,7 +238,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
         `Year Group,${invoice.studentGrade}`,
         `Amount,${invoice.amount}`,
         `Due Date,${format(invoice.dueDate, "yyyy-MM-dd")}`,
-        `Issue Date,${format(invoice.issueDate, "yyyy-MM-dd")}`,
+        `Issue Date,${invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending"}`,
         `Status,${invoice.status}`,
         `Term,${invoice.term}`,
         `Payment Type,${invoice.paymentType}`,
@@ -987,7 +987,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoice.issueDate")}</p>
-                    <p className="font-medium">{format(selectedInvoice.issueDate, "MMM dd, yyyy", { locale })}</p>
+                    <p className="font-medium">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "MMM dd, yyyy", { locale }) : "Pending Approval"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoice.dueDate")}</p>

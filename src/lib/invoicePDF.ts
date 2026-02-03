@@ -24,7 +24,7 @@ interface Invoice {
   finalAmount: number
   status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "overdue" | "cancelled"
   approvalStatus?: "wait" | "approved" | "rejected"
-  issueDate: Date
+  issueDate?: Date | null
   dueDate: Date
   items: InvoiceItem[]
   invoiceType?: "student" | "external"
@@ -145,7 +145,7 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
               </tr>
               <tr>
                 <td style="padding:4px 0; font-weight:bold; padding-right:24px;">Invoice date</td>
-                <td style="padding:4px 0;">${escapeHtml(format(invoice.issueDate, 'd MMMM yyyy'))}</td>
+                <td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, 'd MMMM yyyy') : 'Pending Approval')}</td>
               </tr>
               <tr>
                 <td style="padding:4px 0; font-weight:bold; padding-right:24px;">Due date</td>
@@ -284,9 +284,9 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
             <td style="width:50%; vertical-align:top; padding-left:20px;">
               <table style="width:100%;">
                 <tr><td style="padding:4px 0; width:95px; font-weight:600;">Invoice no.</td><td style="padding:4px 0;">${escapeHtml(invoiceNumberDisplay || '-')}</td></tr>
-                <tr><td style="padding:4px 0; font-weight:600;">Invoice date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.issueDate, 'd MMMM yyyy'))}</td></tr>
+                <tr><td style="padding:4px 0; font-weight:600;">Invoice date</td><td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, 'd MMMM yyyy') : 'Pending Approval')}</td></tr>
                 <tr><td style="padding:4px 0; font-weight:600;">Due date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.dueDate, 'd MMMM yyyy'))}</td></tr>
-                <tr><td style="padding:4px 0; font-weight:600;">School year</td><td style="padding:4px 0;">${escapeHtml(getAcademicYear(invoice.issueDate))}</td></tr>
+                <tr><td style="padding:4px 0; font-weight:600;">School year</td><td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? getAcademicYear(invoice.issueDate) : '-')}</td></tr>
               </table>
             </td>
           </tr>

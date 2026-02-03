@@ -49,7 +49,7 @@ interface Invoice {
   }[]
   status: InvoiceStatus
   approvalStatus?: ApprovalStatus
-  issueDate: Date
+  issueDate?: Date | null
   dueDate: Date
   academicYear?: string
   term?: string
@@ -70,7 +70,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
       const savedInvoices = JSON.parse(stored)
       console.log('[ApprovalQueue] Loading invoices from storage:', savedInvoices.length, 'invoices')
       return savedInvoices.map((inv: any) => {
-        let issueDate = new Date()
+        let issueDate: Date | null = null
         if (inv.issueDate) {
           if (inv.issueDate.includes?.("-")) {
             const [year, month, day] = inv.issueDate.split("-").map(Number)
@@ -114,7 +114,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           })),
           status: (inv.status === "pending" ? "draft" : inv.status) as InvoiceStatus,
           approvalStatus,
-          issueDate: isNaN(issueDate.getTime()) ? new Date() : issueDate,
+          issueDate: issueDate && !isNaN(issueDate.getTime()) ? issueDate : null,
           dueDate: isNaN(dueDate.getTime()) ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : dueDate,
           academicYear: inv.academicYear || "",
           term: inv.term || "",
@@ -256,11 +256,11 @@ export function ApprovalQueue() {
     }
 
     if (dateFrom) {
-      filtered = filtered.filter(inv => inv.issueDate >= dateFrom)
+      filtered = filtered.filter(inv => inv.issueDate && inv.issueDate >= dateFrom)
     }
 
     if (dateTo) {
-      filtered = filtered.filter(inv => inv.issueDate <= dateTo)
+      filtered = filtered.filter(inv => inv.issueDate && inv.issueDate <= dateTo)
     }
 
     setFilteredInvoices(filtered)
@@ -313,7 +313,7 @@ export function ApprovalQueue() {
         case "finalAmount":
           return ((a.finalAmount || 0) - (b.finalAmount || 0)) * direction
         case "issueDate":
-          return (a.issueDate.getTime() - b.issueDate.getTime()) * direction
+          return ((a.issueDate?.getTime() || 0) - (b.issueDate?.getTime() || 0)) * direction
         case "dueDate":
           return (a.dueDate.getTime() - b.dueDate.getTime()) * direction
         default:
@@ -374,7 +374,7 @@ export function ApprovalQueue() {
     const studentMatch = target.studentId && stored.studentId === target.studentId
     const issueDateMatch = target.issueDate && stored.issueDate
       ? new Date(stored.issueDate).toDateString() === target.issueDate.toDateString()
-      : false
+      : target.issueDate === null && !stored.issueDate
     return idMatch || numberMatch || (studentMatch && issueDateMatch)
   }
 
@@ -399,6 +399,8 @@ export function ApprovalQueue() {
       ? generateInvoiceNumber(invoice.studentId)
       : invoice.invoiceNumber
 
+    const approvalDate = new Date()
+
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
         ? {
@@ -406,7 +408,8 @@ export function ApprovalQueue() {
             invoiceNumber: finalInvoiceNumber,
             approvalStatus: "approved",
             approvedBy: "Admin",
-            approvedAt: new Date(),
+            approvedAt: approvalDate,
+            issueDate: approvalDate,
           }
         : inv
     )
@@ -418,7 +421,8 @@ export function ApprovalQueue() {
       invoiceNumber: finalInvoiceNumber,
       approvalStatus: "approved",
       approvedBy: "Admin",
-      approvedAt: new Date().toISOString(),
+      approvedAt: approvalDate.toISOString(),
+      issueDate: approvalDate.toISOString().split('T')[0],
       },
       invoice.invoiceNumber
     )
@@ -869,7 +873,7 @@ export function ApprovalQueue() {
                   <TableCell>{invoice.term || "-"}</TableCell>
                   <TableCell>{invoice.studentGrade || "-"}</TableCell>
                   <TableCell className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
-                  <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
+                  <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                   <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-2">

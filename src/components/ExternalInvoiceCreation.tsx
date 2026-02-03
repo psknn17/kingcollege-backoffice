@@ -213,7 +213,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       clientName,
       contactName,
       address,
-      invoiceDate: format(invoiceDate, 'yyyy-MM-dd'),
+      issueDate: editInvoice?.issueDate || null, // Will be set on approval
       dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
       term: "External",
       items: lineItems.map(item => ({

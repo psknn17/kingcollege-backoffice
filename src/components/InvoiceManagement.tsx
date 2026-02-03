@@ -42,7 +42,7 @@ interface Invoice {
   finalAmount: number
   status: "draft" | "pending_approval" | "approved" | "rejected" | "sent" | "paid" | "overdue" | "cancelled"
   approvalStatus?: ApprovalStatus
-  issueDate: Date
+  issueDate?: Date | null
   dueDate: Date
   paidDate?: Date
   issuedBy: string
@@ -147,7 +147,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
       const savedInvoices = JSON.parse(stored)
       return savedInvoices.map((inv: any) => {
         // Handle empty or invalid dates - parse as local time to avoid timezone issues
-        let issueDate = new Date()
+        let issueDate: Date | null = null
         if (inv.issueDate) {
           if (inv.issueDate.includes('-')) {
             const [year, month, day] = inv.issueDate.split('-').map(Number)
@@ -187,7 +187,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           finalAmount: inv.netAmount ?? inv.subtotal ?? 0,
           status: (inv.status === "pending" ? "draft" : inv.status) as "draft" | "sent" | "paid" | "overdue" | "cancelled",
           approvalStatus,
-          issueDate: isNaN(issueDate.getTime()) ? new Date() : issueDate,
+          issueDate: issueDate && !isNaN(issueDate.getTime()) ? issueDate : null,
           dueDate: isNaN(dueDate.getTime()) ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : dueDate,
           issuedBy: "System",
           items: (inv.items || []).map((item: any, idx: number) => ({
@@ -598,11 +598,11 @@ export function InvoiceManagement({
     }
 
     if (dateFrom) {
-      filtered = filtered.filter(inv => inv.issueDate >= dateFrom)
+      filtered = filtered.filter(inv => inv.issueDate && inv.issueDate >= dateFrom)
     }
 
     if (dateTo) {
-      filtered = filtered.filter(inv => inv.issueDate <= dateTo)
+      filtered = filtered.filter(inv => inv.issueDate && inv.issueDate <= dateTo)
     }
 
     setFilteredInvoices(filtered)
@@ -658,7 +658,7 @@ export function InvoiceManagement({
         case "eventName":
           return (a.eventName || "").localeCompare(b.eventName || "") * direction
         case "issueDate":
-          return (a.issueDate.getTime() - b.issueDate.getTime()) * direction
+          return ((a.issueDate?.getTime() || 0) - (b.issueDate?.getTime() || 0)) * direction
         case "dueDate":
           return (a.dueDate.getTime() - b.dueDate.getTime()) * direction
         default:
@@ -739,7 +739,7 @@ export function InvoiceManagement({
       cancelReason: invoice.cancelReason,
       cancelledBy: invoice.cancelledBy,
       cancelledAt: invoice.cancelledAt,
-      issueDate: invoice.issueDate.toISOString(),
+      issueDate: invoice.issueDate ? invoice.issueDate.toISOString() : null,
       dueDate: invoice.dueDate.toISOString(),
       category: "Invoice",
       academicYear: "2024-2025",
@@ -794,7 +794,7 @@ export function InvoiceManagement({
         clientName: invoice.recipientName || invoice.studentName,
         contactName: invoice.parentName,
         address: invoice.recipientAddress || "",
-        invoiceDate: invoice.issueDate.toISOString(),
+        invoiceDate: invoice.issueDate ? invoice.issueDate.toISOString() : new Date().toISOString(),
         dueDate: invoice.dueDate.toISOString(),
         items: invoice.items.map(item => ({
           itemId: item.id,
@@ -819,7 +819,7 @@ export function InvoiceManagement({
         discountAmount: invoice.discountAmount,
         finalAmount: invoice.finalAmount,
         status: invoice.status,
-        issueDate: invoice.issueDate.toISOString(),
+        issueDate: invoice.issueDate ? invoice.issueDate.toISOString() : null,
         dueDate: invoice.dueDate.toISOString(),
         items: invoice.items.map(item => ({
           id: item.id,
@@ -1363,7 +1363,7 @@ export function InvoiceManagement({
       ["Academic Year", invoice.academicYear || ""],
       ["Term", invoice.term || ""],
       ["Status", invoice.status],
-      ["Issue Date", format(invoice.issueDate, "yyyy-MM-dd")],
+      ["Issue Date", invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending"],
       ["Due Date", format(invoice.dueDate, "yyyy-MM-dd")],
       ["Total Amount", invoice.totalAmount],
       ["Discount Amount", invoice.discountAmount],
@@ -1450,7 +1450,7 @@ export function InvoiceManagement({
       inv.academicYear || "",
       inv.term || "",
       inv.status,
-      format(inv.issueDate, "yyyy-MM-dd"),
+      inv.issueDate ? format(inv.issueDate, "yyyy-MM-dd") : "Pending",
       format(inv.dueDate, "yyyy-MM-dd"),
       inv.totalAmount,
       inv.discountAmount,
@@ -1541,7 +1541,7 @@ export function InvoiceManagement({
               <td style="width:50%; vertical-align:top; padding-left:12px;">
                 <table style="width:100%; border-collapse:collapse;">
                   <tr><td style="padding:4px 0; width:120px;">Invoice No.</td><td style="padding:4px 0;">${escapeHtml(invoice.invoiceNumber)}</td></tr>
-                  <tr><td style="padding:4px 0;">Issue Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.issueDate, "yyyy-MM-dd"))}</td></tr>
+                  <tr><td style="padding:4px 0;">Issue Date</td><td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending")}</td></tr>
                   <tr><td style="padding:4px 0;">Due Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.dueDate, "yyyy-MM-dd"))}</td></tr>
                   <tr><td style="padding:4px 0;">Status</td><td style="padding:4px 0;">${escapeHtml(invoice.status)}</td></tr>
                 </table>
@@ -1848,6 +1848,8 @@ export function InvoiceManagement({
       ? generateInvoiceNumber(invoice.studentId)
       : invoice.invoiceNumber
 
+    const approvalDate = new Date()
+
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
         ? {
@@ -1855,7 +1857,8 @@ export function InvoiceManagement({
           invoiceNumber: finalInvoiceNumber,
           approvalStatus: "approved",
           approvedBy: "Admin",
-          approvedAt: new Date()
+          approvedAt: approvalDate,
+          issueDate: approvalDate
         }
         : inv
     )
@@ -1873,7 +1876,8 @@ export function InvoiceManagement({
               invoiceNumber: finalInvoiceNumber,
               approvalStatus: "approved",
               approvedBy: "Admin",
-              approvedAt: new Date().toISOString()
+              approvedAt: approvalDate.toISOString(),
+              issueDate: approvalDate.toISOString().split('T')[0]
             }
             : inv
         )
@@ -2172,9 +2176,11 @@ export function InvoiceManagement({
               {
                 id: markPaidInvoice.id,
                 invoiceNo: markPaidInvoice.invoiceNumber,
-                invoiceDate: typeof markPaidInvoice.issueDate === 'string'
-                  ? markPaidInvoice.issueDate
-                  : markPaidInvoice.issueDate.toISOString(),
+                invoiceDate: markPaidInvoice.issueDate
+                  ? (typeof markPaidInvoice.issueDate === 'string'
+                    ? markPaidInvoice.issueDate
+                    : markPaidInvoice.issueDate.toISOString())
+                  : new Date().toISOString(),
                 invoiceAmount: markPaidInvoice.finalAmount,
                 receivedAmount: markPaidInvoice.finalAmount,
                 outstandingAmount: 0
@@ -2722,7 +2728,7 @@ export function InvoiceManagement({
                           getPaymentStatusBadge(getPaymentStatus(invoice))
                         )}
                       </TableCell>
-                      <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                       <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                       <TableCell>
                         <div className="flex gap-1 justify-center">
@@ -2759,7 +2765,7 @@ export function InvoiceManagement({
                                 finalAmount: invoice.finalAmount,
                                 status: invoice.status,
                                 approvalStatus: getApprovalStatus(invoice),
-                                issueDate: invoice.issueDate.toISOString(),
+                                issueDate: invoice.issueDate ? invoice.issueDate.toISOString() : null,
                                 dueDate: invoice.dueDate.toISOString(),
                                 items: invoice.items.map(item => ({
                                   id: item.id,
@@ -3096,7 +3102,7 @@ export function InvoiceManagement({
                           getPaymentStatusBadge(getPaymentStatus(invoice))
                         )}
                       </TableCell>
-                        <TableCell>{format(invoice.issueDate, "MMM dd, yyyy")}</TableCell>
+                        <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                         <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
@@ -3126,7 +3132,7 @@ export function InvoiceManagement({
                                   clientName: invoice.recipientName || invoice.studentName,
                                   contactName: invoice.parentName,
                                   address: invoice.recipientAddress || "",
-                                  invoiceDate: invoice.issueDate.toISOString(),
+                                  invoiceDate: invoice.issueDate ? invoice.issueDate.toISOString() : new Date().toISOString(),
                                   dueDate: invoice.dueDate.toISOString(),
                                   items: invoice.items.map(item => ({
                                     itemId: item.id,
@@ -3320,7 +3326,7 @@ export function InvoiceManagement({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Invoice Date</span>
-                        <span className="text-sm font-medium text-gray-800">{format(selectedInvoice.issueDate, "dd MMM yyyy")}</span>
+                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Due Date</span>
@@ -3335,7 +3341,7 @@ export function InvoiceManagement({
                         <span className="text-sm font-medium text-gray-800">
                           {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
                             ? (selectedInvoice.eventName || "-")
-                            : getAcademicYear(selectedInvoice.issueDate)}
+                            : (selectedInvoice.issueDate ? getAcademicYear(selectedInvoice.issueDate) : "-")}
                         </span>
                       </div>
                     </div>
@@ -4693,7 +4699,7 @@ export function InvoiceManagement({
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Academic Year</span>
-                      <span className="text-sm font-medium text-gray-900">{getAcademicYear(selectedInvoice.issueDate)}</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedInvoice.issueDate ? getAcademicYear(selectedInvoice.issueDate) : "-"}</span>
                     </div>
                     {selectedInvoice.term && (
                       <div className="flex flex-col">
@@ -5135,7 +5141,7 @@ export function InvoiceManagement({
                       </tr>
                       <tr>
                         <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice date</td>
-                        <td className="py-1">{format(selectedInvoice.issueDate, 'd MMMM yyyy')}</td>
+                        <td className="py-1">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, 'd MMMM yyyy') : 'Pending Approval'}</td>
                       </tr>
                       <tr>
                         <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>

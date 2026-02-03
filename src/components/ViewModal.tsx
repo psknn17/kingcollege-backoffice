@@ -189,7 +189,7 @@ export function ViewModal({
 
   const renderInvoiceView = () => {
     const total = data.total || data.amount || data.items?.reduce((sum: number, item: any) => sum + (item.discountedAmount || item.amount || 0), 0) || 0
-    const issueDate = data.issueDate ? new Date(data.issueDate) : new Date()
+    const issueDate = data.issueDate ? new Date(data.issueDate) : null
     const dueDate = data.dueDate ? new Date(data.dueDate) : null
 
     return (
@@ -245,7 +245,7 @@ export function ViewModal({
                 </div>
                 <div className="flex py-1">
                   <span style={{ width: '90px' }}>Invoice date</span>
-                  <span className="flex-1 text-right">{issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  <span className="flex-1 text-right">{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</span>
                 </div>
                 <div className="flex py-1">
                   <span style={{ width: '90px' }}>Due date</span>
