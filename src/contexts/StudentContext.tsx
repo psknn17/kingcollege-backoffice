@@ -44,6 +44,9 @@ export interface Family {
   address: string
   email: string
   phone: string
+  fatherEmails?: string[]
+  motherEmails?: string[]
+  sponsorEmails?: string[]
   createdAt: Date
 }
 

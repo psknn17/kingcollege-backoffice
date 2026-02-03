@@ -57,7 +57,10 @@ const emptyFamily: Omit<Family, "id" | "createdAt"> = {
   primaryContactId: "",
   address: "",
   email: "",
-  phone: ""
+  phone: "",
+  fatherEmails: [],
+  motherEmails: [],
+  sponsorEmails: []
 }
 
 export function FamilyGroups() {
@@ -212,7 +215,10 @@ export function FamilyGroups() {
       primaryContactId: family.primaryContactId,
       address: family.address,
       email: family.email || "",
-      phone: family.phone || ""
+      phone: family.phone || "",
+      fatherEmails: family.fatherEmails || [],
+      motherEmails: family.motherEmails || [],
+      sponsorEmails: family.sponsorEmails || []
     })
     setIsEditDialogOpen(true)
   }
@@ -789,6 +795,138 @@ export function FamilyGroups() {
                 placeholder="081-234-5678"
               />
             </div>
+
+            {/* Father Emails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Father Email(s)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    fatherEmails: [...(prev.fatherEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
+              {(formData.fatherEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.fatherEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, fatherEmails: newEmails }))
+                    }}
+                    placeholder="father@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.fatherEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, fatherEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Mother Emails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Mother Email(s)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    motherEmails: [...(prev.motherEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
+              {(formData.motherEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.motherEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, motherEmails: newEmails }))
+                    }}
+                    placeholder="mother@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.motherEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, motherEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Sponsor Emails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Sponsor Email(s)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    sponsorEmails: [...(prev.sponsorEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
+              {(formData.sponsorEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.sponsorEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, sponsorEmails: newEmails }))
+                    }}
+                    placeholder="sponsor@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.sponsorEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, sponsorEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -851,6 +989,138 @@ export function FamilyGroups() {
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="081-234-5678"
               />
+            </div>
+
+            {/* Father Emails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Father Email(s)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    fatherEmails: [...(prev.fatherEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
+              {(formData.fatherEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.fatherEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, fatherEmails: newEmails }))
+                    }}
+                    placeholder="father@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.fatherEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, fatherEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Mother Emails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Mother Email(s)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    motherEmails: [...(prev.motherEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
+              {(formData.motherEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.motherEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, motherEmails: newEmails }))
+                    }}
+                    placeholder="mother@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.motherEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, motherEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Sponsor Emails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Sponsor Email(s)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    sponsorEmails: [...(prev.sponsorEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
+              {(formData.sponsorEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.sponsorEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, sponsorEmails: newEmails }))
+                    }}
+                    placeholder="sponsor@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.sponsorEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, sponsorEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
             </div>
           </div>
           <DialogFooter>
