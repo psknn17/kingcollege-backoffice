@@ -3,12 +3,15 @@
   import App from "./App.tsx";
   import { LanguageProvider } from "./contexts/LanguageContext.tsx";
   import { AcademicYearProvider } from "./contexts/AcademicYearContext.tsx";
+  import { AuthProvider } from "./contexts/AuthContext.tsx";
   import "./index.css";
 
   createRoot(document.getElementById("root")!).render(
     <LanguageProvider>
-      <AcademicYearProvider>
-        <App />
-      </AcademicYearProvider>
+      <AuthProvider>
+        <AcademicYearProvider>
+          <App />
+        </AcademicYearProvider>
+      </AuthProvider>
     </LanguageProvider>
   );

@@ -171,40 +171,6 @@ const initialRoles: Role[] = [
     updatedAt: new Date("2024-02-01")
   },
   {
-    id: "role_registrar",
-    name: "Registrar",
-    description: "Student registration and family management",
-    permissions: [
-      { moduleId: "students", actions: ["view", "create", "edit", "delete"] },
-      { moduleId: "families", actions: ["view", "create", "edit", "delete"] },
-      { moduleId: "tuition", actions: ["view"] },
-      { moduleId: "discounts", actions: ["view", "create", "edit"] },
-      { moduleId: "afterschool", actions: ["view", "create", "edit"] },
-      { moduleId: "events", actions: ["view", "create", "edit"] },
-      { moduleId: "reports", actions: ["view"] }
-    ],
-    isSystem: false,
-    userCount: 2,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-20")
-  },
-  {
-    id: "role_teacher",
-    name: "Teacher",
-    description: "View student information and class reports",
-    permissions: [
-      { moduleId: "students", actions: ["view"] },
-      { moduleId: "families", actions: ["view"] },
-      { moduleId: "afterschool", actions: ["view"] },
-      { moduleId: "events", actions: ["view"] },
-      { moduleId: "reports", actions: ["view"] }
-    ],
-    isSystem: false,
-    userCount: 15,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15")
-  },
-  {
     id: "role_viewer",
     name: "Viewer",
     description: "Read-only access to reports",

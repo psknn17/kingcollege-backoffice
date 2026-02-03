@@ -20,8 +20,10 @@ import { AcademicYearProvider } from "./contexts/AcademicYearContext"
 import { StudentProvider } from "./contexts/StudentContext"
 import { DiscountOptionsProvider } from "./contexts/DiscountOptionsContext"
 import { useLanguage } from "./contexts/LanguageContext"
+import { useAuth } from "./contexts/AuthContext"
 import { Button } from "./components/ui/button"
 import { Globe } from "lucide-react"
+import { Login } from "./components/Login"
 import {
   BarChart3,
   Calendar,
@@ -162,6 +164,7 @@ const menuItems = {
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage()
+  const { isAuthenticated, user, logout } = useAuth()
   const [activeSection, setActiveSection] = useState("tuition-dashboard")
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
   const [subPageParams, setSubPageParams] = useState<any>(null)
@@ -400,6 +403,11 @@ export default function App() {
       default:
         return <TuitionDashboard />
     }
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <Login />
   }
 
   return (
@@ -686,9 +694,24 @@ export default function App() {
           </SidebarContent>
 
           <SidebarFooter className="p-4 border-t">
+            {/* User Info */}
+            <div className="px-2 py-3 mb-2">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
+                </div>
+              </div>
+            </div>
+
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => console.log("Logout")}>
+                <SidebarMenuButton onClick={logout}>
                   <LogOut className="w-4 h-4" />
                   <span>{t("common.logout")}</span>
                 </SidebarMenuButton>
