@@ -100,6 +100,7 @@ import { ApprovalQueue } from "./components/ApprovalQueue"
 import { logActivity } from "@/lib/activityLog"
 import { StudentList } from "./components/StudentList"
 import { FamilyGroups } from "./components/FamilyGroups"
+import { SchoolSettings } from "./components/SchoolSettings"
 
 import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
@@ -153,6 +154,9 @@ const menuItems = {
   studentManagement: [
     { id: "student-list", labelKey: "menu.studentList", icon: GraduationCap },
     { id: "family-groups", labelKey: "menu.familyGroups", icon: Users },
+  ],
+  settings: [
+    { id: "school-settings", labelKey: "menu.schoolSettings", icon: Settings2 },
   ]
 }
 
@@ -171,7 +175,8 @@ export default function App() {
     schoolBus: false,
     externalInvoice: false,
     studentManagement: false,
-    userManagement: false
+    userManagement: false,
+    settings: false
   })
 
   const toggleGroup = (group: string) => {
@@ -202,7 +207,8 @@ export default function App() {
       ...menuItems.schoolBus,
       ...menuItems.externalInvoice,
       ...menuItems.userManagement,
-      ...menuItems.studentManagement
+      ...menuItems.studentManagement,
+      ...menuItems.settings
     ]
     const matched = sections.find(item => item.id === section)
     if (matched) return t(matched.labelKey)
@@ -388,6 +394,8 @@ export default function App() {
         return <StudentList />
       case "family-groups":
         return <FamilyGroups />
+      case "school-settings":
+        return <SchoolSettings />
 
       default:
         return <TuitionDashboard />
@@ -630,6 +638,35 @@ export default function App() {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {menuItems.userManagement.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+
+            {/* Settings */}
+            <Collapsible open={openGroups["settings"]} onOpenChange={() => toggleGroup("settings")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.settings")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["settings"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.settings.map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             onClick={() => handleMenuItemClick(item.id)}

@@ -66,6 +66,8 @@ const en: Record<string, string> = {
   "menu.familyGroups": "Family Group",
   "menu.studentManagement": "Student Management",
   "menu.userManagement": "User Management",
+  "menu.settings": "Settings",
+  "menu.schoolSettings": "School Settings",
 
   // Common
   "common.save": "Save",
@@ -3191,6 +3193,8 @@ const th: Record<string, string> = {
   "menu.familyGroups": "ครอบครัว",
   "menu.studentManagement": "นักเรียน",
   "menu.userManagement": "ผู้ใช้งาน",
+  "menu.settings": "ตั้งค่า",
+  "menu.schoolSettings": "ตั้งค่าโรงเรียน",
 
   // Common
   "common.save": "บันทึก",
