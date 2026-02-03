@@ -17,7 +17,7 @@ import { useAcademicYears, Term, AcademicYear } from "@/contexts/AcademicYearCon
 import { useLanguage } from "@/contexts/LanguageContext"
 
 export function TuitionTermSettings() {
-  const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear } = useAcademicYears()
+  const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear, saveAcademicYears } = useAcademicYears()
   const { t, language } = useLanguage()
   const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = useState<string[]>(["2025-2026"])
@@ -194,7 +194,7 @@ export function TuitionTermSettings() {
   }
 
   const handleSaveAllChanges = () => {
-    console.log("Saving all changes", academicYears)
+    saveAcademicYears()
     setIsSaveConfirmDialogOpen(false)
     toast.success(t("termSettings.changesSaved"))
   }
