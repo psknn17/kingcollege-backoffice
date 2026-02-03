@@ -295,8 +295,14 @@ export function ApprovalQueue() {
       academicYearFilter,
       invoiceStatusFilter
     })
-    if (!sortKey) return filteredInvoices
     const sorted = [...filteredInvoices]
+
+    // If no sortKey is set, default to sorting by ID descending (newest first)
+    if (!sortKey) {
+      sorted.sort((a, b) => b.id.localeCompare(a.id))
+      return sorted
+    }
+
     sorted.sort((a, b) => {
       const direction = sortDirection === "asc" ? 1 : -1
       switch (sortKey) {
