@@ -58,6 +58,7 @@ const emptyFamily: Omit<Family, "id" | "createdAt"> = {
   address: "",
   email: "",
   phone: "",
+  invoiceEmails: [],
   fatherEmails: [],
   motherEmails: [],
   sponsorEmails: []
@@ -216,6 +217,7 @@ export function FamilyGroups() {
       address: family.address,
       email: family.email || "",
       phone: family.phone || "",
+      invoiceEmails: family.invoiceEmails || [],
       fatherEmails: family.fatherEmails || [],
       motherEmails: family.motherEmails || [],
       sponsorEmails: family.sponsorEmails || []
@@ -779,13 +781,52 @@ export function FamilyGroups() {
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("familyGroups.emailForInvoices")} *</Label>
+              <div className="flex items-center justify-between">
+                <Label>{t("familyGroups.emailForInvoices")} *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    invoiceEmails: [...(prev.invoiceEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="family@email.com"
               />
+              {(formData.invoiceEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.invoiceEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
+                    }}
+                    placeholder="additional@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.invoiceEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
             </div>
             <div className="space-y-2">
               <Label>{t("familyGroups.phone")}</Label>
@@ -974,13 +1015,52 @@ export function FamilyGroups() {
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("familyGroups.emailForInvoices")} *</Label>
+              <div className="flex items-center justify-between">
+                <Label>{t("familyGroups.emailForInvoices")} *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    invoiceEmails: [...(prev.invoiceEmails || []), ""]
+                  }))}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Email
+                </Button>
+              </div>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="family@email.com"
               />
+              {(formData.invoiceEmails || []).map((email, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...(formData.invoiceEmails || [])]
+                      newEmails[index] = e.target.value
+                      setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
+                    }}
+                    placeholder="additional@email.com"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEmails = (formData.invoiceEmails || []).filter((_, i) => i !== index)
+                      setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
             </div>
             <div className="space-y-2">
               <Label>{t("familyGroups.phone")}</Label>
