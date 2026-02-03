@@ -138,8 +138,11 @@ const generateInvoiceNumber = (studentId: string) => {
   return `INV-${year}${month}-${idSuffix}`
 }
 
-const displayInvoiceNumber = (invoiceNumber: string | undefined) => {
+const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?: ApprovalStatus) => {
   if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+    return ""
+  }
+  if (approvalStatus === "rejected") {
     return ""
   }
   return invoiceNumber
@@ -874,7 +877,7 @@ export function ApprovalQueue() {
                     />
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    {displayInvoiceNumber(invoice.invoiceNumber)}
+                    {displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))}
                   </TableCell>
                   <TableCell>
                     <div>

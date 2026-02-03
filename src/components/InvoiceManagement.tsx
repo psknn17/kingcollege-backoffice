@@ -1833,8 +1833,11 @@ export function InvoiceManagement({
     return `INV-${year}${month}-${idSuffix}`
   }
 
-  const displayInvoiceNumber = (invoiceNumber: string | undefined) => {
+  const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?: ApprovalStatus) => {
     if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+      return ""
+    }
+    if (approvalStatus === "rejected") {
       return ""
     }
     return invoiceNumber
@@ -1989,9 +1992,9 @@ export function InvoiceManagement({
       console.error("Failed to update invoice cancellation in localStorage:", error)
     }
 
-    toast.success(`Invoice ${displayInvoiceNumber(invoice.invoiceNumber)} has been cancelled`)
+    toast.success(`Invoice ${displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))} has been cancelled`)
     logActivity({
-      action: `Cancelled invoice ${displayInvoiceNumber(invoice.invoiceNumber)}`,
+      action: `Cancelled invoice ${displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))}`,
       module: "Invoices",
       detail: `Status: approved → cancelled; Reason: ${reason}`
     })
@@ -2693,7 +2696,7 @@ export function InvoiceManagement({
                         />
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {displayInvoiceNumber(invoice.invoiceNumber)}
+                        {displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -4627,7 +4630,7 @@ export function InvoiceManagement({
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Edit Invoice</h2>
-                    <p className="text-sm text-gray-500 mt-1">{displayInvoiceNumber(selectedInvoice.invoiceNumber)}</p>
+                    <p className="text-sm text-gray-500 mt-1">{displayInvoiceNumber(selectedInvoice.invoiceNumber, getApprovalStatus(selectedInvoice))}</p>
                   </div>
                   <Badge variant={selectedInvoice.status === 'draft' ? 'secondary' : 'default'} className="text-sm px-4 py-1.5">
                     {selectedInvoice.status === 'draft' ? 'Draft' : 'Pending Approval'}
@@ -4935,7 +4938,7 @@ export function InvoiceManagement({
             <div className="bg-gray-50 rounded-md p-4 text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-500">{t("invoice.invoiceNumber")}</span>
-                <span className="font-medium text-right">{displayInvoiceNumber(selectedInvoiceForApproval.invoiceNumber)}</span>
+                <span className="font-medium text-right">{displayInvoiceNumber(selectedInvoiceForApproval.invoiceNumber, getApprovalStatus(selectedInvoiceForApproval))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">{(selectedInvoiceForApproval.invoiceType === 'external' || selectedInvoiceForApproval.studentId === 'EXTERNAL' || selectedInvoiceForApproval.term === "External") ? t("invoice.recipient") : t("invoice.student")}</span>
@@ -5076,7 +5079,7 @@ export function InvoiceManagement({
             <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Invoice Number</span>
-                <span className="font-medium">{displayInvoiceNumber(selectedInvoice.invoiceNumber)}</span>
+                <span className="font-medium">{displayInvoiceNumber(selectedInvoice.invoiceNumber, getApprovalStatus(selectedInvoice))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Student</span>
@@ -5322,7 +5325,7 @@ export function InvoiceManagement({
                 <div className="grid grid-cols-3 gap-8 mb-6 pb-4 border-b">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Invoice Number</p>
-                    <p className="text-base font-bold text-foreground">{displayInvoiceNumber(selectedInvoiceForEmail.invoiceNumber)}</p>
+                    <p className="text-base font-bold text-foreground">{displayInvoiceNumber(selectedInvoiceForEmail.invoiceNumber, getApprovalStatus(selectedInvoiceForEmail))}</p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Student Name</p>
