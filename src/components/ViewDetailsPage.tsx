@@ -43,7 +43,7 @@ interface ViewDetailsPageProps {
 }
 
 const formatCurrency = (amount: number): string => {
-  return `฿${amount.toLocaleString()}`
+  return amount.toLocaleString()
 }
 
 const formatDate = (dateString: string): string => {
@@ -487,7 +487,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                       <p className="text-sm">{item.description || "-"}</p>
                     </div>
                     <div>
-                      <label className="text-sm text-muted-foreground">Amount (฿)</label>
+                      <label className="text-sm text-muted-foreground">Amount</label>
                       <p className="font-medium">{formatCurrency(item.amount || 0)}</p>
                     </div>
                     <div className="text-right">

@@ -418,7 +418,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
             <p className="text-xs text-muted-foreground">
-              {t("invoiceOverview.totalValue")}: ₿{summaryStats.totalAmount.toLocaleString()}
+              {t("invoiceOverview.totalValue")}: {summaryStats.totalAmount.toLocaleString()}
             </p>
           </CardContent>
         </Card>
@@ -442,7 +442,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.unpaid}</div>
             <p className="text-xs text-muted-foreground">
-              ₿{invoices.filter(i => i.status === "unpaid").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.pending").toLowerCase()}
+              {invoices.filter(i => i.status === "unpaid").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.pending").toLowerCase()}
             </p>
           </CardContent>
         </Card>
@@ -454,7 +454,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{summaryStats.overdue}</div>
             <p className="text-xs text-muted-foreground">
-              ₿{invoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.overdue").toLowerCase()}
+              {invoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.overdue").toLowerCase()}
             </p>
           </CardContent>
         </Card>
@@ -719,7 +719,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                     <TableCell>
                       <Badge variant="secondary">{invoice.studentGrade}</Badge>
                     </TableCell>
-                    <TableCell>₿{invoice.amount.toLocaleString()}</TableCell>
+                    <TableCell>{invoice.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <div>
                         <div>{format(invoice.dueDate, "MMM dd, yyyy", { locale })}</div>
@@ -967,7 +967,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoiceOverview.amountDue")}</p>
-                    <p className="text-2xl font-bold">₿{selectedInvoice.amount.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{selectedInvoice.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoiceOverview.academicTerm")}</p>

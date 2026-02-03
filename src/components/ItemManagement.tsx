@@ -1977,7 +1977,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   })
 
   const formatCurrency = (amount: number) => {
-    return `฿${amount.toLocaleString()}`
+    return amount.toLocaleString()
   }
 
   const invoiceTypes = [
@@ -2602,7 +2602,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           ) : (
                             <div key={itemId} className="flex justify-between text-sm text-red-500">
                               <span>Item not found (ID: {itemId})</span>
-                              <span className="font-medium">฿0</span>
+                              <span className="font-medium">0</span>
                             </div>
                           )
                         })}

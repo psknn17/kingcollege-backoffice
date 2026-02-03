@@ -53,7 +53,7 @@ const canEditInvoice = (status: string): boolean => {
 }
 
 const formatCurrency = (amount: number): string => {
-  return `฿${amount.toLocaleString()}`
+  return amount.toLocaleString()
 }
 
 const formatDate = (dateString: string): string => {
@@ -892,7 +892,7 @@ export function ViewModal({
                 <tfoot className="bg-gray-50 border-t">
                   <tr>
                     <td className="px-3 py-2 font-medium text-sm">Total</td>
-                    <td className="px-3 py-2 text-right font-bold text-sm">฿{calculateTotal().toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right font-bold text-sm">{calculateTotal().toLocaleString()}</td>
                     <td></td>
                   </tr>
                 </tfoot>

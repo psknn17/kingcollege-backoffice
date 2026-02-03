@@ -186,10 +186,9 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
     setEditingItem(null)
   }
 
-  // Calculate subtotal and ID charges
+  // Calculate subtotal (ID charges removed)
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0)
-  const idCharges = Math.round(subtotal * 0.03)
-  const total = subtotal + idCharges
+  const total = subtotal
 
   // Validate form
   const isValid = clientName && lineItems.length > 0 && lineItems.every(item => item.description && item.amount > 0)
@@ -224,7 +223,6 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
         amount: item.amount
       })),
       subtotal,
-      idCharges,
       total,
       createdAt: editInvoice?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -257,7 +255,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
           ? `Updated external invoice ${invoice.invoiceNumber || invoice.id}`
           : `Created external invoice ${invoice.invoiceNumber || invoice.id}`,
         module: "External Invoices",
-        detail: `Client: ${clientName || "-"}, Amount: ₿${total.toLocaleString()}`
+        detail: `Client: ${clientName || "-"}, Amount: ${total.toLocaleString()}`
       })
 
       // Close preview dialog
@@ -404,17 +402,6 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               </td>
             </tr>
           ))}
-          {/* ID Charges row */}
-          {idCharges > 0 && (
-            <tr className="border-t border-black">
-              <td className="py-3 px-4 border-r border-black">
-                <span className="text-purple-600">ID Charges (3%)</span>
-              </td>
-              <td className="py-3 px-4 text-right text-purple-600">
-                {idCharges.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-            </tr>
-          )}
           {/* Total row */}
           <tr className="border-t border-black">
             <td className="py-3 px-4 border-r border-black">
@@ -635,7 +622,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                                   </div>
                                   <p className="text-sm text-muted-foreground mb-2">{item.description || "External invoice item"}</p>
                                   <div className="flex items-center gap-4">
-                                    <p className="font-medium text-lg">₿{item.amount.toLocaleString()}</p>
+                                    <p className="font-medium text-lg">{item.amount.toLocaleString()}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center">
@@ -721,7 +708,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                                 </Badge>
                               </TableCell>
                               <TableCell className="font-medium">
-                                ₿{item.amount.toLocaleString()}
+                                {item.amount.toLocaleString()}
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
@@ -985,7 +972,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                               </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mb-2">{item.description || "External invoice item"}</p>
-                            <p className="font-medium">₿{item.amount.toLocaleString()}</p>
+                            <p className="font-medium">{item.amount.toLocaleString()}</p>
                           </div>
                           <div className="flex items-center">
                             {isAdded ? (

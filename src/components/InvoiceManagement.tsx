@@ -1269,11 +1269,11 @@ export function InvoiceManagement({
 
     const totalItems = selectedItems.reduce((sum, item) => sum + item.amount, 0)
 
-    toast.success(`Created ${selectedStudents.length} invoices with ${selectedItems.length} items each - Total per invoice: ₿${totalItems.toLocaleString()}`)
+    toast.success(`Created ${selectedStudents.length} invoices with ${selectedItems.length} items each - Total per invoice: ${totalItems.toLocaleString()}`)
     logActivity({
       action: "Created invoices",
       module: "Invoices",
-      detail: `Students: ${selectedStudents.length}, Items per invoice: ${selectedItems.length}, Total per invoice: ₿${totalItems.toLocaleString()}`
+      detail: `Students: ${selectedStudents.length}, Items per invoice: ${selectedItems.length}, Total per invoice: ${totalItems.toLocaleString()}`
     })
     closeCreateModal()
   }
@@ -1753,7 +1753,7 @@ export function InvoiceManagement({
           )
           if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
             discountLines.push({
-              name: `Registration Fee Waiver (฿${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term)`,
+              name: `Registration Fee Waiver (${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term)`,
               amount: feeWaiverEligibility.creditPerTerm
             })
           }
@@ -1800,19 +1800,15 @@ export function InvoiceManagement({
       const lateFeePercent = 1.5
       const lateFeeAmount = isOverdue ? Math.round(subtotal * lateFeePercent / 100) : 0
 
-      // Calculate ID Charges (3% of subtotal after discounts and fees)
+      // ID Charges removed - no longer applicable
       const totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
       const registrationFeesTotal = (invoice as any).registrationFees?.reduce((sum: number, fee: any) => sum + fee.amount, 0) || 0
-      const subtotalBeforeIdCharges = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
-      const calculatedIdCharges = Math.round(subtotalBeforeIdCharges * 0.03)
-      const finalIdCharges = (invoice as any).idCharges > 0 ? (invoice as any).idCharges : calculatedIdCharges
 
       // Prepare invoice with additional details
       const invoiceWithDetails = {
         ...invoice,
         discounts: discountLines.length > 0 ? discountLines : undefined,
         registrationFees: (invoice as any).registrationFees || undefined,
-        idCharges: finalIdCharges > 0 ? finalIdCharges : undefined,
         securityDepositWaiver: (invoice as any).securityDepositWaiver || undefined,
         lateFee: lateFeeAmount > 0 ? { amount: lateFeeAmount, percent: lateFeePercent } : undefined
       }
@@ -2431,7 +2427,7 @@ export function InvoiceManagement({
             <CardTitle className="text-sm font-medium">{t("invoice.totalAmount")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">฿{summaryStats.totalAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{summaryStats.totalAmount.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -2704,11 +2700,11 @@ export function InvoiceManagement({
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          ₿{invoice.finalAmount.toLocaleString()}
+                          {invoice.finalAmount.toLocaleString()}
                         </div>
                         {invoice.discountAmount > 0 && (
                           <div className="text-xs text-muted-foreground">
-                            Discount: ₿{invoice.discountAmount.toLocaleString()}
+                            Discount: {invoice.discountAmount.toLocaleString()}
                           </div>
                         )}
                       </TableCell>
@@ -3085,7 +3081,7 @@ export function InvoiceManagement({
                         <TableCell>
                           <Badge variant="outline">{invoice.eventName || "-"}</Badge>
                         </TableCell>
-                        <TableCell className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
+                        <TableCell className="font-medium">{invoice.finalAmount.toLocaleString()}</TableCell>
                         <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
                         <TableCell
                           className={getEmailStatus(invoice) === "sent" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
@@ -3526,7 +3522,7 @@ export function InvoiceManagement({
                       })
                     }
 
-                    // 4. Fee Waiver Program (฿75,000/term for eligible students)
+                    // 4. Fee Waiver Program (75,000/term for eligible students)
                     if (!isNonDiscountableInvoice && student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
                       const feeWaiverEligibility = checkFeePrivilegeEligibility(
                         student,
@@ -3573,7 +3569,6 @@ export function InvoiceManagement({
 
                     // Get registration fees from saved invoice data (new students)
                     const savedRegistrationFees = (selectedInvoice as any).registrationFees || []
-                    const savedIdCharges = (selectedInvoice as any).idCharges || 0
                     const isNewStudent = (selectedInvoice as any).isNewStudent || savedRegistrationFees.length > 0
                     const registrationFeesTotal = savedRegistrationFees.reduce((sum: number, fee: any) => sum + fee.amount, 0)
 
@@ -3592,14 +3587,8 @@ export function InvoiceManagement({
                       totalDiscounts = subtotal
                     }
 
-                    // Calculate subtotal before ID Charges
-                    const subtotalBeforeIdCharges = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
-
-                    // Use saved ID Charges or calculate if not saved
-                    const idCharges = savedIdCharges > 0 ? savedIdCharges : Math.round(subtotalBeforeIdCharges * 0.03)
-
-                    // Final total
-                    const finalTotal = subtotalBeforeIdCharges + idCharges
+                    // Final total (ID Charges removed)
+                    const finalTotal = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
 
                     // Separate discounts: Fee Waiver Program vs others
                     const feeWaiverDiscount = discountLines.find(d => d.name.includes('Fee Waiver Program'))
@@ -3647,7 +3636,7 @@ export function InvoiceManagement({
                         {feeWaiverDiscount && (
                           <div className="flex justify-between items-center px-4 py-2 border-t">
                             <span className="text-sm text-green-600">
-                              Registration Fee Waiver (฿{feeWaiverDiscount.amount.toLocaleString()}/term)
+                              Registration Fee Waiver ({feeWaiverDiscount.amount.toLocaleString()}/term)
                             </span>
                             <span className="text-sm font-medium text-green-600">
                               -{formatCurrency(feeWaiverDiscount.amount)}
@@ -3671,19 +3660,7 @@ export function InvoiceManagement({
                           </div>
                         )}
 
-                        {/* 7. ID Charges (Purple, 3%) */}
-                        {idCharges > 0 && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-purple-600">
-                              ID Charges (3%)
-                            </span>
-                            <span className="text-sm font-medium text-purple-600">
-                              +{formatCurrency(idCharges)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* 8. Late Fee (Red) */}
+                        {/* 7. Late Fee (Red) */}
                         {lateFeeAmount > 0 && (
                           <div className="flex justify-between items-center px-4 py-2 border-t">
                             <span className="text-sm text-red-600">
@@ -3854,7 +3831,7 @@ export function InvoiceManagement({
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mb-1">{item.description}</p>
-                            <p className="font-medium">₿{item.amount.toLocaleString()}</p>
+                            <p className="font-medium">{item.amount.toLocaleString()}</p>
                           </div>
                           <div className="flex-shrink-0 ml-4">
                             {isSelected ? (
@@ -3911,7 +3888,7 @@ export function InvoiceManagement({
                                 <Badge variant="outline">{item.category}</Badge>
                               </TableCell>
                               <TableCell className="font-medium">
-                                ₿{item.amount.toLocaleString()}
+                                {item.amount.toLocaleString()}
                               </TableCell>
                               <TableCell>
                                 <Button
@@ -3940,12 +3917,12 @@ export function InvoiceManagement({
                           </div>
                           <div className="flex justify-between">
                             <span>Amount per Student:</span>
-                            <span>₿{selectedItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</span>
+                            <span>{selectedItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</span>
                           </div>
                           <Separator />
                           <div className="flex justify-between font-medium text-lg">
                             <span>Total Amount:</span>
-                            <span>₿{(selectedItems.reduce((sum, item) => sum + item.amount, 0) * selectedStudents.length).toLocaleString()}</span>
+                            <span>{(selectedItems.reduce((sum, item) => sum + item.amount, 0) * selectedStudents.length).toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -4140,8 +4117,8 @@ export function InvoiceManagement({
                       <p className="text-blue-700">Items per Invoice: <span className="font-medium">{selectedItems.length}</span></p>
                     </div>
                     <div>
-                      <p className="text-blue-700">Amount per Student: <span className="font-medium">₿{selectedItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</span></p>
-                      <p className="text-blue-700">Total Amount: <span className="font-medium">₿{(selectedItems.reduce((sum, item) => sum + item.amount, 0) * selectedStudents.length).toLocaleString()}</span></p>
+                      <p className="text-blue-700">Amount per Student: <span className="font-medium">{selectedItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</span></p>
+                      <p className="text-blue-700">Total Amount: <span className="font-medium">{(selectedItems.reduce((sum, item) => sum + item.amount, 0) * selectedStudents.length).toLocaleString()}</span></p>
                       <p className="text-blue-700">Invoices to Create: <span className="font-medium">{selectedStudents.length}</span></p>
                     </div>
                   </div>
@@ -4201,7 +4178,7 @@ export function InvoiceManagement({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Amount (₿) *</label>
+              <label className="text-sm font-medium">Amount *</label>
               <Input
                 type="number"
                 placeholder="0"
@@ -4226,21 +4203,21 @@ export function InvoiceManagement({
               <div className="bg-muted/50 rounded-lg p-3">
                 <div className="flex justify-between text-sm">
                   <span>Original Amount:</span>
-                  <span>₿{parseFloat(newItem.amount || "0").toLocaleString()}</span>
+                  <span>{parseFloat(newItem.amount || "0").toLocaleString()}</span>
                 </div>
                 {newItem.discountPercent && (
                   <>
                     <div className="flex justify-between text-sm">
                       <span>Discount ({newItem.discountPercent}%):</span>
                       <span className="text-red-600">
-                        -₿{(parseFloat(newItem.amount || "0") * parseFloat(newItem.discountPercent || "0") / 100).toLocaleString()}
+                        -{(parseFloat(newItem.amount || "0") * parseFloat(newItem.discountPercent || "0") / 100).toLocaleString()}
                       </span>
                     </div>
                     <Separator className="my-1" />
                     <div className="flex justify-between font-medium">
                       <span>Final Amount:</span>
                       <span>
-                        ₿{(parseFloat(newItem.amount || "0") * (1 - parseFloat(newItem.discountPercent || "0") / 100)).toLocaleString()}
+                        {(parseFloat(newItem.amount || "0") * (1 - parseFloat(newItem.discountPercent || "0") / 100)).toLocaleString()}
                       </span>
                     </div>
                   </>
@@ -4319,7 +4296,7 @@ export function InvoiceManagement({
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
-                        <p className="font-medium text-sm">₿{item.amount.toLocaleString()}</p>
+                        <p className="font-medium text-sm">{item.amount.toLocaleString()}</p>
                       </div>
                       <div className="flex-shrink-0 ml-4">
                         {isSelected ? (
@@ -4453,7 +4430,7 @@ export function InvoiceManagement({
                               <TableCell className="font-mono">{row.studentId}</TableCell>
                               <TableCell>{row.studentName}</TableCell>
                               <TableCell>{row.grade}</TableCell>
-                              <TableCell className="text-right">฿{row.amount.toLocaleString()}</TableCell>
+                              <TableCell className="text-right">{row.amount.toLocaleString()}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -4758,7 +4735,7 @@ export function InvoiceManagement({
                       name: group.name,
                       value: group.discountType === "percentage"
                         ? `${group.discountPercentage}%`
-                        : `฿${group.fixedAmount.toLocaleString()}`,
+                        : `${group.fixedAmount.toLocaleString()}`,
                       color: "bg-purple-100 text-purple-800"
                     })
                   })
@@ -4773,7 +4750,7 @@ export function InvoiceManagement({
                     if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
                       discounts.push({
                         name: "Fee Waiver Program",
-                        value: `฿${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term`,
+                        value: `${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term`,
                         color: "bg-indigo-100 text-indigo-800"
                       })
                     }
@@ -4956,7 +4933,7 @@ export function InvoiceManagement({
               </div>
               <div className="flex justify-between border-t pt-2 mt-2">
                 <span className="text-gray-500">{t("common.amount")}</span>
-                <span className="font-semibold text-green-600">฿{selectedInvoiceForApproval.finalAmount.toLocaleString()}</span>
+                <span className="font-semibold text-green-600">{selectedInvoiceForApproval.finalAmount.toLocaleString()}</span>
               </div>
             </div>
           )}
@@ -5083,7 +5060,7 @@ export function InvoiceManagement({
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-gray-500">Total Amount</span>
-                <span className="font-semibold text-green-600">฿{selectedInvoice.finalAmount.toLocaleString()}</span>
+                <span className="font-semibold text-green-600">{selectedInvoice.finalAmount.toLocaleString()}</span>
               </div>
             </div>
           )}

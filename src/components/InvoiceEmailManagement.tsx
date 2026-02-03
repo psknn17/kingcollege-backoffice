@@ -121,7 +121,7 @@ Invoice Details:
 - Student: {studentName}
 - Grade: {grade}
 - Family Code: {familyCode}
-- Amount: ฿{invoiceAmount}
+- Amount: {invoiceAmount}
 
 Please ensure payment is made by the due date specified in the invoice. If you have any questions or concerns regarding this invoice, please don't hesitate to contact our finance office.
 
@@ -142,7 +142,7 @@ Thank you for your continued trust in King's College.`,
 - นักเรียน: {studentName}
 - ชั้น: {grade}
 - รหัสครอบครัว: {familyCode}
-- จำนวนเงิน: ฿{invoiceAmount}
+- จำนวนเงิน: {invoiceAmount}
 
 กรุณาชำระเงินภายในกำหนดที่ระบุในใบแจ้งหนี้ หากท่านมีคำถามหรือข้อสงสัยเกี่ยวกับใบแจ้งหนี้นี้ กรุณาติดต่อแผนกการเงินของโรงเรียน
 
@@ -163,7 +163,7 @@ Thank you for your continued trust in King's College.`,
 - 学生：{studentName}
 - 年级：{grade}
 - 家庭代码：{familyCode}
-- 金额：฿{invoiceAmount}
+- 金额：{invoiceAmount}
 
 请在账单上指定的截止日期前付款。如果您对此账单有任何疑问，请随时联系我们的财务办公室。
 

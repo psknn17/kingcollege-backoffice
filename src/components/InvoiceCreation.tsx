@@ -1085,7 +1085,7 @@ const defaultBusTemplates: ItemTemplate[] = [
 ]
 
 const formatCurrency = (amount: number): string => {
-  return `₿${amount.toLocaleString()}`
+  return amount.toLocaleString()
 }
 
 // Item categories for each invoice type - getter function for translations
@@ -2549,9 +2549,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           ? fees.securityDeposit
           : 0
 
-      // Calculate ID Charges (3%)
+      // ID Charges removed - no longer applicable
       const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
-      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
 
       // Add line numbers and itemCode to items
       const itemsWithLineNumbers = selectedItems.map((item, index) => ({
@@ -2591,8 +2590,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
         securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
-        // ID Charges
-        idCharges: idCharges,
         // Excel export fields
         familyCode: invoiceStudent.originalStudent?.familyCode || '',
         adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
@@ -2694,9 +2691,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           ? fees.securityDeposit
           : 0
 
-      // Calculate ID Charges (3%)
+      // ID Charges removed - no longer applicable
       const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
-      const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
 
       // Add line numbers and itemCode to items
       const itemsWithLineNumbers = selectedItems.map((item, index) => ({
@@ -2737,8 +2733,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
         securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
-        // ID Charges
-        idCharges: idCharges,
         // Excel export fields
         familyCode: invoiceStudent.originalStudent?.familyCode || '',
         adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
@@ -3324,7 +3318,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground mb-1">{item.description}</p>
-                            <p className="font-medium">₿{item.amount.toLocaleString()}</p>
+                            <p className="font-medium">{item.amount.toLocaleString()}</p>
                           </div>
                           <div className="flex-shrink-0 ml-4">
                             {isSelected ? (
@@ -3410,7 +3404,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="font-medium">
-                                  ₿{item.amount.toLocaleString()}
+                                  {item.amount.toLocaleString()}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-1">
@@ -3920,7 +3914,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <CheckCircle className="w-4 h-4 text-amber-600" />
                             <div className="flex-1">
                               <span className="font-medium">Application Fee</span>
-                              <span className="text-muted-foreground ml-2">฿{fees.applicationFee.toLocaleString()}</span>
+                              <span className="text-muted-foreground ml-2">{fees.applicationFee.toLocaleString()}</span>
                             </div>
                             {fees.applicationFeeRefundable && (
                               <Badge variant="outline" className="text-xs">Refundable</Badge>
@@ -3932,7 +3926,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <CheckCircle className="w-4 h-4 text-amber-600" />
                             <div className="flex-1">
                               <span className="font-medium">Registration Fee</span>
-                              <span className="text-muted-foreground ml-2">฿{fees.registrationFee.toLocaleString()}</span>
+                              <span className="text-muted-foreground ml-2">{fees.registrationFee.toLocaleString()}</span>
                             </div>
                             {fees.registrationFeeRefundable && (
                               <Badge variant="outline" className="text-xs">Refundable</Badge>
@@ -3944,7 +3938,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <CheckCircle className="w-4 h-4 text-amber-600" />
                             <div className="flex-1">
                               <span className="font-medium">Security Deposit</span>
-                              <span className="text-muted-foreground ml-2">฿{fees.securityDeposit.toLocaleString()}</span>
+                              <span className="text-muted-foreground ml-2">{fees.securityDeposit.toLocaleString()}</span>
                             </div>
                             {fees.securityDepositRefundable && (
                               <Badge variant="outline" className="text-xs">Refundable</Badge>
@@ -3955,7 +3949,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="mt-3 pt-3 border-t border-amber-200">
                         <div className="flex justify-between text-sm font-medium text-amber-900">
                           <span>Registration Fees Total:</span>
-                          <span>฿{totalFees.toLocaleString()}</span>
+                          <span>{totalFees.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -4002,9 +3996,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     </div>
                     <div>
                       <p className="text-blue-700">Items: <span className="font-medium">{selectedItems.length}</span></p>
-                      <p className="text-blue-700">Amount: <span className="font-medium">฿{getTotalAmount().toLocaleString()}</span></p>
+                      <p className="text-blue-700">Amount: <span className="font-medium">{getTotalAmount().toLocaleString()}</span></p>
                       {selectedStudents.length > 1 && (
-                        <p className="text-blue-700">Total Amount: <span className="font-medium">฿{(getTotalAmount() * selectedStudents.length).toLocaleString()}</span></p>
+                        <p className="text-blue-700">Total Amount: <span className="font-medium">{(getTotalAmount() * selectedStudents.length).toLocaleString()}</span></p>
                       )}
                       <p className="text-blue-700">Payment Deadline: <span className="font-medium">{paymentDeadline ? format(paymentDeadline, "dd/MM/yyyy") : "-"}</span></p>
                       {selectedStudents.length > 0 && (
@@ -4275,8 +4269,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             <div className="bg-muted rounded-lg p-3">
               <div className="text-sm space-y-1">
                 <p><span className="font-medium">Students:</span> {selectedStudents.length}</p>
-                <p><span className="font-medium">Amount per invoice:</span> ₿{getTotalAmount().toLocaleString()}</p>
-                <p><span className="font-medium">Total amount:</span> ₿{(getTotalAmount() * selectedStudents.length).toLocaleString()}</p>
+                <p><span className="font-medium">Amount per invoice:</span> {getTotalAmount().toLocaleString()}</p>
+                <p><span className="font-medium">Total amount:</span> {(getTotalAmount() * selectedStudents.length).toLocaleString()}</p>
                 <p><span className="font-medium">Payment deadline:</span> {paymentDeadline ? format(paymentDeadline, "dd/MM/yyyy") : "-"}</p>
               </div>
             </div>
@@ -4313,8 +4307,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               {isSimplifiedView && payerSelectionType === "manual" && manualClientName ? (
                 (() => {
                   const subtotal = getTotalAmount()
-                  const idCharges = Math.round(subtotal * 0.03)
-                  const finalTotal = subtotal + idCharges
+                  const finalTotal = subtotal
                   const invoiceNumber = `DRAFT-${Date.now()}-MANUAL`
                   const issueDate = new Date()
                   const dueDate = paymentDeadline || null
@@ -4467,14 +4460,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
                               </tr>
                             ))}
-                            {/* ID Charges (3%) - Purple */}
-                            {idCharges > 0 && (
-                              <tr className="border-b border-gray-200 text-purple-600">
-                                <td className="py-1.5 px-2 align-top">{selectedItems.length + 1}</td>
-                                <td className="py-1.5 px-2">ID Charges (3%)</td>
-                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(idCharges)}</td>
-                              </tr>
-                            )}
                             {/* Total Row */}
                             <tr className="border-t border-black bg-gray-100">
                               <td colSpan={2} className="py-2 px-2">
@@ -4598,12 +4583,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     ? fees.securityDeposit
                     : 0
 
-                  // Calculate ID Charges (3%)
-                  const subtotalBeforeIdCharges = Math.max(0, discountCalc.netAmount + registrationFeesTotal - securityDepositWaiver)
-                  const idCharges = Math.round(subtotalBeforeIdCharges * 0.03)
-
-                  // Calculate final total
-                  const finalTotal = subtotalBeforeIdCharges + idCharges
+                  // Calculate final total (ID Charges removed)
+                  const finalTotal = Math.max(0, discountCalc.netAmount + registrationFeesTotal - securityDepositWaiver)
 
                   return (
                     <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
@@ -4729,14 +4710,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(discount.amount)}</td>
                               </tr>
                             ))}
-                            {/* ID Charges (3%) - Purple */}
-                            {idCharges > 0 && (
-                              <tr className="border-b border-gray-200 text-purple-600">
-                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + (securityDepositWaiver > 0 ? 1 : 0) + discountCalc.discountItems.length + 1}</td>
-                                <td className="py-1.5 px-2">ID Charges (3%)</td>
-                                <td className="py-1.5 px-2 text-right align-top">{formatCurrency(idCharges)}</td>
-                              </tr>
-                            )}
                             {/* Total Row */}
                             <tr className="border-t border-black bg-gray-100">
                               <td colSpan={2} className="py-2 px-2">
@@ -4975,7 +4948,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
-                      <span className="font-medium text-sm">฿{item.amount.toLocaleString()}</span>
+                      <span className="font-medium text-sm">{item.amount.toLocaleString()}</span>
                     </div>
                     <div className="flex-shrink-0">
                       <Plus className="w-5 h-5 text-muted-foreground" />
