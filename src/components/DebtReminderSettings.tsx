@@ -6,7 +6,7 @@ import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Textarea } from "./ui/textarea"
 import { Switch } from "./ui/switch"
-import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings } from "lucide-react"
+import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send } from "lucide-react"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
@@ -155,6 +155,58 @@ export function DebtReminderSettings() {
   const saveSettings = () => {
     console.log("Saving reminder settings", { reminders, globalSettings })
     // In a real app, this would save to backend
+  }
+
+  const handleSendNow = (reminder: ReminderConfig) => {
+    // Validate reminder has required fields
+    if (!reminder.subject || !reminder.message) {
+      toast.error("Cannot send reminder", {
+        description: "Please fill in subject and message before sending"
+      })
+      return
+    }
+
+    if (!reminder.enabled) {
+      toast.error("Cannot send reminder", {
+        description: "Please enable this reminder first"
+      })
+      return
+    }
+
+    // Get academic year name for display
+    const academicYear = academicYears.find(y => y.id === reminder.academicYear)
+    const term = academicYear?.terms.find(t => t.id === reminder.term)
+
+    // Mock recipient count (in real app, this would come from backend based on filters)
+    const mockRecipientCount = Math.floor(Math.random() * 150) + 50
+
+    // Create history entry
+    const historyEntry = {
+      id: `reminder-${Date.now()}`,
+      sentDate: new Date().toISOString().split('T')[0],
+      subject: reminder.subject,
+      academicYear: academicYear?.name || reminder.academicYear,
+      term: term?.name || `Term ${reminder.term}`,
+      recipients: mockRecipientCount,
+      status: "sent"
+    }
+
+    // Save to emailReminderHistory
+    try {
+      const existingHistory = localStorage.getItem("emailReminderHistory")
+      const history = existingHistory ? JSON.parse(existingHistory) : []
+      history.unshift(historyEntry) // Add to beginning
+      localStorage.setItem("emailReminderHistory", JSON.stringify(history))
+    } catch (error) {
+      console.error("Failed to save email history:", error)
+    }
+
+    // Also save to invoice email logs
+    saveReminderEmailLog(reminder.subject, mockRecipientCount)
+
+    toast.success(`Reminder email sent to ${mockRecipientCount} recipients`, {
+      description: `Subject: ${reminder.subject}`
+    })
   }
 
   return (
@@ -343,6 +395,18 @@ export function DebtReminderSettings() {
                         </span>
                       </p>
                     </div>
+                  </div>
+
+                  {/* Send Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => handleSendNow(reminder)}
+                      disabled={!reminder.enabled || !reminder.subject || !reminder.message}
+                      className="flex items-center gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
