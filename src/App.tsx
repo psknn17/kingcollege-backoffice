@@ -100,6 +100,7 @@ import { ExternalInvoiceCreation } from "./components/ExternalInvoiceCreation"
 import { ItemManagement } from "./components/ItemManagement"
 import { ReceiptPage } from "./components/ReceiptPageUpdated"
 import { EmailJobsManagement } from "./components/EmailJobsManagement"
+import { EmailHistory } from "./components/EmailHistory"
 import { EmailHistoryView } from "./components/EmailHistoryView"
 import { EmailCsvExport } from "./components/EmailCsvExport"
 import { WaiveFeeYearDetails } from "./components/WaiveFeeYearDetails"
@@ -120,14 +121,14 @@ const menuItems = {
     { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
     { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
-    { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
     { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
+    { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "email-jobs", labelKey: "menu.emailJobs", icon: Send },
+    { id: "email-jobs", labelKey: "menu.emailHistory", icon: Send },
   ],
   eca: [
     { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
@@ -379,7 +380,7 @@ export default function App() {
       case "item-management":
         return <ItemManagement key="tuition-items" onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} invoiceType="tuition" />
       case "email-jobs":
-        return <EmailJobsManagement onNavigateToSubPage={navigateToSubPage} />
+        return <EmailHistory />
       case "email-history-view":
         return <EmailHistoryView jobData={subPageParams?.job} onBack={navigateBack} />
       case "email-csv-export":
