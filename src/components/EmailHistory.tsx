@@ -1,9 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
-import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search } from "lucide-react"
+import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
 
@@ -78,17 +80,133 @@ const formatDisplayDate = (dateString: string) => {
   return `${day} ${month} ${year}`
 }
 
+// Mock recipient data generator
+const generateMockRecipients = (count: number, subject: string) => {
+  const mockNames = [
+    "John Smith", "Mary Johnson", "Robert Williams", "Patricia Brown", "Michael Jones",
+    "Jennifer Garcia", "William Martinez", "Linda Rodriguez", "David Lee", "Barbara Wilson",
+    "Richard Anderson", "Susan Thomas", "Joseph Taylor", "Jessica Moore", "Thomas Jackson"
+  ]
+  const recipients = []
+  for (let i = 0; i < count; i++) {
+    const name = mockNames[i % mockNames.length]
+    recipients.push({
+      id: `recipient-${i}`,
+      name: `${name} (${i + 1})`,
+      email: `parent${i + 1}@example.com`,
+      studentName: `Student ${i + 1}`,
+      status: Math.random() > 0.05 ? "delivered" : "failed"
+    })
+  }
+  return recipients
+}
+
 export function EmailHistory() {
   const { t } = useLanguage()
   const [historySearch, setHistorySearch] = useState("")
+  const [detailsDialog, setDetailsDialog] = useState<any>(null)
+  const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
+  const [resendDialog, setResendDialog] = useState<any>(null)
+  const [allHistory, setAllHistory] = useState<any[]>([])
 
-  // Combine localStorage and mock data
-  const storedHistory = loadEmailHistoryFromStorage()
-  const allHistory = [...storedHistory, ...mockHistory]
+  // Load history from localStorage on mount and when component becomes visible
+  useEffect(() => {
+    const loadHistory = () => {
+      const storedHistory = loadEmailHistoryFromStorage()
+      setAllHistory([...storedHistory, ...mockHistory])
+    }
+
+    loadHistory()
+
+    // Set up an interval to check for new entries (in case sent from Debt Reminder)
+    const interval = setInterval(loadHistory, 2000) // Check every 2 seconds
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleViewDetails = (historyItem: any) => {
+    setDetailsDialog(historyItem)
+  }
+
+  const handleViewRecipients = (historyItem: any) => {
+    const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
+    setRecipientsDialog({ ...historyItem, recipientList: recipients })
+  }
 
   const handleResendReminder = (historyItem: any) => {
-    toast.success(`Reminder email resent to ${historyItem.recipients} recipients`, {
+    // Generate recipients to check for failures
+    const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
+    const failedCount = recipients.filter(r => r.status === "failed").length
+
+    // Show dialog with options
+    setResendDialog({
+      ...historyItem,
+      failedCount,
+      totalCount: historyItem.recipients
+    })
+  }
+
+  const executeResend = (historyItem: any, resendType: 'failed' | 'all') => {
+    const recipientCount = resendType === 'failed' ? historyItem.failedCount : historyItem.totalCount
+
+    // Create new history entry
+    const newEntry = {
+      id: `resend-${Date.now()}`,
+      sentDate: new Date().toISOString().split('T')[0],
+      subject: historyItem.subject,
+      academicYear: historyItem.academicYear,
+      term: historyItem.term,
+      recipients: recipientCount,
+      status: "sent"
+    }
+
+    // Save to localStorage
+    try {
+      const existingHistory = localStorage.getItem("emailReminderHistory")
+      const history = existingHistory ? JSON.parse(existingHistory) : []
+      history.unshift(newEntry)
+      localStorage.setItem("emailReminderHistory", JSON.stringify(history))
+
+      // Update state to show new entry immediately
+      setAllHistory([newEntry, ...allHistory])
+    } catch (error) {
+      console.error("Failed to save resend history:", error)
+    }
+
+    // Close dialog and show success
+    setResendDialog(null)
+
+    const message = resendType === 'failed'
+      ? `Resent to ${recipientCount} failed recipients`
+      : `Resent to all ${recipientCount} recipients`
+
+    toast.success(message, {
       description: `Subject: ${historyItem.subject}`
+    })
+  }
+
+  const handleDownloadReport = (historyItem: any) => {
+    // Generate CSV content
+    const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
+    const csvHeader = "No.,Parent Name,Email,Student Name,Status\n"
+    const csvRows = recipients.map((r, idx) =>
+      `${idx + 1},${r.name},${r.email},${r.studentName},${r.status}`
+    ).join("\n")
+    const csvContent = csvHeader + csvRows
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `email-report-${historyItem.id}-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.success("Report downloaded successfully", {
+      description: `${historyItem.recipients} recipients exported to CSV`
     })
   }
 
@@ -240,11 +358,11 @@ export function EmailHistory() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewDetails(item)}>
                               <Eye className="w-4 h-4" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewRecipients(item)}>
                               <FileText className="w-4 h-4" />
                               View Recipients
                             </DropdownMenuItem>
@@ -253,7 +371,7 @@ export function EmailHistory() {
                               <Send className="w-4 h-4" />
                               Resend
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadReport(item)}>
                               <Download className="w-4 h-4" />
                               Download Report
                             </DropdownMenuItem>
@@ -286,6 +404,225 @@ export function EmailHistory() {
           </div>
         </CardContent>
       </Card>
+
+      {/* View Details Dialog */}
+      <Dialog open={!!detailsDialog} onOpenChange={() => setDetailsDialog(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Eye className="w-6 h-6" />
+              Email Details
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Complete information about this reminder email
+            </DialogDescription>
+          </DialogHeader>
+          {detailsDialog && (
+            <div className="space-y-10 px-6 py-4">
+              {/* Subject - Full Width */}
+              <div className="border-b pb-4">
+                <Label className="text-sm font-medium text-muted-foreground">Subject</Label>
+                <p className="text-xl font-semibold mt-1">{detailsDialog.subject}</p>
+              </div>
+
+              {/* Main Details - 3 Columns */}
+              <div className="grid grid-cols-3 gap-8">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Sent Date</Label>
+                  <p className="text-base font-medium mt-1">{formatDisplayDate(detailsDialog.sentDate)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Academic Year</Label>
+                  <p className="text-base font-medium mt-1">{detailsDialog.academicYear}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Term</Label>
+                  <p className="text-base font-medium mt-1">{detailsDialog.term}</p>
+                </div>
+              </div>
+
+              {/* Recipients and Status - 2 Columns */}
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Recipients</Label>
+                  <p className="text-lg font-semibold mt-1">{detailsDialog.recipients} parents/students</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                      <CheckCircle className="w-4 h-4" />
+                      {detailsDialog.status.charAt(0).toUpperCase() + detailsDialog.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Message Preview - Full Width */}
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Message Preview</Label>
+                <div className="mt-2 p-6 bg-muted rounded-lg text-sm leading-relaxed">
+                  <p>Dear Parent,</p>
+                  <p className="mt-3">
+                    This is a reminder regarding your payment for {detailsDialog.subject.toLowerCase()}.
+                    Please ensure that your payment is completed on time to avoid any inconvenience.
+                  </p>
+                  <p className="mt-3">
+                    Academic Year: {detailsDialog.academicYear}<br />
+                    Term: {detailsDialog.term}
+                  </p>
+                  <p className="mt-3">
+                    If you have any questions, please contact our office.
+                  </p>
+                  <p className="mt-3">
+                    Best regards,<br />
+                    King's College International School Bangkok
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Recipients Dialog */}
+      <Dialog open={!!recipientsDialog} onOpenChange={() => setRecipientsDialog(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Users className="w-6 h-6" />
+              Email Recipients
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              {recipientsDialog?.recipients} recipients for "{recipientsDialog?.subject}"
+            </DialogDescription>
+          </DialogHeader>
+          {recipientsDialog && (
+            <div className="space-y-4 px-6 py-4">
+              <div className="overflow-y-auto max-h-[50vh]">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-background border-b">
+                    <tr className="bg-muted/50">
+                      <th className="text-left p-3 font-semibold text-sm">No.</th>
+                      <th className="text-left p-3 font-semibold text-sm">Parent Name</th>
+                      <th className="text-left p-3 font-semibold text-sm">Email</th>
+                      <th className="text-left p-3 font-semibold text-sm">Student Name</th>
+                      <th className="text-center p-3 font-semibold text-sm">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recipientsDialog.recipientList.map((recipient: any, idx: number) => (
+                      <tr key={recipient.id} className="border-b hover:bg-muted/30">
+                        <td className="p-3 text-sm">{idx + 1}</td>
+                        <td className="p-3 text-sm font-medium">{recipient.name}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{recipient.email}</td>
+                        <td className="p-3 text-sm">{recipient.studentName}</td>
+                        <td className="p-3 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            recipient.status === "delivered"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}>
+                            {recipient.status === "delivered" ? (
+                              <CheckCircle className="w-3 h-3" />
+                            ) : (
+                              <X className="w-3 h-3" />
+                            )}
+                            {recipient.status.charAt(0).toUpperCase() + recipient.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Total: {recipientsDialog.recipientList.length} recipients
+                  <span className="ml-4">
+                    Delivered: {recipientsDialog.recipientList.filter((r: any) => r.status === "delivered").length}
+                  </span>
+                  <span className="ml-4">
+                    Failed: {recipientsDialog.recipientList.filter((r: any) => r.status === "failed").length}
+                  </span>
+                </div>
+                <Button onClick={() => handleDownloadReport(recipientsDialog)} variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Resend Confirmation Dialog */}
+      <Dialog open={!!resendDialog} onOpenChange={() => setResendDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Send className="w-6 h-6" />
+              Resend Email
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Choose who should receive this email
+            </DialogDescription>
+          </DialogHeader>
+          {resendDialog && (
+            <div className="px-6 py-4 space-y-4">
+              {/* Email Info */}
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-semibold">{resendDialog.subject}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {resendDialog.academicYear} • {resendDialog.term}
+                </p>
+              </div>
+
+              {/* Show warning if there are failures */}
+              {resendDialog.failedCount > 0 && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-900">
+                      {resendDialog.failedCount} recipients did not receive this email
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      You can resend to failed recipients only or to everyone
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="space-y-2">
+                {resendDialog.failedCount > 0 && (
+                  <Button
+                    onClick={() => executeResend(resendDialog, 'failed')}
+                    className="w-full justify-start"
+                    variant="default"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Resend to Failed Only ({resendDialog.failedCount} recipients)
+                  </Button>
+                )}
+                <Button
+                  onClick={() => executeResend(resendDialog, 'all')}
+                  className="w-full justify-start"
+                  variant={resendDialog.failedCount > 0 ? "outline" : "default"}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Resend to All Recipients ({resendDialog.totalCount} recipients)
+                </Button>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="px-6 pb-6">
+            <Button onClick={() => setResendDialog(null)} variant="ghost">
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
