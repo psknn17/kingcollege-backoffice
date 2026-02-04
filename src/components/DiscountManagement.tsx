@@ -356,42 +356,58 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const handleCsvUpload = (file: File) => {
     setCsvFile(file)
     setIsPreviewingCsv(true)
-    
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
       const lines = text.split('\n').filter(line => line.trim())
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-      
-      // Check if required columns exist
-      const requiredColumns = ['id', 'name', 'year_group', 'parent_name']
-      const missingColumns = requiredColumns.filter(col => !headers.includes(col))
-      
-      if (missingColumns.length > 0) {
-        toast.error(`Missing required columns: ${missingColumns.join(', ')}`)
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
+
+      // Map common column name variations
+      const findColumn = (variations: string[]) => {
+        for (const variant of variations) {
+          const index = headers.findIndex(h => h === variant || h.includes(variant))
+          if (index !== -1) return index
+        }
+        return -1
+      }
+
+      const idIndex = findColumn(['id', 'student_id', 'studentid'])
+      const nameIndex = findColumn(['name', 'student_name', 'studentname'])
+      const yearGroupIndex = findColumn(['year_group', 'yeargroup', 'year', 'grade', 'level'])
+      const parentNameIndex = findColumn(['parent_name', 'parentname', 'parent'])
+
+      if (idIndex === -1 || nameIndex === -1 || yearGroupIndex === -1 || parentNameIndex === -1) {
+        const missing = []
+        if (idIndex === -1) missing.push('id')
+        if (nameIndex === -1) missing.push('name')
+        if (yearGroupIndex === -1) missing.push('year_group')
+        if (parentNameIndex === -1) missing.push('parent_name')
+
+        toast.error(`Missing required columns: ${missing.join(', ')}. Found columns: ${lines[0]}`)
         setIsPreviewingCsv(false)
         setCsvFile(null)
         return
       }
-      
+
       // Parse CSV data
       const students: Student[] = []
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim())
         if (values.length >= 4) {
           students.push({
-            id: values[headers.indexOf('id')],
-            name: values[headers.indexOf('name')],
-            yearGroup: values[headers.indexOf('year_group')],
-            parentName: values[headers.indexOf('parent_name')]
+            id: values[idIndex],
+            name: values[nameIndex],
+            yearGroup: values[yearGroupIndex],
+            parentName: values[parentNameIndex]
           })
         }
       }
-      
+
       setCsvPreviewData(students)
       setIsPreviewingCsv(false)
     }
-    
+
     reader.readAsText(file)
   }
 
@@ -1877,7 +1893,27 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
           <div className="space-y-4">
             {!csvFile && (
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8">
+              <div
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 hover:border-primary/50 transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.add('border-primary', 'bg-primary/5')
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                  const file = e.dataTransfer.files?.[0]
+                  if (file && file.type === 'text/csv') {
+                    handleCsvUpload(file)
+                  } else {
+                    toast.error("Please upload a CSV file")
+                  }
+                }}
+              >
                 <div className="text-center">
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Upload CSV File</h3>
@@ -1894,11 +1930,11 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     className="hidden"
                     id="csv-upload"
                   />
-                  <label htmlFor="csv-upload">
-                    <Button variant="outline" className="cursor-pointer">
+                  <Button variant="outline" asChild className="cursor-pointer">
+                    <label htmlFor="csv-upload">
                       Select CSV File
-                    </Button>
-                  </label>
+                    </label>
+                  </Button>
                 </div>
               </div>
             )}
