@@ -122,7 +122,7 @@ const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   registrationFees: defaultRegistrationFees,
   registrationPrivileges: defaultRegistrationPrivileges,
   waiverAfter3rdYear: {
-    enabled: true,
+    enabled: false,
     minimumGradeLevel: 3,
     minimumTerms: 3,  // First child waits 3 terms, receives from 4th term
     creditAmount: 225000,

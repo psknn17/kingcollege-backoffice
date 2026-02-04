@@ -358,6 +358,16 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Auto-save students to localStorage whenever they change
+  useEffect(() => {
+    saveStudentsToStorage(students)
+  }, [students])
+
+  // Auto-save families to localStorage whenever they change
+  useEffect(() => {
+    saveFamiliesToStorage(families)
+  }, [families])
+
   const setStudents = (newStudents: Student[]) => {
     setStudentsState(newStudents)
   }
@@ -432,7 +442,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     const convertedTerm = convertTermFormat(term)
     const options = loadDiscountOptions(currentYear, convertedTerm)
     const waiverSettings = options?.waiverAfter3rdYear || {
-      enabled: true,
+      enabled: false,
       minimumGradeLevel: 3,
       minimumTerms: 3,  // First child waits 3 terms
       creditAmount: 225000,

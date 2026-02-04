@@ -1621,7 +1621,30 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="edit-csv-file">Upload Student CSV File</Label>
-                          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                          <div
+                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary/50 transition-colors"
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.currentTarget.classList.add('border-primary', 'bg-primary/5')
+                            }}
+                            onDragLeave={(e) => {
+                              e.preventDefault()
+                              e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                              const file = e.dataTransfer.files?.[0]
+                              if (file && file.type === 'text/csv') {
+                                const fakeEvent = {
+                                  target: { files: [file] }
+                                } as React.ChangeEvent<HTMLInputElement>
+                                handleFileUpload(fakeEvent)
+                              } else {
+                                toast.error("Please upload a CSV file")
+                              }
+                            }}
+                          >
                             <div className="flex flex-col items-center gap-2 text-center">
                               <Upload className="h-8 w-8 text-muted-foreground" />
                               <div className="space-y-1">

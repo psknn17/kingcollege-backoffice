@@ -3126,16 +3126,16 @@ export function InvoiceManagement({
                           }}
                         />
                       </TableHead>
-                      <TableHead>{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
-                      <TableHead>{renderSortHeader(t("invoice.recipient"), "studentName")}</TableHead>
-                      <TableHead>{renderSortHeader(t("invoice.event"), "eventName")}</TableHead>
-                      <TableHead>{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
-                      <TableHead>{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
-                      <TableHead>{renderSortHeader("E-mail Status", "emailStatus")}</TableHead>
-                      <TableHead>{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
-                      <TableHead>{renderSortHeader(t("invoice.issueDate"), "issueDate")}</TableHead>
-                      <TableHead>{renderSortHeader(t("invoice.dueDate"), "dueDate")}</TableHead>
-                      <TableHead className="text-center">{t("common.actions")}</TableHead>
+                      <TableHead className="font-semibold">{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
+                      <TableHead className="font-semibold">{renderSortHeader("Client Name", "studentName")}</TableHead>
+                      <TableHead className="font-semibold">{renderSortHeader("Description", "eventName")}</TableHead>
+                      <TableHead className="font-semibold text-right">{renderSortHeader("Amount", "finalAmount")}</TableHead>
+                      <TableHead className="font-semibold text-center">{renderSortHeader("Approval", "invoiceStatus")}</TableHead>
+                      <TableHead className="font-semibold text-center">{renderSortHeader("Email", "emailStatus")}</TableHead>
+                      <TableHead className="font-semibold text-center">{renderSortHeader("Payment", "paymentStatus")}</TableHead>
+                      <TableHead className="font-semibold">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
+                      <TableHead className="font-semibold">{renderSortHeader("Due Date", "dueDate")}</TableHead>
+                      <TableHead className="text-center font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

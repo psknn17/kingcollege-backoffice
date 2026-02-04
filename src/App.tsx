@@ -16,6 +16,14 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./components/ui/collapsible"
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar"
 import { Toaster } from "./components/ui/sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu"
 import { AcademicYearProvider } from "./contexts/AcademicYearContext"
 import { StudentProvider } from "./contexts/StudentContext"
 import { DiscountOptionsProvider } from "./contexts/DiscountOptionsContext"
@@ -394,7 +402,7 @@ export default function App() {
       case "approval-queue":
         return <ApprovalQueue />
       case "student-list":
-        return <StudentList />
+        return <StudentList onNavigate={(sectionId: string) => setActiveSection(sectionId)} />
       case "family-groups":
         return <FamilyGroups />
       case "school-settings":
@@ -694,29 +702,56 @@ export default function App() {
           </SidebarContent>
 
           <SidebarFooter className="p-4 border-t">
-            {/* User Info */}
-            <div className="px-2 py-3 mb-2">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
-                </div>
-              </div>
-            </div>
-
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={logout}>
-                  <LogOut className="w-4 h-4" />
-                  <span>{t("common.logout")}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            {/* User Dropdown Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors flex items-center gap-3 cursor-pointer shadow-sm">
+                  <Avatar className="w-9 h-9">
+                    <AvatarFallback className="bg-blue-600 text-white text-sm font-semibold">
+                      {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.role}</p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>
+                  <div className="flex items-center gap-3 py-2">
+                    <Avatar className="w-12 h-12">
+                      <AvatarFallback className="bg-blue-600 text-white text-base font-semibold">
+                        {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email || 'user@example.com'}</p>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleMenuItemClick("user-management")}>
+                  <UserCog className="w-4 h-4 mr-2" />
+                  <span>My Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMenuItemClick("activity-log")}>
+                  <Activity className="w-4 h-4 mr-2" />
+                  <span>My Activity</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMenuItemClick("school-settings")}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarFooter>
 
         </Sidebar>

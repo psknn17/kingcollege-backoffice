@@ -549,14 +549,8 @@ export function FamilyGroups() {
                                           <p className="text-xs text-indigo-600 mt-1">{eligibility.reason}</p>
                                         </div>
                                       )
-                                    } else {
-                                      return (
-                                        <div>
-                                          <Badge variant="outline" className="text-gray-500">{t("familyGroups.pending")}</Badge>
-                                          <p className="text-xs text-muted-foreground mt-1">{eligibility.reason}</p>
-                                        </div>
-                                      )
                                     }
+                                    return <span className="text-muted-foreground text-sm">-</span>
                                   })()}
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -595,39 +589,46 @@ export function FamilyGroups() {
                             </div>
                           )}
 
-                          {/* Fee Waiver Summary */}
-                          <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                            <h4 className="font-medium text-indigo-800 mb-2">{t("familyGroups.registrationFeeWaiverProgram")}</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                              {familyStudents.map(student => {
-                                const eligibility = checkFeePrivilegeEligibility(
-                                  student,
-                                  student.academicYear,
-                                  student.enrollmentTerm
-                                )
-                                return (
-                                  <div key={student.id}>
-                                    <p className="text-indigo-700 font-medium">
-                                      {student.firstName} ({t("student.child")} #{student.childOrder})
-                                    </p>
-                                    {eligibility.eligible ? (
-                                      <>
-                                        <p className="font-bold text-indigo-800">
-                                          ฿{eligibility.creditPerTerm?.toLocaleString()}{t("familyGroups.perTerm")}
-                                        </p>
-                                        <p className="text-xs text-indigo-600">{eligibility.reason}</p>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <p className="font-medium text-gray-500">{t("familyGroups.pending")}</p>
-                                        <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
-                                      </>
-                                    )}
+                          {/* Fee Waiver Summary (only show if any student is eligible) */}
+                          {(() => {
+                            const eligibleStudents = familyStudents.filter(student => {
+                              const eligibility = checkFeePrivilegeEligibility(
+                                student,
+                                student.academicYear,
+                                student.enrollmentTerm
+                              )
+                              return eligibility.eligible
+                            })
+
+                            if (eligibleStudents.length > 0) {
+                              return (
+                                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                  <h4 className="font-medium text-indigo-800 mb-2">{t("familyGroups.registrationFeeWaiverProgram")}</h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    {eligibleStudents.map(student => {
+                                      const eligibility = checkFeePrivilegeEligibility(
+                                        student,
+                                        student.academicYear,
+                                        student.enrollmentTerm
+                                      )
+                                      return (
+                                        <div key={student.id}>
+                                          <p className="text-indigo-700 font-medium">
+                                            {student.firstName} ({t("student.child")} #{student.childOrder})
+                                          </p>
+                                          <p className="font-bold text-indigo-800">
+                                            ฿{eligibility.creditPerTerm?.toLocaleString()}{t("familyGroups.perTerm")}
+                                          </p>
+                                          <p className="text-xs text-indigo-600">{eligibility.reason}</p>
+                                        </div>
+                                      )
+                                    })}
                                   </div>
-                                )
-                              })}
-                            </div>
-                          </div>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
                         </div>
                       )}
                     </CardContent>

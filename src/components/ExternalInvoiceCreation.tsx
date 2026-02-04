@@ -561,9 +561,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               {/* Step 1: Client Information */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
-                    1
-                  </div>
+                  <span className="font-semibold text-lg">1</span>
                   <h3 className="font-semibold">Client Information</h3>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-9">
@@ -620,9 +618,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               {/* Step 2: Select Items */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
-                    2
-                  </div>
+                  <span className="font-semibold text-lg">2</span>
                   <h3 className="font-semibold">Select Items</h3>
                 </div>
                 <div className="ml-9 space-y-3">
@@ -796,9 +792,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               {lineItems.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
-                      4
-                    </div>
+                    <span className="font-semibold text-lg">4</span>
                     <h3 className="font-semibold">Payment Due Date</h3>
                   </div>
                   <div className="ml-9">

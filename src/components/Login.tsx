@@ -68,7 +68,6 @@ export function Login() {
             backgroundColor: "white",
             borderRadius: "16px",
             boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
-            border: "1px solid #e5e7eb",
             padding: "48px 40px"
           }}
         >

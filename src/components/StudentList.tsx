@@ -218,7 +218,11 @@ const emptyParent: Omit<Parent, "id"> = {
   isPrimary: false
 }
 
-export function StudentList() {
+interface StudentListProps {
+  onNavigate?: (sectionId: string) => void
+}
+
+export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { t } = useLanguage()
   const { students, families, addStudent, updateStudent, deleteStudent, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
@@ -1112,12 +1116,72 @@ export function StudentList() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.dateOfBirth || undefined}
-                  onSelect={(date) => setFormData(prev => ({ ...prev, dateOfBirth: date || null }))}
-                  initialFocus
-                />
+                {(() => {
+                  const [showYearPicker, setShowYearPicker] = useState(true)
+                  const [selectedYear, setSelectedYear] = useState<number | null>(
+                    formData.dateOfBirth ? formData.dateOfBirth.getFullYear() : null
+                  )
+                  const currentYear = new Date().getFullYear()
+                  const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => currentYear - i)
+
+                  if (showYearPicker) {
+                    return (
+                      <div className="p-4 w-80">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-semibold text-sm">Select Year</h4>
+                          {selectedYear && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowYearPicker(false)}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                          {years.map(year => (
+                            <Button
+                              key={year}
+                              variant={selectedYear === year ? "default" : "outline"}
+                              size="sm"
+                              className="h-10"
+                              onClick={() => {
+                                setSelectedYear(year)
+                                setShowYearPicker(false)
+                              }}
+                            >
+                              {year}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between p-2 border-b">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowYearPicker(true)}
+                          className="text-sm font-medium"
+                        >
+                          {selectedYear || 'Select Year'} <ChevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Calendar
+                        mode="single"
+                        selected={formData.dateOfBirth || undefined}
+                        onSelect={(date) => setFormData(prev => ({ ...prev, dateOfBirth: date || null }))}
+                        defaultMonth={selectedYear ? new Date(selectedYear, 0) : new Date()}
+                        fromYear={1950}
+                        toYear={currentYear}
+                      />
+                    </div>
+                  )
+                })()}
               </PopoverContent>
             </Popover>
           </div>
@@ -1280,23 +1344,13 @@ export function StudentList() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">Child Order</Label>
-                <Select
-                  value={formData.childOrder.toString()}
-                  onValueChange={(value: string) => {
-                    setFormData(prev => ({ ...prev, childOrder: parseInt(value) }))
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1st Child</SelectItem>
-                    <SelectItem value="2">2nd Child</SelectItem>
-                    <SelectItem value="3">3rd Child</SelectItem>
-                    <SelectItem value="4">4th Child</SelectItem>
-                    <SelectItem value="5">5th Child+</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="h-10 px-3 py-2 border rounded-md bg-background text-sm flex items-center font-medium">
+                  {formData.childOrder === 1 ? '1st Child' :
+                   formData.childOrder === 2 ? '2nd Child' :
+                   formData.childOrder === 3 ? '3rd Child' :
+                   formData.childOrder === 4 ? '4th Child' :
+                   '5th Child+'}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">Discount Rate</Label>
@@ -1668,7 +1722,7 @@ export function StudentList() {
                           )
                         }
 
-                        // Fee Waiver
+                        // Fee Waiver (only show if eligible)
                         if (feeWaiver.eligible) {
                           discounts.push(
                             <Badge key="waiver" className="bg-indigo-100 text-indigo-800 text-xs">
@@ -1906,138 +1960,90 @@ export function StudentList() {
                 </div>
               </div>
 
-              {/* Discounts & Registration Fees - Side by Side */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Discounts & Benefits */}
-                <div className="border rounded-lg p-4 bg-green-50/50">
-                  <h4 className="font-medium mb-3 flex items-center gap-2 text-green-800">
-                    <Percent className="w-4 h-4" />
-                    {t("student.discountsBenefits")}
-                  </h4>
-                  <div className="space-y-2">
-                    {/* Sibling Discount */}
-                    {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span>{t("student.siblingDiscount")}</span>
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                          {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm)}%
-                        </Badge>
-                      </div>
-                    )}
-
-                    {/* Student Group Discounts */}
-                    {getStudentGroupDiscounts(selectedStudent.studentId).map((group, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span>{group.name}</span>
-                        <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">
-                          {group.discountType === "percentage" ? `${group.discountPercentage}% ` : `฿${group.fixedAmount.toLocaleString()} `}
-                        </Badge>
-                      </div>
-                    ))}
-
-                    {/* Staff Child Discount */}
-                    {(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) && (
-                      <div className="flex justify-between text-sm">
-                        <span>{t("student.staffChild")}</span>
-                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">50%</Badge>
-                      </div>
-                    )}
-
-                    {/* Scholarship */}
-                    {(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) && (
-                      <div className="flex justify-between text-sm">
-                        <span>{t("student.scholarship")}</span>
-                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("student.yes")}</Badge>
-                      </div>
-                    )}
-
-                    {/* Early Bird */}
-                    {(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
-                      <div className="flex justify-between text-sm">
-                        <span>{t("student.earlyBird")}</span>
-                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">5%</Badge>
-                      </div>
-                    )}
-
-                    {/* Registration Fee Waiver Program */}
-                    {(() => {
-                      const eligibility = checkFeePrivilegeEligibility(
-                        selectedStudent,
-                        selectedStudent.academicYear,
-                        selectedStudent.enrollmentTerm
-                      )
-                      if (eligibility.eligible) {
-                        return (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span>{t("student.registrationFeeWaiver")}</span>
-                              <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">
-                                ฿{eligibility.creditPerTerm?.toLocaleString()}/{t("student.term")}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-indigo-600">{eligibility.reason}</p>
-                          </div>
-                        )
-                      } else if (selectedStudent.childOrder >= 1) {
-                        // Show waiting status for students who might be eligible later
-                        return (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{t("student.registrationFeeWaiver")}</span>
-                              <Badge variant="outline" className="text-gray-500">{t("student.pending")}</Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
-                          </div>
-                        )
-                      }
-                      return null
-                    })()}
-
-                    {/* No discounts message */}
-                    {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) === 0 &&
-                      getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
-                      !(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) &&
-                      !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
-                      !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) &&
-                      !checkFeePrivilegeEligibility(selectedStudent, selectedStudent.academicYear, selectedStudent.enrollmentTerm).eligible && (
-                        <span className="text-sm text-muted-foreground">{t("student.noDiscountsApplied")}</span>
-                      )}
-                  </div>
-                </div>
-
-                {/* Registration Fees */}
-                {(() => {
-                  const fees = getRegistrationFees(selectedStudent.academicYear, selectedStudent.enrollmentTerm)
-                  if (!fees) return null
-                  return (
-                    <div className="border rounded-lg p-4 bg-blue-50/50">
-                      <h4 className="font-medium mb-3 flex items-center gap-2 text-blue-800">
-                        <CreditCard className="w-4 h-4" />
-                        {t("student.registrationFees")}
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t("student.applicationFee")}</span>
-                          <span className="font-medium">฿{fees.applicationFee.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t("student.registrationFee")}</span>
-                          <span className="font-medium">฿{fees.registrationFee.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t("student.securityDeposit")}</span>
-                          <span className="font-medium">฿{fees.securityDeposit.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between border-t pt-2 mt-2">
-                          <span className="font-semibold">{t("student.totalInitialFees")}</span>
-                          <span className="font-bold text-blue-700">
-                            ฿{(fees.applicationFee + fees.registrationFee + fees.securityDeposit).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
+              {/* Discounts & Benefits */}
+              <div className="border rounded-lg p-4 bg-green-50/50">
+                <h4 className="font-medium mb-3 flex items-center gap-2 text-green-800">
+                  <Percent className="w-4 h-4" />
+                  {t("student.discountsBenefits")}
+                </h4>
+                <div className="space-y-2">
+                  {/* Sibling Discount */}
+                  {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>{t("student.siblingDiscount")}</span>
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                        {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm)}%
+                      </Badge>
                     </div>
-                  )
-                })()}
+                  )}
+
+                  {/* Student Group Discounts */}
+                  {getStudentGroupDiscounts(selectedStudent.studentId).map((group, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{group.name}</span>
+                      <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">
+                        {group.discountType === "percentage" ? `${group.discountPercentage}% ` : `฿${group.fixedAmount.toLocaleString()} `}
+                      </Badge>
+                    </div>
+                  ))}
+
+                  {/* Staff Child Discount */}
+                  {(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) && (
+                    <div className="flex justify-between text-sm">
+                      <span>{t("student.staffChild")}</span>
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">50%</Badge>
+                    </div>
+                  )}
+
+                  {/* Scholarship */}
+                  {(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) && (
+                    <div className="flex justify-between text-sm">
+                      <span>{t("student.scholarship")}</span>
+                      <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("student.yes")}</Badge>
+                    </div>
+                  )}
+
+                  {/* Early Bird */}
+                  {(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
+                    <div className="flex justify-between text-sm">
+                      <span>{t("student.earlyBird")}</span>
+                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">5%</Badge>
+                    </div>
+                  )}
+
+                  {/* Registration Fee Waiver (only show if eligible) */}
+                  {(() => {
+                    const eligibility = checkFeePrivilegeEligibility(
+                      selectedStudent,
+                      selectedStudent.academicYear,
+                      selectedStudent.enrollmentTerm
+                    )
+                    if (eligibility.eligible) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span>{t("student.registrationFeeWaiver")}</span>
+                            <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">
+                              ฿{eligibility.creditPerTerm?.toLocaleString()}/{t("student.term")}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-indigo-600">{eligibility.reason}</p>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
+
+                  {/* No discounts message */}
+                  {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) === 0 &&
+                    getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
+                    !(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) &&
+                    !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
+                    !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) &&
+                    !checkFeePrivilegeEligibility(selectedStudent, selectedStudent.academicYear, selectedStudent.enrollmentTerm).eligible && (
+                      <span className="text-sm text-muted-foreground">{t("student.noDiscountsApplied")}</span>
+                    )}
+                </div>
               </div>
 
               {/* Parents */}
