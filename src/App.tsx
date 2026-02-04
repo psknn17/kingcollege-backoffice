@@ -32,6 +32,7 @@ import { useAuth } from "./contexts/AuthContext"
 import { Button } from "./components/ui/button"
 import { Globe } from "lucide-react"
 import { Login } from "./components/Login"
+import { RoleSelection } from "./components/RoleSelection"
 import {
   BarChart3,
   Calendar,
@@ -115,6 +116,7 @@ import { SchoolSettings } from "./components/SchoolSettings"
 
 import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
+import { canAccessSection, getAccessibleMenuItems } from "./utils/rolePermissions"
 
 const menuItems = {
   tuition: [
@@ -173,9 +175,21 @@ const menuItems = {
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage()
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout, needsRoleSelection, selectRole } = useAuth()
   const [activeSection, setActiveSection] = useState("tuition-dashboard")
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
+
+  // Filter menu items based on user role
+  const getFilteredMenuItems = (section: string) => {
+    if (!user?.role) return []
+    return getAccessibleMenuItems(user.role, section, menuItems[section as keyof typeof menuItems] || [])
+  }
+
+  // Check if user can access a section
+  const canAccessMenuSection = (section: string) => {
+    if (!user?.role) return false
+    return canAccessSection(user.role, section)
+  }
   const [subPageParams, setSubPageParams] = useState<any>(null)
 
   // Collapsible menu state - allow multiple groups to be open
@@ -415,8 +429,13 @@ export default function App() {
   }
 
   // Show login page if not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !needsRoleSelection) {
     return <Login />
+  }
+
+  // Show role selection if needed
+  if (needsRoleSelection) {
+    return <RoleSelection onSelectRole={selectRole} />
   }
 
   return (
@@ -440,6 +459,7 @@ export default function App() {
           
           <SidebarContent>
             {/* Tuition Management */}
+            {canAccessMenuSection("tuition") && (
             <Collapsible open={openGroups["tuition"]} onOpenChange={() => toggleGroup("tuition")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -451,7 +471,7 @@ export default function App() {
                 <CollapsibleContent>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {menuItems.tuition.map((item) => (
+                      {getFilteredMenuItems("tuition").map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             onClick={() => handleMenuItemClick(item.id)}
@@ -467,8 +487,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* ECA */}
+            {canAccessMenuSection("eca") && (
             <Collapsible open={openGroups["eca"]} onOpenChange={() => toggleGroup("eca")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -480,7 +502,7 @@ export default function App() {
                 <CollapsibleContent>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {menuItems.eca.map((item) => (
+                      {getFilteredMenuItems("eca").map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             onClick={() => handleMenuItemClick(item.id)}
@@ -496,8 +518,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* Trip & Activity */}
+            {canAccessMenuSection("events") && (
             <Collapsible open={openGroups["tripActivity"]} onOpenChange={() => toggleGroup("tripActivity")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -525,8 +549,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* Exam */}
+            {(user?.role === "Super Admin" || user?.role === "Admin") && (
             <Collapsible open={openGroups["exam"]} onOpenChange={() => toggleGroup("exam")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -554,8 +580,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* School Bus */}
+            {(user?.role === "Super Admin" || user?.role === "Admin") && (
             <Collapsible open={openGroups["schoolBus"]} onOpenChange={() => toggleGroup("schoolBus")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -583,8 +611,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* External Invoice */}
+            {(user?.role === "Super Admin" || user?.role === "Admin" || user?.role === "Accountant") && (
             <Collapsible open={openGroups["externalInvoice"]} onOpenChange={() => toggleGroup("externalInvoice")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -612,8 +642,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* Student Management */}
+            {(user?.role === "Super Admin" || user?.role === "Admin") && (
             <Collapsible open={openGroups["studentManagement"]} onOpenChange={() => toggleGroup("studentManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -641,8 +673,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* User Management */}
+            {canAccessMenuSection("userManagement") && (
             <Collapsible open={openGroups["userManagement"]} onOpenChange={() => toggleGroup("userManagement")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -654,7 +688,7 @@ export default function App() {
                 <CollapsibleContent>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {menuItems.userManagement.map((item) => (
+                      {getFilteredMenuItems("userManagement").map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             onClick={() => handleMenuItemClick(item.id)}
@@ -670,8 +704,10 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
             {/* Settings */}
+            {(user?.role === "Super Admin" || user?.role === "Admin") && (
             <Collapsible open={openGroups["settings"]} onOpenChange={() => toggleGroup("settings")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -699,6 +735,7 @@ export default function App() {
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
+            )}
 
           </SidebarContent>
 

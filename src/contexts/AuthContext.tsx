@@ -11,13 +11,24 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
+  selectRole: (roleId: string) => void
   isAuthenticated: boolean
+  needsRoleSelection: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const STORAGE_KEY = "authUser"
 const USERS_STORAGE_KEY = "users"
+const ROLE_SELECTION_KEY = "needsRoleSelection"
+
+const roleNames: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  accountant: "Accountant",
+  viewer: "Viewer",
+  approver: "Approver"
+}
 
 // Default admin user
 const DEFAULT_ADMIN = {
@@ -30,66 +41,44 @@ const DEFAULT_ADMIN = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false)
 
   // Load user from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
+      const roleSelectionNeeded = localStorage.getItem(ROLE_SELECTION_KEY)
+
       if (stored) {
         const userData = JSON.parse(stored)
         setUser(userData)
+
+        // Check if role selection is needed
+        if (roleSelectionNeeded === "true") {
+          setNeedsRoleSelection(true)
+        }
       }
     } catch (error) {
       console.error("Failed to load user:", error)
       localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(ROLE_SELECTION_KEY)
     }
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Check default admin
-      if (email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password) {
-        const userData: User = {
-          id: DEFAULT_ADMIN.id,
-          email: DEFAULT_ADMIN.email,
-          name: DEFAULT_ADMIN.name,
-          role: DEFAULT_ADMIN.role
-        }
-        setUser(userData)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
-        return true
-      }
-
-      // Check users from User Management
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY)
-      if (storedUsers) {
-        const users = JSON.parse(storedUsers)
-        const foundUser = users.find(
-          (u: any) => u.email === email && u.password === password
-        )
-
-        if (foundUser) {
-          const userData: User = {
-            id: foundUser.id,
-            email: foundUser.email,
-            name: foundUser.name,
-            role: foundUser.role
-          }
-          setUser(userData)
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
-          return true
-        }
-      }
-
-      // Allow any email/password for demo/testing
+      // Create user without role - will select role next
       const userData: User = {
         id: `user-${Date.now()}`,
         email: email,
         name: email.split('@')[0] || 'User',
-        role: 'User'
+        role: '' // Empty until role is selected
       }
+
       setUser(userData)
+      setNeedsRoleSelection(true)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+      localStorage.setItem(ROLE_SELECTION_KEY, "true")
       return true
     } catch (error) {
       console.error("Login error:", error)
@@ -97,15 +86,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem(STORAGE_KEY)
+  const selectRole = (roleId: string) => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        role: roleNames[roleId] || roleId
+      }
+      setUser(updatedUser)
+      setNeedsRoleSelection(false)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser))
+      localStorage.removeItem(ROLE_SELECTION_KEY)
+    }
   }
 
-  const isAuthenticated = user !== null
+  const logout = () => {
+    setUser(null)
+    setNeedsRoleSelection(false)
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(ROLE_SELECTION_KEY)
+  }
+
+  const isAuthenticated = user !== null && !needsRoleSelection
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, selectRole, isAuthenticated, needsRoleSelection }}>
       {children}
     </AuthContext.Provider>
   )

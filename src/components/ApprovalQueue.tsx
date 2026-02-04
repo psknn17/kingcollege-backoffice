@@ -14,6 +14,7 @@ import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { logActivity } from "@/lib/activityLog"
@@ -151,6 +152,7 @@ const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?
 export function ApprovalQueue() {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
+  const { user } = useAuth()
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
     const loaded = loadCreatedInvoicesFromStorage()
     console.log('[ApprovalQueue] Initial invoices:', loaded.length)
@@ -621,6 +623,9 @@ export function ApprovalQueue() {
   const approvedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length
   const rejectedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length
 
+  // Check if user can approve invoices (Super Admin, Admin, or Approver)
+  const canApproveInvoices = user?.role === "Super Admin" || user?.role === "Admin" || user?.role === "Approver"
+
   return (
     <div className="space-y-6">
       <div>
@@ -689,14 +694,16 @@ export function ApprovalQueue() {
         </Card>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Selected {selectedInvoiceIds.size}
+      {canApproveInvoices && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Selected {selectedInvoiceIds.size}
+          </div>
+          <Button size="sm" onClick={approveSelectedInvoices} disabled={selectedInvoiceIds.size === 0}>
+            Approve Selected
+          </Button>
         </div>
-        <Button size="sm" onClick={approveSelectedInvoices} disabled={selectedInvoiceIds.size === 0}>
-          Approve Selected
-        </Button>
-      </div>
+      )}
 
       <Card>
         <CardHeader className="pb-4">
@@ -907,7 +914,7 @@ export function ApprovalQueue() {
                         <Badge className="bg-green-100 text-green-800">Approved</Badge>
                       ) : getApprovalStatus(invoice) === "rejected" ? (
                         <Badge className="bg-red-100 text-red-800">Rejected</Badge>
-                      ) : (
+                      ) : canApproveInvoices ? (
                         <>
                           <Button
                             size="sm"
@@ -928,6 +935,8 @@ export function ApprovalQueue() {
                             <X className="w-4 h-4" />
                           </Button>
                         </>
+                      ) : (
+                        <Badge className="bg-yellow-100 text-yellow-800">Wait</Badge>
                       )}
                     </div>
                   </TableCell>
