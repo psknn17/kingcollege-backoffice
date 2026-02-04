@@ -41,25 +41,13 @@ export function Login() {
           width: "50%",
           height: "100%",
           position: "relative",
-          backgroundImage: `url(${SchoolBg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center"
+          backgroundImage: `url(${SchoolLogo})`,
+          backgroundSize: "contain",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundColor: "#f8f9fa"
         }}
       >
-        {/* Logo - Top Left */}
-        <div style={{ position: "absolute", top: "24px", left: "24px" }}>
-          <div style={{ backgroundColor: "white", borderRadius: "12px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "56px", width: "auto" }} />
-          </div>
-        </div>
-
-        {/* Content - Bottom Left */}
-        <div style={{ position: "absolute", bottom: "32px", left: "24px", right: "24px", color: "white" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>Finance Backoffice</h2>
-          <p style={{ fontSize: "14px", marginBottom: "4px" }}>Invoice & Accounting Management System</p>
-          <p style={{ fontSize: "12px", marginBottom: "16px" }}>Secure authentication powered by your school</p>
-          <p style={{ fontSize: "12px", opacity: 0.7 }}>© 2024 Schooney Educational System</p>
-        </div>
       </div>
 
       {/* Right Side - Login Form */}
@@ -86,7 +74,7 @@ export function Login() {
         >
           {/* Logo */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "32px" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "64px", width: "auto" }} />
+            <img src={SchoolLogo} alt="King's College" style={{ height: "120px", width: "auto" }} />
           </div>
 
           {/* Header */}
@@ -144,6 +132,14 @@ export function Login() {
               Sign up here
             </a>
           </p>
+
+          {/* Info Text */}
+          <div style={{ marginTop: "32px", textAlign: "center", color: "#6b7280", paddingTop: "32px" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", color: "#111827" }}>Finance Backoffice</h2>
+            <p style={{ fontSize: "13px", marginBottom: "4px" }}>Invoice & Accounting Management System</p>
+            <p style={{ fontSize: "12px", marginBottom: "16px" }}>Secure authentication powered by your school</p>
+            <p style={{ fontSize: "11px", opacity: 0.7 }}>© 2024 Schooney Educational System</p>
+          </div>
         </div>
       </div>
     </div>

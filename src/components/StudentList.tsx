@@ -1421,10 +1421,6 @@ export function StudentList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleOpenPromoteDialog}>
-            <ArrowUpCircle className="w-4 h-4 mr-2" />
-            {t("student.promoteGrade")}
-          </Button>
           <Button variant="outline" onClick={handleImport}>
             <Upload className="w-4 h-4 mr-2" />
             {t("common.import")}
