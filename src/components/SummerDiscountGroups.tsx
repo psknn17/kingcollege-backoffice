@@ -186,6 +186,7 @@ export function SummerDiscountGroups() {
   }
 
   const handleEditGroup = (group: DiscountGroup) => {
+    if (!userCanEdit) return // Prevent editing for viewers
     setEditingGroup(group)
     setGroupForm({
       name: group.name,
@@ -199,6 +200,7 @@ export function SummerDiscountGroups() {
   }
 
   const handleDeleteGroup = (groupId: string) => {
+    if (!userCanEdit) return // Prevent deleting for viewers
     const updatedGroups = groups.filter(g => g.id !== groupId)
     setGroups(updatedGroups)
     saveGroupsToStorage(updatedGroups)
@@ -285,7 +287,10 @@ export function SummerDiscountGroups() {
           <h3 className="font-medium">{t("menu.discountGroups")}</h3>
         </div>
 
-        <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+        <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {
+          if (!userCanEdit && open) return // Prevent opening dialog for viewers
+          setIsGroupDialogOpen(open)
+        }}>
           <DialogTrigger asChild>
             <Button onClick={() => resetGroupForm()} disabled={!userCanEdit}>
               <Plus className="w-4 h-4 mr-2" />

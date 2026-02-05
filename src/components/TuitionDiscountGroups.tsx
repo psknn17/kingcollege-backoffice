@@ -191,6 +191,7 @@ export function TuitionDiscountGroups() {
 
   // Handle edit
   const handleEdit = (group: DiscountGroup) => {
+    if (!userCanEdit) return // Prevent editing for viewers
     setEditingGroup(group)
     setFormData({
       name: group.name,
@@ -205,11 +206,13 @@ export function TuitionDiscountGroups() {
 
   // Handle delete
   const handleDelete = (groupId: string) => {
+    if (!userCanEdit) return // Prevent deleting for viewers
     setGroupToDelete(groupId)
     setDeleteDialogOpen(true)
   }
 
   const confirmDelete = () => {
+    if (!userCanEdit) return // Prevent deleting for viewers
     if (groupToDelete) {
       const updatedGroups = groups.filter(g => g.id !== groupToDelete)
       setGroups(updatedGroups)
@@ -260,6 +263,7 @@ export function TuitionDiscountGroups() {
           <h1 className="text-xl font-semibold">{t("menu.studentGroups")}</h1>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          if (!userCanEdit && open) return // Prevent opening dialog for viewers
           setIsDialogOpen(open)
           if (!open) resetForm()
         }}>
