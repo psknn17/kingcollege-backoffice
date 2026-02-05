@@ -3,22 +3,22 @@
 export const rolePermissions = {
   super_admin: {
     name: "Super Admin",
-    sections: ["tuition", "eca", "events", "summer", "discount", "userManagement"],
+    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
   admin: {
     name: "Admin",
-    sections: ["tuition", "eca", "events", "summer", "discount"],
+    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
     menuItems: [] // All items except userManagement section
   },
   accountant: {
     name: "Accountant",
-    sections: ["tuition", "eca", "events", "summer", "discount"],
+    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
   viewer: {
     name: "Viewer",
-    sections: ["tuition", "eca", "events", "summer", "discount"],
+    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
     menuItems: [] // Can view all menus (read-only access)
   },
   approver: {
