@@ -15,6 +15,8 @@ import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface PaymentDeadline {
   id: number
@@ -78,6 +80,8 @@ const mockDeadlines: PaymentDeadline[] = [
 export function EventPaymentDeadline() {
   const { t, language } = useLanguage()
   const locale = language === "th" ? th : enUS
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const [deadlines, setDeadlines] = useState<PaymentDeadline[]>(mockDeadlines)
   const [selectedEvent, setSelectedEvent] = useState("")
   const [selectedDate, setSelectedDate] = useState<Date>()
@@ -236,7 +240,7 @@ export function EventPaymentDeadline() {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
+            <Button onClick={() => resetForm()} disabled={!userCanEdit}>
               <Plus className="w-4 h-4 mr-2" />
               {t("eventPayment.addDeadline")}
             </Button>
@@ -253,8 +257,8 @@ export function EventPaymentDeadline() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="event-select">{t("eventPayment.event")}</Label>
-                <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-                  <SelectTrigger>
+                <Select value={selectedEvent} onValueChange={setSelectedEvent} disabled={!userCanEdit}>
+                  <SelectTrigger disabled={!userCanEdit}>
                     <SelectValue placeholder={t("eventPayment.selectEvent")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -271,7 +275,7 @@ export function EventPaymentDeadline() {
                 <Label>{t("eventPayment.paymentDeadline")}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start" disabled={!userCanEdit}>
                       <CalendarDays className="w-4 h-4 mr-2" />
                       {selectedDate ? format(selectedDate, "PPP", { locale }) : t("eventPayment.selectDate")}
                     </Button>
@@ -282,6 +286,7 @@ export function EventPaymentDeadline() {
                       selected={selectedDate}
                       onSelect={setSelectedDate}
                       initialFocus
+                      disabled={!userCanEdit}
                     />
                   </PopoverContent>
                 </Popover>
@@ -294,6 +299,7 @@ export function EventPaymentDeadline() {
                   value={reminderDays}
                   onChange={(e) => setReminderDays(e.target.value)}
                   placeholder={t("eventPayment.reminderDaysPlaceholder")}
+                  disabled={!userCanEdit}
                 />
                 <p className="text-xs text-muted-foreground">
                   {t("eventPayment.reminderDaysHint")}
@@ -304,7 +310,7 @@ export function EventPaymentDeadline() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   {t("common.cancel")}
                 </Button>
-                <Button onClick={handleSaveDeadline}>
+                <Button onClick={handleSaveDeadline} disabled={!userCanEdit}>
                   {editingDeadline ? t("eventPayment.updateDeadline") : t("eventPayment.createDeadline")}
                 </Button>
               </div>
@@ -379,6 +385,7 @@ export function EventPaymentDeadline() {
                         checked={deadline.isActive}
                         onCheckedChange={() => toggleActiveStatus(deadline.id)}
                         size="sm"
+                        disabled={!userCanEdit}
                       />
                       <span className="text-xs text-muted-foreground">
                         {deadline.isActive ? t("common.active") : t("common.inactive")}
@@ -402,7 +409,7 @@ export function EventPaymentDeadline() {
                     variant="outline"
                     size="sm"
                     onClick={() => openReminderDialog(deadline)}
-                    disabled={!deadline.isActive}
+                    disabled={!deadline.isActive || !userCanEdit}
                   >
                     <Send className="w-4 h-4 mr-1" />
                     {t("eventPayment.sendReminder")}
@@ -411,6 +418,7 @@ export function EventPaymentDeadline() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleEdit(deadline)}
+                    disabled={!userCanEdit}
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
@@ -418,6 +426,7 @@ export function EventPaymentDeadline() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDelete(deadline.id)}
+                    disabled={!userCanEdit}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -482,8 +491,9 @@ export function EventPaymentDeadline() {
                       setCustomMessage(getDefaultReminderMessage(value, currentDeadlineForReminder))
                     }
                   }}
+                  disabled={!userCanEdit}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger disabled={!userCanEdit}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,8 +507,8 @@ export function EventPaymentDeadline() {
 
               <div className="space-y-2">
                 <Label htmlFor="reminder-schedule">{t("eventPayment.schedule")}</Label>
-                <Select value={reminderSchedule} onValueChange={setReminderSchedule}>
-                  <SelectTrigger>
+                <Select value={reminderSchedule} onValueChange={setReminderSchedule} disabled={!userCanEdit}>
+                  <SelectTrigger disabled={!userCanEdit}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -513,8 +523,8 @@ export function EventPaymentDeadline() {
 
             <div className="space-y-2">
               <Label htmlFor="recipients">{t("eventPayment.recipients")}</Label>
-              <Select value={selectedRecipients} onValueChange={setSelectedRecipients}>
-                <SelectTrigger>
+              <Select value={selectedRecipients} onValueChange={setSelectedRecipients} disabled={!userCanEdit}>
+                <SelectTrigger disabled={!userCanEdit}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -535,6 +545,7 @@ export function EventPaymentDeadline() {
                 placeholder={t("eventPayment.messagePlaceholder")}
                 rows={8}
                 className="resize-none"
+                disabled={!userCanEdit}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{t("eventPayment.characters")}: {customMessage.length}</span>
@@ -581,7 +592,7 @@ export function EventPaymentDeadline() {
               </Button>
               <Button
                 onClick={sendReminder}
-                disabled={!customMessage.trim()}
+                disabled={!customMessage.trim() || !userCanEdit}
               >
                 <Send className="w-4 h-4 mr-2" />
                 {reminderSchedule === 'immediate' ? t("eventPayment.sendNow") : t("eventPayment.scheduleReminder")}

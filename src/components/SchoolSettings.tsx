@@ -5,6 +5,8 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import { School, Upload, Save, MapPin, Phone, Mail, Globe, Building2, CreditCard } from "lucide-react"
 
 interface SchoolInfo {
@@ -74,6 +76,8 @@ const saveSettings = (settings: SchoolInfo) => {
 }
 
 export function SchoolSettings() {
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const [formData, setFormData] = useState<SchoolInfo>(loadSettings())
   const [isSaving, setIsSaving] = useState(false)
 
@@ -113,7 +117,7 @@ export function SchoolSettings() {
             <p className="text-sm text-muted-foreground">Manage school information and system settings</p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={!userCanEdit || isSaving}>
           <Save className="w-4 h-4 mr-2" />
           Save Changes
         </Button>
@@ -166,6 +170,7 @@ export function SchoolSettings() {
                 value={formData.schoolName}
                 onChange={(e) => setFormData(prev => ({ ...prev, schoolName: e.target.value }))}
                 placeholder="School name in English"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -174,6 +179,7 @@ export function SchoolSettings() {
                 value={formData.schoolNameThai}
                 onChange={(e) => setFormData(prev => ({ ...prev, schoolNameThai: e.target.value }))}
                 placeholder="ชื่อโรงเรียนภาษาไทย"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -188,6 +194,7 @@ export function SchoolSettings() {
               onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
               placeholder="School address in English"
               rows={2}
+              disabled={!userCanEdit}
             />
           </div>
 
@@ -201,6 +208,7 @@ export function SchoolSettings() {
               onChange={(e) => setFormData(prev => ({ ...prev, addressThai: e.target.value }))}
               placeholder="ที่อยู่โรงเรียนภาษาไทย"
               rows={2}
+              disabled={!userCanEdit}
             />
           </div>
 
@@ -214,6 +222,7 @@ export function SchoolSettings() {
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="02-xxx-xxxx"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -222,6 +231,7 @@ export function SchoolSettings() {
                 value={formData.taxId}
                 onChange={(e) => setFormData(prev => ({ ...prev, taxId: e.target.value }))}
                 placeholder="0-xxxx-xxxxx-xx-x"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -237,6 +247,7 @@ export function SchoolSettings() {
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="info@school.com"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -248,6 +259,7 @@ export function SchoolSettings() {
                 value={formData.website}
                 onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
                 placeholder="www.school.com"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -271,6 +283,7 @@ export function SchoolSettings() {
                 value={formData.bankName}
                 onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
                 placeholder="e.g., Kasikorn Bank"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -279,6 +292,7 @@ export function SchoolSettings() {
                 value={formData.bankBranch}
                 onChange={(e) => setFormData(prev => ({ ...prev, bankBranch: e.target.value }))}
                 placeholder="e.g., Sathu Pradit"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -289,6 +303,7 @@ export function SchoolSettings() {
               value={formData.bankAccountName}
               onChange={(e) => setFormData(prev => ({ ...prev, bankAccountName: e.target.value }))}
               placeholder="Account holder name"
+              disabled={!userCanEdit}
             />
           </div>
 
@@ -299,6 +314,7 @@ export function SchoolSettings() {
                 value={formData.bankAccountNumber}
                 onChange={(e) => setFormData(prev => ({ ...prev, bankAccountNumber: e.target.value }))}
                 placeholder="xxx-x-xxxxx-x"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -307,6 +323,7 @@ export function SchoolSettings() {
                 value={formData.swiftCode}
                 onChange={(e) => setFormData(prev => ({ ...prev, swiftCode: e.target.value }))}
                 placeholder="e.g., KASITHBK"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -330,6 +347,7 @@ export function SchoolSettings() {
                 value={formData.contactPersonName}
                 onChange={(e) => setFormData(prev => ({ ...prev, contactPersonName: e.target.value }))}
                 placeholder="Full name"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -338,6 +356,7 @@ export function SchoolSettings() {
                 value={formData.contactPersonPosition}
                 onChange={(e) => setFormData(prev => ({ ...prev, contactPersonPosition: e.target.value }))}
                 placeholder="e.g., School Director"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -349,6 +368,7 @@ export function SchoolSettings() {
                 value={formData.contactPersonPhone}
                 onChange={(e) => setFormData(prev => ({ ...prev, contactPersonPhone: e.target.value }))}
                 placeholder="02-xxx-xxxx"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -358,6 +378,7 @@ export function SchoolSettings() {
                 value={formData.contactPersonEmail}
                 onChange={(e) => setFormData(prev => ({ ...prev, contactPersonEmail: e.target.value }))}
                 placeholder="contact@school.com"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -366,7 +387,7 @@ export function SchoolSettings() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving} size="lg">
+        <Button onClick={handleSave} disabled={!userCanEdit || isSaving} size="lg">
           <Save className="w-4 h-4 mr-2" />
           Save Changes
         </Button>

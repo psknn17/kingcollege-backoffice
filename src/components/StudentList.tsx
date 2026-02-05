@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { SearchInput } from "./ui/advanced-filter"
 import { EmptySearchResults, EmptyDataState } from "./ui/states"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import {
   Search,
   Plus,
@@ -227,6 +229,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { students, families, addStudent, updateStudent, deleteStudent, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
   const { getSiblingDiscountPercentage } = useDiscountOptions()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   const [searchTerm, setSearchTerm] = useState("")
   const [filterGrade, setFilterGrade] = useState<string>("all")
@@ -1058,6 +1062,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               value={formData.studentId}
               onChange={(e) => setFormData(prev => ({ ...prev, studentId: e.target.value }))}
               placeholder="KC2024001"
+              disabled={!userCanEdit}
             />
           </div>
           <div className="space-y-2">
@@ -1065,6 +1070,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Select
               value={formData.gender}
               onValueChange={(value: "male" | "female" | "other") => setFormData(prev => ({ ...prev, gender: value }))}
+              disabled={!userCanEdit}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -1085,6 +1091,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               value={formData.firstName}
               onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
               placeholder="Enter first name"
+              disabled={!userCanEdit}
             />
           </div>
           <div className="space-y-2">
@@ -1093,6 +1100,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               value={formData.lastName}
               onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
               placeholder="Enter last name"
+              disabled={!userCanEdit}
             />
           </div>
         </div>
@@ -1104,6 +1112,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               value={formData.nickname}
               onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
               placeholder="Enter nickname"
+              disabled={!userCanEdit}
             />
           </div>
           <div className="space-y-2">
@@ -1193,6 +1202,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             value={formData.notes}
             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             placeholder="Additional notes"
+            disabled={!userCanEdit}
           />
         </div>
       </TabsContent>
@@ -1205,6 +1215,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Select
               value={formData.gradeLevel}
               onValueChange={(value) => setFormData(prev => ({ ...prev, gradeLevel: value }))}
+              disabled={!userCanEdit}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select grade" />
@@ -1223,6 +1234,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Select
               value={formData.academicYear}
               onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
+              disabled={!userCanEdit}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select year" />
@@ -1244,6 +1256,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Select
               value={formData.enrollmentTerm}
               onValueChange={(value: "term1" | "term2" | "term3") => setFormData(prev => ({ ...prev, enrollmentTerm: value }))}
+              disabled={!userCanEdit}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select term" />
@@ -1262,6 +1275,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Select
               value={formData.status}
               onValueChange={(value: "active" | "graduated" | "withdrawn" | "on_leave") => setFormData(prev => ({ ...prev, status: value }))}
+              disabled={!userCanEdit}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -1282,7 +1296,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Label>Enrollment Date</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!userCanEdit}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.enrollmentDate ? format(formData.enrollmentDate, "PPP") : "Pick a date"}
                 </Button>
@@ -1293,6 +1307,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   selected={formData.enrollmentDate || undefined}
                   onSelect={(date) => setFormData(prev => ({ ...prev, enrollmentDate: date || null }))}
                   initialFocus
+                  disabled={!userCanEdit}
                 />
               </PopoverContent>
             </Popover>
@@ -1317,6 +1332,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   }))
                 }
               }}
+              disabled={!userCanEdit}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select family" />
@@ -1391,6 +1407,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                       size="icon"
                       className="text-destructive"
                       onClick={() => handleRemoveParent(parent.id)}
+                      disabled={!userCanEdit}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -1411,6 +1428,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 value={newParent.name}
                 onChange={(e) => setNewParent(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Full name"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -1418,6 +1436,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               <Select
                 value={newParent.relationship}
                 onValueChange={(value: "father" | "mother" | "guardian" | "other") => setNewParent(prev => ({ ...prev, relationship: value }))}
+                disabled={!userCanEdit}
               >
                 <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
                   <SelectValue />
@@ -1438,6 +1457,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 value={newParent.phone}
                 onChange={(e) => setNewParent(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="081-234-5678"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -1447,6 +1467,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 value={newParent.email}
                 onChange={(e) => setNewParent(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="email@example.com"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -1454,7 +1475,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             type="button"
             variant="outline"
             onClick={handleAddParent}
-            disabled={!newParent.name || !newParent.phone}
+            disabled={!userCanEdit || !newParent.name || !newParent.phone}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Parent
@@ -1475,7 +1496,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleImport}>
+          <Button variant="outline" onClick={handleImport} disabled={!userCanEdit}>
             <Upload className="w-4 h-4 mr-2" />
             {t("common.import")}
           </Button>
@@ -1483,7 +1504,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Download className="w-4 h-4 mr-2" />
             {t("common.export")}
           </Button>
-          <Button onClick={handleAddStudent}>
+          <Button onClick={handleAddStudent} disabled={!userCanEdit}>
             <Plus className="w-4 h-4 mr-2" />
             {t("student.addStudent")}
           </Button>
@@ -1790,10 +1811,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         <Button variant="ghost" size="icon" onClick={() => handleViewStudent(student)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditStudent(student)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditStudent(student)} disabled={!userCanEdit}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteStudent(student)}>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteStudent(student)} disabled={!userCanEdit}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -1888,7 +1909,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveNewStudent} disabled={!formData.firstName || !formData.lastName || !formData.gradeLevel}>
+            <Button onClick={handleSaveNewStudent} disabled={!userCanEdit || !formData.firstName || !formData.lastName || !formData.gradeLevel}>
               Add Student
             </Button>
           </DialogFooter>
@@ -1906,7 +1927,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEditStudent}>
+            <Button onClick={handleSaveEditStudent} disabled={!userCanEdit}>
               Save Changes
             </Button>
           </DialogFooter>
@@ -2108,7 +2129,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Button onClick={() => {
               setIsViewDialogOpen(false)
               if (selectedStudent) handleEditStudent(selectedStudent)
-            }}>
+            }} disabled={!userCanEdit}>
               <Edit className="w-4 h-4 mr-2" />
               {t("common.edit")}
             </Button>
@@ -2132,7 +2153,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={!userCanEdit}>
               Delete
             </Button>
           </DialogFooter>
@@ -2171,6 +2192,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 accept=".csv"
                 onChange={handleFileUpload}
                 className="cursor-pointer"
+                disabled={!userCanEdit}
               />
             </div>
 
@@ -2228,7 +2250,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Button>
             <Button
               onClick={handleConfirmImport}
-              disabled={importPreview.length === 0 || !!importError}
+              disabled={!userCanEdit || importPreview.length === 0 || !!importError}
             >
               <Upload className="w-4 h-4 mr-2" />
               Import {importPreview.length > 0 ? `${importPreview.length} Students` : ""}
@@ -2256,7 +2278,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>From Academic Year</Label>
-                <Select value={promoteFromYear} onValueChange={(year: string) => setPromoteFromYear(year)}>
+                <Select value={promoteFromYear} onValueChange={(year: string) => setPromoteFromYear(year)} disabled={!userCanEdit}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
@@ -2271,7 +2293,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               </div>
               <div className="space-y-2">
                 <Label>To Academic Year</Label>
-                <Select value={promoteToYear} onValueChange={setPromoteToYear}>
+                <Select value={promoteToYear} onValueChange={setPromoteToYear} disabled={!userCanEdit}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
@@ -2308,10 +2330,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     Select Students ({totalStudentsToPromote} selected)
                   </Label>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={selectAllStudents}>
+                    <Button variant="outline" size="sm" onClick={selectAllStudents} disabled={!userCanEdit}>
                       Select All
                     </Button>
-                    <Button variant="outline" size="sm" onClick={deselectAllStudents}>
+                    <Button variant="outline" size="sm" onClick={deselectAllStudents} disabled={!userCanEdit}>
                       Deselect All
                     </Button>
                   </div>
@@ -2344,6 +2366,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                               }
                             }}
                             onCheckedChange={() => toggleGradeSelection(row.currentGradeId)}
+                            disabled={!userCanEdit}
                           />
                         </div>
 
@@ -2378,6 +2401,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                               <Checkbox
                                 checked={selectedStudentIds.has(student.id)}
                                 onCheckedChange={() => toggleStudentSelection(student.id)}
+                                disabled={!userCanEdit}
                               />
                               <div className="flex-1">
                                 <span className="text-sm">
@@ -2427,6 +2451,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   id="confirm-promote"
                   checked={promoteConfirmed}
                   onCheckedChange={(checked) => setPromoteConfirmed(checked === true)}
+                  disabled={!userCanEdit}
                 />
                 <div className="space-y-1">
                   <label
@@ -2450,7 +2475,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Button>
             <Button
               onClick={handleConfirmPromotion}
-              disabled={totalStudentsToPromote === 0 || !promoteConfirmed || !promoteToYear}
+              disabled={!userCanEdit || totalStudentsToPromote === 0 || !promoteConfirmed || !promoteToYear}
               className="gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />

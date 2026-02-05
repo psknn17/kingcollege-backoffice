@@ -12,6 +12,8 @@ import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookm
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface Item {
   id: string
@@ -1941,6 +1943,8 @@ interface ItemManagementProps {
 
 export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceType = "student" }: ItemManagementProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const isExternalView = invoiceType === "external"
   const isCategoryView = ["afterschool", "event", "summer", "eca", "trip", "exam", "bus"].includes(invoiceType)
   const isSimplifiedView = isExternalView || isCategoryView
@@ -2400,6 +2404,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               <div className="flex gap-2">
                 <Button
                   variant="outline"
+                  disabled={!userCanEdit}
                   onClick={() => {
                     const input = document.createElement('input')
                     input.type = 'file'
@@ -2416,7 +2421,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   <Upload className="w-4 h-4 mr-2" />
                   Import
                 </Button>
-                <Button onClick={openCreateItemModal}>
+                <Button disabled={!userCanEdit} onClick={openCreateItemModal}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Item
                 </Button>
@@ -2432,9 +2437,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   value={searchItemTerm}
                   onChange={(e) => setSearchItemTerm(e.target.value)}
                   className=""
+                  disabled={!userCanEdit}
                 />
               </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={!userCanEdit}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
@@ -2526,6 +2532,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={!userCanEdit}
                             onClick={() => openEditItemModal(item)}
                             title="Edit Item"
                           >
@@ -2534,6 +2541,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={!userCanEdit}
                             onClick={() => handleDeleteItem(item.id)}
                             title="Delete Item"
                           >
@@ -2559,7 +2567,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <CardTitle>{isExternalView ? "External Templates" : isSimplifiedView ? "Activity Templates" : "Manage Templates"}</CardTitle>
                 <p className="text-muted-foreground">{isSimplifiedView ? "Create shortcuts for commonly used activity item combinations" : "Create shortcuts for commonly used item combinations"}</p>
               </div>
-              <Button onClick={openCreateTemplateModal}>
+              <Button disabled={!userCanEdit} onClick={openCreateTemplateModal}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Template
               </Button>
@@ -2574,6 +2582,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   value={searchTemplateTerm}
                   onChange={(e) => setSearchTemplateTerm(e.target.value)}
                   className=""
+                  disabled={!userCanEdit}
                 />
               </div>
             </div>
@@ -2600,6 +2609,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={!userCanEdit}
                           onClick={() => openEditTemplateModal(template)}
                           title="Edit Template"
                         >
@@ -2608,6 +2618,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={!userCanEdit}
                           onClick={() => handleDeleteTemplate(template.id)}
                           title="Delete Template"
                         >

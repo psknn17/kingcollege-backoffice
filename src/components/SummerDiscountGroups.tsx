@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Switch } from "./ui/switch"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import {
   Plus,
   Edit,
@@ -89,6 +91,8 @@ const saveGroupsToStorage = (groups: DiscountGroup[]) => {
 export function SummerDiscountGroups() {
   const { t } = useLanguage()
   const { students: contextStudents } = useStudents()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Convert students from context to local format
   const availableStudents = useMemo(() =>
@@ -283,7 +287,7 @@ export function SummerDiscountGroups() {
 
         <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => resetGroupForm()}>
+            <Button onClick={() => resetGroupForm()} disabled={!userCanEdit}>
               <Plus className="w-4 h-4 mr-2" />
               Create Student Group
             </Button>
@@ -303,6 +307,7 @@ export function SummerDiscountGroups() {
                   value={groupForm.name}
                   onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
                   placeholder="Year 7 Excellence Group"
+                  disabled={!userCanEdit}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -311,8 +316,9 @@ export function SummerDiscountGroups() {
                   <Select
                     value={groupForm.discountType}
                     onValueChange={(value: "percentage" | "fixed") => setGroupForm({...groupForm, discountType: value})}
+                    disabled={!userCanEdit}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger disabled={!userCanEdit}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -332,6 +338,7 @@ export function SummerDiscountGroups() {
                       placeholder="15"
                       min="0"
                       max="100"
+                      disabled={!userCanEdit}
                     />
                   </div>
                 ) : (
@@ -344,6 +351,7 @@ export function SummerDiscountGroups() {
                       onChange={(e) => setGroupForm({...groupForm, fixedAmount: Number(e.target.value)})}
                       placeholder="1000"
                       min="0"
+                      disabled={!userCanEdit}
                     />
                   </div>
                 )}
@@ -375,6 +383,7 @@ export function SummerDiscountGroups() {
                             onChange={(e) => setStudentInput(e.target.value)}
                             placeholder="Search by ID or Name (e.g., KC2024001)"
                             className=""
+                            disabled={!userCanEdit}
                           />
                         </div>
                         {/* Search Results Dropdown */}
@@ -434,6 +443,7 @@ export function SummerDiscountGroups() {
                           variant="outline"
                           size="sm"
                           onClick={() => document.getElementById('csv-file-input')?.click()}
+                          disabled={!userCanEdit}
                         >
                           <FileText className="w-4 h-4 mr-2" />
                           Choose File
@@ -444,6 +454,7 @@ export function SummerDiscountGroups() {
                           accept=".csv"
                           className="hidden"
                           onChange={handleFileUpload}
+                          disabled={!userCanEdit}
                         />
                       </div>
 
@@ -508,6 +519,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         variant="outline"
                         size="sm"
                         onClick={() => setGroupForm(prev => ({ ...prev, selectedStudents: [] }))}
+                        disabled={!userCanEdit}
                       >
                         Clear All
                       </Button>
@@ -531,6 +543,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                 <Switch
                                   checked={student.isActive !== false}
                                   onCheckedChange={() => toggleStudentStatus(student.id)}
+                                  disabled={!userCanEdit}
                                 />
                                 <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
                                   {student.isActive === false ? 'Inactive' : 'Active'}
@@ -540,6 +553,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                 type="button"
                                 onClick={() => removeStudentFromGroup(student.id)}
                                 className="text-red-600 hover:text-red-800 p-1"
+                                disabled={!userCanEdit}
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -556,7 +570,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveGroup}>
+                <Button onClick={handleSaveGroup} disabled={!userCanEdit}>
                   {editingGroup ? "Update Group" : "Create Group"}
                 </Button>
               </div>
@@ -605,13 +619,14 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     <Eye className="w-4 h-4 mr-1" />
                     View All
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleEditGroup(group)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleEditGroup(group)} disabled={!userCanEdit}>
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setDeleteGroupId(group.id)}
+                    disabled={!userCanEdit}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
@@ -673,7 +688,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteGroupId && handleDeleteGroup(deleteGroupId)}>
+            <AlertDialogAction onClick={() => deleteGroupId && handleDeleteGroup(deleteGroupId)} disabled={!userCanEdit}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

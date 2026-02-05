@@ -15,9 +15,11 @@ import { SearchInput } from "./ui/advanced-filter"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
-import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X } from "lucide-react"
-import { ViewModal } from "./ViewModal"
+import { canPerformActions } from "@/utils/rolePermissions"
+import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
+import { formatCurrency, numberToWords, getAcademicYear } from "@/lib/invoiceUtils"
+import SchoolLogo from "@/assets/Logo.png"
 
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
@@ -175,8 +177,8 @@ export function ApprovalQueue() {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [viewModalData, setViewModalData] = useState<any>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
   const [sortKey, setSortKey] = useState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "issueDate" | "dueDate" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -454,39 +456,29 @@ export function ApprovalQueue() {
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
 
-  const openViewModal = (invoice: Invoice) => {
-    const modalData = {
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      studentName: invoice.studentName,
-      studentId: invoice.studentId,
-      grade: invoice.studentGrade,
-      parentEmail: invoice.parentEmail,
-      amount: invoice.finalAmount,
-      total: invoice.finalAmount,
-      status: invoice.status,
-      issueDate: invoice.issueDate.toISOString(),
-      dueDate: invoice.dueDate.toISOString(),
-      category: "Invoice",
-      academicYear: invoice.academicYear || "",
-      items: invoice.items.map(item => ({
-        name: item.description,
-        description: item.description,
-        amount: item.discountedAmount,
-        quantity: 1
-      })),
-      student: {
-        name: invoice.studentName,
-        id: invoice.studentId,
-        grade: invoice.studentGrade,
-        parentEmail: invoice.parentEmail,
-        parentName: invoice.parentName
-      }
-    }
-
-    setViewModalData(modalData)
-    setIsViewModalOpen(true)
+  const openInvoiceDetail = (invoice: Invoice) => {
+    setSelectedInvoice(invoice)
+    setIsModalOpen(true)
   }
+
+  const closeInvoiceModal = () => {
+    setSelectedInvoice(null)
+    setIsModalOpen(false)
+  }
+
+  const downloadSingleInvoicePDF = async (invoice: Invoice) => {
+    setIsDownloadingPDF(true)
+    try {
+      toast.success(`Downloading invoice ${invoice.invoiceNumber}...`)
+      // Implement PDF download logic here
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    } catch (error) {
+      toast.error("Failed to download PDF")
+    } finally {
+      setIsDownloadingPDF(false)
+    }
+  }
+
 
   const approveSelectedInvoices = () => {
     if (selectedInvoiceIds.size === 0) {
@@ -623,8 +615,8 @@ export function ApprovalQueue() {
   const approvedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length
   const rejectedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length
 
-  // Check if user can approve invoices (Super Admin, Admin, or Approver)
-  const canApproveInvoices = user?.role === "Super Admin" || user?.role === "Admin" || user?.role === "Approver"
+  // Check if user can approve invoices (not viewer role)
+  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "Super Admin" || user?.role === "Admin" || user?.role === "Approver")
 
   return (
     <div className="space-y-6">
@@ -903,7 +895,7 @@ export function ApprovalQueue() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => openViewModal(invoice)}
+                        onClick={() => openInvoiceDetail(invoice)}
                         title="View"
                       >
                         <Eye className="w-4 h-4" />
@@ -999,13 +991,209 @@ export function ApprovalQueue() {
         </DialogContent>
       </Dialog>
 
-      <ViewModal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        type="invoice"
-        data={viewModalData}
-        previewOnly
-      />
+      {/* Invoice Detail Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] p-0 flex flex-col">
+          {selectedInvoice && (
+            <div className="flex flex-col h-full">
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 bg-white">
+                {/* School Header */}
+                <div className="text-center pt-6 pb-4 border-b">
+                  <img
+                    src={SchoolLogo}
+                    alt="King's College International School Bangkok"
+                    style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
+                  />
+                  <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
+                  <p className="text-xs text-gray-500 mt-1">727 Ratchadapisek Road, Bang Phongphang, Yannawa, Bangkok 10120, Thailand</p>
+                  <p className="text-xs text-gray-500">+66 (0) 2481 9955, finance@kingsbangkok.ac.th, www.kingsbangkok.ac.th</p>
+                </div>
+
+                {/* Invoice Title */}
+                <div className="text-center py-4">
+                  <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
+                  <Badge variant="outline" className="mt-2">
+                    <Eye className="w-3 h-3 mr-1" />
+                    View Only
+                  </Badge>
+                </div>
+
+                {/* Student & Invoice Info */}
+                <div className="px-8 py-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+                    {/* Left - Student Info */}
+                    <div className="p-6 pr-8">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Student Information</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Student ID</span>
+                          <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentId}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Student Name</span>
+                          <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentName}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Year Group</span>
+                          <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Contact Name</span>
+                          <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Right - Invoice Info */}
+                    <div className="p-6 pl-8">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Invoice No.</span>
+                          <span className="text-sm font-medium text-gray-800">
+                            {selectedInvoice.approvalStatus === 'approved'
+                              ? selectedInvoice.invoiceNumber
+                              : 'Pending Approval'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Invoice Date</span>
+                          <span className="text-sm font-medium text-gray-800">
+                            {selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Due Date</span>
+                          <span className="text-sm font-medium text-red-600">
+                            {selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">School Year</span>
+                          <span className="text-sm font-medium text-gray-800">
+                            {selectedInvoice.issueDate ? getAcademicYear(selectedInvoice.issueDate) : "-"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rejection Information */}
+                  {selectedInvoice.approvalStatus === "rejected" && (
+                    <div className="my-6 bg-orange-50 border border-orange-200 rounded-md p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-orange-800 mb-1">Invoice Rejected</p>
+                          <p className="text-sm text-orange-700">
+                            <span className="font-medium">Reason:</span> {selectedInvoice.rejectedReason || "No reason recorded"}
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            {selectedInvoice.rejectedBy && <>Rejected by {selectedInvoice.rejectedBy}</>}
+                            {selectedInvoice.rejectedAt && (
+                              <>
+                                {selectedInvoice.rejectedBy && <> on </>}
+                                {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: false
+                                })}
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Invoice Items Table */}
+                <div className="px-8 pb-6">
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
+                          <th className="py-3 px-4 text-left font-semibold">Description</th>
+                          <th className="py-3 px-4 text-right font-semibold w-28">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedInvoice.items.map((item, index) => (
+                          <tr key={item.id} className="border-b last:border-b-0">
+                            <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
+                            <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span>{item.description}</span>
+                              </div>
+                              {item.discountPercent > 0 && (
+                                <span className="text-gray-400 text-xs">(-{item.discountPercent}%)</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
+                              {formatCurrency(item.discountedAmount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {/* Total */}
+                    <div className="border-t bg-gray-50 p-4">
+                      <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
+                      <div className="flex justify-between items-center font-bold text-base">
+                        <span>TOTAL</span>
+                        <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Methods */}
+                <div className="px-8 pb-6">
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Payment methods: </span>
+                    <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={closeInvoiceModal}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
+                    disabled={isDownloadingPDF}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isDownloadingPDF ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Generating PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

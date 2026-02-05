@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Badge } from "./ui/badge"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import {
   Search,
   Plus,
@@ -63,6 +65,8 @@ const emptyFamily: Omit<Family, "id" | "createdAt"> = {
 
 export function FamilyGroups() {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const {
     students,
     families,
@@ -326,7 +330,7 @@ export function FamilyGroups() {
             {t("familyGroups.subtitle")}
           </p>
         </div>
-        <Button onClick={handleAddFamily}>
+        <Button onClick={handleAddFamily} disabled={!userCanEdit}>
           <Plus className="w-4 h-4 mr-2" />
           {t("familyGroups.addFamily")}
         </Button>
@@ -443,6 +447,7 @@ export function FamilyGroups() {
                                 e.stopPropagation()
                                 handleAddStudentToFamily(family)
                               }}
+                              disabled={!userCanEdit}
                             >
                               <UserPlus className="w-4 h-4" />
                             </Button>
@@ -453,6 +458,7 @@ export function FamilyGroups() {
                                 e.stopPropagation()
                                 handleEditFamily(family)
                               }}
+                              disabled={!userCanEdit}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -464,6 +470,7 @@ export function FamilyGroups() {
                                 e.stopPropagation()
                                 handleDeleteFamily(family)
                               }}
+                              disabled={!userCanEdit}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -559,6 +566,7 @@ export function FamilyGroups() {
                                     size="sm"
                                     className="text-destructive"
                                     onClick={() => handleRemoveStudentFromFamily(student)}
+                                    disabled={!userCanEdit}
                                   >
                                     {t("familyGroups.remove")}
                                   </Button>
@@ -645,7 +653,7 @@ export function FamilyGroups() {
         <div className="flex items-center justify-between border rounded-lg p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{t("familyGroups.show")}</span>
-            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))} disabled={!userCanEdit}>
               <SelectTrigger className="w-[70px] h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -756,6 +764,7 @@ export function FamilyGroups() {
                   onChange={(e) => setFormData(prev => ({ ...prev, familyCode: e.target.value.toUpperCase() }))}
                   placeholder="e.g., SM2025001"
                   className="font-mono"
+                  disabled={!userCanEdit}
                 />
               </div>
               <div className="space-y-2">
@@ -764,6 +773,7 @@ export function FamilyGroups() {
                   value={formData.familyName}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyName: e.target.value }))}
                   placeholder="e.g., Smith"
+                  disabled={!userCanEdit}
                 />
               </div>
             </div>
@@ -773,6 +783,7 @@ export function FamilyGroups() {
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                 placeholder="Enter family address"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -786,6 +797,7 @@ export function FamilyGroups() {
                     ...prev,
                     invoiceEmails: [...(prev.invoiceEmails || []), ""]
                   }))}
+                  disabled={!userCanEdit}
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Email
@@ -796,6 +808,7 @@ export function FamilyGroups() {
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="family@email.com"
+                disabled={!userCanEdit}
               />
               {(formData.invoiceEmails || []).map((email, index) => (
                 <div key={index} className="flex gap-2">
@@ -808,6 +821,7 @@ export function FamilyGroups() {
                       setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
                     }}
                     placeholder="additional@email.com"
+                    disabled={!userCanEdit}
                   />
                   <Button
                     type="button"
@@ -817,6 +831,7 @@ export function FamilyGroups() {
                       const newEmails = (formData.invoiceEmails || []).filter((_, i) => i !== index)
                       setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
                     }}
+                    disabled={!userCanEdit}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
@@ -829,6 +844,7 @@ export function FamilyGroups() {
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="081-234-5678"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -836,7 +852,7 @@ export function FamilyGroups() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               {t("familyGroups.cancel")}
             </Button>
-            <Button onClick={handleSaveNewFamily} disabled={!formData.familyCode || !formData.familyName || !formData.email}>
+            <Button onClick={handleSaveNewFamily} disabled={!userCanEdit || !formData.familyCode || !formData.familyName || !formData.email}>
               {t("familyGroups.createFamily")}
             </Button>
           </DialogFooter>
@@ -858,6 +874,7 @@ export function FamilyGroups() {
                   onChange={(e) => setFormData(prev => ({ ...prev, familyCode: e.target.value.toUpperCase() }))}
                   placeholder="e.g., SM2025001"
                   className="font-mono"
+                  disabled={!userCanEdit}
                 />
               </div>
               <div className="space-y-2">
@@ -866,6 +883,7 @@ export function FamilyGroups() {
                   value={formData.familyName}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyName: e.target.value }))}
                   placeholder="e.g., Smith"
+                  disabled={!userCanEdit}
                 />
               </div>
             </div>
@@ -875,6 +893,7 @@ export function FamilyGroups() {
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                 placeholder="Enter family address"
+                disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
@@ -888,6 +907,7 @@ export function FamilyGroups() {
                     ...prev,
                     invoiceEmails: [...(prev.invoiceEmails || []), ""]
                   }))}
+                  disabled={!userCanEdit}
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Email
@@ -898,6 +918,7 @@ export function FamilyGroups() {
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="family@email.com"
+                disabled={!userCanEdit}
               />
               {(formData.invoiceEmails || []).map((email, index) => (
                 <div key={index} className="flex gap-2">
@@ -910,6 +931,7 @@ export function FamilyGroups() {
                       setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
                     }}
                     placeholder="additional@email.com"
+                    disabled={!userCanEdit}
                   />
                   <Button
                     type="button"
@@ -919,6 +941,7 @@ export function FamilyGroups() {
                       const newEmails = (formData.invoiceEmails || []).filter((_, i) => i !== index)
                       setFormData(prev => ({ ...prev, invoiceEmails: newEmails }))
                     }}
+                    disabled={!userCanEdit}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
@@ -931,6 +954,7 @@ export function FamilyGroups() {
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="081-234-5678"
+                disabled={!userCanEdit}
               />
             </div>
           </div>
@@ -938,7 +962,7 @@ export function FamilyGroups() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               {t("familyGroups.cancel")}
             </Button>
-            <Button onClick={handleSaveEditFamily} disabled={!formData.familyCode || !formData.familyName || !formData.email}>
+            <Button onClick={handleSaveEditFamily} disabled={!userCanEdit || !formData.familyCode || !formData.familyName || !formData.email}>
               {t("familyGroups.saveChanges")}
             </Button>
           </DialogFooter>
@@ -963,7 +987,7 @@ export function FamilyGroups() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               {t("familyGroups.cancel")}
             </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={!userCanEdit}>
               {t("familyGroups.deleteFamily")}
             </Button>
           </DialogFooter>
@@ -984,7 +1008,7 @@ export function FamilyGroups() {
             ) : (
               <div className="space-y-2">
                 <Label>{t("familyGroups.selectStudent")}</Label>
-                <Select value={selectedStudentToAdd} onValueChange={setSelectedStudentToAdd}>
+                <Select value={selectedStudentToAdd} onValueChange={setSelectedStudentToAdd} disabled={!userCanEdit}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("familyGroups.selectAStudent")} />
                   </SelectTrigger>
@@ -1008,7 +1032,7 @@ export function FamilyGroups() {
             </Button>
             <Button
               onClick={handleConfirmAddStudent}
-              disabled={!selectedStudentToAdd || studentsWithoutFamily.length === 0}
+              disabled={!userCanEdit || !selectedStudentToAdd || studentsWithoutFamily.length === 0}
             >
               {t("familyGroups.addToFamily")}
             </Button>

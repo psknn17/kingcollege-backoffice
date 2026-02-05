@@ -15,10 +15,14 @@ import { toast } from "@/components/ui/sonner"
 import { Badge } from "./ui/badge"
 import { useAcademicYears, Term, AcademicYear } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 export function TuitionTermSettings() {
   const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear, saveAcademicYears } = useAcademicYears()
   const { t, language } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = useState<string[]>(["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
@@ -220,7 +224,7 @@ export function TuitionTermSettings() {
             {t("termSettings.subtitle")}
           </p>
         </div>
-        <Button onClick={() => setIsAddYearDialogOpen(true)}>
+        <Button onClick={() => setIsAddYearDialogOpen(true)} disabled={!userCanEdit}>
           <Plus className="w-4 h-4 mr-2" />
           {t("termSettings.addAcademicYear")}
         </Button>
@@ -269,6 +273,7 @@ export function TuitionTermSettings() {
                               e.stopPropagation()
                               deleteAcademicYear(year.id)
                             }}
+                            disabled={!userCanEdit}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -309,6 +314,7 @@ export function TuitionTermSettings() {
                                     value={term.name}
                                     onChange={(e) => updateTerm(year.id, term.id, "name", e.target.value)}
                                     className="border-0 p-0 h-auto text-sm font-medium text-black focus-visible:ring-0 bg-transparent"
+                                    disabled={!userCanEdit}
                                   />
                                 </td>
                                 <td className="px-4 py-3">
@@ -317,6 +323,7 @@ export function TuitionTermSettings() {
                                       <Button
                                         variant="ghost"
                                         className="h-8 px-2 text-sm font-normal justify-start hover:bg-gray-100"
+                                        disabled={!userCanEdit}
                                       >
                                         <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                                         <span className="text-black">
@@ -340,6 +347,7 @@ export function TuitionTermSettings() {
                                       <Button
                                         variant="ghost"
                                         className="h-8 px-2 text-sm font-normal justify-start hover:bg-gray-100"
+                                        disabled={!userCanEdit}
                                       >
                                         <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                                         <span className="text-black">
@@ -378,6 +386,7 @@ export function TuitionTermSettings() {
                                     size="icon"
                                     className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
                                     onClick={() => deleteTerm(year.id, term.id)}
+                                    disabled={!userCanEdit}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -395,6 +404,7 @@ export function TuitionTermSettings() {
                         variant="outline"
                         className="w-full mt-4 border-dashed text-gray-500 hover:text-gray-700"
                         onClick={() => addNewTerm(year.id)}
+                        disabled={!userCanEdit}
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         {t("termSettings.addTerm")}
@@ -410,7 +420,7 @@ export function TuitionTermSettings() {
 
       {/* Save All Button */}
       <div className="flex justify-end">
-        <Button size="lg" onClick={() => setIsSaveConfirmDialogOpen(true)}>
+        <Button size="lg" onClick={() => setIsSaveConfirmDialogOpen(true)} disabled={!userCanEdit}>
           <Save className="w-4 h-4 mr-2" />
           {t("termSettings.saveAllChanges")}
         </Button>
@@ -436,6 +446,7 @@ export function TuitionTermSettings() {
               min="2020"
               max="2050"
               className={cn("mt-2", newYearStart && parseInt(newYearStart) !== getNextValidYear() && "border-red-500 focus-visible:ring-red-500")}
+              disabled={!userCanEdit}
             />
             {newYearStart && parseInt(newYearStart) !== getNextValidYear() && (
               <p className="text-sm text-red-500 mt-2">
@@ -454,7 +465,7 @@ export function TuitionTermSettings() {
             </Button>
             <Button
               onClick={addNewAcademicYear}
-              disabled={!newYearStart || parseInt(newYearStart) !== getNextValidYear()}
+              disabled={!userCanEdit || !newYearStart || parseInt(newYearStart) !== getNextValidYear()}
             >
               {t("termSettings.createYear")}
             </Button>
@@ -477,7 +488,7 @@ export function TuitionTermSettings() {
             <Button variant="outline" onClick={() => setIsSaveConfirmDialogOpen(false)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={handleSaveAllChanges}>
+            <Button onClick={handleSaveAllChanges} disabled={!userCanEdit}>
               {t("termSettings.confirmSave")}
             </Button>
           </DialogFooter>

@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -235,6 +237,8 @@ interface EmailJobsManagementProps {
 
 export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }: EmailJobsManagementProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const isExternalView = jobType === "external"
   const isCategoryView = ["afterschool", "event", "summer"].includes(jobType)
   const isSimplifiedView = isExternalView || isCategoryView
@@ -429,11 +433,11 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSaveChanges}>
+          <Button variant="outline" onClick={handleSaveChanges} disabled={!userCanEdit}>
             <Save className="w-4 h-4 mr-2" />
             Save Changes
           </Button>
-          <Button onClick={() => window.location.reload()}>
+          <Button onClick={() => window.location.reload()} disabled={!userCanEdit}>
             <RefreshCw className="w-4 h-4 mr-2" />
             {t("common.refresh")}
           </Button>
@@ -500,11 +504,12 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
+                  disabled={!userCanEdit}
                 />
               </div>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder={t("emailJobs.filterByStatus")} />
               </SelectTrigger>
@@ -518,7 +523,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
             </Select>
 
             {!isSimplifiedView && (
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="w-full md:w-[200px]">
                   <SelectValue placeholder={t("emailJobs.filterByType")} />
                 </SelectTrigger>
@@ -665,7 +670,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
         <div className="flex items-center justify-between border rounded-lg p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{t("emailJobs.show")}</span>
-            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))} disabled={!userCanEdit}>
               <SelectTrigger className="w-[70px] h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -688,7 +693,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
+              disabled={currentPage === 1 || !userCanEdit}
             >
               <ChevronLeft className="w-4 h-4" />
               {t("emailJobs.previous")}
@@ -712,6 +717,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
                     size="sm"
                     className="w-8 h-8 p-0"
                     onClick={() => setCurrentPage(pageNum)}
+                    disabled={!userCanEdit}
                   >
                     {pageNum}
                   </Button>
@@ -722,7 +728,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || !userCanEdit}
             >
               {t("emailJobs.next")}
               <ChevronRight className="w-4 h-4" />

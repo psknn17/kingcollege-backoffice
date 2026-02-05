@@ -45,7 +45,7 @@ export function Login() {
           backgroundSize: "contain",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          backgroundColor: "#f8f9fa"
+          backgroundColor: "#FFFFFF"
         }}
       >
       </div>

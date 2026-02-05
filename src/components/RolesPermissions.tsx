@@ -9,6 +9,8 @@ import { Badge } from "./ui/badge"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import {
   Search,
   Plus,
@@ -194,6 +196,8 @@ const emptyRole: Omit<Role, "id" | "createdAt" | "updatedAt"> = {
 
 export function RolesPermissions() {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -558,7 +562,7 @@ export function RolesPermissions() {
           <h1 className="text-3xl font-bold">{t("roles.title")}</h1>
           <p className="text-muted-foreground mt-1">{t("roles.subtitle")}</p>
         </div>
-        <Button onClick={handleAddRole}>
+        <Button onClick={handleAddRole} disabled={!userCanEdit}>
           <Plus className="w-4 h-4 mr-2" />
           {t("roles.addRole")}
         </Button>
@@ -712,7 +716,7 @@ export function RolesPermissions() {
                         <Button variant="ghost" size="icon" onClick={() => handleViewRole(role)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditRole(role)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditRole(role)} disabled={!userCanEdit}>
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
@@ -720,7 +724,7 @@ export function RolesPermissions() {
                           size="icon"
                           className={role.isSystem || role.userCount > 0 ? "text-muted-foreground" : "text-destructive"}
                           onClick={() => handleDeleteRole(role)}
-                          disabled={role.isSystem || role.userCount > 0}
+                          disabled={!userCanEdit || role.isSystem || role.userCount > 0}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -774,7 +778,7 @@ export function RolesPermissions() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveNewRole}>
+            <Button onClick={handleSaveNewRole} disabled={!userCanEdit}>
               <Plus className="w-4 h-4 mr-2" />
               Create Role
             </Button>
@@ -965,10 +969,13 @@ export function RolesPermissions() {
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => {
-              setIsViewDialogOpen(false)
-              if (selectedRole) handleEditRole(selectedRole)
-            }}>
+            <Button
+              onClick={() => {
+                setIsViewDialogOpen(false)
+                if (selectedRole) handleEditRole(selectedRole)
+              }}
+              disabled={!userCanEdit}
+            >
               <Edit className="w-4 h-4 mr-2" />
               Edit Role
             </Button>

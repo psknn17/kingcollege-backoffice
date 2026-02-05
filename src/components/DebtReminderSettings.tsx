@@ -11,6 +11,8 @@ import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { toast } from "@/components/ui/sonner"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 // Preset email subject options based on system menus
 const PRESET_EMAIL_SUBJECTS = [
@@ -121,6 +123,8 @@ const saveReminderEmailLog = (subject: string, recipientCount: number) => {
 export function DebtReminderSettings() {
   const { t } = useLanguage()
   const { academicYears } = useAcademicYears()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const [reminders, setReminders] = useState<ReminderConfig[]>(initialReminders)
   const [globalSettings, setGlobalSettings] = useState({
     enableReminders: true,
@@ -222,7 +226,7 @@ export function DebtReminderSettings() {
 
       <div className="space-y-6">
         <div className="flex justify-end">
-            <Button onClick={addReminder} disabled={reminders.length >= 3} className="flex items-center gap-2">
+            <Button onClick={addReminder} disabled={!userCanEdit || reminders.length >= 3} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               {t("debt.addReminder")}
             </Button>
@@ -247,6 +251,7 @@ export function DebtReminderSettings() {
                   onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, enableReminders: checked})
                   }
+                  disabled={!userCanEdit}
                 />
               </div>
 
@@ -258,6 +263,7 @@ export function DebtReminderSettings() {
                     setGlobalSettings({...globalSettings, fromEmail: e.target.value})
                   }
                   placeholder="noreply@example.com"
+                  disabled={!userCanEdit}
                 />
               </div>
             </CardContent>
@@ -275,17 +281,20 @@ export function DebtReminderSettings() {
                         value={reminder.name}
                         onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
                         className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0"
+                        disabled={!userCanEdit}
                       />
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={reminder.enabled}
                         onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
+                        disabled={!userCanEdit}
                       />
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => deleteReminder(reminder.id)}
+                        disabled={!userCanEdit}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -300,6 +309,7 @@ export function DebtReminderSettings() {
                       <Select
                         value={reminder.academicYear}
                         onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
+                        disabled={!userCanEdit}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={t("common.selectYear")} />
@@ -319,6 +329,7 @@ export function DebtReminderSettings() {
                       <Select
                         value={reminder.term}
                         onValueChange={(value) => updateReminder(reminder.id, "term", value)}
+                        disabled={!userCanEdit}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={t("common.selectTerm")} />
@@ -342,6 +353,7 @@ export function DebtReminderSettings() {
                       <Select
                         value={reminder.subject}
                         onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
+                        disabled={!userCanEdit}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={t("debt.emailSubjectPlaceholder")} />
@@ -365,6 +377,7 @@ export function DebtReminderSettings() {
                         type="date"
                         value={reminder.sendDate}
                         onChange={(e) => updateReminder(reminder.id, "sendDate", e.target.value)}
+                        disabled={!userCanEdit}
                       />
                     </div>
                   </div>
@@ -376,6 +389,7 @@ export function DebtReminderSettings() {
                       onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
                       placeholder={t("debt.messageTemplatePlaceholder")}
                       rows={4}
+                      disabled={!userCanEdit}
                     />
                     <p className="text-xs text-muted-foreground">
                       {t("debt.availableVariables")}: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
@@ -401,7 +415,7 @@ export function DebtReminderSettings() {
                   <div className="flex justify-end">
                     <Button
                       onClick={() => handleSendNow(reminder)}
-                      disabled={!reminder.enabled || !reminder.subject || !reminder.message}
+                      disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
                       className="flex items-center gap-2"
                     >
                       <Send className="w-4 h-4" />
@@ -415,7 +429,7 @@ export function DebtReminderSettings() {
 
           {/* Save Button */}
           <div className="flex justify-end">
-            <Button onClick={saveSettings} size="lg" className="px-8">
+            <Button onClick={saveSettings} size="lg" className="px-8" disabled={!userCanEdit}>
               <Save className="w-4 h-4 mr-2" />
               {t("debt.saveAllSettings")}
             </Button>

@@ -23,6 +23,8 @@ import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
@@ -398,6 +400,8 @@ export function InvoiceManagement({
   category // Filter invoices by category/menu type
 }: InvoiceManagementProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   // Discount Options context for late payment calculations
   const { getLatePaymentSettings, getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears = [] } = useAcademicYears()
@@ -2429,7 +2433,11 @@ export function InvoiceManagement({
             <Download className="w-4 h-4" />
             {t("invoice.exportReport")}
           </Button>
-          <Button onClick={() => onNavigateToSubPage(category === 'external' ? 'external-invoice-creation' : 'invoice-creation', { category, invoiceType: category === 'tuition' ? 'student' : category })} className="flex items-center gap-2">
+          <Button
+            onClick={() => onNavigateToSubPage(category === 'external' ? 'external-invoice-creation' : 'invoice-creation', { category, invoiceType: category === 'tuition' ? 'student' : category })}
+            className="flex items-center gap-2"
+            disabled={!userCanEdit}
+          >
             <Plus className="w-4 h-4" />
             {t("invoice.createInvoice")}
           </Button>
@@ -2807,10 +2815,10 @@ export function InvoiceManagement({
                           <Button
                             size="sm"
                             variant="ghost"
-                            disabled={!canEditInvoice(invoice.status, getApprovalStatus(invoice))}
-                            className={!canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "opacity-30 cursor-not-allowed" : ""}
+                            disabled={!userCanEdit || !canEditInvoice(invoice.status, getApprovalStatus(invoice))}
+                            className={!userCanEdit || !canEditInvoice(invoice.status, getApprovalStatus(invoice)) ? "opacity-30 cursor-not-allowed" : ""}
                             onClick={() => {
-                              if (!canEditInvoice(invoice.status, getApprovalStatus(invoice))) return
+                              if (!userCanEdit || !canEditInvoice(invoice.status, getApprovalStatus(invoice))) return
                               const editInvoice = {
                                 id: invoice.id,
                                 invoiceNumber: invoice.invoiceNumber,
@@ -2857,6 +2865,7 @@ export function InvoiceManagement({
                               size="sm"
                               variant="ghost"
                               onClick={() => openSendEmailConfirm(invoice.id)}
+                              disabled={!userCanEdit}
                               title="Send Email"
                             >
                               <Mail className="w-4 h-4" />
@@ -2868,6 +2877,7 @@ export function InvoiceManagement({
                               variant="ghost"
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                               onClick={() => openMarkPaidDialog(invoice)}
+                              disabled={!userCanEdit}
                               title="Mark Paid"
                             >
                               <DollarSign className="w-4 h-4" />
@@ -3808,8 +3818,11 @@ export function InvoiceManagement({
                   )}
                 </Button>
                 {(() => {
-                  const shouldShowCancelButton = getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
+                  const canCancelInvoice = user?.role !== "Approver"
+                  const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
                   console.log('[Cancel Button] Visibility check:', {
+                    userRole: user?.role,
+                    canCancelInvoice,
                     approvalStatus: getApprovalStatus(selectedInvoice),
                     invoiceStatus: selectedInvoice.status,
                     shouldShow: shouldShowCancelButton
@@ -3887,6 +3900,7 @@ export function InvoiceManagement({
                       size="sm"
                       onClick={() => setIsAddItemsDialogOpen(true)}
                       className="gap-2"
+                      disabled={!userCanEdit}
                     >
                       <Plus className="w-4 h-4" />
                       Add More Items
@@ -3984,6 +3998,7 @@ export function InvoiceManagement({
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleItemRemove(item.id)}
+                                  disabled={!userCanEdit}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -4316,7 +4331,7 @@ export function InvoiceManagement({
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button onClick={handleAddItem} className="flex-1">
+            <Button onClick={handleAddItem} className="flex-1" disabled={!userCanEdit}>
               Add Item
             </Button>
             <Button variant="outline" onClick={closeAddItemModal}>
@@ -4974,6 +4989,7 @@ export function InvoiceManagement({
                   variant="ghost"
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   onClick={deleteInvoice}
+                  disabled={!userCanEdit}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
@@ -4985,6 +5001,7 @@ export function InvoiceManagement({
                   <Button
                     onClick={() => setIsConfirmSaveOpen(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={!userCanEdit}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Save Changes

@@ -11,6 +11,8 @@ import { Textarea } from "./ui/textarea"
 import { CalendarIcon, Save, Plus, Trash2, Settings, Clock } from "lucide-react"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface RegistrationPeriod {
   id: string
@@ -54,6 +56,8 @@ const initialPeriods: RegistrationPeriod[] = [
 
 export function AfterSchoolSettings() {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const [periods, setPeriods] = useState<RegistrationPeriod[]>(initialPeriods)
   const [globalSettings, setGlobalSettings] = useState({
     autoCloseRegistration: true,
@@ -128,7 +132,7 @@ export function AfterSchoolSettings() {
             {t("settings.afterSchoolDesc")}
           </p>
         </div>
-        <Button onClick={addPeriod} className="flex items-center gap-2">
+        <Button onClick={addPeriod} className="flex items-center gap-2" disabled={!userCanEdit}>
           <Plus className="w-4 h-4" />
           {t("settings.addPeriod")}
         </Button>
@@ -152,9 +156,10 @@ export function AfterSchoolSettings() {
                 </div>
                 <Switch
                   checked={globalSettings.autoCloseRegistration}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, autoCloseRegistration: checked})
                   }
+                  disabled={!userCanEdit}
                 />
               </div>
 
@@ -168,6 +173,7 @@ export function AfterSchoolSettings() {
                   onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, sendConfirmationEmails: checked})
                   }
+                  disabled={!userCanEdit}
                 />
               </div>
 
@@ -181,6 +187,7 @@ export function AfterSchoolSettings() {
                   onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, requireParentApproval: checked})
                   }
+                  disabled={!userCanEdit}
                 />
               </div>
 
@@ -194,6 +201,7 @@ export function AfterSchoolSettings() {
                   onCheckedChange={(checked) =>
                     setGlobalSettings({...globalSettings, allowWaitlist: checked})
                   }
+                  disabled={!userCanEdit}
                 />
               </div>
             </div>
@@ -207,7 +215,7 @@ export function AfterSchoolSettings() {
                   onChange={(e) =>
                     setGlobalSettings({...globalSettings, maxWaitlistSize: parseInt(e.target.value)})
                   }
-                  disabled={!globalSettings.allowWaitlist}
+                  disabled={!globalSettings.allowWaitlist || !userCanEdit}
                 />
               </div>
 
@@ -219,6 +227,7 @@ export function AfterSchoolSettings() {
                   onChange={(e) =>
                     setGlobalSettings({...globalSettings, paymentDeadlineDays: parseInt(e.target.value)})
                   }
+                  disabled={!userCanEdit}
                 />
                 <p className="text-xs text-muted-foreground">
                   {t("settings.paymentDeadlineDesc")}
@@ -233,6 +242,7 @@ export function AfterSchoolSettings() {
                   onChange={(e) =>
                     setGlobalSettings({...globalSettings, cancellationDeadlineDays: parseInt(e.target.value)})
                   }
+                  disabled={!userCanEdit}
                 />
                 <p className="text-xs text-muted-foreground">
                   {t("settings.cancellationDeadlineDesc")}
@@ -259,6 +269,7 @@ export function AfterSchoolSettings() {
                       value={period.name}
                       onChange={(e) => updatePeriod(period.id, "name", e.target.value)}
                       className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0"
+                      disabled={!userCanEdit}
                     />
                     {getStatusBadge(status)}
                   </div>
@@ -266,11 +277,13 @@ export function AfterSchoolSettings() {
                     <Switch
                       checked={period.isActive}
                       onCheckedChange={(checked) => updatePeriod(period.id, "isActive", checked)}
+                      disabled={!userCanEdit}
                     />
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="destructive"
                       onClick={() => deletePeriod(period.id)}
+                      disabled={!userCanEdit}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -285,6 +298,7 @@ export function AfterSchoolSettings() {
                     onChange={(e) => updatePeriod(period.id, "description", e.target.value)}
                     placeholder={t("settings.enterDescription")}
                     rows={2}
+                    disabled={!userCanEdit}
                   />
                 </div>
 
@@ -296,6 +310,7 @@ export function AfterSchoolSettings() {
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
+                          disabled={!userCanEdit}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {period.openDate ? format(period.openDate, "PPP") : t("settings.pickDate")}
@@ -319,6 +334,7 @@ export function AfterSchoolSettings() {
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
+                          disabled={!userCanEdit}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {period.closeDate ? format(period.closeDate, "PPP") : t("settings.pickDate")}
@@ -345,6 +361,7 @@ export function AfterSchoolSettings() {
                       onChange={(e) => updatePeriod(period.id, "maxRegistrationsPerStudent", parseInt(e.target.value))}
                       min="1"
                       max="10"
+                      disabled={!userCanEdit}
                     />
                   </div>
 
@@ -356,6 +373,7 @@ export function AfterSchoolSettings() {
                       onChange={(e) => updatePeriod(period.id, "earlyBirdDiscount", parseInt(e.target.value))}
                       min="0"
                       max="50"
+                      disabled={!userCanEdit}
                     />
                   </div>
 
@@ -366,6 +384,7 @@ export function AfterSchoolSettings() {
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
+                          disabled={!userCanEdit}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {period.earlyBirdDeadline ? format(period.earlyBirdDeadline, "MM/dd") : t("settings.pickDate")}
@@ -391,6 +410,7 @@ export function AfterSchoolSettings() {
                   <Switch
                     checked={period.allowExternal}
                     onCheckedChange={(checked) => updatePeriod(period.id, "allowExternal", checked)}
+                    disabled={!userCanEdit}
                   />
                 </div>
 
@@ -438,7 +458,7 @@ export function AfterSchoolSettings() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={saveSettings} size="lg" className="px-8">
+        <Button onClick={saveSettings} size="lg" className="px-8" disabled={!userCanEdit}>
           <Save className="w-4 h-4 mr-2" />
           Save All Settings
         </Button>

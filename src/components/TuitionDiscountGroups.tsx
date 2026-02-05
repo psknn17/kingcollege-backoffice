@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import {
   Plus,
   Edit,
@@ -83,6 +85,8 @@ const saveGroupsToStorage = (groups: DiscountGroup[]) => {
 export function TuitionDiscountGroups() {
   const { t } = useLanguage()
   const { students: contextStudents } = useStudents()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Convert students from context to local format
   const availableStudents = useMemo(() =>
@@ -260,7 +264,7 @@ export function TuitionDiscountGroups() {
           if (!open) resetForm()
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={!userCanEdit}>
               <Plus className="w-4 h-4 mr-2" />
               Create Student Group
             </Button>
@@ -283,6 +287,7 @@ export function TuitionDiscountGroups() {
                   placeholder="Year 7 Excellence Group"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  disabled={!userCanEdit}
                 />
               </div>
 
@@ -295,8 +300,9 @@ export function TuitionDiscountGroups() {
                     onValueChange={(value: "percentage" | "fixed") =>
                       setFormData({ ...formData, discountType: value })
                     }
+                    disabled={!userCanEdit}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger disabled={!userCanEdit}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -318,6 +324,7 @@ export function TuitionDiscountGroups() {
                         setFormData({ ...formData, discountPercentage: parseInt(e.target.value) || 0 })
                       }
                       placeholder="15"
+                      disabled={!userCanEdit}
                     />
                   </div>
                 ) : (
@@ -331,6 +338,7 @@ export function TuitionDiscountGroups() {
                         setFormData({ ...formData, fixedAmount: parseInt(e.target.value) || 0 })
                       }
                       placeholder="1000"
+                      disabled={!userCanEdit}
                     />
                   </div>
                 )}
@@ -359,6 +367,7 @@ export function TuitionDiscountGroups() {
                           value={studentInput}
                           onChange={(e) => setStudentInput(e.target.value)}
                           placeholder="Search by ID or Name (e.g., KC2024001)"
+                          disabled={!userCanEdit}
                         />
                         {/* Search Results Dropdown */}
                         {studentInput.length >= 1 && (
@@ -408,6 +417,7 @@ export function TuitionDiscountGroups() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveStudent(student.id)}
+                                disabled={!userCanEdit}
                               >
                                 <X className="w-4 h-4" />
                               </Button>
@@ -434,7 +444,7 @@ export function TuitionDiscountGroups() {
               }}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveGroup}>
+              <Button onClick={handleSaveGroup} disabled={!userCanEdit}>
                 {editingGroup ? "Update Group" : "Create Group"}
               </Button>
             </div>
@@ -485,6 +495,7 @@ export function TuitionDiscountGroups() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(group)}
+                      disabled={!userCanEdit}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -492,6 +503,7 @@ export function TuitionDiscountGroups() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(group.id)}
+                      disabled={!userCanEdit}
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
@@ -546,7 +558,7 @@ export function TuitionDiscountGroups() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete} disabled={!userCanEdit}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "./ui/label"
 import { Checkbox } from "./ui/checkbox"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -176,6 +178,8 @@ const mockUsers: User[] = [
 
 export function UserManagement() {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const [users, setUsers] = useState<User[]>(mockUsers)
   const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers)
   const [searchTerm, setSearchTerm] = useState("")
@@ -574,10 +578,14 @@ export function UserManagement() {
       <div className="flex justify-end">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2" onClick={() => {
-              resetForm()
-              setSelectedPermissions(roleDefaultPermissions.viewer)
-            }}>
+            <Button
+              className="flex items-center gap-2"
+              disabled={!userCanEdit}
+              onClick={() => {
+                resetForm()
+                setSelectedPermissions(roleDefaultPermissions.viewer)
+              }}
+            >
               <Plus className="w-4 h-4" />
               Add User
             </Button>
@@ -878,6 +886,7 @@ export function UserManagement() {
                         size="sm"
                         variant="ghost"
                         onClick={() => openEditDialog(user)}
+                        disabled={!userCanEdit}
                         title="Edit User"
                       >
                         <Edit className="w-4 h-4 text-gray-600" />
@@ -886,6 +895,7 @@ export function UserManagement() {
                         size="sm"
                         variant="ghost"
                         onClick={() => toggleUserStatus(user.id)}
+                        disabled={!userCanEdit}
                         title={user.status === "active" ? "Deactivate User" : "Activate User"}
                       >
                         {user.status === "active" ? (
@@ -899,6 +909,7 @@ export function UserManagement() {
                           size="sm"
                           variant="ghost"
                           onClick={() => openDeleteDialog(user)}
+                          disabled={!userCanEdit}
                           title="Delete User"
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />

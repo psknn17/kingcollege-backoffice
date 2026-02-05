@@ -18,11 +18,8 @@ export const rolePermissions = {
   },
   viewer: {
     name: "Viewer",
-    sections: [],
-    menuItems: [
-      // Only reports
-      "discount-reports"
-    ]
+    sections: ["tuition", "eca", "events", "summer", "discount"],
+    menuItems: [] // Can view all menus (read-only access)
   },
   approver: {
     name: "Approver",
@@ -83,4 +80,20 @@ function normalizeRoleName(role: string): string {
   }
 
   return roleMap[role] || role.toLowerCase().replace(/ /g, '_')
+}
+
+// Check if user can perform edit/add/delete actions (read-only check)
+export function canPerformActions(userRole: string | undefined): boolean {
+  if (!userRole) return false
+
+  const normalizedRole = normalizeRoleName(userRole)
+
+  // Viewer role can only view, cannot perform any actions
+  return normalizedRole !== "viewer"
+}
+
+// Check if user is viewer (convenience function)
+export function isViewerRole(userRole: string | undefined): boolean {
+  if (!userRole) return false
+  return normalizeRoleName(userRole) === "viewer"
 }

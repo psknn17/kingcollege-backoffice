@@ -16,6 +16,8 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface CreditNote {
   id: string
@@ -100,6 +102,8 @@ const generateCreditNoteNumber = (existingNotes: CreditNote[]): string => {
 export function CreditNoteManagement() {
   const { t } = useLanguage()
   const { students } = useStudents()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Load credit notes from localStorage
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
@@ -446,7 +450,7 @@ export function CreditNoteManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-end items-center gap-2">
-        <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2">
+        <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
           <Save className="w-4 h-4" />
           Save Changes
         </Button>
@@ -454,11 +458,11 @@ export function CreditNoteManagement() {
           <Download className="w-4 h-4" />
           {t("invoice.exportReport")}
         </Button>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button variant="outline" className="flex items-center gap-2" disabled={!userCanEdit}>
           <Upload className="w-4 h-4" />
           Import Excel
         </Button>
-        <Button onClick={openCreateModal} className="flex items-center gap-2">
+        <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!userCanEdit}>
           <Plus className="w-4 h-4" />
           {t("creditNote.createCreditNote")}
         </Button>
@@ -479,9 +483,9 @@ export function CreditNoteManagement() {
             <CardContent>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <Input placeholder="Search by receipt number, student name..." />
+                  <Input placeholder="Search by receipt number, student name..." disabled={!userCanEdit} />
                 </div>
-                <Select defaultValue="all">
+                <Select defaultValue="all" disabled={!userCanEdit}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder={t("paymentMethod.label")} />
                   </SelectTrigger>
@@ -626,12 +630,13 @@ export function CreditNoteManagement() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
+                disabled={!userCanEdit}
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
@@ -647,7 +652,7 @@ export function CreditNoteManagement() {
 
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("invoiceOverview.type")}</label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
