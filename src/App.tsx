@@ -136,16 +136,19 @@ const menuItems = {
     { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
     { id: "eca-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "eca-receipts", labelKey: "menu.receipts", icon: Receipt },
+    { id: "eca-discount-groups", labelKey: "menu.studentGroups", icon: Users },
   ],
   tripActivity: [
     { id: "trip-invoices", labelKey: "menu.tripInvoices", icon: FileInvoice },
     { id: "trip-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "trip-receipts", labelKey: "menu.receipts", icon: Receipt },
+    { id: "trip-discount-groups", labelKey: "menu.studentGroups", icon: Users },
   ],
   exam: [
     { id: "exam-invoices", labelKey: "menu.examInvoices", icon: FileInvoice },
     { id: "exam-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "exam-receipts", labelKey: "menu.receipts", icon: Receipt },
+    { id: "exam-discount-groups", labelKey: "menu.studentGroups", icon: Users },
   ],
   schoolBus: [
     { id: "bus-invoices", labelKey: "menu.busInvoices", icon: FileInvoice },
@@ -157,6 +160,7 @@ const menuItems = {
     { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
     { id: "external-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
+    { id: "external-discount-groups", labelKey: "menu.studentGroups", icon: Users },
   ],
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
@@ -352,24 +356,32 @@ export default function App() {
         return <ItemManagement key="external-items" onNavigateToSubPage={navigateToSubPage} invoiceType="external" />
       case "external-receipts":
         return <ReceiptPage category="external" />
+      case "external-discount-groups":
+        return <DiscountManagement activeTab="student-groups" category="external" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "eca-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="eca" />
       case "eca-item-management":
         return <ItemManagement key="eca-items" onNavigateToSubPage={navigateToSubPage} invoiceType="eca" />
       case "eca-receipts":
         return <ReceiptPage category="eca" />
+      case "eca-discount-groups":
+        return <DiscountManagement activeTab="student-groups" category="eca" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "trip-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="trip" />
       case "trip-item-management":
         return <ItemManagement key="trip-items" onNavigateToSubPage={navigateToSubPage} invoiceType="trip" />
       case "trip-receipts":
         return <ReceiptPage category="trip" />
+      case "trip-discount-groups":
+        return <DiscountManagement activeTab="student-groups" category="trip" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "exam-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="exam" />
       case "exam-item-management":
         return <ItemManagement key="exam-items" onNavigateToSubPage={navigateToSubPage} invoiceType="exam" />
       case "exam-receipts":
         return <ReceiptPage category="exam" />
+      case "exam-discount-groups":
+        return <DiscountManagement activeTab="student-groups" category="exam" onNavigateToSubPage={navigateToSubPage} onTabChange={setActiveSection} />
       case "bus-invoices":
         return <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="student" showTypeTabs={false} category="bus" />
       case "bus-item-management":
