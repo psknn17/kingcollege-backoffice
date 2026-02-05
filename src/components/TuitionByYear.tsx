@@ -10,6 +10,8 @@ import { Save, GraduationCap } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface GradeLevelTuition {
   id: string
@@ -182,6 +184,8 @@ const saveTuitionToStorage = (data: Record<string, GradeLevelTuition[]>) => {
 export function TuitionByYear() {
   const { academicYears } = useAcademicYears()
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Initialize tuition data from localStorage or empty object
   const [tuitionData, setTuitionData] = useState<Record<string, GradeLevelTuition[]>>(() => {
@@ -304,7 +308,7 @@ export function TuitionByYear() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Label htmlFor="academic-year" className="text-sm whitespace-nowrap">{t("common.academicYear")}:</Label>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <Select value={selectedYear} onValueChange={setSelectedYear} disabled={!userCanEdit}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder={t("tuition.selectYear")} />
               </SelectTrigger>
@@ -317,7 +321,7 @@ export function TuitionByYear() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => setIsSaveConfirmDialogOpen(true)} className="flex items-center gap-2">
+          <Button onClick={() => setIsSaveConfirmDialogOpen(true)} disabled={!userCanEdit} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
             {t("tuition.saveAllChanges")}
           </Button>
@@ -359,6 +363,7 @@ export function TuitionByYear() {
                         placeholder={t("tuition.term1")}
                         className="w-full text-center"
                         min={0}
+                        disabled={!userCanEdit}
                       />
                     </TableCell>
                     <TableCell>
@@ -369,6 +374,7 @@ export function TuitionByYear() {
                         placeholder={t("tuition.term2")}
                         className="w-full text-center"
                         min={0}
+                        disabled={!userCanEdit}
                       />
                     </TableCell>
                     <TableCell>
@@ -379,6 +385,7 @@ export function TuitionByYear() {
                         placeholder={t("tuition.term3")}
                         className="w-full text-center"
                         min={0}
+                        disabled={!userCanEdit}
                       />
                     </TableCell>
                     <TableCell className="text-right font-semibold">
@@ -439,7 +446,7 @@ export function TuitionByYear() {
             <Button variant="outline" onClick={() => setIsSaveConfirmDialogOpen(false)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={handleSaveAll}>
+            <Button onClick={handleSaveAll} disabled={!userCanEdit}>
               {t("tuition.confirmSave")}
             </Button>
           </DialogFooter>
