@@ -961,6 +961,12 @@ export function ReceiptManagementFlow({
         if (!open) onFormClose?.()
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create New Receipt</DialogTitle>
+            <DialogDescription>
+              Fill in the receipt details below. Fields marked with * are required.
+            </DialogDescription>
+          </DialogHeader>
           {/* Header */}
           <div className="sticky top-0 z-10 bg-background border-b px-8 pt-6 pb-5">
             <div className="flex items-start gap-4">
