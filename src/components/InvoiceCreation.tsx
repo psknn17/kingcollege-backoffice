@@ -1991,7 +1991,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         }
       })
 
-      return totalDiscount >= 100
+      return totalDiscount === 100
     } catch (error) {
       console.error("Error checking full discount:", error)
       return false
@@ -2006,7 +2006,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
     // For Tuition invoices only: exclude students with 100% discount from Discount Groups
     if (hasFullDiscount(student.id)) {
-      return false // Exclude students with 100% or more discount
+      return false // Exclude students with exactly 100% discount
     }
 
     // For simplified views (event only), don't filter by grade/room
