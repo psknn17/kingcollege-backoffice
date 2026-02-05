@@ -2119,13 +2119,37 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       return
     }
 
+    // Set default category based on invoiceType if not provided
+    const getDefaultCategory = (type: string): string => {
+      switch (type) {
+        case "tuition":
+        case "student":
+          return "Tuition"
+        case "bus":
+        case "summer":
+          return "School Bus"
+        case "eca":
+          return "ECA"
+        case "trip":
+        case "afterschool":
+          return "Trip & Other Activity"
+        case "exam":
+        case "event":
+          return "Exam"
+        case "external":
+          return "Rental"
+        default:
+          return "Tuition"
+      }
+    }
+
     const itemData: Item = {
       id: editingItem?.id || `item-${Date.now()}`,
       itemCode: newItem.itemCode,
       name: newItem.name,
       description: newItem.description,
       amount: amount,
-      category: newItem.category,
+      category: newItem.category || getDefaultCategory(invoiceType),
       nominalCode: newItem.nominalCode || undefined,
       documentType: newItem.documentType || "SI",
       applicableGrades: newItem.applicableGrades,
