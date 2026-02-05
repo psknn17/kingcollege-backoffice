@@ -2162,24 +2162,26 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const handleSelectAllStudents = () => {
     // For simplified views, select all available students
     if (isSimplifiedView) {
-      setSelectedStudents(availableStudents)
+      const studentsToSelect = availableStudents.filter(s => !hasFullDiscount(s.id))
+      setSelectedStudents(studentsToSelect)
     } else if (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") {
       // For Trip & Activity and School Bus, select all students from selected grades
       const gradeStudents = availableStudents.filter(s =>
-        selectedGrades.includes(s.grade)
+        selectedGrades.includes(s.grade) && !hasFullDiscount(s.id)
       )
       setSelectedStudents(gradeStudents)
     } else if (invoiceType === "summer") {
       // For Summer Activities, select all students from selected grade (no room filter)
       const gradeStudents = availableStudents.filter(s =>
-        s.grade === selectedGrade
+        s.grade === selectedGrade && !hasFullDiscount(s.id)
       )
       setSelectedStudents(gradeStudents)
     } else {
       // For regular invoices (Tuition, ECA), filter by grade and room
       const gradeStudents = availableStudents.filter(s =>
         s.grade === selectedGrade &&
-        (selectedRoom === "" || s.room === selectedRoom)
+        (selectedRoom === "" || s.room === selectedRoom) &&
+        !hasFullDiscount(s.id)
       )
       setSelectedStudents(gradeStudents)
     }
@@ -3802,14 +3804,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       </p>
                       <p className="text-sm text-blue-600 mb-3">
                         {isSimplifiedView
-                          ? availableStudents.length
+                          ? availableStudents.filter(s => !hasFullDiscount(s.id)).length
                           : (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus")
-                            ? availableStudents.filter(s => selectedGrades.includes(s.grade)).length
+                            ? availableStudents.filter(s => selectedGrades.includes(s.grade) && !hasFullDiscount(s.id)).length
                             : invoiceType === "summer"
-                              ? availableStudents.filter(s => s.grade === selectedGrade).length
+                              ? availableStudents.filter(s => s.grade === selectedGrade && !hasFullDiscount(s.id)).length
                               : availableStudents.filter(s =>
                                   s.grade === selectedGrade &&
-                                  (selectedRoom === "" || s.room === selectedRoom)
+                                  (selectedRoom === "" || s.room === selectedRoom) &&
+                                  !hasFullDiscount(s.id)
                                 ).length
                         } students will be selected
                       </p>
