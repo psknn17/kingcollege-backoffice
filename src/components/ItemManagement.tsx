@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Save } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Save, ChevronLeft, ChevronRight } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -1975,6 +1975,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [searchItemTerm, setSearchItemTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
@@ -2008,6 +2012,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     description: "",
     applicableGrades: [] as string[]
   })
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchItemTerm, selectedCategory])
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString()
@@ -2125,10 +2134,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     }
 
     if (editingItem) {
-      setItems(items.map(item => item.id === editingItem.id ? itemData : item))
+      const updatedItems = items.map(item => item.id === editingItem.id ? itemData : item)
+      setItems(updatedItems)
+      saveItemsToStorage(updatedItems, invoiceType)
       toast.success("Item updated successfully")
     } else {
-      setItems([...items, itemData])
+      const updatedItems = [...items, itemData]
+      setItems(updatedItems)
+      saveItemsToStorage(updatedItems, invoiceType)
       toast.success("Item created successfully")
     }
 
@@ -2363,6 +2376,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     }
   })
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredItems.length / pageSize)
+  const paginatedItems = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   const filteredTemplates = templates.filter(template =>
     template.name.toLowerCase().includes(searchTemplateTerm.toLowerCase()) ||
     template.description.toLowerCase().includes(searchTemplateTerm.toLowerCase())
@@ -2489,7 +2506,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedItems.map((item) => (
+                  {paginatedItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
@@ -2554,6 +2571,80 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 </TableBody>
               </Table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredItems.length > 0 && (
+              <div className="flex items-center justify-between border-t p-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Show</span>
+                  <Select value={pageSize.toString()} onValueChange={(value) => {
+                    setPageSize(Number(value))
+                    setCurrentPage(1)
+                  }}>
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>entries</span>
+                </div>
+
+                <div className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredItems.length)} of {filteredItems.length} items
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1 mx-2">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum: number
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = currentPage - 2 + i
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="w-8 h-8 p-0"
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
