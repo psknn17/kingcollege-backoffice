@@ -4,6 +4,8 @@ import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -1332,6 +1334,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Student context
   const { students, addStudent, families, addFamily, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
+
+  // Auth context for role-based access control
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Get current academic year and term (default to first ones)
   const academicYear = academicYears[0]?.id || "2025-2026"
@@ -2819,7 +2825,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {!isSimplifiedView && (
             <div className="space-y-3">
               <h3 className="font-medium">1. {t("invoiceCreate.selectAcademicYear")}</h3>
-              <Select value={selectedAcademicYear} onValueChange={(value) => {
+              <Select disabled={!userCanEdit} value={selectedAcademicYear} onValueChange={(value) => {
                 setSelectedAcademicYear(value)
                 setSelectedGrade("") // Reset grade when year changes
                 setSelectedTerm("") // Reset term
@@ -2845,7 +2851,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 // Step 2 for Trip & Activity, Summer, and School Bus: Select Term first
                 <div className="space-y-3">
                   <h3 className="font-medium">2. {t("invoiceCreate.selectTerm")}</h3>
-                  <Select value={selectedTerm} onValueChange={handleTermChange}>
+                  <Select disabled={!userCanEdit} value={selectedTerm} onValueChange={handleTermChange}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("invoiceCreate.selectTerm")} />
                     </SelectTrigger>
@@ -2860,7 +2866,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 // Step 2 for others: Select Grade
                 <div className="space-y-3">
                   <h3 className="font-medium">2. {t("invoiceCreate.selectGrade")}</h3>
-                  <Select value={selectedGrade} onValueChange={handleGradeChange}>
+                  <Select disabled={!userCanEdit} value={selectedGrade} onValueChange={handleGradeChange}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("invoice.chooseGradeLevel")} />
                     </SelectTrigger>
@@ -2927,7 +2933,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 selectedTerm && (
                   <div className="space-y-3">
                     <h3 className="font-medium">3. {t("invoiceCreate.selectGrade")}</h3>
-                    <Select value={selectedGrade} onValueChange={handleGradeChange}>
+                    <Select disabled={!userCanEdit} value={selectedGrade} onValueChange={handleGradeChange}>
                       <SelectTrigger>
                         <SelectValue placeholder={t("invoice.chooseGradeLevel")} />
                       </SelectTrigger>
@@ -2944,7 +2950,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 selectedGrade && (
                   <div className="space-y-3">
                     <h3 className="font-medium">3. {t("invoiceCreate.selectTerm")}</h3>
-                    <Select value={selectedTerm} onValueChange={handleTermChange}>
+                    <Select disabled={!userCanEdit} value={selectedTerm} onValueChange={handleTermChange}>
                       <SelectTrigger>
                         <SelectValue placeholder={t("invoiceCreate.selectTerm")} />
                       </SelectTrigger>
@@ -2963,7 +2969,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "summer" && selectedAcademicYear && selectedGrade && selectedTerm && (
               <div className="space-y-3">
                 <h3 className="font-medium">4. {t("invoiceCreate.selectRoom")} ({t("common.optional")})</h3>
-                <Select value={selectedRoom === "" ? "all" : selectedRoom} onValueChange={handleRoomChange}>
+                <Select disabled={!userCanEdit} value={selectedRoom === "" ? "all" : selectedRoom} onValueChange={handleRoomChange}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("invoiceCreate.selectRoom")} />
                   </SelectTrigger>
@@ -3000,6 +3006,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         Trip / Activity Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
+                        disabled={!userCanEdit}
                         placeholder={t('invoiceCreation.placeholderActivityName')}
                         value={tripName}
                         onChange={(e) => setTripName(e.target.value)}
@@ -3029,6 +3036,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">{t('invoiceCreation.location')}</Label>
                       <Input
+                        disabled={!userCanEdit}
                         placeholder={t('invoiceCreation.placeholderLocation')}
                         value={tripLocation}
                         onChange={(e) => setTripLocation(e.target.value)}
@@ -3046,6 +3054,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         Exam Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
+                        disabled={!userCanEdit}
                         placeholder={t('invoiceCreation.placeholderExamName')}
                         value={examName}
                         onChange={(e) => setExamName(e.target.value)}
@@ -3075,6 +3084,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">{t('invoiceCreation.testCenter')}</Label>
                       <Input
+                        disabled={!userCanEdit}
                         placeholder={t('invoiceCreation.placeholderSchoolName')}
                         value={testCenter}
                         onChange={(e) => setTestCenter(e.target.value)}
@@ -3092,6 +3102,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         ECA Activity Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
+                        disabled={!userCanEdit}
                         placeholder="Enter ECA activity name"
                         value={examName}
                         onChange={(e) => setExamName(e.target.value)}
@@ -3102,7 +3113,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <Label className="text-sm font-medium">
                         Term <span className="text-red-500">*</span>
                       </Label>
-                      <Select value={examType} onValueChange={setExamType}>
+                      <Select disabled={!userCanEdit} value={examType} onValueChange={setExamType}>
                         <SelectTrigger className="h-10">
                           <SelectValue placeholder="Select term" />
                         </SelectTrigger>
@@ -3118,6 +3129,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         Academic Year <span className="text-red-500">*</span>
                       </Label>
                       <Input
+                        disabled={!userCanEdit}
                         placeholder="e.g., 2024-2025"
                         value={tripLocation}
                         onChange={(e) => setTripLocation(e.target.value)}
@@ -3134,7 +3146,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <Label className="text-sm font-medium">
                         Route / Zone <span className="text-red-500">*</span>
                       </Label>
-                      <Select value={busRoute} onValueChange={setBusRoute}>
+                      <Select disabled={!userCanEdit} value={busRoute} onValueChange={setBusRoute}>
                         <SelectTrigger className="h-10">
                           <SelectValue placeholder="Select route" />
                         </SelectTrigger>
@@ -3149,7 +3161,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <Label className="text-sm font-medium">
                         Service Type <span className="text-red-500">*</span>
                       </Label>
-                      <Select value={busServiceType} onValueChange={setBusServiceType}>
+                      <Select disabled={!userCanEdit} value={busServiceType} onValueChange={setBusServiceType}>
                         <SelectTrigger className="h-10">
                           <SelectValue placeholder="Select service type" />
                         </SelectTrigger>
@@ -3561,6 +3573,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="space-y-2">
                         <Label className="text-sm">{t('invoiceCreation.clientName')} <span className="text-red-500">*</span></Label>
                         <Input
+                          disabled={!userCanEdit}
                           placeholder={t('invoiceCreation.placeholderParentName')}
                           value={manualClientName}
                           onChange={(e) => setManualClientName(e.target.value)}
@@ -3570,6 +3583,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="space-y-2">
                         <Label className="text-sm">{t('invoiceCreation.contactName')}</Label>
                         <Input
+                          disabled={!userCanEdit}
                           placeholder={t('invoiceCreation.placeholderContactPerson')}
                           value={manualContactName}
                           onChange={(e) => setManualClientName(e.target.value)}
@@ -3579,6 +3593,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="space-y-2">
                         <Label className="text-sm">{t('common.email')} <span className="text-red-500">*</span></Label>
                         <Input
+                          disabled={!userCanEdit}
                           type="email"
                           placeholder={t('invoiceCreation.placeholderEmail')}
                           value={manualClientEmail}
@@ -3798,7 +3813,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 ).length
                         } students will be selected
                       </p>
-                      <Button onClick={handleSelectAllStudents} size="sm">
+                      <Button disabled={!userCanEdit} onClick={handleSelectAllStudents} size="sm">
                         Select All Students
                       </Button>
                     </div>
@@ -4010,6 +4025,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
                 <div className="flex gap-2 pt-4 justify-end">
                   <Button
+                    disabled={!userCanEdit}
                     onClick={handlePreviewInvoice}
                     variant="outline"
                     size="sm"
@@ -4019,6 +4035,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     Preview
                   </Button>
                   <Button
+                    disabled={!userCanEdit}
                     onClick={handleSaveAsDraft}
                     size="sm"
                     className="flex items-center gap-1.5"
@@ -4085,7 +4102,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>{t('common.gender')}</Label>
-                  <Select value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>
+                  <Select disabled={!userCanEdit} value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -4140,7 +4157,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               {newStudentFamilyType === "existing" ? (
                 <div className="space-y-2">
                   <Label>{t('invoiceCreation.selectFamily')}</Label>
-                  <Select value={newStudentFamilyId} onValueChange={setNewStudentFamilyId}>
+                  <Select disabled={!userCanEdit} value={newStudentFamilyId} onValueChange={setNewStudentFamilyId}>
                     <SelectTrigger>
                       <SelectValue placeholder={t('invoiceCreation.selectFamily')} />
                     </SelectTrigger>
@@ -4161,7 +4178,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               ) : (
                 <div className="space-y-2">
                   <Label>{t('invoiceCreation.childOrderInFamily')}</Label>
-                  <Select value={String(newStudentChildOrder)} onValueChange={(v) => setNewStudentChildOrder(Number(v))}>
+                  <Select disabled={!userCanEdit} value={String(newStudentChildOrder)} onValueChange={(v) => setNewStudentChildOrder(Number(v))}>
                     <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
@@ -4191,7 +4208,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </div>
                   <div className="space-y-2">
                     <Label>{t('common.relationship')}</Label>
-                    <Select value={newStudentParentRelation} onValueChange={(v: "father" | "mother" | "guardian" | "other") => setNewStudentParentRelation(v)}>
+                    <Select disabled={!userCanEdit} value={newStudentParentRelation} onValueChange={(v: "father" | "mother" | "guardian" | "other") => setNewStudentParentRelation(v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -4244,6 +4261,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               Cancel
             </Button>
             <Button
+              disabled={!userCanEdit}
               onClick={handleAddNewStudent}
               className="flex-1"
               style={{ backgroundColor: '#d97706', color: 'white' }}
@@ -4284,6 +4302,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 Cancel
               </Button>
               <Button
+                disabled={!userCanEdit}
                 onClick={handleFinalConfirmation}
                 className="flex-1"
               >
@@ -4904,7 +4923,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </div>
             {/* Only show category filter for non-tuition invoice types */}
             {invoiceType !== "student" && invoiceType !== "tuition" && invoiceType && (
-              <Select value={addItemCategory} onValueChange={setAddItemCategory}>
+              <Select disabled={!userCanEdit} value={addItemCategory} onValueChange={setAddItemCategory}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
@@ -5017,6 +5036,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               <div className="space-y-2">
                 <Label htmlFor="edit-description">{t('common.description')}</Label>
                 <Textarea
+                  disabled={!userCanEdit}
                   id="edit-description"
                   value={editItemDescription}
                   onChange={(e) => setEditItemDescription(e.target.value)}
@@ -5049,7 +5069,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveEditItem}>
+            <Button disabled={!userCanEdit} onClick={handleSaveEditItem}>
               Save Changes
             </Button>
           </div>

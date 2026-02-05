@@ -39,6 +39,8 @@ import {
 import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface Student {
   id: string
@@ -222,6 +224,8 @@ const grades = [
 export function InvoiceEmailManagement() {
   const { t } = useLanguage()
   const { students: contextStudents, families } = useStudents()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Convert students from context to local format
   const allStudents = useMemo(() =>
@@ -561,6 +565,7 @@ export function InvoiceEmailManagement() {
                             id={grade}
                             checked={selectedGrades.includes(grade)}
                             onCheckedChange={() => handleGradeToggle(grade)}
+                            disabled={!userCanEdit}
                           />
                           <label htmlFor={grade} className="text-sm">{grade}</label>
                         </div>
@@ -577,6 +582,7 @@ export function InvoiceEmailManagement() {
                             id={status}
                             checked={selectedStatuses.includes(status)}
                             onCheckedChange={() => handleStatusToggle(status)}
+                            disabled={!userCanEdit}
                           />
                           <label htmlFor={status} className="text-sm capitalize">{status}</label>
                         </div>
@@ -585,7 +591,7 @@ export function InvoiceEmailManagement() {
                   </div>
                 </div>
 
-                <Button onClick={applyBatchFilters}>{t("invoiceEmail.applyFilters")}</Button>
+                <Button onClick={applyBatchFilters} disabled={!userCanEdit}>{t("invoiceEmail.applyFilters")}</Button>
               </CardContent>
             </Card>
           )}
@@ -606,6 +612,7 @@ export function InvoiceEmailManagement() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className=""
+                    disabled={!userCanEdit}
                   />
                 </div>
 
@@ -650,6 +657,7 @@ export function InvoiceEmailManagement() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleStudentRemove(student.id)}
+                            disabled={!userCanEdit}
                           >
                             ×
                           </Button>
@@ -693,7 +701,7 @@ export function InvoiceEmailManagement() {
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handlePreview}>
+                <Button variant="outline" onClick={handlePreview} disabled={!userCanEdit}>
                   <Eye className="w-4 h-4 mr-2" />
                   {t("invoiceEmail.previewEmail")}
                 </Button>
@@ -743,7 +751,7 @@ export function InvoiceEmailManagement() {
 
               <Button
                 onClick={handleSendEmails}
-                disabled={isSending || getTargetCount() === 0}
+                disabled={!userCanEdit || isSending || getTargetCount() === 0}
                 className="w-full"
               >
                 {isSending ? (
@@ -835,7 +843,7 @@ export function InvoiceEmailManagement() {
                       <TableCell>{currentJob.createdAt.toLocaleString()}</TableCell>
                       <TableCell>{currentJob.createdBy}</TableCell>
                       <TableCell>
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" disabled={!userCanEdit}>
                           <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
@@ -866,7 +874,7 @@ export function InvoiceEmailManagement() {
                       <TableCell>{job.createdAt.toLocaleString()}</TableCell>
                       <TableCell>{job.createdBy}</TableCell>
                       <TableCell>
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" disabled={!userCanEdit}>
                           <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
@@ -897,7 +905,7 @@ export function InvoiceEmailManagement() {
               <Select value={previewStudent?.id || ""} onValueChange={(id) => {
                 const student = allStudents.find(s => s.id === id)
                 if (student) setPreviewStudent(student)
-              }}>
+              }} disabled={!userCanEdit}>
                 <SelectTrigger className="w-64">
                   <SelectValue placeholder={t("invoiceEmail.selectStudent")} />
                 </SelectTrigger>

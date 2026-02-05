@@ -18,6 +18,8 @@ import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 interface Invoice {
   id: string
@@ -86,6 +88,8 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
   const locale = language === "th" ? th : enUS
   const { students } = useStudents()
   const { academicYears = [] } = useAcademicYears()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Load invoices from localStorage immediately (not waiting for useEffect)
   const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage(showOnlyInternal))
@@ -402,7 +406,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
             <RefreshCw className="w-4 h-4" />
             {t("common.refresh")}
           </Button>
-          <Button className="flex items-center gap-2">
+          <Button className="flex items-center gap-2" disabled={!userCanEdit}>
             <Download className="w-4 h-4" />
             {t("invoice.exportReport")}
           </Button>
@@ -469,8 +473,8 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               {t("invoiceOverview.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+              <Button onClick={applyFilters} className="h-9" disabled={!userCanEdit}>{t("common.apply")}</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9" disabled={!userCanEdit}>{t("common.clear")}</Button>
             </div>
           </div>
         </CardHeader>
@@ -485,6 +489,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9"
+                disabled={!userCanEdit}
               />
             </div>
 
@@ -494,7 +499,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               <Select value={academicYearFilter} onValueChange={(value) => {
                 setAcademicYearFilter(value)
                 setTermFilter("all") // Reset term when year changes
-              }}>
+              }} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allYears")} />
                 </SelectTrigger>
@@ -510,7 +515,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
             {/* Term */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
-              <Select value={termFilter} onValueChange={setTermFilter}>
+              <Select value={termFilter} onValueChange={setTermFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allTerms")} />
                 </SelectTrigger>
@@ -529,7 +534,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
             {/* Year Group */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <Select value={gradeFilter} onValueChange={setGradeFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allYearGroups")} />
                 </SelectTrigger>
@@ -545,7 +550,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
             {/* Status */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PaymentStatus)}>
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PaymentStatus)} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allStatus")} />
                 </SelectTrigger>
@@ -573,7 +578,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal" disabled={!userCanEdit}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dueDateFrom ? format(dueDateFrom, "dd/MM/yy", { locale }) : t("date.from")}
                     </Button>
@@ -584,13 +589,14 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                       selected={dueDateFrom || undefined}
                       onSelect={setDueDateFrom}
                       initialFocus
+                      disabled={!userCanEdit}
                     />
                   </PopoverContent>
                 </Popover>
                 <span className="text-muted-foreground">→</span>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal" disabled={!userCanEdit}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dueDateTo ? format(dueDateTo, "dd/MM/yy", { locale }) : t("date.to")}
                     </Button>
@@ -601,6 +607,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                       selected={dueDateTo || undefined}
                       onSelect={setDueDateTo}
                       initialFocus
+                      disabled={!userCanEdit}
                     />
                   </PopoverContent>
                 </Popover>
@@ -760,6 +767,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                           variant="ghost"
                           onClick={() => downloadInvoice(invoice.id)}
                           title={t("invoiceOverview.downloadInvoice")}
+                          disabled={!userCanEdit}
                         >
                           <Download className="w-4 h-4 text-blue-600" />
                         </Button>
@@ -770,6 +778,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                             variant="ghost"
                             onClick={() => sendReminder(invoice.id)}
                             title={t("invoiceOverview.sendReminder")}
+                            disabled={!userCanEdit}
                           >
                             <Send className="w-4 h-4 text-purple-600" />
                           </Button>
@@ -898,6 +907,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 }
               }}
               className="w-16 h-8"
+              disabled={!userCanEdit}
             />
           </div>
         </div>
@@ -1042,6 +1052,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                     toast.success(t("invoiceOverview.downloadSuccess"))
                     closeModal()
                   }}
+                  disabled={!userCanEdit}
                 >
                   <Download className="w-4 h-4 mr-2" />
                   {t("invoiceOverview.downloadInvoice")}
@@ -1055,6 +1066,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                       sendReminder(selectedInvoice.id)
                       closeModal()
                     }}
+                    disabled={!userCanEdit}
                   >
                     <Send className="w-4 h-4 mr-2" />
                     {t("invoiceOverview.sendReminder")}
