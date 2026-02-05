@@ -22,6 +22,8 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { ReceiptManagementFlow } from "./ReceiptManagementFlow"
 import { SCHOOL_INFO, numberToWords } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 // Student data matching StudentContext
 const studentData = [
@@ -228,6 +230,8 @@ interface ReceiptPageProps {
 export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps) {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
 
   // Categories that should NOT show credit notes
   const hideCreditNotes = ['eca', 'trip', 'exam', 'bus', 'external'].includes(category || '')
@@ -812,6 +816,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
             <Button
               variant="outline"
               className="flex items-center gap-2"
+              disabled={!userCanEdit}
               onClick={() => {
                 // Create hidden file input
                 const input = document.createElement('input')
@@ -833,6 +838,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
             <Button
               variant="outline"
               className="flex items-center gap-2"
+              disabled={!userCanEdit}
               onClick={exportToExcel}
             >
               <FileDown className="w-4 h-4" />
@@ -840,6 +846,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
             </Button>
             <Button
               className="flex items-center gap-2"
+              disabled={!userCanEdit}
               onClick={() => {
                 if (activeTab === "receipts") {
                   setIsCreateDialogOpen(true)
@@ -1027,6 +1034,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!userCanEdit}
                   onClick={bulkDownloadPDF}
                   className="bg-white hover:bg-blue-100 border-blue-300"
                 >
@@ -1036,6 +1044,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!userCanEdit}
                   onClick={bulkResendEmail}
                   className="bg-white hover:bg-blue-100 border-blue-300"
                 >
@@ -1083,6 +1092,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                 <TableHead className="w-12">
                   <Checkbox
                     checked={currentPageReceipts.length > 0 && currentPageReceipts.every(receipt => selectedReceipts.has(receipt.id))}
+                    disabled={!userCanEdit}
                     onCheckedChange={(checked) => {
                       if (checked) {
                         selectAllCurrentPage()
@@ -1163,6 +1173,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                   <TableCell>
                     <Checkbox
                       checked={selectedReceipts.has(receipt.id)}
+                      disabled={!userCanEdit}
                       onCheckedChange={() => toggleReceiptSelection(receipt.id)}
                     />
                   </TableCell>
@@ -1228,6 +1239,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                             <Button
                               size="sm"
                               variant="ghost"
+                              disabled={!userCanEdit}
                               onClick={() => resendReceipt(receipt.id)}
                             >
                               <Mail className="w-4 h-4" />
@@ -1677,6 +1689,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                     <Button
                       variant="outline"
                       size="sm"
+                      disabled={!userCanEdit}
                       onClick={bulkDownloadCreditNotes}
                       className="bg-white hover:bg-blue-100 border-blue-300"
                     >
@@ -1686,6 +1699,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                     <Button
                       variant="outline"
                       size="sm"
+                      disabled={!userCanEdit}
                       onClick={bulkCancelCreditNotes}
                       className="bg-white hover:bg-blue-100 border-blue-300"
                     >
@@ -1733,6 +1747,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                     <TableHead className="w-12">
                       <Checkbox
                         checked={currentPageCreditNotes.length > 0 && currentPageCreditNotes.every(cn => selectedCreditNotes.has(cn.id))}
+                        disabled={!userCanEdit}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             selectAllCreditNotesCurrentPage()
@@ -1803,6 +1818,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                       <TableCell>
                         <Checkbox
                           checked={selectedCreditNotes.has(creditNote.id)}
+                          disabled={!userCanEdit}
                           onCheckedChange={() => toggleCreditNoteSelection(creditNote.id)}
                         />
                       </TableCell>
@@ -1866,6 +1882,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                                   <Button
                                     size="sm"
                                     variant="ghost"
+                                    disabled={!userCanEdit}
                                     onClick={() => cancelCreditNote(creditNote.id)}
                                   >
                                     <X className="w-4 h-4 text-red-500" />
@@ -2197,7 +2214,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
             <Button variant="outline" onClick={() => setIsCreateCreditNoteOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateCreditNote}>
+            <Button disabled={!userCanEdit} onClick={handleCreateCreditNote}>
               Create Credit Note
             </Button>
           </div>

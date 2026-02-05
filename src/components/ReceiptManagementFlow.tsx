@@ -30,6 +30,8 @@ import {
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import SchoolLogo from "@/assets/Logo.png"
 
 // ========================
@@ -194,6 +196,8 @@ export function ReceiptManagementFlow({
   onFormClose
 }: ReceiptManagementFlowProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const printRef = useRef<HTMLDivElement>(null)
 
   // Get payment methods with translations
@@ -826,7 +830,7 @@ export function ReceiptManagementFlow({
               <h2 className="text-xl font-semibold">{title}</h2>
               <p className="text-muted-foreground">{description}</p>
             </div>
-            <Button onClick={handleOpenForm} className="flex items-center gap-2">
+            <Button onClick={handleOpenForm} className="flex items-center gap-2" disabled={!userCanEdit}>
               <Plus className="w-4 h-4" />
               Create Receipt
             </Button>
@@ -933,6 +937,7 @@ export function ReceiptManagementFlow({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleResendReceipt(receipt)}
+                          disabled={!userCanEdit}
                         >
                           <Mail className="w-4 h-4" />
                         </Button>
@@ -1006,6 +1011,7 @@ export function ReceiptManagementFlow({
                       onChange={(e) => updateFormField("clientNo", e.target.value)}
                       placeholder="e.g., STU-2024-001"
                       className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                      disabled={!userCanEdit}
                     />
                   </div>
                   <div className="space-y-3">
@@ -1017,6 +1023,7 @@ export function ReceiptManagementFlow({
                       onChange={(e) => updateFormField("clientName", e.target.value)}
                       placeholder="Enter full name"
                       className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                      disabled={!userCanEdit}
                     />
                   </div>
                 </div>
@@ -1031,6 +1038,7 @@ export function ReceiptManagementFlow({
                       onChange={(e) => updateFormField("contactName", e.target.value)}
                       placeholder="Contact person name"
                       className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                      disabled={!userCanEdit}
                     />
                   </div>
                   <div className="space-y-3">
@@ -1042,6 +1050,7 @@ export function ReceiptManagementFlow({
                       onChange={(e) => updateFormField("address", e.target.value)}
                       placeholder="Enter address"
                       className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                      disabled={!userCanEdit}
                     />
                   </div>
                 </div>
@@ -1071,6 +1080,7 @@ export function ReceiptManagementFlow({
                       onChange={(e) => updateFormField("receiptNo", e.target.value)}
                       placeholder="e.g., RCP-2024-001"
                       className="h-9 px-3 font-mono focus:ring-2 focus:ring-primary"
+                      disabled={!userCanEdit}
                     />
                   </div>
                   <div className="space-y-3">
@@ -1079,7 +1089,7 @@ export function ReceiptManagementFlow({
                     </Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full h-9 justify-start font-normal focus:ring-2 focus:ring-primary">
+                        <Button variant="outline" className="w-full h-9 justify-start font-normal focus:ring-2 focus:ring-primary" disabled={!userCanEdit}>
                           <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                           {formData.receiptDate ? format(formData.receiptDate, "dd/MM/yyyy") : "Select date"}
                         </Button>
@@ -1089,6 +1099,7 @@ export function ReceiptManagementFlow({
                           mode="single"
                           selected={formData.receiptDate}
                           onSelect={(date) => updateFormField("receiptDate", date)}
+                          disabled={!userCanEdit}
                         />
                       </PopoverContent>
                     </Popover>
@@ -1104,6 +1115,7 @@ export function ReceiptManagementFlow({
                       <Select
                         value={formData.yearGroup}
                         onValueChange={(v) => updateFormField("yearGroup", v)}
+                        disabled={!userCanEdit}
                       >
                         <SelectTrigger className="h-9 px-3 focus:ring-2 focus:ring-primary">
                           <SelectValue placeholder="Select year group" />
@@ -1121,6 +1133,7 @@ export function ReceiptManagementFlow({
                     <Select
                       value={formData.schoolYear}
                       onValueChange={(v) => updateFormField("schoolYear", v)}
+                      disabled={!userCanEdit}
                     >
                       <SelectTrigger className="h-9 px-3 focus:ring-2 focus:ring-primary">
                         <SelectValue placeholder="Select school year" />
@@ -1148,7 +1161,7 @@ export function ReceiptManagementFlow({
                     <p className="text-xs text-gray-500 mt-1">List all invoices related to this receipt</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={addInvoiceRow} className="flex items-center gap-1.5">
+                <Button variant="outline" size="sm" onClick={addInvoiceRow} className="flex items-center gap-1.5" disabled={!userCanEdit}>
                   <Plus className="w-4 h-4" />
                   Add Row
                 </Button>
@@ -1185,12 +1198,13 @@ export function ReceiptManagementFlow({
                             value={invoice.invoiceNo}
                             onChange={(e) => updateInvoiceRow(invoice.id, "invoiceNo", e.target.value)}
                             className="h-9 font-mono text-sm border-gray-300 focus:ring-2 focus:ring-primary"
+                            disabled={!userCanEdit}
                           />
                         </TableCell>
                         <TableCell className="py-2.5">
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm" className="w-full h-9 text-xs justify-start border-gray-300 focus:ring-2 focus:ring-primary">
+                              <Button variant="outline" size="sm" className="w-full h-9 text-xs justify-start border-gray-300 focus:ring-2 focus:ring-primary" disabled={!userCanEdit}>
                                 <Calendar className="w-3 h-3 mr-1" />
                                 {invoice.invoiceDate ? format(invoice.invoiceDate, "dd/MM/yy") : "Select"}
                               </Button>
@@ -1200,6 +1214,7 @@ export function ReceiptManagementFlow({
                                 mode="single"
                                 selected={invoice.invoiceDate}
                                 onSelect={(date) => updateInvoiceRow(invoice.id, "invoiceDate", date)}
+                                disabled={!userCanEdit}
                               />
                             </PopoverContent>
                           </Popover>
@@ -1211,6 +1226,7 @@ export function ReceiptManagementFlow({
                             value={invoice.invoiceAmount || ""}
                             onChange={(e) => updateInvoiceRow(invoice.id, "invoiceAmount", parseFloat(e.target.value) || 0)}
                             className="h-9 text-right font-mono text-sm border-gray-300 focus:ring-2 focus:ring-primary"
+                            disabled={!userCanEdit}
                           />
                         </TableCell>
                         <TableCell className="py-2.5">
@@ -1220,6 +1236,7 @@ export function ReceiptManagementFlow({
                             value={invoice.receivedAmount || ""}
                             onChange={(e) => updateInvoiceRow(invoice.id, "receivedAmount", parseFloat(e.target.value) || 0)}
                             className="h-9 text-right font-mono text-sm border-gray-300 focus:ring-2 focus:ring-primary"
+                            disabled={!userCanEdit}
                           />
                         </TableCell>
                         <TableCell className="py-2.5">
@@ -1232,7 +1249,7 @@ export function ReceiptManagementFlow({
                             variant="ghost"
                             size="sm"
                             onClick={() => removeInvoiceRow(invoice.id)}
-                            disabled={formData.invoices.length <= 1}
+                            disabled={!userCanEdit || formData.invoices.length <= 1}
                             className="h-8 w-8 p-0 hover:bg-red-50 transition-colors"
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
@@ -1282,6 +1299,7 @@ export function ReceiptManagementFlow({
                   <Select
                     value={formData.paymentMethod}
                     onValueChange={(v) => updateFormField("paymentMethod", v)}
+                    disabled={!userCanEdit}
                   >
                     <SelectTrigger className="h-9 px-3 focus:ring-2 focus:ring-primary">
                       <SelectValue placeholder="Select payment method" />
@@ -1304,6 +1322,7 @@ export function ReceiptManagementFlow({
                       <Select
                         value={formData.bankName}
                         onValueChange={(v) => updateFormField("bankName", v)}
+                        disabled={!userCanEdit}
                       >
                         <SelectTrigger className="h-9 px-3 focus:ring-2 focus:ring-primary">
                           <SelectValue placeholder="Select bank" />
@@ -1324,6 +1343,7 @@ export function ReceiptManagementFlow({
                         onChange={(e) => updateFormField("bankBranch", e.target.value)}
                         placeholder="e.g., Sukhumvit Branch"
                         className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                        disabled={!userCanEdit}
                       />
                     </div>
                   </div>
@@ -1341,6 +1361,7 @@ export function ReceiptManagementFlow({
                         onChange={(e) => updateFormField("chequeNo", e.target.value)}
                         placeholder="e.g., 123456"
                         className="h-9 px-3 font-mono focus:ring-2 focus:ring-primary"
+                        disabled={!userCanEdit}
                       />
                     </div>
                     <div className="space-y-3">
@@ -1349,7 +1370,7 @@ export function ReceiptManagementFlow({
                       </Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-9 justify-start font-normal focus:ring-2 focus:ring-primary">
+                          <Button variant="outline" className="w-full h-9 justify-start font-normal focus:ring-2 focus:ring-primary" disabled={!userCanEdit}>
                             <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                             {formData.chequeDate ? format(formData.chequeDate, "dd/MM/yyyy") : "Select date"}
                           </Button>
@@ -1359,6 +1380,7 @@ export function ReceiptManagementFlow({
                             mode="single"
                             selected={formData.chequeDate}
                             onSelect={(date) => updateFormField("chequeDate", date)}
+                            disabled={!userCanEdit}
                           />
                         </PopoverContent>
                       </Popover>
@@ -1390,6 +1412,7 @@ export function ReceiptManagementFlow({
                     onChange={(e) => updateFormField("collectorName", e.target.value)}
                     placeholder="Enter collector's name"
                     className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                    disabled={!userCanEdit}
                   />
                 </div>
                 <div className="space-y-3">
@@ -1401,6 +1424,7 @@ export function ReceiptManagementFlow({
                     onChange={(e) => updateFormField("authorizedSignature", e.target.value)}
                     placeholder="e.g., Finance Director"
                     className="h-9 px-3 focus:ring-2 focus:ring-primary"
+                    disabled={!userCanEdit}
                   />
                 </div>
               </div>
@@ -1428,6 +1452,7 @@ export function ReceiptManagementFlow({
                   variant="outline"
                   onClick={handlePreview}
                   className="gap-2 hover:bg-gray-50"
+                  disabled={!userCanEdit}
                 >
                   <Eye className="w-4 h-4" />
                   Preview Receipt
@@ -1435,6 +1460,7 @@ export function ReceiptManagementFlow({
                 <Button
                   onClick={handleGenerateReceipt}
                   className="gap-2 bg-primary hover:bg-primary/90"
+                  disabled={!userCanEdit}
                 >
                   <FileText className="w-4 h-4" />
                   Generate Receipt
@@ -1471,7 +1497,7 @@ export function ReceiptManagementFlow({
               <Printer className="w-4 h-4 mr-2" />
               Print
             </Button>
-            <Button onClick={handleGenerateReceipt}>
+            <Button onClick={handleGenerateReceipt} disabled={!userCanEdit}>
               <FileText className="w-4 h-4 mr-2" />
               Generate
             </Button>
@@ -1516,7 +1542,7 @@ export function ReceiptManagementFlow({
             <Button variant="outline" onClick={() => setIsViewOpen(false)}>
               Close
             </Button>
-            <Button variant="outline" onClick={() => selectedReceipt && handleResendReceipt(selectedReceipt)}>
+            <Button variant="outline" onClick={() => selectedReceipt && handleResendReceipt(selectedReceipt)} disabled={!userCanEdit}>
               <Mail className="w-4 h-4 mr-2" />
               Send Email
             </Button>
