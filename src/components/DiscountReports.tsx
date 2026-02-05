@@ -19,6 +19,8 @@ import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 
 // Standard Year Groups (grade levels) - consistent with StudentContext
 const STANDARD_YEAR_GROUPS = [
@@ -419,6 +421,8 @@ const discountTypeStyles: Record<string, React.CSSProperties> = {
 
 export function DiscountReports() {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const { students, families, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
   const { getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears: academicYearsFromContext } = useAcademicYears()

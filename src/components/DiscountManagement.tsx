@@ -14,6 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Progress } from "./ui/progress"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { canPerformActions } from "@/utils/rolePermissions"
 import {
   Percent,
   Tag,
@@ -178,6 +180,8 @@ interface DiscountManagementProps {
 
 export function DiscountManagement({ activeTab, category = "tuition", onNavigateToSubPage, onTabChange }: DiscountManagementProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const userCanEdit = canPerformActions(user?.role)
   const { students: contextStudents } = useStudents()
 
   // Determine department based on category
@@ -412,16 +416,17 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleConfirmCsvUpload = () => {
+    if (!userCanEdit) return
     if (csvUploadDialog.groupId && csvPreviewData.length > 0) {
       const groupIndex = studentGroups.findIndex(g => g.id === csvUploadDialog.groupId)
       if (groupIndex !== -1) {
         const updatedGroups = [...studentGroups]
         const existingStudentIds = updatedGroups[groupIndex].students.map(s => s.id)
         const newStudents = csvPreviewData.filter(s => !existingStudentIds.includes(s.id))
-        
+
         updatedGroups[groupIndex].students = [...updatedGroups[groupIndex].students, ...newStudents]
         setStudentGroups(updatedGroups)
-        
+
         toast.success(`Added ${newStudents.length} students to group`)
         setCsvUploadDialog({isOpen: false, groupId: null})
         setCsvFile(null)
@@ -477,28 +482,29 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
   // Individual Student handlers
   const handleAddIndividualStudent = () => {
+    if (!userCanEdit) return
     const { id, name, yearGroup, parentName } = individualStudentForm
-    
+
     if (!id || !name || !yearGroup || !parentName) {
       toast.error("Please fill in all fields")
       return
     }
-    
+
     if (addIndividualDialog.groupId) {
       const groupIndex = studentGroups.findIndex(g => g.id === addIndividualDialog.groupId)
       if (groupIndex !== -1) {
         const updatedGroups = [...studentGroups]
         const existingStudent = updatedGroups[groupIndex].students.find(s => s.id === id)
-        
+
         if (existingStudent) {
           toast.error("Student with this ID already exists in the group")
           return
         }
-        
+
         const newStudent: Student = { id, name, yearGroup, parentName }
         updatedGroups[groupIndex].students = [...updatedGroups[groupIndex].students, newStudent]
         setStudentGroups(updatedGroups)
-        
+
         toast.success("Student added successfully")
         setAddIndividualDialog({isOpen: false, groupId: null})
         setIndividualStudentForm({ id: "", name: "", yearGroup: "", parentName: "" })
@@ -680,6 +686,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const removeStudentFromGroup = (studentId: string) => {
+    if (!userCanEdit) return
     setGroupForm(prev => ({
       ...prev,
       selectedStudents: prev.selectedStudents.filter(s => s.id !== studentId)
@@ -687,6 +694,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const toggleStudentStatus = (studentId: string) => {
+    if (!userCanEdit) return
     setGroupForm(prev => ({
       ...prev,
       selectedStudents: prev.selectedStudents.map(s =>
@@ -696,6 +704,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleSaveGroup = () => {
+    if (!userCanEdit) return
     const hasValidDiscount = groupForm.discountType === "percentage"
       ? groupForm.discountPercentage > 0
       : groupForm.fixedAmount > 0
@@ -746,6 +755,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleEditGroup = (group: any) => {
+    if (!userCanEdit) return
     setEditGroupDialog({isOpen: true, group})
     setGroupForm({
       name: group.name,
@@ -759,6 +769,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleDeleteGroup = (group: any) => {
+    if (!userCanEdit) return
     setDeleteConfirmDialog({isOpen: true, group})
   }
 
@@ -771,16 +782,17 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleSaveDiscount = () => {
+    if (!userCanEdit) return
     if (!formData.code || !formData.startDate || !formData.endDate) {
       toast.error("Please fill in all required fields")
       return
     }
 
     if (editingDiscount) {
-      setDiscountCodes(prev => prev.map(discount => 
-        discount.id === editingDiscount.id 
-          ? { 
-              ...discount, 
+      setDiscountCodes(prev => prev.map(discount =>
+        discount.id === editingDiscount.id
+          ? {
+              ...discount,
               ...formData,
               startDate: formData.startDate!,
               endDate: formData.endDate!
@@ -807,6 +819,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleEditDiscount = (discount: DiscountCode) => {
+    if (!userCanEdit) return
     setEditingDiscount(discount)
     setFormData({
       code: discount.code,
@@ -827,8 +840,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const toggleDiscountStatus = (id: number) => {
-    setDiscountCodes(prev => prev.map(discount => 
-      discount.id === id 
+    if (!userCanEdit) return
+    setDiscountCodes(prev => prev.map(discount =>
+      discount.id === id
         ? { ...discount, isActive: !discount.isActive }
         : discount
     ))
@@ -1030,9 +1044,12 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
               <h3 className="font-medium">{t("menu.studentGroups")}</h3>
             </div>
 
-            <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+            <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {
+              if (!userCanEdit && open) return
+              setIsGroupDialogOpen(open)
+            }}>
               <DialogTrigger asChild>
-                <Button onClick={() => resetGroupForm()}>
+                <Button onClick={() => resetGroupForm()} disabled={!userCanEdit}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Student Group
                 </Button>
@@ -1052,6 +1069,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       value={groupForm.name}
                       onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
                       placeholder="Year 7 Excellence Group"
+                      disabled={!userCanEdit}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -1060,6 +1078,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       <Select
                         value={groupForm.discountType}
                         onValueChange={(value: "percentage" | "fixed") => setGroupForm({...groupForm, discountType: value})}
+                        disabled={!userCanEdit}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -1081,6 +1100,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           placeholder="15"
                           min="0"
                           max="100"
+                          disabled={!userCanEdit}
                         />
                       </div>
                     ) : (
@@ -1093,6 +1113,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           onChange={(e) => setGroupForm({...groupForm, fixedAmount: Number(e.target.value)})}
                           placeholder="1000"
                           min="0"
+                          disabled={!userCanEdit}
                         />
                       </div>
                     )}
@@ -1200,9 +1221,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               onChange={handleFileUpload}
                               className="hidden"
                               id="csv-file-upload"
-                              disabled={isProcessingFile}
+                              disabled={isProcessingFile || !userCanEdit}
                             />
-                            <Button asChild variant="outline" disabled={isProcessingFile}>
+                            <Button asChild variant="outline" disabled={isProcessingFile || !userCanEdit}>
                               <label htmlFor="csv-file-upload" className="cursor-pointer">
                                 {isProcessingFile ? "Processing..." : "Choose CSV File"}
                               </label>
@@ -1270,6 +1291,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                             variant="outline"
                             size="sm"
                             onClick={() => setGroupForm(prev => ({ ...prev, selectedStudents: [] }))}
+                            disabled={!userCanEdit}
                           >
                             Clear All
                           </Button>
@@ -1290,6 +1312,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                     <Switch
                                       checked={student.isActive !== false}
                                       onCheckedChange={() => toggleStudentStatus(student.id)}
+                                      disabled={!userCanEdit}
                                     />
                                     <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
                                       {student.isActive === false ? 'Inactive' : 'Active'}
@@ -1298,7 +1321,8 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                   <button
                                     type="button"
                                     onClick={() => removeStudentFromGroup(student.id)}
-                                    className="text-red-600 hover:text-red-800 p-1"
+                                    className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={!userCanEdit}
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
@@ -1315,7 +1339,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSaveGroup}>
+                    <Button onClick={handleSaveGroup} disabled={!userCanEdit}>
                       Create Group
                     </Button>
                   </div>
@@ -1359,13 +1383,14 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         <Eye className="w-4 h-4 mr-1" />
                         View All
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEditGroup(group)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditGroup(group)} disabled={!userCanEdit}>
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteGroup(group)}
+                        disabled={!userCanEdit}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -1383,7 +1408,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   <p className="text-sm text-muted-foreground mb-4">
                     Create your first student group to manage discount whitelist
                   </p>
-                  <Button onClick={() => setIsGroupDialogOpen(true)}>
+                  <Button onClick={() => setIsGroupDialogOpen(true)} disabled={!userCanEdit}>
                     <Plus className="w-4 h-4 mr-2" />
                     Create Student Group
                   </Button>
@@ -1440,22 +1465,24 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
                   <div className="flex justify-between">
                     <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => {
                           setCsvUploadDialog({isOpen: true, groupId: viewGroupDialog.group?.id})
                           setViewGroupDialog({isOpen: false, group: null})
                         }}
+                        disabled={!userCanEdit}
                       >
                         <Upload className="w-4 h-4 mr-2" />
                         Upload CSV
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         onClick={() => {
                           setAddIndividualDialog({isOpen: true, groupId: viewGroupDialog.group?.id})
                           setViewGroupDialog({isOpen: false, group: null})
                         }}
+                        disabled={!userCanEdit}
                       >
                         <UserPlus className="w-4 h-4 mr-2" />
                         Add Individual
@@ -1472,6 +1499,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
           {/* Edit Group Dialog */}
           <Dialog open={editGroupDialog.isOpen} onOpenChange={(open) => {
+            if (!userCanEdit && open) return
             if (!open) {
               setEditGroupDialog({isOpen: false, group: null})
               resetGroupForm()
@@ -1495,6 +1523,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   <Switch
                     checked={groupForm.isActive}
                     onCheckedChange={(checked) => setGroupForm({...groupForm, isActive: checked})}
+                    disabled={!userCanEdit}
                   />
                 </div>
 
@@ -1505,6 +1534,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     value={groupForm.name}
                     onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
                     placeholder="Year 7 Excellence Group"
+                    disabled={!userCanEdit}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1513,6 +1543,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     <Select
                       value={groupForm.discountType}
                       onValueChange={(value: "percentage" | "fixed") => setGroupForm({...groupForm, discountType: value})}
+                      disabled={!userCanEdit}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1534,6 +1565,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         placeholder="15"
                         min="0"
                         max="100"
+                        disabled={!userCanEdit}
                       />
                     </div>
                   ) : (
@@ -1546,6 +1578,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         onChange={(e) => setGroupForm({...groupForm, fixedAmount: Number(e.target.value)})}
                         placeholder="1000"
                         min="0"
+                        disabled={!userCanEdit}
                       />
                     </div>
                   )}
@@ -1660,7 +1693,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                               <Upload className="h-8 w-8 text-muted-foreground" />
                               <div className="space-y-1">
                                 <p className="text-sm">
-                                  <label htmlFor="edit-csv-file" className="font-medium text-primary hover:underline cursor-pointer">
+                                  <label htmlFor="edit-csv-file" className={`font-medium ${userCanEdit ? 'text-primary hover:underline cursor-pointer' : 'text-muted-foreground cursor-not-allowed'}`}>
                                     Click to upload
                                   </label>
                                   {" "}or drag and drop
@@ -1680,6 +1713,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                   }
                                 }}
                                 className="hidden"
+                                disabled={!userCanEdit}
                               />
                             </div>
                           </div>
@@ -1778,6 +1812,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                     <Switch
                                       checked={student.isActive !== false}
                                       onCheckedChange={() => toggleStudentStatus(student.id)}
+                                      disabled={!userCanEdit}
                                     />
                                     <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
                                       {student.isActive === false ? 'Inactive' : 'Active'}
@@ -1786,7 +1821,8 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                   <button
                                     type="button"
                                     onClick={() => removeStudentFromGroup(student.id)}
-                                    className="text-red-600 hover:text-red-800 p-1"
+                                    className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={!userCanEdit}
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
@@ -1820,7 +1856,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   }}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveGroup}>
+                  <Button onClick={handleSaveGroup} disabled={!userCanEdit}>
                     Update Group
                   </Button>
                 </div>
@@ -1871,6 +1907,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
       {/* CSV Upload Dialog */}
       <Dialog open={csvUploadDialog.isOpen} onOpenChange={(open) => {
+        if (!userCanEdit && open) return
         if (!open) {
           setCsvUploadDialog({isOpen: false, groupId: null})
           setCsvFile(null)
@@ -1982,9 +2019,9 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
               <Button variant="outline" onClick={() => setCsvUploadDialog({isOpen: false, groupId: null})}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleConfirmCsvUpload}
-                disabled={!csvFile || csvPreviewData.length === 0}
+                disabled={!csvFile || csvPreviewData.length === 0 || !userCanEdit}
               >
                 Add {csvPreviewData.length} Students
               </Button>
@@ -1995,6 +2032,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
       {/* Add Individual Student Dialog */}
       <Dialog open={addIndividualDialog.isOpen} onOpenChange={(open) => {
+        if (!userCanEdit && open) return
         if (!open) {
           setAddIndividualDialog({isOpen: false, groupId: null})
           setIndividualStudentForm({ id: "", name: "", yearGroup: "", parentName: "" })
@@ -2077,6 +2115,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   value={individualStudentForm.id}
                   onChange={(e) => setIndividualStudentForm({...individualStudentForm, id: e.target.value})}
                   placeholder="KC2024001"
+                  disabled={!userCanEdit}
                 />
               </div>
               <div className="space-y-2">
@@ -2086,6 +2125,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   value={individualStudentForm.name}
                   onChange={(e) => setIndividualStudentForm({...individualStudentForm, name: e.target.value})}
                   placeholder="Emma Johnson"
+                  disabled={!userCanEdit}
                 />
               </div>
             </div>
@@ -2096,6 +2136,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 <Select
                   value={individualStudentForm.yearGroup}
                   onValueChange={(value) => setIndividualStudentForm({...individualStudentForm, yearGroup: value})}
+                  disabled={!userCanEdit}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select year group" />
@@ -2114,6 +2155,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 <Label htmlFor="parent-name">Parent Name</Label>
                 <Input
                   id="parent-name"
+                  disabled={!userCanEdit}
                   value={individualStudentForm.parentName}
                   onChange={(e) => setIndividualStudentForm({...individualStudentForm, parentName: e.target.value})}
                   placeholder="Sarah Johnson"
@@ -2125,7 +2167,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
               <Button variant="outline" onClick={() => setAddIndividualDialog({isOpen: false, groupId: null})}>
                 Cancel
               </Button>
-              <Button onClick={handleAddIndividualStudent}>
+              <Button onClick={handleAddIndividualStudent} disabled={!userCanEdit}>
                 Add Student
               </Button>
             </div>
