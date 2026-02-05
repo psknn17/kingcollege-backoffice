@@ -521,7 +521,7 @@ export default function App() {
             )}
 
             {/* Trip & Activity */}
-            {canAccessMenuSection("events") && (
+            {canAccessMenuSection("tripActivity") && (
             <Collapsible open={openGroups["tripActivity"]} onOpenChange={() => toggleGroup("tripActivity")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -552,7 +552,7 @@ export default function App() {
             )}
 
             {/* Exam */}
-            {(user?.role === "Super Admin" || user?.role === "Admin") && (
+            {canAccessMenuSection("exam") && (
             <Collapsible open={openGroups["exam"]} onOpenChange={() => toggleGroup("exam")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -583,7 +583,7 @@ export default function App() {
             )}
 
             {/* School Bus */}
-            {(user?.role === "Super Admin" || user?.role === "Admin") && (
+            {canAccessMenuSection("schoolBus") && (
             <Collapsible open={openGroups["schoolBus"]} onOpenChange={() => toggleGroup("schoolBus")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
@@ -614,7 +614,7 @@ export default function App() {
             )}
 
             {/* External Invoice */}
-            {(user?.role === "Super Admin" || user?.role === "Admin" || user?.role === "Accountant") && (
+            {canAccessMenuSection("externalInvoice") && (
             <Collapsible open={openGroups["externalInvoice"]} onOpenChange={() => toggleGroup("externalInvoice")}>
               <SidebarGroup>
                 <CollapsibleTrigger className="w-full">
