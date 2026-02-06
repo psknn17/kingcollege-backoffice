@@ -755,7 +755,7 @@ export default function App() {
             {/* Version Display */}
             <div className="px-2 py-1 mb-3">
               <p className="text-xs text-muted-foreground">
-                Version 0.1.0
+                Version {__APP_VERSION__}
               </p>
             </div>
 
