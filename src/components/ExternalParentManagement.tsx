@@ -12,6 +12,7 @@ import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download,
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface ExternalParent {
   id: string
@@ -117,10 +118,12 @@ export function ExternalParentManagement() {
   const { t } = useLanguage()
   const [parents] = useState<ExternalParent[]>(mockParents)
   const [filteredParents, setFilteredParents] = useState<ExternalParent[]>(mockParents)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = usePersistedState("external-parent:search", "")
+  const [statusFilter, setStatusFilter] = usePersistedState("external-parent:filterStatus", "all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [selectedParent, setSelectedParent] = useState<ExternalParent | null>(null)
+  const [currentPage, setCurrentPage] = usePersistedState("external-parent:page", 1)
+  const [pageSize, setPageSize] = usePersistedState("external-parent:pageSize", 10)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 

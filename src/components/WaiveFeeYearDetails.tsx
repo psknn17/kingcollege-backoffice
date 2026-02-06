@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -57,12 +58,12 @@ interface WaiveFeeYearDetailsProps {
 
 export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetailsProps) {
   const { t } = useLanguage()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [searchQuery, setSearchQuery] = usePersistedState("waive-fee-year:search", '')
+  const [filterStatus, setFilterStatus] = usePersistedState("waive-fee-year:statusFilter", 'all')
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = usePersistedState("waive-fee-year:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("waive-fee-year:sortDirection", "asc")
 
   // Generate mock family data for the specific year
   const generateFamilyDetails = (year: string): FamilyDetail[] => {

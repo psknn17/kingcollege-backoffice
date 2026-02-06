@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -108,16 +109,16 @@ export function CreditNoteManagement() {
   // Load credit notes from localStorage
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [typeFilter, setTypeFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = usePersistedState("credit-note:search", "")
+  const [statusFilter, setStatusFilter] = usePersistedState("credit-note:statusFilter", "all")
+  const [typeFilter, setTypeFilter] = usePersistedState("credit-note:typeFilter", "all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [selectedCreditNote, setSelectedCreditNote] = useState<CreditNote | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreateReceiptModalOpen, setIsCreateReceiptModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"receipts" | "credit-notes">("receipts")
+  const [activeTab, setActiveTab] = usePersistedState<"receipts" | "credit-notes">("credit-note:activeTab", "receipts")
 
   // Mock receipts data - using translation keys where applicable
   const receipts = [
@@ -129,12 +130,12 @@ export function CreditNoteManagement() {
   ]
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = usePersistedState("credit-note:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("credit-note:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = usePersistedState("credit-note:currentPage", 1)
+  const [pageSize, setPageSize] = usePersistedState("credit-note:pageSize", 10)
 
   // Load invoices from localStorage
   const [invoices, setInvoices] = useState<any[]>([])

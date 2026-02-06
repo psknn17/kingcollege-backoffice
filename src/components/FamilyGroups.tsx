@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -79,16 +80,16 @@ export function FamilyGroups() {
     updateStudent
   } = useStudents()
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [expandedFamilies, setExpandedFamilies] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = usePersistedState("family-groups:search", "")
+  const [expandedFamilies, setExpandedFamilies] = usePersistedState<string[]>("family-groups:expanded", [])
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = usePersistedState("family-groups:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("family-groups:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = usePersistedState("family-groups:currentPage", 1)
+  const [pageSize, setPageSize] = usePersistedState("family-groups:pageSize", 10)
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)

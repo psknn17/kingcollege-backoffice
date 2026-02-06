@@ -13,6 +13,7 @@ import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "./ui/utils"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface PaymentRecord {
   id: string
@@ -80,13 +81,13 @@ export function PaymentHistorySimple() {
   const { t } = useLanguage()
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = usePersistedState<string>("payment-history:statusFilter", "all")
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
-  const [academicYearFilter, setAcademicYearFilter] = useState("all")
+  const [academicYearFilter, setAcademicYearFilter] = usePersistedState<string>("payment-history:academicYearFilter", "all")
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all")
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+  const [dateFrom, setDateFrom] = usePersistedState<Date | undefined>("payment-history:dateFrom", undefined)
+  const [dateTo, setDateTo] = usePersistedState<Date | undefined>("payment-history:dateTo", undefined)
   const [viewingPaymentProof, setViewingPaymentProof] = useState<PaymentRecord | null>(null)
 
   useEffect(() => {

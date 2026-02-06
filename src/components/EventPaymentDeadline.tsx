@@ -17,6 +17,7 @@ import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface PaymentDeadline {
   id: number
@@ -83,7 +84,7 @@ export function EventPaymentDeadline() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const [deadlines, setDeadlines] = useState<PaymentDeadline[]>(mockDeadlines)
-  const [selectedEvent, setSelectedEvent] = useState("")
+  const [selectedEvent, setSelectedEvent] = usePersistedState("event-deadline:selectedEvent", "")
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [reminderDays, setReminderDays] = useState<string>("7,3,1")
   const [isDialogOpen, setIsDialogOpen] = useState(false)

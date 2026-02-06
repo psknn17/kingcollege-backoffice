@@ -17,6 +17,7 @@ import { useAcademicYears, Term, AcademicYear } from "@/contexts/AcademicYearCon
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 export function TuitionTermSettings() {
   const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear, saveAcademicYears } = useAcademicYears()
@@ -24,7 +25,7 @@ export function TuitionTermSettings() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const locale = language === "th" ? th : enUS
-  const [expandedYears, setExpandedYears] = useState<string[]>(["2025-2026"])
+  const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
   const [isSaveConfirmDialogOpen, setIsSaveConfirmDialogOpen] = useState(false)
 

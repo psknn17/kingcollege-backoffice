@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { 
   BarChart, 
   Bar, 
@@ -127,15 +128,15 @@ const paymentStatusData = [
 
 export function EventRegistrationReports() {
   const { t } = useLanguage()
-  const [selectedEvent, setSelectedEvent] = useState("all")
+  const [selectedEvent, setSelectedEvent] = usePersistedState("event-registration:selectedYear", "all")
   const [selectedYearGroup, setSelectedYearGroup] = useState("all")
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<PaymentStatus>("all")
   const [selectedPaymentChannel, setSelectedPaymentChannel] = useState<PaymentChannel>("all")
   const [dateFrom, setDateFrom] = useState<Date>()
   const [dateTo, setDateTo] = useState<Date>()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [searchTerm, setSearchTerm] = usePersistedState("event-registration:search", "")
+  const [currentPage, setCurrentPage] = usePersistedState("event-registration:page", 1)
+  const [itemsPerPage, setItemsPerPage] = usePersistedState("event-registration:pageSize", 50)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 

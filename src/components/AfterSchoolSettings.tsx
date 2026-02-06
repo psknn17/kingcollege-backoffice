@@ -13,6 +13,7 @@ import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface RegistrationPeriod {
   id: string

@@ -33,6 +33,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import SchoolLogo from "@/assets/Logo.png"
 
 // ========================
@@ -237,7 +238,7 @@ export function ReceiptManagementFlow({
   })
 
   // Search and filter state
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState(`eca-receipts:search`, "")
   const [filterStatus, setFilterStatus] = useState<string>("all")
 
   // View receipt state

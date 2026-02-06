@@ -12,6 +12,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface GradeLevelTuition {
   id: string
@@ -191,7 +192,7 @@ export function TuitionByYear() {
   const [tuitionData, setTuitionData] = useState<Record<string, GradeLevelTuition[]>>(() => {
     return loadTuitionFromStorage() || {}
   })
-  const [selectedYear, setSelectedYear] = useState<string>("")
+  const [selectedYear, setSelectedYear] = usePersistedState<string>("tuition-by-year:selectedYear", "")
 
   // Get available years from the context (Term Settings)
   const availableYears = useMemo(() => {

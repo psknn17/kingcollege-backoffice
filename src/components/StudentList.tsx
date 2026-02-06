@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -232,18 +233,18 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterGrade, setFilterGrade] = useState<string>("all")
-  const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
+  const [searchTerm, setSearchTerm] = usePersistedState("student-list:search", "")
+  const [filterGrade, setFilterGrade] = usePersistedState("student-list:gradeFilter", "all")
+  const [filterStatus, setFilterStatus] = usePersistedState("student-list:statusFilter", "all")
+  const [filterAcademicYear, setFilterAcademicYear] = usePersistedState("student-list:academicYearFilter", "all")
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = usePersistedState("student-list:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("student-list:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = usePersistedState("student-list:currentPage", 1)
+  const [pageSize, setPageSize] = usePersistedState("student-list:pageSize", 10)
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)

@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface Item {
   id: string
@@ -1972,16 +1973,28 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   // Items state
   const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
-  const [searchItemTerm, setSearchItemTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [searchItemTerm, setSearchItemTerm] = invoiceType === "tuition"
+    ? usePersistedState<string>("tuition-item-management:search", "")
+    : useState("")
+  const [selectedCategory, setSelectedCategory] = invoiceType === "tuition"
+    ? usePersistedState<string>("tuition-item-management:filterCategory", "all")
+    : useState("all")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = invoiceType === "tuition"
+    ? usePersistedState<number>("tuition-item-management:currentPage", 1)
+    : useState(1)
+  const [pageSize, setPageSize] = invoiceType === "tuition"
+    ? usePersistedState<number>("tuition-item-management:pageSize", 10)
+    : useState(10)
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = invoiceType === "tuition"
+    ? usePersistedState<string>("tuition-item-management:sortColumn", "")
+    : useState<string>("")
+  const [sortDirection, setSortDirection] = invoiceType === "tuition"
+    ? usePersistedState<"asc" | "desc">("tuition-item-management:sortDirection", "asc")
+    : useState<"asc" | "desc">("asc")
   // Templates state
   const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<ItemTemplate | null>(null)

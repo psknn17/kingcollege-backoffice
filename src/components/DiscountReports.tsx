@@ -21,6 +21,7 @@ import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 // Standard Year Groups (grade levels) - consistent with StudentContext
 const STANDARD_YEAR_GROUPS = [
@@ -441,7 +442,7 @@ export function DiscountReports() {
     return labelMap[type] || type
   }
 
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState("discount-reports:search", "")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterYearGroup, setFilterYearGroup] = useState<string>("all")
   const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
@@ -449,12 +450,13 @@ export function DiscountReports() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = usePersistedState("discount-reports:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("discount-reports:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const [currentPage, setCurrentPage] = usePersistedState("discount-reports:page", 1)
+  const [pageSize] = usePersistedState("discount-reports:pageSize", 10)
+  const itemsPerPage = pageSize
 
   // Reset page when filters change
   useEffect(() => {

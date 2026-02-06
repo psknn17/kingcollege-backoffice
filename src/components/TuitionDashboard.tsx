@@ -9,6 +9,7 @@ import { Users, DollarSign, Calendar as CalendarIcon, CreditCard, Filter, Rotate
 import { format, subDays, startOfYear, endOfYear } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { DateRange } from "react-day-picker"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 const paymentData = [
   { month: "Aug", yearly: 45, termly: 30 },
@@ -55,9 +56,9 @@ export function TuitionDashboard() {
   // Get payment channel data with translations
   const paymentChannelData = getPaymentChannelData(t)
   // Filter states (for UI selection)
-  const [selectedYear, setSelectedYear] = useState<string>("")
-  const [selectedTerm, setSelectedTerm] = useState<string>("")
-  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined })
+  const [selectedYear, setSelectedYear] = usePersistedState<string>("tuition-dashboard:selectedYear", "")
+  const [selectedTerm, setSelectedTerm] = usePersistedState<string>("tuition-dashboard:selectedTerm", "")
+  const [dateRange, setDateRange] = usePersistedState<DateRange>("tuition-dashboard:dateRange", { from: undefined })
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   // Applied filters (actual filters being used)

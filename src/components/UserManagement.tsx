@@ -11,6 +11,7 @@ import { Checkbox } from "./ui/checkbox"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -182,15 +183,15 @@ export function UserManagement() {
   const userCanEdit = canPerformActions(user?.role)
   const [users, setUsers] = useState<User[]>(mockUsers)
   const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = usePersistedState("user-management:search", "")
+  const [roleFilter, setRoleFilter] = usePersistedState("user-management:roleFilter", "all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = usePersistedState<string>("user-management:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("user-management:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = usePersistedState("user-management:page", 1)
+  const [pageSize, setPageSize] = usePersistedState("user-management:pageSize", 10)
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {

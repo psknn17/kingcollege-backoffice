@@ -10,6 +10,7 @@ import { Search, Filter, Download, Users, Calendar, CreditCard, Mail, Phone, Arr
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface Course {
   id: string
@@ -131,10 +132,10 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [parentTypeFilter, setParentTypeFilter] = useState("all")
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 15
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = usePersistedState("course-student-report:page", 1)
+  const [itemsPerPage, setItemsPerPage] = usePersistedState("course-student-report:pageSize", 15)
+  const [sortColumn, setSortColumn] = usePersistedState("course-student-report:sortColumn", "")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("course-student-report:sortDirection", "asc")
 
   const course = mockCourses.find(c => c.id === courseId) || mockCourses[0]
 

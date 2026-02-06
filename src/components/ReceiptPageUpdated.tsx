@@ -24,6 +24,7 @@ import { SCHOOL_INFO, numberToWords } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 // Student data matching StudentContext
 const studentData = [
@@ -255,8 +256,8 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>(mockCreditNotes)
 
   // Filter states
-  const [searchTerm, setSearchTerm] = useState("")
-  const [academicYearFilter, setAcademicYearFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = usePersistedState("receipt-page:search", "")
+  const [academicYearFilter, setAcademicYearFilter] = usePersistedState("receipt-page:academicYear", "all")
   const [termFilter, setTermFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [paymentChannelFilter, setPaymentChannelFilter] = useState<PaymentChannel>("all")
@@ -265,8 +266,9 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
   const [dateTo, setDateTo] = useState<Date | null>(null)
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 15
+  const [currentPage, setCurrentPage] = usePersistedState("receipt-page:page", 1)
+  const [pageSize] = usePersistedState("receipt-page:pageSize", 15)
+  const itemsPerPage = pageSize
 
   // View Dialog states
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)

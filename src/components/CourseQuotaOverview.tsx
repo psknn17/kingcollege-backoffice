@@ -14,6 +14,7 @@ import { Search, Filter, Users, DollarSign, AlertTriangle, CheckCircle, Clock, E
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface Course {
   id: string
@@ -198,14 +199,14 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const { t } = useLanguage()
   const [courses, setCourses] = useState<Course[]>(mockCourses)
   const [filteredCourses, setFilteredCourses] = useState<Course[]>(mockCourses)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState("course-quota:search", "")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 15
+  const [currentPage, setCurrentPage] = usePersistedState("course-quota:page", 1)
+  const [itemsPerPage, setItemsPerPage] = usePersistedState("course-quota:pageSize", 15)
 
   // Modal states
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
@@ -226,8 +227,8 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const [studentRegistrations, setStudentRegistrations] = useState<StudentRegistration[]>([])
   const [studentReportPage, setStudentReportPage] = useState(1)
   const studentReportItemsPerPage = 10
-  const [tableSortColumn, setTableSortColumn] = useState<string>("")
-  const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
+  const [tableSortColumn, setTableSortColumn] = usePersistedState("course-quota:sortColumn", "")
+  const [tableSortDirection, setTableSortDirection] = usePersistedState<"asc" | "desc">("course-quota:sortDirection", "asc")
 
   const handleTableSort = (column: string) => {
     if (tableSortColumn === column) {

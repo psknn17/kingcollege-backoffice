@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/sonner"
 import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface PreCreatedItem {
   id: string
@@ -1348,9 +1349,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const term = "term1" // Default term
 
   // Create invoice state - declare early so they can be used in useMemo
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState("")
-  const [selectedTerm, setSelectedTerm] = useState("")
-  const [selectedGrade, setSelectedGrade] = useState("")
+  const [selectedAcademicYear, setSelectedAcademicYear] = usePersistedState("invoice-creation:academicYear", "")
+  const [selectedTerm, setSelectedTerm] = usePersistedState("invoice-creation:term", "")
+  const [selectedGrade, setSelectedGrade] = usePersistedState("invoice-creation:grade", "")
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]) // For Trip & Activity multi-select
   const [selectedRoom, setSelectedRoom] = useState("")
 

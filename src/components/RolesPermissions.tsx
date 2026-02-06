@@ -11,6 +11,7 @@ import { Textarea } from "./ui/textarea"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import {
   Search,
   Plus,
@@ -199,7 +200,8 @@ export function RolesPermissions() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const [roles, setRoles] = useState<Role[]>(initialRoles)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState("roles-permissions:search", "")
+  const [expandedModules, setExpandedModules] = usePersistedState<string[]>("roles-permissions:expandedModules", [])
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 

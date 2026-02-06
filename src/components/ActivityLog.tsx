@@ -5,6 +5,7 @@ import { Input } from "./ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 const mockActivityLogs: ActivityLogEntry[] = [
   {
@@ -78,7 +79,7 @@ const getStatusBadge = (status: ActivityLogEntry["status"]) => {
 }
 
 export function ActivityLog() {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState("activity-log:search", "")
   const [logs, setLogs] = useState<ActivityLogEntry[]>([])
 
   const filteredLogs = useMemo(() => {

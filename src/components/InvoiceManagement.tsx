@@ -30,6 +30,7 @@ import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, 
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 type ApprovalStatus = "wait" | "approved" | "rejected"
 
@@ -414,18 +415,18 @@ export function InvoiceManagement({
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(mockTemplates)
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
-  const [searchTerm, setSearchTerm] = useState("")
-  const [academicYearFilter, setAcademicYearFilter] = useState("all")
-  const [termFilter, setTermFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
-  const [gradeFilter, setGradeFilter] = useState("all")
-  const [dateFrom, setDateFrom] = useState<Date | null>(null)
-  const [dateTo, setDateTo] = useState<Date | null>(null)
+  const [searchTerm, setSearchTerm] = usePersistedState("invoice-management:search", "")
+  const [academicYearFilter, setAcademicYearFilter] = usePersistedState("invoice-management:academicYear", "all")
+  const [termFilter, setTermFilter] = usePersistedState("invoice-management:term", "all")
+  const [statusFilter, setStatusFilter] = usePersistedState("invoice-management:status", "all")
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = usePersistedState("invoice-management:invoiceStatus", "all")
+  const [paymentStatusFilter, setPaymentStatusFilter] = usePersistedState("invoice-management:paymentStatus", "all")
+  const [gradeFilter, setGradeFilter] = usePersistedState("invoice-management:grade", "all")
+  const [dateFrom, setDateFrom] = usePersistedState<Date | null>("invoice-management:dateFrom", null)
+  const [dateTo, setDateTo] = usePersistedState<Date | null>("invoice-management:dateTo", null)
   const [isExportingAll, setIsExportingAll] = useState(false)
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
-  const [sortKey, setSortKey] = useState<
+  const [sortKey, setSortKey] = usePersistedState<
     | "invoiceNumber"
     | "studentName"
     | "studentGrade"
@@ -437,15 +438,15 @@ export function InvoiceManagement({
     | "issueDate"
     | "dueDate"
     | null
-  >(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  >("invoice-management:sortKey", null)
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("invoice-management:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = usePersistedState("invoice-management:page", 1)
+  const [pageSize, setPageSize] = usePersistedState("invoice-management:pageSize", 10)
 
   // Invoice type tab state
-  const [invoiceTypeTab, setInvoiceTypeTab] = useState<"student" | "external">(defaultTab)
+  const [invoiceTypeTab, setInvoiceTypeTab] = usePersistedState<"student" | "external">("invoice-management:invoiceTypeTab", defaultTab)
 
   // Get available terms based on selected academic year
   const availableTerms = academicYearFilter !== "all"

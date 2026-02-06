@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { formatCurrency, numberToWords, getAcademicYear } from "@/lib/invoiceUtils"
@@ -167,10 +168,10 @@ export function ApprovalQueue() {
     console.log('[ApprovalQueue] Initial filteredInvoices:', loaded.length)
     return loaded
   })
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState("approval-queue:search", "")
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = usePersistedState("approval-queue:statusFilter", "all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
@@ -181,8 +182,10 @@ export function ApprovalQueue() {
   const [rejectReason, setRejectReason] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
-  const [sortKey, setSortKey] = useState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "issueDate" | "dueDate" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", null)
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "asc")
+  const [currentPage, setCurrentPage] = usePersistedState("approval-queue:page", 1)
+  const [pageSize, setPageSize] = usePersistedState("approval-queue:pageSize", 10)
 
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -222,8 +223,9 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 15
+  const [currentPage, setCurrentPage] = usePersistedState("email-history-view:page", 1)
+  const [pageSize, setPageSize] = usePersistedState("email-history-view:pageSize", 15)
+  const itemsPerPage = pageSize
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [selectedRecord, setSelectedRecord] = useState<EmailRecord | null>(null)

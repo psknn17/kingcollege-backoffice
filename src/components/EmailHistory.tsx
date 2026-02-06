@@ -9,6 +9,7 @@ import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileT
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 // Mock history data
 const mockHistory = [
@@ -105,7 +106,7 @@ const generateMockRecipients = (count: number, subject: string) => {
 export function EmailHistory() {
   const { t } = useLanguage()
   const schoolSettings = useSchoolSettings()
-  const [historySearch, setHistorySearch] = useState("")
+  const [historySearch, setHistorySearch] = usePersistedState("email-history:search", "")
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
   const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
   const [resendDialog, setResendDialog] = useState<any>(null)

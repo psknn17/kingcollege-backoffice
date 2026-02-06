@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -269,11 +270,11 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
     toast.success("Email jobs saved successfully")
   }
 
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = usePersistedState("email-jobs:search", "")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = usePersistedState("email-jobs:page", 1)
+  const [pageSize, setPageSize] = usePersistedState("email-jobs:pageSize", 10)
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)

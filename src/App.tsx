@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { usePersistedState } from "./hooks/usePersistedState"
 import {
   Sidebar,
   SidebarContent,
@@ -180,7 +181,7 @@ const menuItems = {
 export default function App() {
   const { language, setLanguage, t } = useLanguage()
   const { isAuthenticated, user, logout, needsRoleSelection, selectRole } = useAuth()
-  const [activeSection, setActiveSection] = useState("tuition-dashboard")
+  const [activeSection, setActiveSection] = usePersistedState("app:activeSection", "tuition-dashboard")
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
 
   // Filter menu items based on user role
@@ -197,7 +198,7 @@ export default function App() {
   const [subPageParams, setSubPageParams] = useState<any>(null)
 
   // Collapsible menu state - allow multiple groups to be open
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+  const [openGroups, setOpenGroups] = usePersistedState<Record<string, boolean>>("app:openGroups", {
     tuition: true,
     eca: false,
     tripActivity: false,
