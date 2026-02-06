@@ -46,11 +46,8 @@ export function usePersistedState<T>(key: string, defaultValue: T) {
 
     try {
       localStorage.setItem(storageKey, JSON.stringify(state))
-      // Dispatch event for cross-tab sync
-      window.dispatchEvent(new StorageEvent("storage", {
-        key: storageKey,
-        newValue: JSON.stringify(state)
-      }))
+      // Note: StorageEvent is automatically dispatched by browser for cross-tab sync
+      // Manual dispatch causes infinite loop, so we don't dispatch it here
     } catch (error) {
       console.warn(`Failed to save persisted state for key "${key}":`, error)
       // Continue using memory state if localStorage fails
