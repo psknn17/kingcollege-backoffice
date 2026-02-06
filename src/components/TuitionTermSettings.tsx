@@ -308,7 +308,6 @@ export function TuitionTermSettings() {
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">{t("termSettings.startDate")}</th>
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">{t("termSettings.endDate")}</th>
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">{t("termSettings.duration")}</th>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">{t("termSettings.status")}</th>
                             <th className="text-right text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[60px]"></th>
                           </tr>
                         </thead>
@@ -379,16 +378,6 @@ export function TuitionTermSettings() {
                                   <span className="text-sm text-gray-600">
                                     {duration ? `${duration} ${t("termSettings.days")}` : "-"}
                                   </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isComplete ? (
-                                    <div className="flex items-center gap-1 text-green-600">
-                                      <CheckCircle2 className="w-4 h-4" />
-                                      <span className="text-xs font-medium">{t("termSettings.done")}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-amber-600 font-medium">{t("termSettings.pending")}</span>
-                                  )}
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                   <Button
