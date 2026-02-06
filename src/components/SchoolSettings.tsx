@@ -131,7 +131,7 @@ export function SchoolSettings() {
         <CardContent className="p-6">
           {/* Logo Section - Compact */}
           <div className="mb-4 pb-4 border-b">
-            <Label className="text-sm font-medium mb-2 block">School Logo</Label>
+            <Label className="text-base font-medium mb-2 block">School Logo</Label>
             <div className="flex items-center gap-4">
               {formData.logoUrl ? (
                 <div className="w-20 h-20 border-2 border-dashed rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
@@ -175,13 +175,13 @@ export function SchoolSettings() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* LEFT COLUMN: School Identity */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">
+              <h3 className="font-semibold text-lg text-muted-foreground uppercase tracking-wide">
                 School Information
               </h3>
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label className="text-sm">School Name (English) *</Label>
+                  <Label className="text-base">School Name (English) *</Label>
                   <Input
                     value={formData.schoolName}
                     onChange={(e) => setFormData(prev => ({ ...prev, schoolName: e.target.value }))}
@@ -191,7 +191,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">School Name (Thai) *</Label>
+                  <Label className="text-base">School Name (Thai) *</Label>
                   <Input
                     value={formData.schoolNameThai}
                     onChange={(e) => setFormData(prev => ({ ...prev, schoolNameThai: e.target.value }))}
@@ -201,7 +201,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Tax ID</Label>
+                  <Label className="text-base">Tax ID</Label>
                   <Input
                     value={formData.taxId}
                     onChange={(e) => setFormData(prev => ({ ...prev, taxId: e.target.value }))}
@@ -211,7 +211,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm flex items-center gap-1.5">
+                  <Label className="text-base flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5" />
                     Phone *
                   </Label>
@@ -224,7 +224,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm flex items-center gap-1.5">
+                  <Label className="text-base flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" />
                     Email *
                   </Label>
@@ -238,7 +238,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm flex items-center gap-1.5">
+                  <Label className="text-base flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5" />
                     Website
                   </Label>
@@ -254,13 +254,13 @@ export function SchoolSettings() {
 
             {/* RIGHT COLUMN: Addresses & Bank */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">
+              <h3 className="font-semibold text-lg text-muted-foreground uppercase tracking-wide">
                 Address & Banking
               </h3>
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Address (English) *</Label>
+                  <Label className="text-base">Address (English) *</Label>
                   <Textarea
                     value={formData.address}
                     onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
@@ -272,7 +272,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Address (Thai) *</Label>
+                  <Label className="text-base">Address (Thai) *</Label>
                   <Textarea
                     value={formData.addressThai}
                     onChange={(e) => setFormData(prev => ({ ...prev, addressThai: e.target.value }))}
@@ -287,13 +287,13 @@ export function SchoolSettings() {
               <Separator className="my-4" />
 
               <div className="space-y-3">
-                <h4 className="font-medium text-base flex items-center gap-1.5">
+                <h4 className="font-medium text-lg flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4" />
                   Bank Details
                 </h4>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Bank Name *</Label>
+                  <Label className="text-base">Bank Name *</Label>
                   <Input
                     value={formData.bankName}
                     onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
@@ -303,7 +303,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Account Name *</Label>
+                  <Label className="text-base">Account Name *</Label>
                   <Input
                     value={formData.bankAccountName}
                     onChange={(e) => setFormData(prev => ({ ...prev, bankAccountName: e.target.value }))}
@@ -313,7 +313,7 @@ export function SchoolSettings() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Account Number *</Label>
+                  <Label className="text-base">Account Number *</Label>
                   <Input
                     value={formData.bankAccountNumber}
                     onChange={(e) => setFormData(prev => ({ ...prev, bankAccountNumber: e.target.value }))}
@@ -324,7 +324,7 @@ export function SchoolSettings() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Branch</Label>
+                    <Label className="text-base">Branch</Label>
                     <Input
                       value={formData.bankBranch}
                       onChange={(e) => setFormData(prev => ({ ...prev, bankBranch: e.target.value }))}
@@ -333,7 +333,7 @@ export function SchoolSettings() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm">SWIFT Code</Label>
+                    <Label className="text-base">SWIFT Code</Label>
                     <Input
                       value={formData.swiftCode}
                       onChange={(e) => setFormData(prev => ({ ...prev, swiftCode: e.target.value }))}
