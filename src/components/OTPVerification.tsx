@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "./ui/button"
-import { Card, CardContent } from "./ui/card"
-import { Mail, ArrowLeft, ShieldCheck, Languages } from "lucide-react"
+import { Mail, ArrowLeft, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import SchoolLogo from "@/assets/Logo.png"
 
@@ -19,7 +18,7 @@ export function OTPVerification({
   onResend
 }: OTPVerificationProps) {
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""])
-  const [countdown, setCountdown] = useState(60)
+  const [countdown, setCountdown] = useState(57)
   const [isResendDisabled, setIsResendDisabled] = useState(true)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
@@ -93,7 +92,7 @@ export function OTPVerification({
 
   const handleResend = () => {
     if (!isResendDisabled) {
-      setCountdown(60)
+      setCountdown(57)
       setIsResendDisabled(true)
       setOtp(["", "", "", "", "", ""])
       inputRefs.current[0]?.focus()
@@ -106,50 +105,81 @@ export function OTPVerification({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
-      {/* Language Selector */}
-      <div className="absolute top-6 right-6">
-        <button className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900">
-          <Languages className="w-4 h-4" />
-          English
-        </button>
+    <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      {/* Left Side - School Logo */}
+      <div
+        style={{
+          width: "50%",
+          height: "100%",
+          position: "relative",
+          backgroundImage: `url(${SchoolLogo})`,
+          backgroundSize: "contain",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundColor: "#FFFFFF"
+        }}
+      >
       </div>
 
-      {/* Main Card */}
-      <Card className="w-full max-w-md shadow-lg">
-        <CardContent className="p-8">
-          {/* School Logo */}
-          <div className="flex justify-center mb-8">
-            <img
-              src={SchoolLogo}
-              alt="King's College International School Bangkok"
-              className="h-20 object-contain"
-            />
-          </div>
-
-          {/* Title */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Verify OTP</h1>
-            <p className="text-sm text-gray-600">
-              Enter the verification code sent to your email
+      {/* Right Side - OTP Form */}
+      <div
+        style={{
+          width: "50%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "white"
+        }}
+      >
+        {/* OTP Card */}
+        <div
+          style={{
+            width: "450px",
+            backgroundColor: "white",
+            borderRadius: "16px",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
+            padding: "48px 40px"
+          }}
+        >
+          {/* School Logo & Name */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
+            <img src={SchoolLogo} alt="King's College" style={{ height: "60px", width: "auto", marginBottom: "8px" }} />
+            <p style={{ fontSize: "9px", color: "#6b7280", textAlign: "center", lineHeight: "1.3", letterSpacing: "0.5px" }}>
+              KING'S COLLEGE<br/>INTERNATIONAL SCHOOL<br/>BANGKOK
             </p>
           </div>
 
+          {/* Title */}
+          <div style={{ textAlign: "center", marginBottom: "24px" }}>
+            <h1 style={{ fontSize: "26px", fontWeight: "600", color: "#111827", marginBottom: "8px" }}>Verify OTP</h1>
+            <p style={{ fontSize: "14px", color: "#6b7280" }}>Enter the verification code sent to your email</p>
+          </div>
+
           {/* Email Display */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-              <Mail className="w-8 h-8 text-blue-600" />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
+            <div style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              backgroundColor: "#DBEAFE",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "12px"
+            }}>
+              <Mail style={{ width: "32px", height: "32px", color: "#60A5FA" }} strokeWidth={1.5} />
             </div>
-            <p className="text-sm text-gray-600 mb-1">OTP code has been sent to</p>
-            <p className="text-base font-semibold text-gray-900">{email}</p>
+            <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>OTP code has been sent to</p>
+            <p style={{ fontSize: "15px", fontWeight: "600", color: "#111827" }}>{email}</p>
           </div>
 
           {/* OTP Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: "500", color: "#374151", marginBottom: "12px", textAlign: "center" }}>
               Enter OTP Code
             </label>
-            <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center" }} onPaste={handlePaste}>
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -160,7 +190,26 @@ export function OTPVerification({
                   value={digit}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-12 h-14 text-center text-xl font-semibold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  style={{
+                    width: "48px",
+                    height: "56px",
+                    textAlign: "center",
+                    fontSize: "20px",
+                    fontWeight: "600",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    backgroundColor: "white",
+                    outline: "none",
+                    transition: "all 0.2s"
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#93A5FC"
+                    e.target.style.boxShadow = "0 0 0 3px rgba(147, 165, 252, 0.1)"
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#d1d5db"
+                    e.target.style.boxShadow = "none"
+                  }}
                 />
               ))}
             </div>
@@ -169,41 +218,73 @@ export function OTPVerification({
           {/* Verify Button */}
           <Button
             onClick={handleVerify}
-            className="w-full mb-4 h-12 text-base bg-blue-500 hover:bg-blue-600"
             disabled={otp.join("").length !== 6}
+            style={{
+              width: "100%",
+              height: "48px",
+              fontSize: "15px",
+              fontWeight: "500",
+              backgroundColor: otp.join("").length === 6 ? "#93A5FC" : "#d1d5db",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              cursor: otp.join("").length === 6 ? "pointer" : "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              marginBottom: "16px"
+            }}
           >
-            <ShieldCheck className="w-5 h-5 mr-2" />
+            <ShieldCheck style={{ width: "20px", height: "20px" }} strokeWidth={2} />
             Verify
           </Button>
 
           {/* Resend Code */}
-          <div className="text-center mb-4">
-            <p className="text-sm text-gray-600 mb-2">Didn't receive the code?</p>
+          <div style={{ textAlign: "center", marginBottom: "20px" }}>
+            <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px" }}>Didn't receive the code?</p>
             <button
               onClick={handleResend}
               disabled={isResendDisabled}
-              className={`text-sm font-medium ${
-                isResendDisabled
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-blue-600 hover:text-blue-700"
-              }`}
+              style={{
+                fontSize: "14px",
+                fontWeight: "500",
+                color: "#93A5FC",
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: isResendDisabled ? "not-allowed" : "pointer",
+                padding: "0"
+              }}
             >
-              {isResendDisabled ? `${countdown}` : ""} Resend
+              {isResendDisabled ? `${countdown} ` : ""}Resendin
             </button>
           </div>
 
           {/* Change Email */}
-          <div className="pt-4 border-t">
+          <div>
             <button
               onClick={onChangeEmail}
-              className="w-full flex items-center justify-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+              style={{
+                width: "100%",
+                height: "48px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                fontSize: "14px",
+                color: "#374151",
+                backgroundColor: "white",
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                cursor: "pointer"
+              }}
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft style={{ width: "16px", height: "16px" }} strokeWidth={2} />
               Change Email
             </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
