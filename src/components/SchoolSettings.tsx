@@ -118,20 +118,20 @@ export function SchoolSettings() {
       {/* Main Content - Single Card */}
       <Card>
         <CardContent className="p-6">
-          {/* Logo Section - Prominent at top */}
-          <div className="mb-6 pb-6 border-b">
-            <Label className="text-sm font-medium mb-3 block">School Logo</Label>
-            <div className="flex items-start gap-6">
+          {/* Logo Section - Compact */}
+          <div className="mb-4 pb-4 border-b">
+            <Label className="text-xs font-medium mb-2 block">School Logo</Label>
+            <div className="flex items-center gap-4">
               {formData.logoUrl ? (
-                <div className="w-32 h-32 border-2 border-dashed rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                  <img src={formData.logoUrl} alt="School Logo" className="max-w-full max-h-full object-contain" />
+                <div className="w-20 h-20 border-2 border-dashed rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                  <img src={formData.logoUrl} alt="School Logo" className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className="w-32 h-32 border-2 border-dashed rounded-lg bg-muted flex items-center justify-center">
-                  <School className="w-12 h-12 text-muted-foreground/40" />
+                <div className="w-20 h-20 border-2 border-dashed rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <School className="w-8 h-8 text-muted-foreground/40" />
                 </div>
               )}
-              <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
                 <input
                   type="file"
                   accept="image/*"
@@ -143,18 +143,17 @@ export function SchoolSettings() {
                 <label htmlFor="logo-upload">
                   <Button
                     variant="outline"
+                    size="sm"
                     asChild
                     disabled={!userCanEdit}
                   >
                     <span className="cursor-pointer">
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Upload className="w-3.5 h-3.5 mr-2" />
                       Upload Logo
                     </span>
                   </Button>
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  Recommended: 512x512px
-                  <br />
                   PNG, JPG up to 2MB
                 </p>
               </div>
