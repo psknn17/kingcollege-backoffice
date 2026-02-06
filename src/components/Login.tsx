@@ -2,15 +2,19 @@ import { useState } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { useAuth } from "@/contexts/AuthContext"
-import { Mail, ArrowRight } from "lucide-react"
+import { Mail, ArrowRight, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import SchoolLogo from "@/assets/Logo.png"
 import SchoolBg from "@/assets/school-bg.jpg"
+import { OTPVerification } from "./OTPVerification"
+
+type LoginStep = "email" | "otp"
 
 export function Login() {
   const { login } = useAuth()
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [loginStep, setLoginStep] = useState<LoginStep>("email")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,19 +24,58 @@ export function Login() {
     }
     setIsLoading(true)
     try {
-      const success = await login(email, "password")
-      if (success) {
-        toast.success("Login successful!")
-      } else {
-        toast.error("Invalid email")
-      }
+      // Simulate sending OTP
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast.success("OTP sent to your email!")
+      setLoginStep("otp")
     } catch (error) {
-      toast.error("Login failed")
+      toast.error("Failed to send OTP")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleVerifyOTP = async (otp: string) => {
+    setIsLoading(true)
+    try {
+      // Simulate OTP verification
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // Complete login after OTP verification
+      const success = await login(email, "password")
+      if (success) {
+        toast.success("Login successful!")
+      } else {
+        toast.error("Invalid credentials")
+      }
+    } catch (error) {
+      toast.error("OTP verification failed")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleChangeEmail = () => {
+    setLoginStep("email")
+    setEmail("")
+  }
+
+  const handleResendOTP = async () => {
+    try {
+      // Simulate resending OTP
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast.success("New OTP sent to your email!")
+    } catch (error) {
+      toast.error("Failed to resend OTP")
+    }
+  }
+
+  // Show OTP verification screen if on OTP step
+  if (loginStep === "otp") {
+    return <OTPVerification email={email} onVerify={handleVerifyOTP} onChangeEmail={handleChangeEmail} onResend={handleResendOTP} />
+  }
+
+  // Show email login form
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden" }}>
       {/* Left Side - Hero Image */}
