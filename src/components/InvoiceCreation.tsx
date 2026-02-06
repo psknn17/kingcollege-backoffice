@@ -907,7 +907,7 @@ const defaultTemplates: ItemTemplate[] = [
     isActive: true
   },
   {
-    id: "template-002", 
+    id: "template-002",
     name: "Year 1 Basic Tuition",
     description: "Essential tuition fees only for Year 1",
     items: ["item-001", "item-002", "item-003"],
@@ -1466,16 +1466,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const availableTerms = selectedAcademicYear
     ? (academicYears.find(y => y.id === selectedAcademicYear)?.terms || [])
     : []
-  
+
   // Payment deadline
   const [paymentDeadline, setPaymentDeadline] = useState<Date | undefined>(undefined)
-  
+
   // Preview and confirmation states
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
   const [previewStudentIndex, setPreviewStudentIndex] = useState(0)
-  
+
   // Student selection state
   const [studentSelectionType, setStudentSelectionType] = useState<"individual" | "csv" | "all">("individual")
   const [searchStudentTerm, setSearchStudentTerm] = useState("")
@@ -1492,8 +1492,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const [selectedCategory, setSelectedCategory] = useState<string>(
     defaultCategory ||
     (invoiceType === "eca" ? "ECA" :
-     invoiceType === "exam" ? "Exam" :
-     "Tuition")
+      invoiceType === "exam" ? "Exam" :
+        "Tuition")
   )
 
   // Update selected students' feeWaiver and discounts when term/year changes
@@ -1677,14 +1677,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       // For exam invoices, don't filter by grade (exams can apply to any grade)
       const filteredItems = invoiceType === "exam"
         ? allItems.filter(item =>
-            item.isActive &&
-            item.category === selectedCategory
-          )
+          item.isActive &&
+          item.category === selectedCategory
+        )
         : allItems.filter(item =>
-            item.isActive &&
-            item.applicableGrades.includes(selectedGrade) &&
-            item.category === selectedCategory
-          )
+          item.isActive &&
+          item.applicableGrades.includes(selectedGrade) &&
+          item.category === selectedCategory
+        )
       console.log(`[${invoiceType}] Filtered to ${filteredItems.length} items`)
       setAvailableItems(filteredItems)
 
@@ -1693,8 +1693,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const filteredTemplates = invoiceType === "exam"
         ? allTemplates.filter(template => template.isActive)
         : allTemplates.filter(template =>
-            template.isActive && template.applicableGrades.includes(selectedGrade)
-          )
+          template.isActive && template.applicableGrades.includes(selectedGrade)
+        )
       setAvailableTemplates(filteredTemplates)
     }
   }, [selectedGrade, selectedCategory, invoiceType])
@@ -1831,8 +1831,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     // Set correct category based on invoice type
     setSelectedCategory(
       invoiceType === "eca" ? "ECA" :
-      invoiceType === "exam" ? "Exam" :
-      (defaultCategory || "Tuition")
+        invoiceType === "exam" ? "Exam" :
+          (defaultCategory || "Tuition")
     )
     setPaymentDeadline(undefined)
     setIsPreviewMode(false)
@@ -1852,19 +1852,19 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       ? allItems.filter(item => item.isActive)
       : invoiceType === "exam"
         ? allItems.filter(item =>
-            item.isActive &&
-            item.category === "International Exam"
-          )
+          item.isActive &&
+          item.category === "International Exam"
+        )
         : invoiceType === "eca"
           ? allItems.filter(item =>
-              item.isActive &&
-              item.applicableGrades.includes(grade)
-            )
+            item.isActive &&
+            item.applicableGrades.includes(grade)
+          )
           : allItems.filter(item =>
-              item.isActive &&
-              item.applicableGrades.includes(grade) &&
-              item.category === (defaultCategory || "Tuition")
-            )
+            item.isActive &&
+            item.applicableGrades.includes(grade) &&
+            item.category === (defaultCategory || "Tuition")
+          )
     console.log(`[${invoiceType}] Filtered to ${gradeItems.length} items for grade ${grade}`)
     setAvailableItems(gradeItems)
 
@@ -1879,8 +1879,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const gradeTemplates = invoiceType === "summer"
       ? allTemplates.filter(template => template.isActive)
       : allTemplates.filter(template =>
-          template.isActive && template.applicableGrades.includes(grade)
-        )
+        template.isActive && template.applicableGrades.includes(grade)
+      )
     setAvailableTemplates(gradeTemplates)
   }
 
@@ -2011,7 +2011,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const filteredStudents = availableStudents.filter(student => {
     const searchLower = (searchStudentTerm || '').toLowerCase()
     const matchesSearch = (student.id || '').toLowerCase().includes(searchLower) ||
-                         (student.name || '').toLowerCase().includes(searchLower)
+      (student.name || '').toLowerCase().includes(searchLower)
     const notAlreadySelected = !selectedStudents.find(s => s.id === student.id)
 
     // For Tuition invoices only: exclude students with 100% discount from Discount Groups
@@ -2027,22 +2027,22 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     // For Trip & Activity (afterschool/trip) and School Bus (bus), filter by multiple selected grades
     if (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") {
       return matchesSearch &&
-             selectedGrades.includes(student.grade) &&
-             notAlreadySelected
+        selectedGrades.includes(student.grade) &&
+        notAlreadySelected
     }
 
     // For Summer Activities (summer), filter by single grade (no room filter)
     if (invoiceType === "summer") {
       return matchesSearch &&
-             student.grade === selectedGrade &&
-             notAlreadySelected
+        student.grade === selectedGrade &&
+        notAlreadySelected
     }
 
     // For regular student invoices (Tuition, ECA), filter by single grade and room
     return matchesSearch &&
-           student.grade === selectedGrade &&
-           (selectedRoom === "" || student.room === selectedRoom) &&
-           notAlreadySelected
+      student.grade === selectedGrade &&
+      (selectedRoom === "" || student.room === selectedRoom) &&
+      notAlreadySelected
   })
 
   // Calculate discounts for a student
@@ -2564,8 +2564,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
         invoiceStudent.feeWaiver?.eligible &&
         fees.securityDeposit > 0
-          ? fees.securityDeposit
-          : 0
+        ? fees.securityDeposit
+        : 0
 
       // ID Charges removed - no longer applicable
       const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
@@ -2682,91 +2682,91 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       // Save each student's invoice to localStorage with "pending" status
       selectedStudents.forEach((student) => {
         console.log("Processing student:", student.name)
-      const invoiceStudent = student as InvoiceStudent
-      const subtotal = getTotalAmount()
-      const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
-      // Use existing invoice number if editing, otherwise create draft number
-      const invoiceNumber = isEditMode && editInvoice?.invoiceNumber
-        ? editInvoice.invoiceNumber
-        : `DRAFT-${Date.now()}-${student.id.slice(-4)}`
+        const invoiceStudent = student as InvoiceStudent
+        const subtotal = getTotalAmount()
+        const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
+        // Use existing invoice number if editing, otherwise create draft number
+        const invoiceNumber = isEditMode && editInvoice?.invoiceNumber
+          ? editInvoice.invoiceNumber
+          : `DRAFT-${Date.now()}-${student.id.slice(-4)}`
 
-      // Calculate registration fees for new students
-      const registrationFeesList: { name: string, amount: number }[] = []
-      let registrationFeesTotal = 0
-      if (invoiceStudent.isNewStudent) {
-        if (fees.applicationFee > 0) {
-          registrationFeesList.push({ name: 'Application Fee', amount: fees.applicationFee })
-          registrationFeesTotal += fees.applicationFee
+        // Calculate registration fees for new students
+        const registrationFeesList: { name: string, amount: number }[] = []
+        let registrationFeesTotal = 0
+        if (invoiceStudent.isNewStudent) {
+          if (fees.applicationFee > 0) {
+            registrationFeesList.push({ name: 'Application Fee', amount: fees.applicationFee })
+            registrationFeesTotal += fees.applicationFee
+          }
+          if (fees.registrationFee > 0) {
+            registrationFeesList.push({ name: 'Registration Fee', amount: fees.registrationFee })
+            registrationFeesTotal += fees.registrationFee
+          }
+          if (fees.securityDeposit > 0) {
+            registrationFeesList.push({ name: `Security Deposit${fees.securityDepositRefundable ? ' (Refundable)' : ''}`, amount: fees.securityDeposit })
+            registrationFeesTotal += fees.securityDeposit
+          }
         }
-        if (fees.registrationFee > 0) {
-          registrationFeesList.push({ name: 'Registration Fee', amount: fees.registrationFee })
-          registrationFeesTotal += fees.registrationFee
-        }
-        if (fees.securityDeposit > 0) {
-          registrationFeesList.push({ name: `Security Deposit${fees.securityDepositRefundable ? ' (Refundable)' : ''}`, amount: fees.securityDeposit })
-          registrationFeesTotal += fees.securityDeposit
-        }
-      }
 
-      // Calculate Security Deposit Fee Waiver (for new students eligible for fee waiver)
-      const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
-        invoiceStudent.feeWaiver?.eligible &&
-        fees.securityDeposit > 0
+        // Calculate Security Deposit Fee Waiver (for new students eligible for fee waiver)
+        const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
+          invoiceStudent.feeWaiver?.eligible &&
+          fees.securityDeposit > 0
           ? fees.securityDeposit
           : 0
 
-      // ID Charges removed - no longer applicable
-      const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
+        // ID Charges removed - no longer applicable
+        const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
 
-      // Add line numbers and itemCode to items
-      const itemsWithLineNumbers = selectedItems.map((item, index) => ({
-        ...item,
-        lineNumber: index + 1,
-        itemCode: item.itemCode || getAccountCode(item)
-      }))
+        // Add line numbers and itemCode to items
+        const itemsWithLineNumbers = selectedItems.map((item, index) => ({
+          ...item,
+          lineNumber: index + 1,
+          itemCode: item.itemCode || getAccountCode(item)
+        }))
 
-      // Get first item's account code for invoice-level accountCode
-      const invoiceAccountCode = selectedItems.length > 0 ? getAccountCode(selectedItems[0]) : '2130001'
+        // Get first item's account code for invoice-level accountCode
+        const invoiceAccountCode = selectedItems.length > 0 ? getAccountCode(selectedItems[0]) : '2130001'
 
-      const savedInvoice: SavedInvoice = {
-        id: isEditMode && editInvoice?.id ? editInvoice.id : `inv-${student.id}-${Date.now()}`,
-        invoiceNumber: invoiceNumber,
-        studentName: student.name || '',
-        studentId: student.id || '',
-        studentGrade: student.grade || selectedGrade || '',
-        studentRoom: student.room || '',
-        parentName: student.parentName || '',
-        parentEmail: student.email || '',
-        items: itemsWithLineNumbers,
-        subtotal: subtotal,
-        discounts: discountCalc.discountItems,
-        totalDiscount: discountCalc.totalDiscountAmount,
-        netAmount: discountCalc.netAmount,
-        dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
-        issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : null,
-        status: "pending_approval", // Pending approval status
-        approvalStatus: editInvoice?.approvalStatus || "wait",
-        term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
-        paymentType: "termly",
-        createdAt: now.toISOString(),
-        invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
-        category: category, // Category for filtering by menu type
-        // Event/Trip/Activity name for afterschool/event/summer/eca/exam invoices
-        eventName: (invoiceType === "exam" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
-        // New student data
-        isNewStudent: invoiceStudent.isNewStudent,
-        registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
-        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
-        // Excel export fields
-        familyCode: invoiceStudent.originalStudent?.familyCode || '',
-        adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
-        accountCode: invoiceAccountCode,
-        documentType: 'SI', // Sales Invoice
-        academicYear: formatAcademicYearForExcel(selectedAcademicYear || effectiveAcademicYear),
-        termName: selectedTerm || effectiveTerm
-      }
+        const savedInvoice: SavedInvoice = {
+          id: isEditMode && editInvoice?.id ? editInvoice.id : `inv-${student.id}-${Date.now()}`,
+          invoiceNumber: invoiceNumber,
+          studentName: student.name || '',
+          studentId: student.id || '',
+          studentGrade: student.grade || selectedGrade || '',
+          studentRoom: student.room || '',
+          parentName: student.parentName || '',
+          parentEmail: student.email || '',
+          items: itemsWithLineNumbers,
+          subtotal: subtotal,
+          discounts: discountCalc.discountItems,
+          totalDiscount: discountCalc.totalDiscountAmount,
+          netAmount: discountCalc.netAmount,
+          dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
+          issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : null,
+          status: "pending_approval", // Pending approval status
+          approvalStatus: editInvoice?.approvalStatus || "wait",
+          term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
+          paymentType: "termly",
+          createdAt: now.toISOString(),
+          invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+          category: category, // Category for filtering by menu type
+          // Event/Trip/Activity name for afterschool/event/summer/eca/exam invoices
+          eventName: (invoiceType === "exam" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
+          // New student data
+          isNewStudent: invoiceStudent.isNewStudent,
+          registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
+          securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
+          // Excel export fields
+          familyCode: invoiceStudent.originalStudent?.familyCode || '',
+          adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
+          accountCode: invoiceAccountCode,
+          documentType: 'SI', // Sales Invoice
+          academicYear: formatAcademicYearForExcel(selectedAcademicYear || effectiveAcademicYear),
+          termName: selectedTerm || effectiveTerm
+        }
 
-      console.log("Saving invoice to storage:", savedInvoice)
+        console.log("Saving invoice to storage:", savedInvoice)
         saveInvoiceToStorage(savedInvoice, invoiceType)
         console.log("Invoice saved successfully for student:", student.name)
       })
@@ -2841,26 +2841,26 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           <div className="space-y-6">
             {/* Step 1: Select Academic Year - Hide for simplified views */}
             {!isSimplifiedView && (
-            <div className="space-y-3">
-              <h3 className="font-medium">1. {t("invoiceCreate.selectAcademicYear")}</h3>
-              <Select disabled={!userCanEdit} value={selectedAcademicYear} onValueChange={(value) => {
-                setSelectedAcademicYear(value)
-                setSelectedGrade("") // Reset grade when year changes
-                setSelectedTerm("") // Reset term
-                setSelectedRoom("")
-                setSelectedStudents([])
-                setSelectedItems([])
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("invoiceCreate.selectAcademicYear")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-3">
+                <h3 className="font-medium">1. {t("invoiceCreate.selectAcademicYear")}</h3>
+                <Select disabled={!userCanEdit} value={selectedAcademicYear} onValueChange={(value) => {
+                  setSelectedAcademicYear(value)
+                  setSelectedGrade("") // Reset grade when year changes
+                  setSelectedTerm("") // Reset term
+                  setSelectedRoom("")
+                  setSelectedStudents([])
+                  setSelectedItems([])
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("invoiceCreate.selectAcademicYear")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears.map(year => (
+                      <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
             {/* Step 2: Select Term (for Trip & Activity, Summer, and School Bus) or Grade (for others) */}
@@ -2912,11 +2912,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         {grades.map(grade => (
                           <label
                             key={grade}
-                            className={`flex items-center gap-2 p-3 rounded-md cursor-pointer transition-all ${
-                              selectedGrades.includes(grade)
-                                ? "bg-primary/10 border-2 border-primary"
-                                : "bg-background border-2 border-muted hover:border-primary/50"
-                            }`}
+                            className={`flex items-center gap-2 p-3 rounded-md cursor-pointer transition-all ${selectedGrades.includes(grade)
+                              ? "bg-primary/10 border-2 border-primary"
+                              : "bg-background border-2 border-muted hover:border-primary/50"
+                              }`}
                           >
                             <input
                               type="checkbox"
@@ -3218,7 +3217,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </Button>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {availableTemplates.map((template) => {
                         const isSelected = selectedTemplate === template.id
@@ -3226,10 +3225,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           const item = allStoredItems.find(i => i.id === itemId)
                           return sum + (item?.amount || 0)
                         }, 0)
-                        
+
                         return (
-                          <Card 
-                            key={template.id} 
+                          <Card
+                            key={template.id}
                             className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
                             onClick={() => handleTemplateSelect(isSelected ? "none" : template.id)}
                           >
@@ -3243,15 +3242,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   <CheckCircle className="w-5 h-5 text-primary" />
                                 )}
                               </div>
-                              
+
                               <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
-                              
+
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-medium">Items: {template.items.length}</span>
                                   <span className="font-medium">{formatCurrency(totalAmount)}</span>
                                 </div>
-                                
+
                                 <div className="flex flex-wrap gap-1">
                                   {template.applicableGrades.slice(0, 2).map(grade => (
                                     <Badge key={grade} variant="secondary" className="text-xs">
@@ -3270,7 +3269,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         )
                       })}
                     </div>
-                    
+
                     {selectedTemplate && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <div className="flex justify-between items-start">
@@ -3323,9 +3322,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       return (
                         <div
                           key={item.id}
-                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                            index !== 0 ? 'border-t' : ''
-                          } ${isSelected ? 'bg-primary/5' : ''}`}
+                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${index !== 0 ? 'border-t' : ''
+                            } ${isSelected ? 'bg-primary/5' : ''}`}
                           onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
                         >
                           <div className="flex-1 min-w-0">
@@ -3333,11 +3331,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               <span className="font-medium">{item.name}</span>
                               <Badge
                                 variant="outline"
-                                className={`text-xs ${
-                                  item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                                className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                                   item.category === "ECA" ? "border-green-300 text-green-700" :
-                                  "border-orange-300 text-orange-700"
-                                }`}
+                                    "border-orange-300 text-orange-700"
+                                  }`}
                               >
                                 {item.category}
                               </Badge>
@@ -3386,7 +3383,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         Clear All Items
                       </Button>
                     </div>
-                    
+
                     <div className="border rounded-lg">
                       <Table>
                         <TableHeader>
@@ -3422,13 +3419,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge 
+                                  <Badge
                                     variant="outline"
-                                    className={`${
-                                      item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                                    className={`${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                                       item.category === "ECA" ? "border-green-300 text-green-700" :
-                                      "border-orange-300 text-orange-700"
-                                    }`}
+                                        "border-orange-300 text-orange-700"
+                                      }`}
                                   >
                                     {item.category}
                                   </Badge>
@@ -3685,159 +3681,173 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       </div>
                     )}
 
-                {/* Individual Selection */}
-                {studentSelectionType === "individual" && (
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          placeholder={t('invoiceCreation.placeholderSearchStudent')}
-                          value={searchStudentTerm}
-                          onChange={(e) => setSearchStudentTerm(e.target.value)}
-                          onFocus={() => setIsStudentSearchFocused(true)}
-                          onBlur={() => setTimeout(() => setIsStudentSearchFocused(false), 200)}
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={handleSyncStudentList}
-                        disabled={isSyncing}
-                        className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                      >
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {t('invoiceCreation.syncStudentList')}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsAddNewStudentOpen(true)}
-                        className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Student
-                      </Button>
-                    </div>
-
-                    {(isStudentSearchFocused || searchStudentTerm) && (
-                      <div className="border rounded-lg max-h-64 overflow-y-auto">
-                        <div className="p-2 bg-muted/50 border-b sticky top-0">
-                          <p className="text-xs text-muted-foreground">
-                            {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''}{!isSimplifiedView && selectedGrade ? ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}` : ''}
-                          </p>
+                    {/* Individual Selection */}
+                    {studentSelectionType === "individual" && (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              placeholder={t('invoiceCreation.placeholderSearchStudent')}
+                              value={searchStudentTerm}
+                              onChange={(e) => setSearchStudentTerm(e.target.value)}
+                              onFocus={() => setIsStudentSearchFocused(true)}
+                              onBlur={() => setTimeout(() => setIsStudentSearchFocused(false), 200)}
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={handleSyncStudentList}
+                            disabled={isSyncing}
+                            className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                          >
+                            <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                            {t('invoiceCreation.syncStudentList')}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsAddNewStudentOpen(true)}
+                            className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Student
+                          </Button>
                         </div>
-                        {filteredStudents.length > 0 ? (
-                          filteredStudents.map((student) => {
-                            const invoiceStudent = student as InvoiceStudent
-                            const studentHasDiscounts = !isSimplifiedView && hasDiscounts(invoiceStudent)
-                            return (
-                              <div
-                                key={student.id}
-                                className={`p-3 hover:bg-muted cursor-pointer border-b last:border-b-0 ${studentHasDiscounts ? 'bg-green-50' : ''}`}
-                                onClick={() => handleIndividualStudentSelect(student)}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <div>
-                                    <p className="font-medium">{student.name}</p>
-                                    <p className="text-sm text-muted-foreground">{student.id}</p>
-                                    {studentHasDiscounts && (
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {invoiceStudent.discounts.siblingDiscount > 0 && (
-                                          <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
-                                            Sibling {invoiceStudent.discounts.siblingDiscount}%
-                                          </Badge>
-                                        )}
-                                        {invoiceStudent.discounts.studentGroupDiscounts.map((g, i) => (
-                                          <Badge key={i} variant="outline" className="text-xs bg-cyan-100 text-cyan-700 border-cyan-300">
-                                            {g.name}
-                                          </Badge>
-                                        ))}
-                                        {invoiceStudent.discounts.staffChild && (
-                                          <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
-                                            Staff Child
-                                          </Badge>
-                                        )}
-                                        {invoiceStudent.discounts.scholarship && (
-                                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
-                                            Scholarship
-                                          </Badge>
-                                        )}
-                                        {invoiceStudent.discounts.earlyBird && (
-                                          <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                            Early Bird
-                                          </Badge>
+
+                        {(isStudentSearchFocused || searchStudentTerm.length > 0) && (
+                          <div className="absolute z-50 w-full mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="p-2 border-b mb-1.5 flex items-center justify-between px-3">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                                {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
+                              </p>
+                              {!isSimplifiedView && selectedGrade && (
+                                <Badge variant="outline" className="text-[10px] font-bold bg-primary/5 text-primary border-primary/20">
+                                  {selectedGrade} {selectedRoom ? `• ${selectedRoom}` : ''}
+                                </Badge>
+                              )}
+                            </div>
+                            {filteredStudents.length > 0 ? (
+                              filteredStudents.slice(0, 15).map((student) => {
+                                const invoiceStudent = student as InvoiceStudent
+                                const studentHasDiscounts = !isSimplifiedView && hasDiscounts(invoiceStudent)
+                                return (
+                                  <div
+                                    key={student.id}
+                                    onMouseDown={(e: any) => {
+                                      e.preventDefault()
+                                      handleIndividualStudentSelect(student)
+                                      toast.success(`Added ${student.name} (${student.id})`)
+                                    }}
+                                    className={`group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0 ${studentHasDiscounts ? 'bg-green-50/50 hover:bg-green-50' : ''}`}
+                                  >
+                                    <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shadow-sm border border-primary/20">
+                                      {student.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-sm truncate uppercase tracking-tight flex items-center gap-2">
+                                        {student.name}
+                                        {studentHasDiscounts && (
+                                          <CheckCircle className="h-3 w-4 text-green-500" />
                                         )}
                                       </div>
-                                    )}
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[10px] font-mono font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
+                                        <span className="text-[11px] text-muted-foreground font-medium">• {student.grade}</span>
+                                      </div>
+                                      {studentHasDiscounts && (
+                                        <div className="flex flex-wrap gap-1 mt-1.5 scale-[0.85] origin-left">
+                                          {invoiceStudent.discounts.siblingDiscount > 0 && (
+                                            <Badge variant="outline" className="text-[10px] bg-green-100 text-green-700 border-green-300">
+                                              Sibling {invoiceStudent.discounts.siblingDiscount}%
+                                            </Badge>
+                                          )}
+                                          {invoiceStudent.discounts.staffChild && (
+                                            <Badge variant="outline" className="text-[10px] bg-blue-100 text-blue-700 border-blue-300">
+                                              Staff Child
+                                            </Badge>
+                                          )}
+                                          {invoiceStudent.discounts.scholarship && (
+                                            <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-700 border-purple-300">
+                                              Scholarship
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="h-9 w-9 rounded-full border border-border flex items-center justify-center bg-background group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/20">
+                                      <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
+                                    </div>
                                   </div>
-                                  <Plus className="w-4 h-4 text-muted-foreground" />
+                                )
+                              })
+                            ) : (
+                              <div className="py-12 px-4 text-center">
+                                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
+                                  <Users className="h-8 w-8 text-muted-foreground" />
                                 </div>
+                                <p className="text-sm font-medium text-foreground">No students found</p>
+                                <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
                               </div>
-                            )
-                          })
-                        ) : (
-                          <div className="p-3 text-center text-muted-foreground">
-                            No students found
+                            )}
                           </div>
                         )}
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* CSV Upload */}
-                {studentSelectionType === "csv" && (
-                  <div className="space-y-3">
-                    <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
-                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground mb-2">Upload CSV file with student information</p>
-                      <Input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleCsvUpload}
-                        className="max-w-xs mx-auto"
-                      />
-                    </div>
-                    {csvFile && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <p className="text-sm text-green-700">
-                          <span className="font-medium">File uploaded:</span> {csvFile.name}
-                        </p>
-                        <p className="text-sm text-green-600">Loaded {csvStudents.length} students</p>
+                    {/* CSV Upload */}
+                    {studentSelectionType === "csv" && (
+                      <div className="space-y-3">
+                        <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
+                          <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground mb-2">Upload CSV file with student information</p>
+                          <Input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCsvUpload}
+                            className="max-w-xs mx-auto"
+                          />
+                        </div>
+                        {csvFile && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p className="text-sm text-green-700">
+                              <span className="font-medium">File uploaded:</span> {csvFile.name}
+                            </p>
+                            <p className="text-sm text-green-600">Loaded {csvStudents.length} students</p>
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* All Students */}
-                {studentSelectionType === "all" && (
-                  <div className="space-y-3">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                      <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                      <p className="text-sm text-blue-700 mb-2">
-                        Select all students
-                        {!isSimplifiedView && (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") && selectedGrades.length > 0 && ` in ${selectedGrades.join(", ")}`}
-                        {!isSimplifiedView && invoiceType === "summer" && selectedGrade && ` in ${selectedGrade}`}
-                        {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "trip" && invoiceType !== "bus" && invoiceType !== "summer" && selectedGrade && ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}`}
-                      </p>
-                      <p className="text-sm text-blue-600 mb-3">
-                        {isSimplifiedView
-                          ? availableStudents.filter(s => !hasFullDiscount(s.id)).length
-                          : (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus")
-                            ? availableStudents.filter(s => selectedGrades.includes(s.grade) && !hasFullDiscount(s.id)).length
-                            : invoiceType === "summer"
-                              ? availableStudents.filter(s => s.grade === selectedGrade && !hasFullDiscount(s.id)).length
-                              : availableStudents.filter(s =>
-                                  s.grade === selectedGrade &&
-                                  (selectedRoom === "" || s.room === selectedRoom) &&
-                                  !hasFullDiscount(s.id)
-                                ).length
-                        } students will be selected
-                      </p>
-                      <Button disabled={!userCanEdit} onClick={handleSelectAllStudents} size="sm">
-                        Select All Students
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                    {/* All Students */}
+                    {studentSelectionType === "all" && (
+                      <div className="space-y-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                          <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                          <p className="text-sm text-blue-700 mb-2">
+                            Select all students
+                            {!isSimplifiedView && (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") && selectedGrades.length > 0 && ` in ${selectedGrades.join(", ")}`}
+                            {!isSimplifiedView && invoiceType === "summer" && selectedGrade && ` in ${selectedGrade}`}
+                            {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "trip" && invoiceType !== "bus" && invoiceType !== "summer" && selectedGrade && ` in ${selectedGrade}${selectedRoom ? ` - ${selectedRoom}` : ''}`}
+                          </p>
+                          <p className="text-sm text-blue-600 mb-3">
+                            {isSimplifiedView
+                              ? availableStudents.filter(s => !hasFullDiscount(s.id)).length
+                              : (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus")
+                                ? availableStudents.filter(s => selectedGrades.includes(s.grade) && !hasFullDiscount(s.id)).length
+                                : invoiceType === "summer"
+                                  ? availableStudents.filter(s => s.grade === selectedGrade && !hasFullDiscount(s.id)).length
+                                  : availableStudents.filter(s =>
+                                    s.grade === selectedGrade &&
+                                    (selectedRoom === "" || s.room === selectedRoom) &&
+                                    !hasFullDiscount(s.id)
+                                  ).length
+                            } students will be selected
+                          </p>
+                          <Button disabled={!userCanEdit} onClick={handleSelectAllStudents} size="sm">
+                            Select All Students
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -4066,11 +4076,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </CardContent >
+      </Card >
 
       {/* Add New Student Dialog */}
-      <Dialog open={isAddNewStudentOpen} onOpenChange={setIsAddNewStudentOpen}>
+      < Dialog open={isAddNewStudentOpen} onOpenChange={setIsAddNewStudentOpen} >
         <DialogContent className="max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -4290,10 +4300,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Confirmation Dialog */}
-      <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
+      < Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} >
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Confirm Email Sending</DialogTitle>
@@ -4330,10 +4340,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Invoice Preview Dialog */}
-      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+      < Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen} >
         <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Invoice Preview</DialogTitle>
@@ -4918,10 +4928,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Add Item from List Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+      < Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen} >
         <DialogContent className="max-w-md flex flex-col p-6" style={{ maxHeight: '65vh' }}>
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add Item from List</DialogTitle>
@@ -4969,9 +4979,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 {getItemsForDialog().map((item, index) => (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
-                      index !== 0 ? 'border-t' : ''
-                    }`}
+                    className={`flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer transition-colors ${index !== 0 ? 'border-t' : ''
+                      }`}
                     onClick={() => handleAddItemFromList(item)}
                   >
                     <div className="flex-1 min-w-0 mr-3">
@@ -4979,12 +4988,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <span className="font-medium text-sm">{item.name}</span>
                         <Badge
                           variant="outline"
-                          className={`text-xs flex-shrink-0 ${
-                            item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                          className={`text-xs flex-shrink-0 ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                             item.category === "ECA" ? "border-green-300 text-green-700" :
-                            item.category === "School Bus" ? "border-yellow-300 text-yellow-700" :
-                            "border-orange-300 text-orange-700"
-                          }`}
+                              item.category === "School Bus" ? "border-yellow-300 text-yellow-700" :
+                                "border-orange-300 text-orange-700"
+                            }`}
                         >
                           {item.category}
                         </Badge>
@@ -5019,10 +5027,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Edit Item Dialog */}
-      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+      < Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen} >
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Edit Item</DialogTitle>
@@ -5040,11 +5048,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   <p className="font-medium">{editingItem.name}</p>
                   <Badge
                     variant="outline"
-                    className={`mt-1 text-xs ${
-                      editingItem.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                    className={`mt-1 text-xs ${editingItem.category === "Tuition" ? "border-blue-300 text-blue-700" :
                       editingItem.category === "ECA" ? "border-green-300 text-green-700" :
-                      "border-orange-300 text-orange-700"
-                    }`}
+                        "border-orange-300 text-orange-700"
+                      }`}
                   >
                     {editingItem.category}
                   </Badge>
@@ -5093,10 +5100,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Confirmation Dialog */}
-      <ConfirmDialog
+      < ConfirmDialog
         open={confirmDialog.isOpen}
         onOpenChange={confirmDialog.setIsOpen}
         onConfirm={confirmDialog.handleConfirm}
@@ -5104,6 +5111,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         descriptionKey="confirmDialog.createDescription"
         confirmTextKey="common.create"
       />
-    </div>
+    </div >
   )
 }

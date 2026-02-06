@@ -23,6 +23,7 @@ import {
   X
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { getSortedYearGroups } from "@/utils/gradeLevels"
 
 interface Student {
   id: string
@@ -153,15 +154,15 @@ export function TuitionDiscountGroups() {
       const updatedGroups = groups.map(g =>
         g.id === editingGroup.id
           ? {
-              ...g,
-              name: formData.name,
-              discountType: formData.discountType,
-              discountPercentage: formData.discountPercentage,
-              fixedAmount: formData.fixedAmount,
-              students: formData.selectedStudents,
-              departments: ["Tuition"],
-              isActive: formData.isActive
-            }
+            ...g,
+            name: formData.name,
+            discountType: formData.discountType,
+            discountPercentage: formData.discountPercentage,
+            fixedAmount: formData.fixedAmount,
+            students: formData.selectedStudents,
+            departments: ["Tuition"],
+            isActive: formData.isActive
+          }
           : g
       )
       setGroups(updatedGroups)
@@ -248,10 +249,20 @@ export function TuitionDiscountGroups() {
     })
   }
 
+  const [selectedYearGroup, setSelectedYearGroup] = useState<string>("All")
+  const [isInputFocused, setIsInputFocused] = useState(false)
+
+  // Get unique year groups
+  const uniqueYearGroups = useMemo(() => {
+    const groups = new Set(availableStudents.map(s => s.yearGroup))
+    return getSortedYearGroups(["All", ...Array.from(groups)])
+  }, [availableStudents])
+
   // Filtered students for search
   const filteredStudents = availableStudents.filter(student =>
+    (selectedYearGroup === "All" || student.yearGroup === selectedYearGroup) &&
     (student.name.toLowerCase().includes(studentInput.toLowerCase()) ||
-     student.id.toLowerCase().includes(studentInput.toLowerCase())) &&
+      student.id.toLowerCase().includes(studentInput.toLowerCase())) &&
     !formData.selectedStudents.find(s => s.id === student.id)
   )
 
@@ -265,7 +276,10 @@ export function TuitionDiscountGroups() {
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           if (!userCanEdit && open) return // Prevent opening dialog for viewers
           setIsDialogOpen(open)
-          if (!open) resetForm()
+          if (!open) {
+            resetForm()
+            setSelectedYearGroup("All")
+          }
         }}>
           <DialogTrigger asChild>
             <Button disabled={!userCanEdit}>
@@ -365,31 +379,70 @@ export function TuitionDiscountGroups() {
 
                   <TabsContent value="individual" className="space-y-3">
                     <div className="space-y-2">
+                      <Label>Filter by Year Group</Label>
+                      <Select
+                        value={selectedYearGroup}
+                        onValueChange={setSelectedYearGroup}
+                        disabled={!userCanEdit}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Year Group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {uniqueYearGroups.map(group => (
+                            <SelectItem key={group} value={group}>
+                              {group === "All" ? "All Year Groups" : group}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label>Search & Add Student</Label>
                       <div className="relative">
                         <Input
                           value={studentInput}
                           onChange={(e) => setStudentInput(e.target.value)}
+                          onFocus={() => setIsInputFocused(true)}
+                          onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                           placeholder="Search by ID or Name (e.g., KC2024001)"
                           disabled={!userCanEdit}
                         />
                         {/* Search Results Dropdown */}
-                        {studentInput.length >= 1 && (
-                          <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {isInputFocused && (
+                          <div className="absolute z-50 mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                             {filteredStudents.length === 0 ? (
-                              <div className="p-3 text-sm text-muted-foreground text-center">
-                                No students found
+                              <div className="py-12 px-4 text-center">
+                                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
+                                  <Users className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                                <p className="text-sm font-medium text-foreground">No students found</p>
+                                <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
                               </div>
                             ) : (
                               filteredStudents.slice(0, 10).map(student => (
                                 <div
                                   key={student.id}
-                                  onClick={() => handleAddStudent(student)}
-                                  className="p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                                  onMouseDown={(e: any) => {
+                                    e.preventDefault()
+                                    handleAddStudent(student)
+                                    toast.success(`Added ${student.name} (${student.id})`)
+                                  }}
+                                  className="group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0"
                                 >
-                                  <div className="font-medium">{student.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {student.id} - {student.yearGroup}
+                                  <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shadow-sm border border-primary/20">
+                                    {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-sm truncate uppercase tracking-tight">{student.name}</div>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] font-mono font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
+                                      <span className="text-[11px] text-muted-foreground font-medium">• {student.yearGroup}</span>
+                                    </div>
+                                  </div>
+                                  <div className="h-9 w-9 rounded-full border border-border flex items-center justify-center bg-background group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/20">
+                                    <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
                                   </div>
                                 </div>
                               ))
@@ -398,7 +451,7 @@ export function TuitionDiscountGroups() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Type to search, then click to add student
+                        Select a year group or type to search, then click to add student
                       </p>
                     </div>
 

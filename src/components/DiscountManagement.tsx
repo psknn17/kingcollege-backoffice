@@ -48,6 +48,7 @@ import { WaiveFeeManagement } from "./WaiveFeeManagement"
 import { useStudents } from "@/contexts/StudentContext"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { getSortedYearGroups } from "@/utils/gradeLevels"
 
 interface Student {
   id: string
@@ -195,10 +196,19 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const STORAGE_KEY = category === "tuition" ? "studentGroups" : `studentGroups_${category}`
 
   // Convert students from context to local format
-  const availableStudents = useMemo(() =>
+  const availableStudents = useMemo<Student[]>(() =>
     convertStudentsToDiscountFormat(contextStudents),
     [contextStudents]
   )
+
+  const [selectedYearGroup, setSelectedYearGroup] = useState<string>("All")
+  const [isInputFocused, setIsInputFocused] = useState(false)
+
+  // Get unique year groups
+  const uniqueYearGroups = useMemo(() => {
+    const groups = new Set(availableStudents.map((s: Student) => s.yearGroup))
+    return getSortedYearGroups(["All", ...Array.from(groups)])
+  }, [availableStudents])
 
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(mockDiscountCodes)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -329,13 +339,13 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const [fileParseErrors, setFileParseErrors] = useState<string[]>([])
 
   // Group view and edit states
-  const [viewGroupDialog, setViewGroupDialog] = useState<{isOpen: boolean, group: any | null}>({isOpen: false, group: null})
-  const [editGroupDialog, setEditGroupDialog] = useState<{isOpen: boolean, group: any | null}>({isOpen: false, group: null})
-  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{isOpen: boolean, group: any | null}>({isOpen: false, group: null})
-  
+  const [viewGroupDialog, setViewGroupDialog] = useState<{ isOpen: boolean, group: any | null }>({ isOpen: false, group: null })
+  const [editGroupDialog, setEditGroupDialog] = useState<{ isOpen: boolean, group: any | null }>({ isOpen: false, group: null })
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ isOpen: boolean, group: any | null }>({ isOpen: false, group: null })
+
   // CSV Upload and Individual Add states
-  const [csvUploadDialog, setCsvUploadDialog] = useState<{isOpen: boolean, groupId: string | null}>({isOpen: false, groupId: null})
-  const [addIndividualDialog, setAddIndividualDialog] = useState<{isOpen: boolean, groupId: string | null}>({isOpen: false, groupId: null})
+  const [csvUploadDialog, setCsvUploadDialog] = useState<{ isOpen: boolean, groupId: string | null }>({ isOpen: false, groupId: null })
+  const [addIndividualDialog, setAddIndividualDialog] = useState<{ isOpen: boolean, groupId: string | null }>({ isOpen: false, groupId: null })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvPreviewData, setCsvPreviewData] = useState<Student[]>([])
   const [isPreviewingCsv, setIsPreviewingCsv] = useState(false)
@@ -345,7 +355,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     yearGroup: "",
     parentName: ""
   })
-  
+
   // Student search states
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
   const [studentSearchResults, setStudentSearchResults] = useState<Student[]>([])
@@ -357,7 +367,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const saveDialog = useConfirmDialog()
   const deleteDialog = useConfirmDialog()
 
-  
+
   const getUsageProgress = (used: number, limit: number) => {
     return Math.min((used / limit) * 100, 100)
   }
@@ -434,7 +444,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         setStudentGroups(updatedGroups)
 
         toast.success(`Added ${newStudents.length} students to group`)
-        setCsvUploadDialog({isOpen: false, groupId: null})
+        setCsvUploadDialog({ isOpen: false, groupId: null })
         setCsvFile(null)
         setCsvPreviewData([])
       }
@@ -444,15 +454,15 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   // Student search handlers
   const handleStudentSearch = (query: string) => {
     setStudentSearchQuery(query)
-    
+
     if (query.trim().length < 2) {
       setStudentSearchResults([])
       setShowSearchResults(false)
       return
     }
-    
+
     setIsSearching(true)
-    
+
     // Simulate search delay
     setTimeout(() => {
       const lowercaseQuery = query.toLowerCase()
@@ -460,7 +470,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         student.id.toLowerCase().includes(lowercaseQuery) ||
         student.name.toLowerCase().includes(lowercaseQuery)
       )
-      
+
       setStudentSearchResults(results)
       setShowSearchResults(true)
       setIsSearching(false)
@@ -512,7 +522,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         setStudentGroups(updatedGroups)
 
         toast.success("Student added successfully")
-        setAddIndividualDialog({isOpen: false, groupId: null})
+        setAddIndividualDialog({ isOpen: false, groupId: null })
         setIndividualStudentForm({ id: "", name: "", yearGroup: "", parentName: "" })
         clearStudentSearch()
       }
@@ -553,6 +563,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     setUploadedFile(null)
     setFileParseErrors([])
     setIsProcessingFile(false)
+    setSelectedYearGroup("All")
   }
 
   const addStudentToGroup = () => {
@@ -610,7 +621,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
       // Check for duplicates in current selection
       if (validStudents.find(s => s.id.toUpperCase() === studentId) ||
-          groupForm.selectedStudents.find(s => s.id.toUpperCase() === studentId)) {
+        groupForm.selectedStudents.find(s => s.id.toUpperCase() === studentId)) {
         errors.push(`Line ${index + 1}: Student ID "${studentId}" already selected`)
         return
       }
@@ -680,7 +691,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       "KC2024003\n" +
       "KC2024004\n" +
       "KC2024005"
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -735,7 +746,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
       setStudentGroups(prev => prev.map(g => g.id === editGroupDialog.group.id ? updatedGroup : g))
       toast.success("Student group updated successfully")
-      setEditGroupDialog({isOpen: false, group: null})
+      setEditGroupDialog({ isOpen: false, group: null })
     } else {
       // Create new group
       const newGroup = {
@@ -763,12 +774,12 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const handleViewGroup = (group: any) => {
-    setViewGroupDialog({isOpen: true, group})
+    setViewGroupDialog({ isOpen: true, group })
   }
 
   const handleEditGroup = (group: any) => {
     if (!userCanEdit) return
-    setEditGroupDialog({isOpen: true, group})
+    setEditGroupDialog({ isOpen: true, group })
     setGroupForm({
       name: group.name,
       discountType: group.discountType || "percentage",
@@ -782,14 +793,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
   const handleDeleteGroup = (group: any) => {
     if (!userCanEdit) return
-    setDeleteConfirmDialog({isOpen: true, group})
+    setDeleteConfirmDialog({ isOpen: true, group })
   }
 
   const confirmDeleteGroup = () => {
     if (deleteConfirmDialog.group) {
       setStudentGroups(prev => prev.filter(g => g.id !== deleteConfirmDialog.group.id))
       toast.success("Student group deleted successfully")
-      setDeleteConfirmDialog({isOpen: false, group: null})
+      setDeleteConfirmDialog({ isOpen: false, group: null })
     }
   }
 
@@ -804,11 +815,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       setDiscountCodes(prev => prev.map(discount =>
         discount.id === editingDiscount.id
           ? {
-              ...discount,
-              ...formData,
-              startDate: formData.startDate!,
-              endDate: formData.endDate!
-            }
+            ...discount,
+            ...formData,
+            startDate: formData.startDate!,
+            endDate: formData.endDate!
+          }
           : discount
       ))
       toast.success("Discount code updated successfully")
@@ -947,24 +958,24 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     .sort((a, b) => b.discountPercentage - a.discountPercentage)
                     .slice(0, 3)
                     .map((group) => (
-                    <div key={group.id} className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{group.name}</h4>
-                        <p className="text-sm text-muted-foreground">{group.departments.join(", ")}</p>
+                      <div key={group.id} className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">{group.name}</h4>
+                          <p className="text-sm text-muted-foreground">{group.departments.join(", ")}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {group.discountType === "fixed"
+                              ? `฿${group.fixedAmount?.toLocaleString() || 0} discount`
+                              : `${group.discountPercentage}% discount`
+                            }
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {group.students.length} students
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">
-                          {group.discountType === "fixed"
-                            ? `฿${group.fixedAmount?.toLocaleString() || 0} discount`
-                            : `${group.discountPercentage}% discount`
-                          }
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {group.students.length} students
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                   {studentGroups.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No student groups created yet
@@ -986,11 +997,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     return (
                       <div key={dept} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            dept === 'Tuition' ? 'bg-blue-500' :
-                            dept === 'After School' ? 'bg-green-500' : 
-                            dept === 'Event Management' ? 'bg-purple-500' : 'bg-orange-500'
-                          }`} />
+                          <div className={`w-3 h-3 rounded-full ${dept === 'Tuition' ? 'bg-blue-500' :
+                            dept === 'After School' ? 'bg-green-500' :
+                              dept === 'Event Management' ? 'bg-purple-500' : 'bg-orange-500'
+                            }`} />
                           <span>{dept}</span>
                         </div>
                         <span className="font-medium">{count}</span>
@@ -1028,17 +1038,17 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     .filter(d => d.selectedStudents.length > 0)
                     .slice(0, studentGroups.length > 0 ? 2 : 3)
                     .map((discount) => (
-                    <div key={discount.id} className="flex items-center justify-between py-2">
-                      <div>
-                        <h4 className="font-medium">{discount.code}</h4>
-                        <p className="text-xs text-muted-foreground">{discount.period} • {discount.targetTypes.join(", ")}</p>
+                      <div key={discount.id} className="flex items-center justify-between py-2">
+                        <div>
+                          <h4 className="font-medium">{discount.code}</h4>
+                          <p className="text-xs text-muted-foreground">{discount.period} • {discount.targetTypes.join(", ")}</p>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {discount.selectedStudents.length} students
+                        </span>
                       </div>
-                      <span className="text-sm text-muted-foreground">
-                        {discount.selectedStudents.length} students
-                      </span>
-                    </div>
-                  ))}
-                  
+                    ))}
+
                   {studentGroups.length === 0 && discountCodes.filter(d => d.selectedStudents.length > 0).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No student groups or targeted discounts available
@@ -1079,7 +1089,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     <Input
                       id="group-name"
                       value={groupForm.name}
-                      onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                      onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
                       placeholder="Year 7 Excellence Group"
                       disabled={!userCanEdit}
                     />
@@ -1089,7 +1099,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       <Label htmlFor="group-discount-type">Discount Type</Label>
                       <Select
                         value={groupForm.discountType}
-                        onValueChange={(value: "percentage" | "fixed") => setGroupForm({...groupForm, discountType: value})}
+                        onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}
                         disabled={!userCanEdit}
                       >
                         <SelectTrigger>
@@ -1108,7 +1118,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           id="group-discount"
                           type="number"
                           value={groupForm.discountPercentage}
-                          onChange={(e) => setGroupForm({...groupForm, discountPercentage: Number(e.target.value)})}
+                          onChange={(e) => setGroupForm({ ...groupForm, discountPercentage: Number(e.target.value) })}
                           placeholder="15"
                           min="0"
                           max="100"
@@ -1122,7 +1132,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           id="group-fixed-amount"
                           type="number"
                           value={groupForm.fixedAmount}
-                          onChange={(e) => setGroupForm({...groupForm, fixedAmount: Number(e.target.value)})}
+                          onChange={(e) => setGroupForm({ ...groupForm, fixedAmount: Number(e.target.value) })}
                           placeholder="1000"
                           min="0"
                           disabled={!userCanEdit}
@@ -1139,7 +1149,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         {groupForm.selectedStudents.length} students added
                       </span>
                     </div>
-                    
+
+
+
                     <Tabs defaultValue="individual" className="space-y-4">
                       <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="individual">Individual Input</TabsTrigger>
@@ -1148,6 +1160,26 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                       <TabsContent value="individual" className="space-y-3">
                         <div className="space-y-2">
+                          <Label>Filter by Year Group</Label>
+                          <Select
+                            value={selectedYearGroup}
+                            onValueChange={setSelectedYearGroup}
+                            disabled={!userCanEdit}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Year Group" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {uniqueYearGroups.map(group => (
+                                <SelectItem key={group} value={group}>
+                                  {group === "All" ? "All Year Groups" : group}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
                           <Label htmlFor="student-input">Search & Add Student</Label>
                           <div className="relative">
                             <div className="relative">
@@ -1155,54 +1187,73 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 id="student-input"
                                 value={studentInput}
                                 onChange={(e) => setStudentInput(e.target.value)}
+                                onFocus={() => setIsInputFocused(true)}
+                                onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                                 placeholder="Search by ID or Name (e.g., KC2024001)"
                                 className=""
+                                disabled={!userCanEdit}
                               />
                             </div>
                             {/* Search Results Dropdown */}
-                            {studentInput.length >= 1 && (
-                              <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                {availableStudents
-                                  .filter(s =>
-                                    !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
-                                    (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                     s.name.toLowerCase().includes(studentInput.toLowerCase()))
-                                  )
-                                  .slice(0, 10)
-                                  .map(student => (
-                                    <div
-                                      key={student.id}
-                                      className="px-3 py-2 hover:bg-muted cursor-pointer flex items-center justify-between"
-                                      onClick={() => {
-                                        setGroupForm(prev => ({
-                                          ...prev,
-                                          selectedStudents: [...prev.selectedStudents, student]
-                                        }))
-                                        setStudentInput("")
-                                        toast.success(`Added ${student.name} (${student.id})`)
-                                      }}
-                                    >
-                                      <div>
-                                        <p className="font-medium text-sm">{student.name}</p>
-                                        <p className="text-xs text-muted-foreground">{student.id} • {student.yearGroup}</p>
-                                      </div>
-                                      <Plus className="h-4 w-4 text-muted-foreground" />
-                                    </div>
-                                  ))}
-                                {availableStudents.filter(s =>
-                                  !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
+                            {isInputFocused && (
+                              <div className="absolute z-50 mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                {availableStudents.filter((s: Student) =>
+                                  !groupForm.selectedStudents.find((sel: Student) => sel.id === s.id) &&
+                                  (selectedYearGroup === "All" || s.yearGroup === selectedYearGroup) &&
                                   (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                   s.name.toLowerCase().includes(studentInput.toLowerCase()))
-                                ).length === 0 && (
-                                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                                    No students found
+                                    s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                ).length === 0 ? (
+                                  <div className="py-12 px-4 text-center">
+                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
+                                      <Users className="h-8 w-8 text-muted-foreground" />
+                                    </div>
+                                    <p className="text-sm font-medium text-foreground">No students found</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
                                   </div>
+                                ) : (
+                                  availableStudents
+                                    .filter((s: Student) =>
+                                      !groupForm.selectedStudents.find((sel: Student) => sel.id === s.id) &&
+                                      (selectedYearGroup === "All" || s.yearGroup === selectedYearGroup) &&
+                                      (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
+                                        s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                    )
+                                    .slice(0, 10)
+                                    .map((student: Student) => (
+                                      <div
+                                        key={student.id}
+                                        onMouseDown={(e: any) => {
+                                          e.preventDefault()
+                                          setGroupForm(prev => ({
+                                            ...prev,
+                                            selectedStudents: [...prev.selectedStudents, student]
+                                          }))
+                                          setStudentInput("")
+                                          toast.success(`Added ${student.name} (${student.id})`)
+                                        }}
+                                        className="group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0"
+                                      >
+                                        <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shadow-sm border border-primary/20">
+                                          {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-semibold text-sm truncate uppercase tracking-tight">{student.name}</div>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] font-mono font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
+                                            <span className="text-[11px] text-muted-foreground font-medium">• {student.yearGroup}</span>
+                                          </div>
+                                        </div>
+                                        <div className="h-9 w-9 rounded-full border border-border flex items-center justify-center bg-background group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/20">
+                                          <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
+                                        </div>
+                                      </div>
+                                    ))
                                 )}
                               </div>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Type to search, then click to add student
+                            Select a year group or type to search, then click to add student
                           </p>
                         </div>
                       </TabsContent>
@@ -1253,7 +1304,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                   </div>
                                 )}
                               </div>
-                              
+
                               {fileParseErrors.length > 0 && (
                                 <div className="bg-destructive/10 border border-destructive/20 rounded p-3">
                                   <h4 className="text-sm font-medium text-destructive mb-2">
@@ -1286,7 +1337,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           <div className="bg-muted/50 p-3 rounded text-xs">
                             <strong>Example CSV content:</strong>
                             <pre className="mt-1 text-muted-foreground">
-Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
+                              Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                             </pre>
                           </div>
                         </div>
@@ -1382,12 +1433,12 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                           <Badge variant="outline" className="text-red-500 border-red-300">Disabled</Badge>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                         <Users className="w-4 h-4" />
                         <span>{group.students.length} students in whitelist</span>
                       </div>
-                      
+
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1411,7 +1462,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 </CardContent>
               </Card>
             ))}
-            
+
             {studentGroups.length === 0 && (
               <Card>
                 <CardContent className="p-12 text-center">
@@ -1430,7 +1481,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           </div>
 
           {/* View Group Dialog */}
-          <Dialog open={viewGroupDialog.isOpen} onOpenChange={(open) => setViewGroupDialog({isOpen: open, group: null})}>
+          <Dialog open={viewGroupDialog.isOpen} onOpenChange={(open) => setViewGroupDialog({ isOpen: open, group: null })}>
             <DialogContent className="max-w-4xl p-6">
               <DialogHeader>
                 <DialogTitle>
@@ -1440,7 +1491,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   Complete list of students in this discount group
                 </DialogDescription>
               </DialogHeader>
-              
+
               {viewGroupDialog.group && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
@@ -1480,8 +1531,8 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setCsvUploadDialog({isOpen: true, groupId: viewGroupDialog.group?.id})
-                          setViewGroupDialog({isOpen: false, group: null})
+                          setCsvUploadDialog({ isOpen: true, groupId: viewGroupDialog.group?.id })
+                          setViewGroupDialog({ isOpen: false, group: null })
                         }}
                         disabled={!userCanEdit}
                       >
@@ -1491,8 +1542,8 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setAddIndividualDialog({isOpen: true, groupId: viewGroupDialog.group?.id})
-                          setViewGroupDialog({isOpen: false, group: null})
+                          setAddIndividualDialog({ isOpen: true, groupId: viewGroupDialog.group?.id })
+                          setViewGroupDialog({ isOpen: false, group: null })
                         }}
                         disabled={!userCanEdit}
                       >
@@ -1500,7 +1551,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         Add Individual
                       </Button>
                     </div>
-                    <Button onClick={() => setViewGroupDialog({isOpen: false, group: null})}>
+                    <Button onClick={() => setViewGroupDialog({ isOpen: false, group: null })}>
                       Close
                     </Button>
                   </div>
@@ -1513,7 +1564,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           <Dialog open={editGroupDialog.isOpen} onOpenChange={(open) => {
             if (!userCanEdit && open) return
             if (!open) {
-              setEditGroupDialog({isOpen: false, group: null})
+              setEditGroupDialog({ isOpen: false, group: null })
               resetGroupForm()
             }
           }}>
@@ -1534,7 +1585,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   </div>
                   <Switch
                     checked={groupForm.isActive}
-                    onCheckedChange={(checked) => setGroupForm({...groupForm, isActive: checked})}
+                    onCheckedChange={(checked) => setGroupForm({ ...groupForm, isActive: checked })}
                     disabled={!userCanEdit}
                   />
                 </div>
@@ -1544,7 +1595,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   <Input
                     id="edit-group-name"
                     value={groupForm.name}
-                    onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                    onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
                     placeholder="Year 7 Excellence Group"
                     disabled={!userCanEdit}
                   />
@@ -1554,7 +1605,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     <Label htmlFor="edit-group-discount-type">Discount Type</Label>
                     <Select
                       value={groupForm.discountType}
-                      onValueChange={(value: "percentage" | "fixed") => setGroupForm({...groupForm, discountType: value})}
+                      onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}
                       disabled={!userCanEdit}
                     >
                       <SelectTrigger>
@@ -1573,7 +1624,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         id="edit-group-discount"
                         type="number"
                         value={groupForm.discountPercentage}
-                        onChange={(e) => setGroupForm({...groupForm, discountPercentage: Number(e.target.value)})}
+                        onChange={(e) => setGroupForm({ ...groupForm, discountPercentage: Number(e.target.value) })}
                         placeholder="15"
                         min="0"
                         max="100"
@@ -1587,7 +1638,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         id="edit-group-fixed-amount"
                         type="number"
                         value={groupForm.fixedAmount}
-                        onChange={(e) => setGroupForm({...groupForm, fixedAmount: Number(e.target.value)})}
+                        onChange={(e) => setGroupForm({ ...groupForm, fixedAmount: Number(e.target.value) })}
                         placeholder="1000"
                         min="0"
                         disabled={!userCanEdit}
@@ -1632,7 +1683,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                 .filter(s =>
                                   !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
                                   (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                   s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                    s.name.toLowerCase().includes(studentInput.toLowerCase()))
                                 )
                                 .slice(0, 10)
                                 .map(student => (
@@ -1658,12 +1709,12 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                               {availableStudents.filter(s =>
                                 !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
                                 (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                 s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                  s.name.toLowerCase().includes(studentInput.toLowerCase()))
                               ).length === 0 && (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
-                                  No students found
-                                </div>
-                              )}
+                                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                                    No students found
+                                  </div>
+                                )}
                             </div>
                           )}
                         </div>
@@ -1730,7 +1781,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                             </div>
                           </div>
                         </div>
-                        
+
                         {uploadedFile && (
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
@@ -1748,14 +1799,14 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
-                            
+
                             {isProcessingFile && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                                 Processing file...
                               </div>
                             )}
-                            
+
                             {fileParseErrors.length > 0 && (
                               <div className="space-y-2">
                                 <Label>Import Errors:</Label>
@@ -1772,9 +1823,9 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         )}
 
                         <div className="flex items-center gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={downloadStudentTemplate}
                             className="flex items-center gap-2"
                           >
@@ -1811,40 +1862,40 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                                   student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
                                 )
                                 .map(student => (
-                              <div key={student.id} className={`flex items-center justify-between p-2 rounded text-sm ${student.isActive === false ? 'bg-muted/30 opacity-60' : 'bg-muted/50'}`}>
-                                <div className="flex items-center gap-2">
-                                  <div>
-                                    <span className="font-medium">{student.name}</span>
-                                    <span className="text-muted-foreground ml-2">({student.id})</span>
-                                    <span className="text-muted-foreground ml-2">{student.yearGroup}</span>
+                                  <div key={student.id} className={`flex items-center justify-between p-2 rounded text-sm ${student.isActive === false ? 'bg-muted/30 opacity-60' : 'bg-muted/50'}`}>
+                                    <div className="flex items-center gap-2">
+                                      <div>
+                                        <span className="font-medium">{student.name}</span>
+                                        <span className="text-muted-foreground ml-2">({student.id})</span>
+                                        <span className="text-muted-foreground ml-2">{student.yearGroup}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <Switch
+                                          checked={student.isActive !== false}
+                                          onCheckedChange={() => toggleStudentStatus(student.id)}
+                                          disabled={!userCanEdit}
+                                        />
+                                        <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
+                                          {student.isActive === false ? 'Inactive' : 'Active'}
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeStudentFromGroup(student.id)}
+                                        className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={!userCanEdit}
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-1">
-                                    <Switch
-                                      checked={student.isActive !== false}
-                                      onCheckedChange={() => toggleStudentStatus(student.id)}
-                                      disabled={!userCanEdit}
-                                    />
-                                    <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
-                                      {student.isActive === false ? 'Inactive' : 'Active'}
-                                    </span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeStudentFromGroup(student.id)}
-                                    className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={!userCanEdit}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
                                 ))}
-                                {groupForm.selectedStudents.filter(student =>
-                                  student.name.toLowerCase().includes(currentStudentsSearch.toLowerCase()) ||
-                                  student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
-                                ).length === 0 && currentStudentsSearch && (
+                              {groupForm.selectedStudents.filter(student =>
+                                student.name.toLowerCase().includes(currentStudentsSearch.toLowerCase()) ||
+                                student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
+                              ).length === 0 && currentStudentsSearch && (
                                   <div className="text-center py-4 text-muted-foreground text-sm">
                                     No students found matching "{currentStudentsSearch}"
                                   </div>
@@ -1863,7 +1914,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => {
-                    setEditGroupDialog({isOpen: false, group: null})
+                    setEditGroupDialog({ isOpen: false, group: null })
                     resetGroupForm()
                   }}>
                     Cancel
@@ -1878,7 +1929,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
 
           {/* Delete Confirmation Dialog */}
           <AlertDialog open={deleteConfirmDialog.isOpen} onOpenChange={(open) => {
-            if (!open) setDeleteConfirmDialog({isOpen: false, group: null})
+            if (!open) setDeleteConfirmDialog({ isOpen: false, group: null })
           }}>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -1887,7 +1938,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   Are you sure you want to delete this student group? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              
+
               {deleteConfirmDialog.group && (
                 <div className="p-4 bg-muted/50 rounded-lg my-4">
                   <div className="font-medium mb-1">{deleteConfirmDialog.group.name}</div>
@@ -1901,7 +1952,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
               )}
 
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setDeleteConfirmDialog({isOpen: false, group: null})}>
+                <AlertDialogCancel onClick={() => setDeleteConfirmDialog({ isOpen: false, group: null })}>
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
@@ -1921,7 +1972,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
       <Dialog open={csvUploadDialog.isOpen} onOpenChange={(open) => {
         if (!userCanEdit && open) return
         if (!open) {
-          setCsvUploadDialog({isOpen: false, groupId: null})
+          setCsvUploadDialog({ isOpen: false, groupId: null })
           setCsvFile(null)
           setCsvPreviewData([])
           setIsPreviewingCsv(false)
@@ -2028,7 +2079,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setCsvUploadDialog({isOpen: false, groupId: null})}>
+              <Button variant="outline" onClick={() => setCsvUploadDialog({ isOpen: false, groupId: null })}>
                 Cancel
               </Button>
               <Button
@@ -2046,7 +2097,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
       <Dialog open={addIndividualDialog.isOpen} onOpenChange={(open) => {
         if (!userCanEdit && open) return
         if (!open) {
-          setAddIndividualDialog({isOpen: false, groupId: null})
+          setAddIndividualDialog({ isOpen: false, groupId: null })
           setIndividualStudentForm({ id: "", name: "", yearGroup: "", parentName: "" })
           clearStudentSearch()
         }
@@ -2081,7 +2132,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     <X className="h-4 w-4" />
                   </Button>
                 )}
-                
+
                 {/* Search Results Dropdown */}
                 {showSearchResults && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50 max-h-60 overflow-y-auto">
@@ -2125,7 +2176,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 <Input
                   id="student-id"
                   value={individualStudentForm.id}
-                  onChange={(e) => setIndividualStudentForm({...individualStudentForm, id: e.target.value})}
+                  onChange={(e) => setIndividualStudentForm({ ...individualStudentForm, id: e.target.value })}
                   placeholder="KC2024001"
                   disabled={!userCanEdit}
                 />
@@ -2135,7 +2186,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 <Input
                   id="student-name"
                   value={individualStudentForm.name}
-                  onChange={(e) => setIndividualStudentForm({...individualStudentForm, name: e.target.value})}
+                  onChange={(e) => setIndividualStudentForm({ ...individualStudentForm, name: e.target.value })}
                   placeholder="Emma Johnson"
                   disabled={!userCanEdit}
                 />
@@ -2147,7 +2198,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                 <Label htmlFor="year-group">Year Group</Label>
                 <Select
                   value={individualStudentForm.yearGroup}
-                  onValueChange={(value) => setIndividualStudentForm({...individualStudentForm, yearGroup: value})}
+                  onValueChange={(value) => setIndividualStudentForm({ ...individualStudentForm, yearGroup: value })}
                   disabled={!userCanEdit}
                 >
                   <SelectTrigger>
@@ -2157,7 +2208,7 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                     <SelectItem value="Pre-Nursery">Pre-Nursery</SelectItem>
                     <SelectItem value="Nursery">Nursery</SelectItem>
                     <SelectItem value="Reception">Reception</SelectItem>
-                    {Array.from({length: 13}, (_, i) => (
+                    {Array.from({ length: 13 }, (_, i) => (
                       <SelectItem key={i + 1} value={`Year ${i + 1}`}>Year {i + 1}</SelectItem>
                     ))}
                   </SelectContent>
@@ -2169,14 +2220,14 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                   id="parent-name"
                   disabled={!userCanEdit}
                   value={individualStudentForm.parentName}
-                  onChange={(e) => setIndividualStudentForm({...individualStudentForm, parentName: e.target.value})}
+                  onChange={(e) => setIndividualStudentForm({ ...individualStudentForm, parentName: e.target.value })}
                   placeholder="Sarah Johnson"
                 />
               </div>
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setAddIndividualDialog({isOpen: false, groupId: null})}>
+              <Button variant="outline" onClick={() => setAddIndividualDialog({ isOpen: false, groupId: null })}>
                 Cancel
               </Button>
               <Button onClick={handleAddIndividualStudent} disabled={!userCanEdit}>

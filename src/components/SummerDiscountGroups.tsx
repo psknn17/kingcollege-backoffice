@@ -24,6 +24,7 @@ import {
   FileText
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { getSortedYearGroups } from "@/utils/gradeLevels"
 
 interface Student {
   id: string
@@ -103,6 +104,7 @@ export function SummerDiscountGroups() {
   const [groups, setGroups] = useState<DiscountGroup[]>(loadGroupsFromStorage())
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<DiscountGroup | null>(null)
+  const [isInputFocused, setIsInputFocused] = useState(false)
   const [viewingGroup, setViewingGroup] = useState<DiscountGroup | null>(null)
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null)
   const [studentInput, setStudentInput] = useState("")
@@ -132,7 +134,16 @@ export function SummerDiscountGroups() {
     setStudentInput("")
     setUploadedFile(null)
     setFileParseErrors([])
+    setSelectedYearGroup("All")
   }
+
+  const [selectedYearGroup, setSelectedYearGroup] = useState<string>("All")
+
+  // Get unique year groups
+  const uniqueYearGroups = useMemo(() => {
+    const groups = new Set(availableStudents.map(s => s.yearGroup))
+    return getSortedYearGroups(["All", ...Array.from(groups)])
+  }, [availableStudents])
 
   const handleSaveGroup = () => {
     const hasValidDiscount = groupForm.discountType === "percentage"
@@ -149,14 +160,14 @@ export function SummerDiscountGroups() {
       const updatedGroups = groups.map(g =>
         g.id === editingGroup.id
           ? {
-              ...editingGroup,
-              name: groupForm.name,
-              students: groupForm.selectedStudents,
-              discountType: groupForm.discountType,
-              discountPercentage: groupForm.discountPercentage,
-              fixedAmount: groupForm.fixedAmount,
-              isActive: groupForm.isActive
-            }
+            ...editingGroup,
+            name: groupForm.name,
+            students: groupForm.selectedStudents,
+            discountType: groupForm.discountType,
+            discountPercentage: groupForm.discountPercentage,
+            fixedAmount: groupForm.fixedAmount,
+            isActive: groupForm.isActive
+          }
           : g
       )
       setGroups(updatedGroups)
@@ -310,7 +321,7 @@ export function SummerDiscountGroups() {
                 <Input
                   id="group-name"
                   value={groupForm.name}
-                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
                   placeholder="Year 7 Excellence Group"
                   disabled={!userCanEdit}
                 />
@@ -320,7 +331,7 @@ export function SummerDiscountGroups() {
                   <Label htmlFor="group-discount-type">Discount Type</Label>
                   <Select
                     value={groupForm.discountType}
-                    onValueChange={(value: "percentage" | "fixed") => setGroupForm({...groupForm, discountType: value})}
+                    onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}
                     disabled={!userCanEdit}
                   >
                     <SelectTrigger disabled={!userCanEdit}>
@@ -339,7 +350,7 @@ export function SummerDiscountGroups() {
                       id="group-discount"
                       type="number"
                       value={groupForm.discountPercentage}
-                      onChange={(e) => setGroupForm({...groupForm, discountPercentage: Number(e.target.value)})}
+                      onChange={(e) => setGroupForm({ ...groupForm, discountPercentage: Number(e.target.value) })}
                       placeholder="15"
                       min="0"
                       max="100"
@@ -353,7 +364,7 @@ export function SummerDiscountGroups() {
                       id="group-fixed-amount"
                       type="number"
                       value={groupForm.fixedAmount}
-                      onChange={(e) => setGroupForm({...groupForm, fixedAmount: Number(e.target.value)})}
+                      onChange={(e) => setGroupForm({ ...groupForm, fixedAmount: Number(e.target.value) })}
                       placeholder="1000"
                       min="0"
                       disabled={!userCanEdit}
@@ -379,6 +390,26 @@ export function SummerDiscountGroups() {
 
                   <TabsContent value="individual" className="space-y-3">
                     <div className="space-y-2">
+                      <Label>Filter by Year Group</Label>
+                      <Select
+                        value={selectedYearGroup}
+                        onValueChange={setSelectedYearGroup}
+                        disabled={!userCanEdit}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Year Group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {uniqueYearGroups.map(group => (
+                            <SelectItem key={group} value={group}>
+                              {group === "All" ? "All Year Groups" : group}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="student-input">Search & Add Student</Label>
                       <div className="relative">
                         <div className="relative">
@@ -386,55 +417,73 @@ export function SummerDiscountGroups() {
                             id="student-input"
                             value={studentInput}
                             onChange={(e) => setStudentInput(e.target.value)}
+                            onFocus={() => setIsInputFocused(true)}
+                            onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                             placeholder="Search by ID or Name (e.g., KC2024001)"
                             className=""
                             disabled={!userCanEdit}
                           />
                         </div>
                         {/* Search Results Dropdown */}
-                        {studentInput.length >= 1 && (
-                          <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                            {availableStudents
-                              .filter(s =>
-                                !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
-                                (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                 s.name.toLowerCase().includes(studentInput.toLowerCase()))
-                              )
-                              .slice(0, 10)
-                              .map(student => (
-                                <div
-                                  key={student.id}
-                                  className="px-3 py-2 hover:bg-muted cursor-pointer flex items-center justify-between"
-                                  onClick={() => {
-                                    setGroupForm(prev => ({
-                                      ...prev,
-                                      selectedStudents: [...prev.selectedStudents, student]
-                                    }))
-                                    setStudentInput("")
-                                    toast.success(`Added ${student.name} (${student.id})`)
-                                  }}
-                                >
-                                  <div>
-                                    <p className="font-medium text-sm">{student.name}</p>
-                                    <p className="text-xs text-muted-foreground">{student.id} • {student.yearGroup}</p>
-                                  </div>
-                                  <Plus className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              ))}
+                        {isInputFocused && (
+                          <div className="absolute z-50 mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                             {availableStudents.filter(s =>
                               !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
+                              (selectedYearGroup === "All" || s.yearGroup === selectedYearGroup) &&
                               (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                               s.name.toLowerCase().includes(studentInput.toLowerCase()))
-                            ).length === 0 && (
-                              <div className="px-3 py-2 text-sm text-muted-foreground">
-                                No students found
+                                s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                            ).length === 0 ? (
+                              <div className="py-12 px-4 text-center">
+                                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
+                                  <Users className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                                <p className="text-sm font-medium text-foreground">No students found</p>
+                                <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
                               </div>
+                            ) : (
+                              availableStudents
+                                .filter(s =>
+                                  !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
+                                  (selectedYearGroup === "All" || s.yearGroup === selectedYearGroup) &&
+                                  (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
+                                    s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                )
+                                .slice(0, 10)
+                                .map(student => (
+                                  <div
+                                    key={student.id}
+                                    onMouseDown={(e: any) => {
+                                      e.preventDefault()
+                                      setGroupForm(prev => ({
+                                        ...prev,
+                                        selectedStudents: [...prev.selectedStudents, student]
+                                      }))
+                                      setStudentInput("")
+                                      toast.success(`Added ${student.name} (${student.id})`)
+                                    }}
+                                    className="group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0"
+                                  >
+                                    <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shadow-sm border border-primary/20">
+                                      {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-sm truncate uppercase tracking-tight">{student.name}</div>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[10px] font-mono font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
+                                        <span className="text-[11px] text-muted-foreground font-medium">• {student.yearGroup}</span>
+                                      </div>
+                                    </div>
+                                    <div className="h-9 w-9 rounded-full border border-border flex items-center justify-center bg-background group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/20">
+                                      <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
+                                    </div>
+                                  </div>
+                                ))
                             )}
                           </div>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Type to search, then click to add student
+                        Select a year group or type to search, then click to add student
                       </p>
                     </div>
                   </TabsContent>
@@ -507,7 +556,7 @@ export function SummerDiscountGroups() {
                       <div className="bg-muted/50 p-3 rounded text-xs">
                         <strong>Example CSV content:</strong>
                         <pre className="mt-1 text-muted-foreground">
-Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
+                          Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         </pre>
                       </div>
                     </div>
