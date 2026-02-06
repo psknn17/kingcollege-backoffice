@@ -30,7 +30,6 @@ export function TuitionTermSettings() {
   const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
-  const [isSaveConfirmDialogOpen, setIsSaveConfirmDialogOpen] = useState(false)
 
   // Calculate next valid year (must be consecutive)
   const getNextValidYear = (): number => {
@@ -472,28 +471,6 @@ export function TuitionTermSettings() {
               disabled={!userCanEdit || !newYearStart || parseInt(newYearStart) !== getNextValidYear()}
             >
               {t("termSettings.createYear")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Save Confirmation Dialog */}
-      <Dialog open={isSaveConfirmDialogOpen} onOpenChange={setIsSaveConfirmDialogOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle>{t("termSettings.confirmSaveChanges")}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-500">
-              {t("termSettings.confirmSaveMessage")} {academicYears.length} {t("termSettings.academicYears")}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSaveConfirmDialogOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleSaveAllChanges} disabled={!userCanEdit}>
-              {t("termSettings.confirmSave")}
             </Button>
           </DialogFooter>
         </DialogContent>
