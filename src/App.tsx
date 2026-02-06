@@ -127,11 +127,13 @@ const menuItems = {
     { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
-    { id: "debt-reminder-settings", labelKey: "menu.debtReminder", icon: Bell },
     { id: "tuition-invoice-management", labelKey: "menu.transactions", icon: FileText },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "email-jobs", labelKey: "menu.emailHistory", icon: Send },
+  ],
+  debtReminder: [
+    { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
+    { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
   ],
   eca: [
     { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
@@ -200,6 +202,7 @@ export default function App() {
   // Collapsible menu state - allow multiple groups to be open
   const [openGroups, setOpenGroups] = usePersistedState<Record<string, boolean>>("app:openGroups", {
     tuition: true,
+    debtReminder: false,
     eca: false,
     tripActivity: false,
     exam: false,
@@ -232,6 +235,7 @@ export default function App() {
   const getModuleName = (section: string) => {
     const sections = [
       ...menuItems.tuition,
+      ...menuItems.debtReminder,
       ...menuItems.eca,
       ...menuItems.tripActivity,
       ...menuItems.exam,
@@ -485,6 +489,37 @@ export default function App() {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {getFilteredMenuItems("tuition").map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            onClick={() => handleMenuItemClick(item.id)}
+                            isActive={activeSection === item.id}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span>{t(item.labelKey)}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+            )}
+
+            {/* Debt Reminder & Email History */}
+            {canAccessMenuSection("debtReminder") && (
+            <Collapsible open={openGroups["debtReminder"]} onOpenChange={() => toggleGroup("debtReminder")}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                    {t("menu.debtReminder")}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["debtReminder"] ? "rotate-180" : ""}`} />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {getFilteredMenuItems("debtReminder").map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             onClick={() => handleMenuItemClick(item.id)}

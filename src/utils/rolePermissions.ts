@@ -3,22 +3,22 @@
 export const rolePermissions = {
   super_admin: {
     name: "Super Admin",
-    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
   admin: {
     name: "Admin",
-    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "studentManagement"],
     menuItems: [] // All items except userManagement section
   },
   accountant: {
     name: "Accountant",
-    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
   viewer: {
     name: "Viewer",
-    sections: ["tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
     menuItems: [] // Can view all menus (read-only access)
   },
   approver: {
