@@ -5,6 +5,7 @@ import { useStudents } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -20,7 +21,7 @@ import { Calendar as CalendarComponent } from "./ui/calendar"
 import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, CreditCard, AlertCircle, Pencil, ArrowLeft, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
-import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 
@@ -1310,6 +1311,9 @@ interface InvoiceStudent {
 export function InvoiceCreation({ defaultCategory, invoiceType = "student", category = "tuition", onNavigateToEmailSending, onNavigateBack, editInvoice }: InvoiceCreationProps) {
   // Language context
   const { t } = useLanguage()
+
+  // School settings from localStorage
+  const schoolSettings = useSchoolSettings()
 
   // Get translated grades and rooms
   const grades = getGrades(t)
@@ -4339,15 +4343,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       {/* School Header */}
                       <div className="text-center py-4 border-b border-gray-300 mb-3">
                         <img
-                          src={SchoolLogo}
-                          alt="King's College International School Bangkok"
+                          src={schoolSettings.logoUrl || SchoolLogo}
+                          alt={schoolSettings.schoolName}
                           style={{ height: '140px', margin: '0 auto 8px auto', display: 'block' }}
                         />
                         <p className="text-xs text-gray-600">
-                          {SCHOOL_INFO.address}
+                          {schoolSettings.address}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
+                          {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
                         </p>
                         <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
                       </div>
@@ -4510,24 +4514,24 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <div className="flex">
                             <span className="mr-2">-</span>
                             <div>
-                              <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+                              <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
                             </div>
                           </div>
                           <div className="flex">
                             <span className="mr-2">-</span>
                             <div className="flex-1">
-                              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {SCHOOL_INFO.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
+                              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {schoolSettings.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
                             </div>
                           </div>
                           <div className="mt-2 flex justify-center">
                             <table>
                               <tbody>
-                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td><td className="text-left">{BANK_DETAILS.accountName}</td></tr>
-                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td><td className="text-left">{BANK_DETAILS.accountNumber}</td></tr>
-                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td><td className="text-left">{BANK_DETAILS.bankName}</td></tr>
-                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td><td className="text-left">{BANK_DETAILS.branch}</td></tr>
-                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td><td className="text-left">KASITHBK</td></tr>
-                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td><td className="text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
+                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td><td className="text-left">{schoolSettings.bankAccountName}</td></tr>
+                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td><td className="text-left">{schoolSettings.bankAccountNumber}</td></tr>
+                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td><td className="text-left">{schoolSettings.bankName}</td></tr>
+                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td><td className="text-left">{schoolSettings.bankBranch}</td></tr>
+                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td><td className="text-left">{schoolSettings.swiftCode}</td></tr>
+                                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td><td className="text-left">{schoolSettings.address}</td></tr>
                               </tbody>
                             </table>
                           </div>
@@ -4626,15 +4630,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       {/* School Header */}
                       <div className="text-center py-4 border-b border-gray-300 mb-3">
                         <img
-                          src={SchoolLogo}
-                          alt="King's College International School Bangkok"
+                          src={schoolSettings.logoUrl || SchoolLogo}
+                          alt={schoolSettings.schoolName}
                           style={{ height: '140px', margin: '0 auto 8px auto', display: 'block' }}
                         />
                         <p className="text-xs text-gray-600">
-                          {SCHOOL_INFO.address}
+                          {schoolSettings.address}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
+                          {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
                         </p>
                         <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
                       </div>
@@ -4773,7 +4777,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <div className="flex">
                             <span className="mr-2">-</span>
                             <div>
-                              <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+                              <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
                             </div>
                           </div>
 
@@ -4789,27 +4793,27 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               <tbody>
                                 <tr>
                                   <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td>
-                                  <td className="py-0.5 text-left">{BANK_DETAILS.accountName}</td>
+                                  <td className="py-0.5 text-left">{schoolSettings.bankAccountName}</td>
                                 </tr>
                                 <tr>
                                   <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td>
-                                  <td className="py-0.5 text-left">{BANK_DETAILS.accountNumber}</td>
+                                  <td className="py-0.5 text-left">{schoolSettings.bankAccountNumber}</td>
                                 </tr>
                                 <tr>
                                   <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td>
-                                  <td className="py-0.5 text-left">{BANK_DETAILS.bankName}</td>
+                                  <td className="py-0.5 text-left">{schoolSettings.bankName}</td>
                                 </tr>
                                 <tr>
                                   <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td>
-                                  <td className="py-0.5 text-left">{BANK_DETAILS.branch}</td>
+                                  <td className="py-0.5 text-left">{schoolSettings.bankBranch}</td>
                                 </tr>
                                 <tr>
                                   <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td>
-                                  <td className="py-0.5 text-left">{BANK_DETAILS.swiftCode}</td>
+                                  <td className="py-0.5 text-left">{schoolSettings.swiftCode}</td>
                                 </tr>
                                 <tr>
                                   <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td>
-                                  <td className="py-0.5 text-left">{BANK_DETAILS.bankAddress}</td>
+                                  <td className="py-0.5 text-left">{schoolSettings.address}</td>
                                 </tr>
                               </tbody>
                             </table>

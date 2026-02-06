@@ -18,6 +18,7 @@ import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 interface ExternalItem {
   id: string
@@ -114,6 +115,7 @@ const loadExternalItems = (): ExternalItem[] => {
 
 export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: ExternalInvoiceCreationProps) {
   const { t } = useLanguage()
+  const schoolSettings = useSchoolSettings()
   const isEditMode = !!editInvoice
 
   // Client information
@@ -377,11 +379,11 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
     <div className="bg-white text-black mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '794px', minHeight: '1123px', padding: '32px 48px' }}>
       {/* School Header */}
       <div className="text-center mb-4">
-        <img src={SchoolLogo} alt="School Logo" className="mx-auto mb-2" style={{ height: '100px' }} />
-        <p className="text-sm font-bold tracking-wider">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
+        <img src={schoolSettings.logoUrl || SchoolLogo} alt="School Logo" className="mx-auto mb-2" style={{ height: '100px' }} />
+        <p className="text-sm font-bold tracking-wider">{schoolSettings.schoolName.toUpperCase()}</p>
         <p className="text-xs text-gray-600 tracking-wide">BANGKOK</p>
-        <p className="text-[10px] text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
-        <p className="text-[10px] text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+        <p className="text-[10px] text-gray-500 mt-1">{schoolSettings.address}</p>
+        <p className="text-[10px] text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
       </div>
 
       {/* Invoice Title */}
@@ -475,23 +477,23 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
           <div className="flex">
             <span className="mr-2">-</span>
             <div>
-              <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+              <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
             </div>
           </div>
           <div className="flex">
             <span className="mr-2">-</span>
             <div className="flex-1">
-              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {SCHOOL_INFO.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
+              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {schoolSettings.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
             </div>
           </div>
           <div className="mt-2 flex justify-center">
             <table>
               <tbody>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td><td className="text-left">{BANK_DETAILS.accountName}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td><td className="text-left">{BANK_DETAILS.accountNumber}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td><td className="text-left">{BANK_DETAILS.bankName}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td><td className="text-left">{BANK_DETAILS.branch}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td><td className="text-left">KASITHBK</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td><td className="text-left">{schoolSettings.bankAccountName}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td><td className="text-left">{schoolSettings.bankAccountNumber}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td><td className="text-left">{schoolSettings.bankName}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td><td className="text-left">{schoolSettings.bankBranch}</td></tr>
+                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td><td className="text-left">{schoolSettings.swiftCode}</td></tr>
                 <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td><td className="text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
               </tbody>
             </table>

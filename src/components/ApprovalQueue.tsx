@@ -16,6 +16,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { formatCurrency, numberToWords, getAcademicYear } from "@/lib/invoiceUtils"
@@ -155,6 +156,7 @@ export function ApprovalQueue() {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
   const { user } = useAuth()
+  const schoolSettings = useSchoolSettings()
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
     const loaded = loadCreatedInvoicesFromStorage()
     console.log('[ApprovalQueue] Initial invoices:', loaded.length)
@@ -1001,13 +1003,13 @@ export function ApprovalQueue() {
                 {/* School Header */}
                 <div className="text-center pt-6 pb-4 border-b">
                   <img
-                    src={SchoolLogo}
-                    alt="King's College International School Bangkok"
+                    src={schoolSettings.logoUrl || SchoolLogo}
+                    alt={schoolSettings.schoolName}
                     style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
                   />
-                  <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
-                  <p className="text-xs text-gray-500 mt-1">727 Ratchadapisek Road, Bang Phongphang, Yannawa, Bangkok 10120, Thailand</p>
-                  <p className="text-xs text-gray-500">+66 (0) 2481 9955, finance@kingsbangkok.ac.th, www.kingsbangkok.ac.th</p>
+                  <h2 className="text-sm font-semibold tracking-wide text-gray-800">{schoolSettings.schoolName.toUpperCase()}</h2>
+                  <p className="text-xs text-gray-500 mt-1">{schoolSettings.address}</p>
+                  <p className="text-xs text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
                 </div>
 
                 {/* Invoice Title */}

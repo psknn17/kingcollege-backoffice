@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import {
   X,
   User,
@@ -98,6 +99,7 @@ export function ViewModal({
   previewOnly = false
 }: ViewModalProps) {
   const { t } = useLanguage()
+  const schoolSettings = useSchoolSettings()
   const [activeTab, setActiveTab] = useState("details")
 
   // Track if user manually switched to preview mode
@@ -197,15 +199,15 @@ export function ViewModal({
         {/* School Header */}
         <div className="text-center py-4 border-b border-gray-300 mb-3">
           <img
-            src={SchoolLogo}
-            alt="King's College International School Bangkok"
+            src={schoolSettings.logoUrl || SchoolLogo}
+            alt={schoolSettings.schoolName}
             style={{ height: '60px', margin: '0 auto 8px auto', display: 'block' }}
           />
           <p className="text-xs text-gray-600">
-            {SCHOOL_INFO.address}
+            {schoolSettings.address}
           </p>
           <p className="text-xs text-gray-600">
-            {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
+            {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
           </p>
           <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
         </div>
@@ -360,14 +362,14 @@ export function ViewModal({
             <div className="flex">
               <span className="mr-2">-</span>
               <div>
-                <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+                <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
               </div>
             </div>
 
             <div className="flex">
               <span className="mr-2">-</span>
               <div className="flex-1">
-                <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to finance@kingsbangkok.ac.th with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
+                <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to {schoolSettings.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
               </div>
             </div>
 
@@ -376,27 +378,27 @@ export function ViewModal({
                 <tbody>
                   <tr>
                     <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td>
-                    <td className="py-0.5 text-left">{BANK_DETAILS.accountName}</td>
+                    <td className="py-0.5 text-left">{schoolSettings.bankAccountName}</td>
                   </tr>
                   <tr>
                     <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td>
-                    <td className="py-0.5 text-left">{BANK_DETAILS.accountNumber}</td>
+                    <td className="py-0.5 text-left">{schoolSettings.bankAccountNumber}</td>
                   </tr>
                   <tr>
                     <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td>
-                    <td className="py-0.5 text-left">{BANK_DETAILS.bankName}</td>
+                    <td className="py-0.5 text-left">{schoolSettings.bankName}</td>
                   </tr>
                   <tr>
                     <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td>
-                    <td className="py-0.5 text-left">{BANK_DETAILS.branch}</td>
+                    <td className="py-0.5 text-left">{schoolSettings.bankBranch}</td>
                   </tr>
                   <tr>
                     <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td>
-                    <td className="py-0.5 text-left">KASITHBK</td>
+                    <td className="py-0.5 text-left">{schoolSettings.swiftCode}</td>
                   </tr>
                   <tr>
                     <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td>
-                    <td className="py-0.5 text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td>
+                    <td className="py-0.5 text-left">{schoolSettings.address}</td>
                   </tr>
                 </tbody>
               </table>

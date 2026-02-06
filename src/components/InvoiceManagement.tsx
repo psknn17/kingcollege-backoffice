@@ -25,6 +25,7 @@ import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
@@ -402,6 +403,7 @@ export function InvoiceManagement({
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const schoolSettings = useSchoolSettings()
   // Discount Options context for late payment calculations
   const { getLatePaymentSettings, getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears = [] } = useAcademicYears()
@@ -3337,13 +3339,13 @@ export function InvoiceManagement({
               {/* School Header */}
               <div className="text-center pt-6 pb-4 border-b">
                 <img
-                  src={SchoolLogo}
-                  alt="King's College International School Bangkok"
+                  src={schoolSettings.logoUrl || SchoolLogo}
+                  alt={schoolSettings.schoolName}
                   style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
                 />
-                <h2 className="text-sm font-semibold tracking-wide text-gray-800">KING'S COLLEGE INTERNATIONAL SCHOOL BANGKOK</h2>
-                <p className="text-xs text-gray-500 mt-1">727 Ratchadapisek Road, Bang Phongphang, Yannawa, Bangkok 10120, Thailand</p>
-                <p className="text-xs text-gray-500">+66 (0) 2481 9955, finance@kingsbangkok.ac.th, www.kingsbangkok.ac.th</p>
+                <h2 className="text-sm font-semibold tracking-wide text-gray-800">{schoolSettings.schoolName.toUpperCase()}</h2>
+                <p className="text-xs text-gray-500 mt-1">{schoolSettings.address}</p>
+                <p className="text-xs text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
               </div>
 
               {/* Invoice Title */}
@@ -5314,14 +5316,14 @@ export function InvoiceManagement({
                   <div className="flex">
                     <span className="mr-2">-</span>
                     <div>
-                      <span className="font-bold">Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+                      <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
                     </div>
                   </div>
 
                   <div className="flex">
                     <span className="mr-2">-</span>
                     <div className="flex-1">
-                      <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to {SCHOOL_INFO.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
+                      <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to {schoolSettings.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
                     </div>
                   </div>
 
@@ -5330,27 +5332,27 @@ export function InvoiceManagement({
                       <tbody>
                         <tr>
                           <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td>
-                          <td className="py-0.5 text-left">{BANK_DETAILS.accountName}</td>
+                          <td className="py-0.5 text-left">{schoolSettings.bankAccountName}</td>
                         </tr>
                         <tr>
                           <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td>
-                          <td className="py-0.5 text-left">{BANK_DETAILS.accountNumber}</td>
+                          <td className="py-0.5 text-left">{schoolSettings.bankAccountNumber}</td>
                         </tr>
                         <tr>
                           <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td>
-                          <td className="py-0.5 text-left">{BANK_DETAILS.bankName}</td>
+                          <td className="py-0.5 text-left">{schoolSettings.bankName}</td>
                         </tr>
                         <tr>
                           <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td>
-                          <td className="py-0.5 text-left">{BANK_DETAILS.branch}</td>
+                          <td className="py-0.5 text-left">{schoolSettings.bankBranch}</td>
                         </tr>
                         <tr>
                           <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td>
-                          <td className="py-0.5 text-left">KASITHBK</td>
+                          <td className="py-0.5 text-left">{schoolSettings.swiftCode}</td>
                         </tr>
                         <tr>
                           <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td>
-                          <td className="py-0.5 text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td>
+                          <td className="py-0.5 text-left">{schoolSettings.address}</td>
                         </tr>
                       </tbody>
                     </table>

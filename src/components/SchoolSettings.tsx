@@ -77,6 +77,8 @@ export function SchoolSettings() {
     setIsSaving(true)
     try {
       saveSettings(formData)
+      // Dispatch event to notify other components
+      window.dispatchEvent(new Event("schoolSettingsUpdated"))
       toast.success("School settings saved successfully")
     } catch (error) {
       toast.error("Failed to save settings")

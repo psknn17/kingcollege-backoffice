@@ -32,6 +32,7 @@ import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import SchoolLogo from "@/assets/Logo.png"
 
 // ========================
@@ -102,15 +103,6 @@ interface ReceiptManagementFlowProps {
 // ========================
 // CONSTANTS
 // ========================
-
-const SCHOOL_INFO = {
-  name: "King's College International School Bangkok",
-  address: "999/1 Pracha-Uthit Road, Huay Kwang, Bangkok 10310, Thailand",
-  tel: "+66 2 123 4567",
-  fax: "+66 2 123 4568",
-  email: "finance@kingscollege.ac.th",
-  taxId: "0-1234-56789-01-2"
-}
 
 // Payment methods - converted to function to use translations
 const getPaymentMethods = (t: any) => [
@@ -198,6 +190,7 @@ export function ReceiptManagementFlow({
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const schoolSettings = useSchoolSettings()
   const printRef = useRef<HTMLDivElement>(null)
 
   // Get payment methods with translations
@@ -631,21 +624,21 @@ export function ReceiptManagementFlow({
         {/* HEADER */}
         <div style={{ textAlign: 'center', marginBottom: forPrint ? '15px' : '25px' }}>
           <img
-            src={SchoolLogo}
+            src={schoolSettings.logoUrl || SchoolLogo}
             alt="School Logo"
             style={{ height: forPrint ? '55px' : '70px', display: 'block', margin: '0 auto 8px auto' }}
           />
           <div style={{ fontSize: headerFontSize, fontWeight: 'bold', letterSpacing: '3px', marginBottom: '2px' }}>
-            KING'S COLLEGE INTERNATIONAL SCHOOL
+            {schoolSettings.schoolName.toUpperCase()}
           </div>
           <div style={{ fontSize: bodyFontSize, letterSpacing: '2px', marginBottom: '8px' }}>
             BANGKOK
           </div>
           <div style={{ fontSize: smallFontSize, color: '#333', marginBottom: '2px' }}>
-            {SCHOOL_INFO.address}
+            {schoolSettings.address}
           </div>
           <div style={{ fontSize: smallFontSize, color: '#333', marginBottom: forPrint ? '12px' : '20px' }}>
-            {SCHOOL_INFO.tel}, {SCHOOL_INFO.email}
+            {schoolSettings.phone}, {schoolSettings.email}
           </div>
           <div style={{ fontSize: titleFontSize, fontWeight: 'bold', letterSpacing: '3px' }}>
             RECEIPT

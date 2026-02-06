@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 // Mock history data
 const mockHistory = [
@@ -103,6 +104,7 @@ const generateMockRecipients = (count: number, subject: string) => {
 
 export function EmailHistory() {
   const { t } = useLanguage()
+  const schoolSettings = useSchoolSettings()
   const [historySearch, setHistorySearch] = useState("")
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
   const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
@@ -476,7 +478,7 @@ export function EmailHistory() {
                   </p>
                   <p className="mt-3">
                     Best regards,<br />
-                    King's College International School Bangkok
+                    {schoolSettings.schoolName}
                   </p>
                 </div>
               </div>
