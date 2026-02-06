@@ -752,6 +752,13 @@ export default function App() {
           </SidebarContent>
 
           <SidebarFooter className="p-4 border-t">
+            {/* Version Display */}
+            <div className="px-2 py-1 mb-3">
+              <p className="text-xs text-muted-foreground">
+                Version 0.1.0
+              </p>
+            </div>
+
             {/* User Dropdown Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
