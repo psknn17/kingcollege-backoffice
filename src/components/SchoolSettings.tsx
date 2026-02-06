@@ -9,6 +9,8 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { School, Upload, Save, Phone, Mail, Globe, CreditCard } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface SchoolInfo {
   schoolName: string
@@ -70,6 +72,7 @@ const saveSettings = (settings: SchoolInfo) => {
 export function SchoolSettings() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const confirmDialog = useConfirmDialog()
   const [formData, setFormData] = useState<SchoolInfo>(loadSettings())
   const [isSaving, setIsSaving] = useState(false)
 
@@ -85,6 +88,12 @@ export function SchoolSettings() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleSaveClick = () => {
+    confirmDialog.confirm(() => {
+      handleSave()
+    })
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +120,7 @@ export function SchoolSettings() {
             <p className="text-sm text-muted-foreground">Manage school information and system settings</p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={!userCanEdit || isSaving}>
+        <Button onClick={handleSaveClick} disabled={!userCanEdit || isSaving}>
           <Save className="w-4 h-4 mr-2" />
           Save Changes
         </Button>
@@ -338,6 +347,14 @@ export function SchoolSettings() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+      />
     </div>
   )
 }

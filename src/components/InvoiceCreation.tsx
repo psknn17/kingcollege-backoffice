@@ -25,6 +25,8 @@ import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademic
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface PreCreatedItem {
   id: string
@@ -1344,6 +1346,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
 
+  // Confirmation dialog hook
+  const confirmDialog = useConfirmDialog()
+
   // Get current academic year and term (default to first ones)
   const academicYear = academicYears[0]?.id || "2025-2026"
   const term = "term1" // Default term
@@ -2524,7 +2529,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setIsConfirmationOpen(true)
   }
 
-  const handleFinalConfirmation = () => {
+  const performFinalConfirmation = () => {
     const totalItems = selectedItems.reduce((sum, item) => sum + item.amount, 0)
     const now = new Date()
     const fees = getRegistrationFees(selectedAcademicYear, selectedTerm)
@@ -2652,6 +2657,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setPaymentDeadline(undefined)
     setIsPreviewMode(false)
     setIsConfirmationOpen(false)
+  }
+
+  const handleFinalConfirmation = () => {
+    confirmDialog.confirm(() => {
+      performFinalConfirmation()
+    })
   }
 
   // Save as Draft - saves invoices without sending email
@@ -5083,6 +5094,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้าง invoices นี้หรือไม่?"
+        confirmText="สร้าง"
+      />
     </div>
   )
 }

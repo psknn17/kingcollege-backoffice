@@ -19,6 +19,8 @@ import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface ExternalItem {
   id: string
@@ -117,6 +119,9 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   const { t } = useLanguage()
   const schoolSettings = useSchoolSettings()
   const isEditMode = !!editInvoice
+
+  // Confirmation dialog hook
+  const confirmDialog = useConfirmDialog()
 
   // Client information
   const [clientName, setClientName] = useState("")
@@ -251,7 +256,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   const isValid = clientName && lineItems.length > 0 && lineItems.every(item => item.description && item.amount > 0)
 
   // Save invoice
-  const handleSave = (status: "draft" | "pending") => {
+  const performSave = (status: "draft" | "pending") => {
     if (!isValid && status !== "draft") {
       toast.error("Please fill in all required fields")
       return
@@ -325,6 +330,12 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       toast.error("Failed to save invoice")
       console.error(error)
     }
+  }
+
+  const handleSave = (status: "draft" | "pending") => {
+    confirmDialog.confirm(() => {
+      performSave(status)
+    })
   }
 
   const handleDownloadPDF = async () => {
@@ -1050,6 +1061,16 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้าง invoice นี้หรือไม่?"
+        confirmText="สร้าง"
+      />
     </div>
   )
 }

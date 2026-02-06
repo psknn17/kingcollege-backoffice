@@ -14,6 +14,8 @@ import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 // Preset email subject options based on system menus
 const PRESET_EMAIL_SUBJECTS = [
@@ -126,6 +128,7 @@ export function DebtReminderSettings() {
   const { academicYears } = useAcademicYears()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const confirmDialog = useConfirmDialog()
   const [reminders, setReminders] = usePersistedState<ReminderConfig[]>("debt-reminder:reminders", initialReminders)
   const [globalSettings, setGlobalSettings] = usePersistedState("debt-reminder:globalSettings", {
     enableReminders: true,
@@ -162,6 +165,12 @@ export function DebtReminderSettings() {
     // This function provides user feedback
     toast.success("Settings saved successfully", {
       description: "Your debt reminder settings have been saved"
+    })
+  }
+
+  const handleSaveClick = () => {
+    confirmDialog.confirm(() => {
+      saveSettings()
     })
   }
 
@@ -433,12 +442,20 @@ export function DebtReminderSettings() {
 
           {/* Save Button */}
           <div className="flex justify-end">
-            <Button onClick={saveSettings} size="lg" className="px-8" disabled={!userCanEdit}>
+            <Button onClick={handleSaveClick} size="lg" className="px-8" disabled={!userCanEdit}>
               <Save className="w-4 h-4 mr-2" />
               {t("debt.saveAllSettings")}
             </Button>
           </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+      />
     </div>
   )
 }

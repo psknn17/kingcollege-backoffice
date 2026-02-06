@@ -18,6 +18,8 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface PaymentDeadline {
   id: number
@@ -83,6 +85,7 @@ export function EventPaymentDeadline() {
   const locale = language === "th" ? th : enUS
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const confirmDialog = useConfirmDialog()
   const [deadlines, setDeadlines] = useState<PaymentDeadline[]>(mockDeadlines)
   const [selectedEvent, setSelectedEvent] = usePersistedState("event-deadline:selectedEvent", "")
   const [selectedDate, setSelectedDate] = useState<Date>()
@@ -146,6 +149,12 @@ export function EventPaymentDeadline() {
 
     setIsDialogOpen(false)
     resetForm()
+  }
+
+  const handleSaveDeadlineClick = () => {
+    confirmDialog.confirm(() => {
+      handleSaveDeadline()
+    })
   }
 
   const resetForm = () => {
@@ -311,7 +320,7 @@ export function EventPaymentDeadline() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   {t("common.cancel")}
                 </Button>
-                <Button onClick={handleSaveDeadline} disabled={!userCanEdit}>
+                <Button onClick={handleSaveDeadlineClick} disabled={!userCanEdit}>
                   {editingDeadline ? t("eventPayment.updateDeadline") : t("eventPayment.createDeadline")}
                 </Button>
               </div>
@@ -602,6 +611,14 @@ export function EventPaymentDeadline() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+      />
     </div>
   )
 }

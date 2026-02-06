@@ -46,6 +46,8 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useStudents, Student, Parent, Family, convertTermFormat } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
@@ -232,6 +234,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { getSiblingDiscountPercentage } = useDiscountOptions()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+
+  // Confirmation dialog hooks
+  const addConfirmDialog = useConfirmDialog()
+  const editConfirmDialog = useConfirmDialog()
+  const importConfirmDialog = useConfirmDialog()
 
   const [searchTerm, setSearchTerm] = usePersistedState("student-list:search", "")
   const [filterGrade, setFilterGrade] = usePersistedState("student-list:gradeFilter", "all")
@@ -443,7 +450,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setIsDeleteDialogOpen(true)
   }
 
-  const handleSaveNewStudent = () => {
+  const performSaveNewStudent = () => {
     const now = new Date()
     const currentUser = "Admin" // TODO: Replace with actual logged-in user
     const newStudent: Student = {
@@ -460,7 +467,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setFormData(emptyStudent)
   }
 
-  const handleSaveEditStudent = () => {
+  const handleSaveNewStudent = () => {
+    addConfirmDialog.confirm(() => {
+      performSaveNewStudent()
+    })
+  }
+
+  const performSaveEditStudent = () => {
     if (selectedStudent) {
       const currentUser = "Admin" // TODO: Replace with actual logged-in user
       updateStudent(selectedStudent.id, {
@@ -472,6 +485,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       setIsEditDialogOpen(false)
       setSelectedStudent(null)
     }
+  }
+
+  const handleSaveEditStudent = () => {
+    editConfirmDialog.confirm(() => {
+      performSaveEditStudent()
+    })
   }
 
   const handleConfirmDelete = () => {
@@ -643,7 +662,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     reader.readAsText(file)
   }
 
-  const handleConfirmImport = () => {
+  const performConfirmImport = () => {
     if (importPreview.length === 0) {
       toast.error("No data to import")
       return
@@ -714,6 +733,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
     setIsImportDialogOpen(false)
     toast.success(`Imported ${imported} students${skipped > 0 ? `, skipped ${skipped} duplicates` : ""} `)
+  }
+
+  const handleConfirmImport = () => {
+    importConfirmDialog.confirm(() => {
+      performConfirmImport()
+    })
   }
 
   const downloadTemplate = () => {
@@ -2485,6 +2510,36 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Student Confirmation Dialog */}
+      <ConfirmDialog
+        open={addConfirmDialog.isOpen}
+        onOpenChange={addConfirmDialog.setIsOpen}
+        onConfirm={addConfirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้างนักเรียนนี้หรือไม่?"
+        confirmText="สร้าง"
+      />
+
+      {/* Edit Student Confirmation Dialog */}
+      <ConfirmDialog
+        open={editConfirmDialog.isOpen}
+        onOpenChange={editConfirmDialog.setIsOpen}
+        onConfirm={editConfirmDialog.handleConfirm}
+        title="ยืนยันการแก้ไข?"
+        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
+        confirmText="บันทึก"
+      />
+
+      {/* Import Students Confirmation Dialog */}
+      <ConfirmDialog
+        open={importConfirmDialog.isOpen}
+        onOpenChange={importConfirmDialog.setIsOpen}
+        onConfirm={importConfirmDialog.handleConfirm}
+        title="ยืนยันการนำเข้า?"
+        description="คุณต้องการนำเข้าข้อมูลหรือไม่?"
+        confirmText="นำเข้า"
+      />
     </div>
   )
 }

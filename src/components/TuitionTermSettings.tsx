@@ -18,12 +18,15 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 export function TuitionTermSettings() {
   const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear, saveAcademicYears } = useAcademicYears()
   const { t, language } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const confirmDialog = useConfirmDialog()
   const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
@@ -202,6 +205,12 @@ export function TuitionTermSettings() {
     saveAcademicYears()
     setIsSaveConfirmDialogOpen(false)
     toast.success(t("termSettings.changesSaved"))
+  }
+
+  const handleSaveClick = () => {
+    confirmDialog.confirm(() => {
+      handleSaveAllChanges()
+    })
   }
 
   const getYearStatus = (year: AcademicYear) => {
@@ -421,7 +430,7 @@ export function TuitionTermSettings() {
 
       {/* Save All Button */}
       <div className="flex justify-end">
-        <Button size="lg" onClick={() => setIsSaveConfirmDialogOpen(true)} disabled={!userCanEdit}>
+        <Button size="lg" onClick={handleSaveClick} disabled={!userCanEdit}>
           <Save className="w-4 h-4 mr-2" />
           {t("termSettings.saveAllChanges")}
         </Button>
@@ -495,6 +504,14 @@ export function TuitionTermSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+      />
     </div>
   )
 }

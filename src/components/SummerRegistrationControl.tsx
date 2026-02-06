@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -178,6 +180,7 @@ const mockActivityControls: ActivityControl[] = [
 
 export function SummerRegistrationControl() {
   const { t } = useLanguage()
+  const confirmDialog = useConfirmDialog()
   const [registrationPeriods, setRegistrationPeriods] = useState<RegistrationPeriod[]>(mockRegistrationPeriods)
   const [activityControls, setActivityControls] = useState<ActivityControl[]>(mockActivityControls)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -187,7 +190,7 @@ export function SummerRegistrationControl() {
   const [newPeriodEnd, setNewPeriodEnd] = useState<Date>()
   const [newPeriodDescription, setNewPeriodDescription] = useState("")
   const [globalRegistrationEnabled, setGlobalRegistrationEnabled] = useState(true)
-  
+
   // Price settings states
   const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false)
   const [currentPeriodForPricing, setCurrentPeriodForPricing] = useState<RegistrationPeriod | null>(null)
@@ -251,10 +254,10 @@ export function SummerRegistrationControl() {
     }
 
     if (editingPeriod) {
-      setRegistrationPeriods(prev => prev.map(period => 
-        period.id === editingPeriod.id 
-          ? { 
-              ...period, 
+      setRegistrationPeriods(prev => prev.map(period =>
+        period.id === editingPeriod.id
+          ? {
+              ...period,
               name: newPeriodName,
               startDate: newPeriodStart,
               endDate: newPeriodEnd,
@@ -282,6 +285,12 @@ export function SummerRegistrationControl() {
 
     resetForm()
     setIsDialogOpen(false)
+  }
+
+  const handleSavePeriodClick = () => {
+    confirmDialog.confirm(() => {
+      handleSavePeriod()
+    })
   }
 
   const resetForm = () => {
@@ -323,14 +332,20 @@ export function SummerRegistrationControl() {
   const handleSavePricing = () => {
     if (!currentPeriodForPricing) return
 
-    setRegistrationPeriods(prev => prev.map(period => 
-      period.id === currentPeriodForPricing.id 
+    setRegistrationPeriods(prev => prev.map(period =>
+      period.id === currentPeriodForPricing.id
         ? { ...period, pricingSettings: pricingForm }
         : period
     ))
 
     toast.success(t("summer.pricingUpdated"))
     setIsPriceDialogOpen(false)
+  }
+
+  const handleSavePricingClick = () => {
+    confirmDialog.confirm(() => {
+      handleSavePricing()
+    })
   }
 
   const resetPricingForm = () => {
@@ -465,7 +480,7 @@ export function SummerRegistrationControl() {
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                     {t("common.cancel")}
                   </Button>
-                  <Button onClick={handleSavePeriod}>
+                  <Button onClick={handleSavePeriodClick}>
                     {editingPeriod ? t("summer.updatePeriod") : t("summer.createPeriod")}
                   </Button>
                 </div>
@@ -1003,13 +1018,21 @@ export function SummerRegistrationControl() {
               >
                 {t("common.cancel")}
               </Button>
-              <Button onClick={handleSavePricing}>
+              <Button onClick={handleSavePricingClick}>
                 {t("summer.savePricingSettings")}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+      />
     </div>
   )
 }

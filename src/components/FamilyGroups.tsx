@@ -30,6 +30,8 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useStudents, Family, Student } from "@/contexts/StudentContext"
 import { cn } from "./ui/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
@@ -68,6 +70,11 @@ export function FamilyGroups() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+
+  // Confirmation dialog hooks
+  const saveConfirmDialog = useConfirmDialog()
+  const addConfirmDialog = useConfirmDialog()
+
   const {
     students,
     families,
@@ -235,7 +242,7 @@ export function FamilyGroups() {
     setIsAddStudentDialogOpen(true)
   }
 
-  const handleSaveNewFamily = () => {
+  const performSaveNewFamily = () => {
     const newFamily: Family = {
       id: `FAM${Date.now()}`,
       ...formData,
@@ -247,13 +254,25 @@ export function FamilyGroups() {
     setFormData(emptyFamily)
   }
 
-  const handleSaveEditFamily = () => {
+  const handleSaveNewFamily = () => {
+    addConfirmDialog.confirm(() => {
+      performSaveNewFamily()
+    })
+  }
+
+  const performSaveEditFamily = () => {
     if (selectedFamily) {
       updateFamily(selectedFamily.id, formData)
       toast.success(t("familyGroups.familyUpdated"))
       setIsEditDialogOpen(false)
       setSelectedFamily(null)
     }
+  }
+
+  const handleSaveEditFamily = () => {
+    saveConfirmDialog.confirm(() => {
+      performSaveEditFamily()
+    })
   }
 
   const handleConfirmDelete = () => {
@@ -1040,6 +1059,26 @@ export function FamilyGroups() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Save Family Confirmation Dialog */}
+      <ConfirmDialog
+        open={saveConfirmDialog.isOpen}
+        onOpenChange={saveConfirmDialog.setIsOpen}
+        onConfirm={saveConfirmDialog.handleConfirm}
+        title="ยืนยันการแก้ไข?"
+        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
+        confirmText="บันทึก"
+      />
+
+      {/* Add Family Confirmation Dialog */}
+      <ConfirmDialog
+        open={addConfirmDialog.isOpen}
+        onOpenChange={addConfirmDialog.setIsOpen}
+        onConfirm={addConfirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้างครอบครัวนี้หรือไม่?"
+        confirmText="สร้าง"
+      />
     </div>
   )
 }

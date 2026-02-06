@@ -19,6 +19,8 @@ import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface CreditNote {
   id: string
@@ -136,6 +138,9 @@ export function CreditNoteManagement() {
   // Pagination states
   const [currentPage, setCurrentPage] = usePersistedState("credit-note:currentPage", 1)
   const [pageSize, setPageSize] = usePersistedState("credit-note:pageSize", 10)
+
+  // Confirm dialog hooks
+  const createDialog = useConfirmDialog()
 
   // Load invoices from localStorage
   const [invoices, setInvoices] = useState<any[]>([])
@@ -274,7 +279,7 @@ export function CreditNoteManagement() {
     setIsCreateModalOpen(false)
   }
 
-  const handleCreateCreditNote = () => {
+  const performCreateCreditNote = () => {
     if (!newCreditNote.selectedInvoiceId || !newCreditNote.creditAmount || !newCreditNote.reason) {
       toast.error("Please select an invoice and fill in all required fields")
       return
@@ -312,6 +317,12 @@ export function CreditNoteManagement() {
     setCreditNotes([newNote, ...creditNotes])
     toast.success(`Credit note ${newNote.creditNoteNumber} created successfully`)
     closeCreateModal()
+  }
+
+  const handleCreateCreditNote = () => {
+    createDialog.confirm(() => {
+      performCreateCreditNote()
+    })
   }
 
   const downloadCreditNote = (creditNoteId: string) => {
@@ -1305,6 +1316,16 @@ export function CreditNoteManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={createDialog.isOpen}
+        onOpenChange={createDialog.setIsOpen}
+        onConfirm={createDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้างรายการนี้หรือไม่?"
+        confirmText="สร้าง"
+      />
     </div>
   )
 }

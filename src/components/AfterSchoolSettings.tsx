@@ -14,6 +14,8 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface RegistrationPeriod {
   id: string
@@ -59,6 +61,7 @@ export function AfterSchoolSettings() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const confirmDialog = useConfirmDialog()
   const [periods, setPeriods] = useState<RegistrationPeriod[]>(initialPeriods)
   const [globalSettings, setGlobalSettings] = useState({
     autoCloseRegistration: true,
@@ -99,6 +102,12 @@ export function AfterSchoolSettings() {
   const saveSettings = () => {
     console.log("Saving settings", { periods, globalSettings })
     // In a real app, this would save to backend
+  }
+
+  const handleSaveClick = () => {
+    confirmDialog.confirm(() => {
+      saveSettings()
+    })
   }
 
   const getPeriodStatus = (period: RegistrationPeriod) => {
@@ -459,11 +468,19 @@ export function AfterSchoolSettings() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={saveSettings} size="lg" className="px-8" disabled={!userCanEdit}>
+        <Button onClick={handleSaveClick} size="lg" className="px-8" disabled={!userCanEdit}>
           <Save className="w-4 h-4 mr-2" />
           Save All Settings
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        onConfirm={confirmDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+      />
     </div>
   )
 }

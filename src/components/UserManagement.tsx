@@ -15,6 +15,8 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 type UserRole = "admin" | "approver" | "accounting" | "viewer"
 type UserStatus = "active" | "inactive" | "suspended"
@@ -181,6 +183,11 @@ export function UserManagement() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+
+  // Confirmation dialog hooks
+  const addConfirmDialog = useConfirmDialog()
+  const editConfirmDialog = useConfirmDialog()
+
   const [users, setUsers] = useState<User[]>(mockUsers)
   const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers)
   const [searchTerm, setSearchTerm] = usePersistedState("user-management:search", "")
@@ -328,7 +335,7 @@ export function UserManagement() {
     setShowPassword(false)
   }
 
-  const handleCreateUser = () => {
+  const performCreateUser = () => {
     if (!formData.username || !formData.email || !formData.firstName || !formData.lastName || !formData.password) {
       toast.error("Please fill in all required fields")
       return
@@ -354,7 +361,13 @@ export function UserManagement() {
     toast.success(`User ${newUser.username} created successfully`)
   }
 
-  const handleEditUser = () => {
+  const handleCreateUser = () => {
+    addConfirmDialog.confirm(() => {
+      performCreateUser()
+    })
+  }
+
+  const performEditUser = () => {
     if (!selectedUser) return
 
     const updatedUsers = users.map(user => {
@@ -377,6 +390,12 @@ export function UserManagement() {
     setIsEditDialogOpen(false)
     resetForm()
     toast.success(`User ${formData.username} updated successfully`)
+  }
+
+  const handleEditUser = () => {
+    editConfirmDialog.confirm(() => {
+      performEditUser()
+    })
   }
 
   const handleDeleteUser = () => {
@@ -1168,6 +1187,26 @@ export function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add User Confirmation Dialog */}
+      <ConfirmDialog
+        open={addConfirmDialog.isOpen}
+        onOpenChange={addConfirmDialog.setIsOpen}
+        onConfirm={addConfirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้างผู้ใช้นี้หรือไม่?"
+        confirmText="สร้าง"
+      />
+
+      {/* Edit User Confirmation Dialog */}
+      <ConfirmDialog
+        open={editConfirmDialog.isOpen}
+        onOpenChange={editConfirmDialog.setIsOpen}
+        onConfirm={editConfirmDialog.handleConfirm}
+        title="ยืนยันการแก้ไข?"
+        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
+        confirmText="บันทึก"
+      />
     </div>
   )
 }

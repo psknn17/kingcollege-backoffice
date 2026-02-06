@@ -46,6 +46,8 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { WaiveFeeManagement } from "./WaiveFeeManagement"
 import { useStudents } from "@/contexts/StudentContext"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface Student {
   id: string
@@ -350,6 +352,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [currentStudentsSearch, setCurrentStudentsSearch] = useState("")
+
+  // Confirm dialog hooks
+  const saveDialog = useConfirmDialog()
+  const deleteDialog = useConfirmDialog()
 
   
   const getUsageProgress = (used: number, limit: number) => {
@@ -703,7 +709,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     }))
   }
 
-  const handleSaveGroup = () => {
+  const performSaveGroup = () => {
     if (!userCanEdit) return
     const hasValidDiscount = groupForm.discountType === "percentage"
       ? groupForm.discountPercentage > 0
@@ -748,6 +754,12 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       setIsGroupDialogOpen(false)
     }
     resetGroupForm()
+  }
+
+  const handleSaveGroup = () => {
+    saveDialog.confirm(() => {
+      performSaveGroup()
+    })
   }
 
   const handleViewGroup = (group: any) => {
@@ -2174,6 +2186,16 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Dialog for Save */}
+      <ConfirmDialog
+        open={saveDialog.isOpen}
+        onOpenChange={saveDialog.setIsOpen}
+        onConfirm={saveDialog.handleConfirm}
+        title="ยืนยันการบันทึก?"
+        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+        confirmText="บันทึก"
+      />
     </div>
   )
 }

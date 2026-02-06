@@ -26,6 +26,8 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 // Permission modules and actions
 const permissionModules = [
@@ -199,6 +201,11 @@ export function RolesPermissions() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+
+  // Confirmation dialog hooks
+  const saveConfirmDialog = useConfirmDialog()
+  const addConfirmDialog = useConfirmDialog()
+
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [searchTerm, setSearchTerm] = usePersistedState("roles-permissions:search", "")
   const [expandedModules, setExpandedModules] = usePersistedState<string[]>("roles-permissions:expandedModules", [])
@@ -386,7 +393,7 @@ export function RolesPermissions() {
     setIsDeleteDialogOpen(true)
   }
 
-  const handleSaveNewRole = () => {
+  const performSaveNewRole = () => {
     if (!formData.name.trim()) {
       toast.error("Role name is required")
       return
@@ -410,7 +417,13 @@ export function RolesPermissions() {
     toast.success(`Role "${formData.name}" created`)
   }
 
-  const handleSaveEditRole = () => {
+  const handleSaveNewRole = () => {
+    addConfirmDialog.confirm(() => {
+      performSaveNewRole()
+    })
+  }
+
+  const performSaveEditRole = () => {
     if (!selectedRole) return
 
     if (!formData.name.trim()) {
@@ -432,6 +445,12 @@ export function RolesPermissions() {
     )
     setIsEditDialogOpen(false)
     toast.success(`Role "${formData.name}" updated`)
+  }
+
+  const handleSaveEditRole = () => {
+    saveConfirmDialog.confirm(() => {
+      performSaveEditRole()
+    })
   }
 
   const handleConfirmDelete = () => {
@@ -1007,6 +1026,26 @@ export function RolesPermissions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Save Role Confirmation Dialog */}
+      <ConfirmDialog
+        open={saveConfirmDialog.isOpen}
+        onOpenChange={saveConfirmDialog.setIsOpen}
+        onConfirm={saveConfirmDialog.handleConfirm}
+        title="ยืนยันการแก้ไข?"
+        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
+        confirmText="บันทึก"
+      />
+
+      {/* Add Role Confirmation Dialog */}
+      <ConfirmDialog
+        open={addConfirmDialog.isOpen}
+        onOpenChange={addConfirmDialog.setIsOpen}
+        onConfirm={addConfirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้าง role นี้หรือไม่?"
+        confirmText="สร้าง"
+      />
     </div>
   )
 }

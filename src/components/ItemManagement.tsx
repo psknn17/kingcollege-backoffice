@@ -11,6 +11,8 @@ import { Textarea } from "./ui/textarea"
 import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Save, ChevronLeft, ChevronRight } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
@@ -1946,6 +1948,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+
+  // Confirmation dialog hooks
+  const addConfirmDialog = useConfirmDialog()
+  const editConfirmDialog = useConfirmDialog()
+
   const isExternalView = invoiceType === "external"
   const isCategoryView = ["afterschool", "event", "summer", "eca", "trip", "exam", "bus"].includes(invoiceType)
   const isSimplifiedView = isExternalView || isCategoryView
@@ -2119,7 +2126,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     setEditingItem(null)
   }
 
-  const handleSaveItem = () => {
+  const performSaveItem = () => {
     // Applicable grades are now optional
     if (!newItem.itemCode || !newItem.name || !newItem.amount) {
       toast.error("Please fill in all required fields")
@@ -2183,6 +2190,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     }
 
     closeItemModal()
+  }
+
+  const handleSaveItem = () => {
+    const isEditing = !!editingItem
+    const dialog = isEditing ? editConfirmDialog : addConfirmDialog
+    dialog.confirm(() => {
+      performSaveItem()
+    })
   }
 
   const handleDeleteItem = (itemId: string) => {
@@ -3039,6 +3054,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         type={viewModalType}
         data={viewModalData}
         onEdit={handleEditFromModal}
+      />
+
+      {/* Add Item Confirmation Dialog */}
+      <ConfirmDialog
+        open={addConfirmDialog.isOpen}
+        onOpenChange={addConfirmDialog.setIsOpen}
+        onConfirm={addConfirmDialog.handleConfirm}
+        title="ยืนยันการสร้าง?"
+        description="คุณต้องการสร้างรายการนี้หรือไม่?"
+        confirmText="สร้าง"
+      />
+
+      {/* Edit Item Confirmation Dialog */}
+      <ConfirmDialog
+        open={editConfirmDialog.isOpen}
+        onOpenChange={editConfirmDialog.setIsOpen}
+        onConfirm={editConfirmDialog.handleConfirm}
+        title="ยืนยันการแก้ไข?"
+        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
+        confirmText="บันทึก"
       />
     </div>
   )
