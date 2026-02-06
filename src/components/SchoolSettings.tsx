@@ -1,13 +1,14 @@
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
+import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
+import { Separator } from "./ui/separator"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { School, Upload, Save, MapPin, Phone, Mail, Globe, Building2, CreditCard } from "lucide-react"
+import { School, Upload, Save, Phone, Mail, Globe, CreditCard } from "lucide-react"
 
 interface SchoolInfo {
   schoolName: string
@@ -25,11 +26,6 @@ interface SchoolInfo {
   bankAccountNumber: string
   bankBranch: string
   swiftCode: string
-  // Contact person
-  contactPersonName: string
-  contactPersonPosition: string
-  contactPersonPhone: string
-  contactPersonEmail: string
 }
 
 const STORAGE_KEY = "schoolSettings"
@@ -58,11 +54,7 @@ const loadSettings = (): SchoolInfo => {
     bankAccountName: "King's College International School Bangkok",
     bankAccountNumber: "041-1-12977-2",
     bankBranch: "Sathu Pradit",
-    swiftCode: "KASITHBK",
-    contactPersonName: "John Smith",
-    contactPersonPosition: "School Director",
-    contactPersonPhone: "02-123-4567",
-    contactPersonEmail: "director@kingscollege.ac.th"
+    swiftCode: "KASITHBK"
   }
 }
 
@@ -105,8 +97,8 @@ export function SchoolSettings() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Header with Save Button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
@@ -123,275 +115,228 @@ export function SchoolSettings() {
         </Button>
       </div>
 
-      {/* School Information */}
+      {/* Main Content - Single Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            School Information
-          </CardTitle>
-          <CardDescription>Basic information about the school</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Logo */}
-          <div className="space-y-2">
-            <Label>School Logo</Label>
-            <div className="flex items-center gap-4">
-              {formData.logoUrl && (
-                <div className="w-24 h-24 border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+        <CardContent className="p-6">
+          {/* Logo Section - Prominent at top */}
+          <div className="mb-6 pb-6 border-b">
+            <Label className="text-sm font-medium mb-3 block">School Logo</Label>
+            <div className="flex items-start gap-6">
+              {formData.logoUrl ? (
+                <div className="w-32 h-32 border-2 border-dashed rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                   <img src={formData.logoUrl} alt="School Logo" className="max-w-full max-h-full object-contain" />
                 </div>
+              ) : (
+                <div className="w-32 h-32 border-2 border-dashed rounded-lg bg-muted flex items-center justify-center">
+                  <School className="w-12 h-12 text-muted-foreground/40" />
+                </div>
               )}
-              <div>
+              <div className="flex flex-col gap-2">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleLogoUpload}
                   className="hidden"
                   id="logo-upload"
+                  disabled={!userCanEdit}
                 />
                 <label htmlFor="logo-upload">
-                  <Button variant="outline" asChild>
+                  <Button
+                    variant="outline"
+                    asChild
+                    disabled={!userCanEdit}
+                  >
                     <span className="cursor-pointer">
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Logo
                     </span>
                   </Button>
                 </label>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 2MB</p>
+                <p className="text-xs text-muted-foreground">
+                  Recommended: 512x512px
+                  <br />
+                  PNG, JPG up to 2MB
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>School Name (English) *</Label>
-              <Input
-                value={formData.schoolName}
-                onChange={(e) => setFormData(prev => ({ ...prev, schoolName: e.target.value }))}
-                placeholder="School name in English"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>School Name (Thai) *</Label>
-              <Input
-                value={formData.schoolNameThai}
-                onChange={(e) => setFormData(prev => ({ ...prev, schoolNameThai: e.target.value }))}
-                placeholder="ชื่อโรงเรียนภาษาไทย"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </div>
+          {/* Two Column Layout for Compact View */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* LEFT COLUMN: School Identity */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                School Information
+              </h3>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Address (English) *
-            </Label>
-            <Textarea
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-              placeholder="School address in English"
-              rows={2}
-              disabled={!userCanEdit}
-            />
-          </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">School Name (English) *</Label>
+                  <Input
+                    value={formData.schoolName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, schoolName: e.target.value }))}
+                    placeholder="School name in English"
+                    disabled={!userCanEdit}
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Address (Thai) *
-            </Label>
-            <Textarea
-              value={formData.addressThai}
-              onChange={(e) => setFormData(prev => ({ ...prev, addressThai: e.target.value }))}
-              placeholder="ที่อยู่โรงเรียนภาษาไทย"
-              rows={2}
-              disabled={!userCanEdit}
-            />
-          </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">School Name (Thai) *</Label>
+                  <Input
+                    value={formData.schoolNameThai}
+                    onChange={(e) => setFormData(prev => ({ ...prev, schoolNameThai: e.target.value }))}
+                    placeholder="ชื่อโรงเรียนภาษาไทย"
+                    disabled={!userCanEdit}
+                  />
+                </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone *
-              </Label>
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="02-xxx-xxxx"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Tax ID</Label>
-              <Input
-                value={formData.taxId}
-                onChange={(e) => setFormData(prev => ({ ...prev, taxId: e.target.value }))}
-                placeholder="0-xxxx-xxxxx-xx-x"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tax ID</Label>
+                  <Input
+                    value={formData.taxId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, taxId: e.target.value }))}
+                    placeholder="0-xxxx-xxxxx-xx-x"
+                    disabled={!userCanEdit}
+                  />
+                </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email *
-              </Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="info@school.com"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Website
-              </Label>
-              <Input
-                value={formData.website}
-                onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
-                placeholder="www.school.com"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    Phone *
+                  </Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="02-xxx-xxxx"
+                    disabled={!userCanEdit}
+                  />
+                </div>
 
-      {/* Bank Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5" />
-            Bank Information
-          </CardTitle>
-          <CardDescription>Bank account details for payments and invoices</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Bank Name *</Label>
-              <Input
-                value={formData.bankName}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
-                placeholder="e.g., Kasikorn Bank"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Bank Branch</Label>
-              <Input
-                value={formData.bankBranch}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankBranch: e.target.value }))}
-                placeholder="e.g., Sathu Pradit"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5" />
+                    Email *
+                  </Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="info@school.com"
+                    disabled={!userCanEdit}
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label>Account Name *</Label>
-            <Input
-              value={formData.bankAccountName}
-              onChange={(e) => setFormData(prev => ({ ...prev, bankAccountName: e.target.value }))}
-              placeholder="Account holder name"
-              disabled={!userCanEdit}
-            />
-          </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5" />
+                    Website
+                  </Label>
+                  <Input
+                    value={formData.website}
+                    onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="www.school.com"
+                    disabled={!userCanEdit}
+                  />
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Account Number *</Label>
-              <Input
-                value={formData.bankAccountNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankAccountNumber: e.target.value }))}
-                placeholder="xxx-x-xxxxx-x"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>SWIFT Code</Label>
-              <Input
-                value={formData.swiftCode}
-                onChange={(e) => setFormData(prev => ({ ...prev, swiftCode: e.target.value }))}
-                placeholder="e.g., KASITHBK"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            {/* RIGHT COLUMN: Addresses & Bank */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Address & Banking
+              </h3>
 
-      {/* Contact Person */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="w-5 h-5" />
-            Primary Contact Person
-          </CardTitle>
-          <CardDescription>Main contact person for school inquiries</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Name *</Label>
-              <Input
-                value={formData.contactPersonName}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactPersonName: e.target.value }))}
-                placeholder="Full name"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Position *</Label>
-              <Input
-                value={formData.contactPersonPosition}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactPersonPosition: e.target.value }))}
-                placeholder="e.g., School Director"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Address (English) *</Label>
+                  <Textarea
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="School address in English"
+                    rows={2}
+                    disabled={!userCanEdit}
+                    className="resize-none"
+                  />
+                </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Phone *</Label>
-              <Input
-                value={formData.contactPersonPhone}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactPersonPhone: e.target.value }))}
-                placeholder="02-xxx-xxxx"
-                disabled={!userCanEdit}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={formData.contactPersonEmail}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactPersonEmail: e.target.value }))}
-                placeholder="contact@school.com"
-                disabled={!userCanEdit}
-              />
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Address (Thai) *</Label>
+                  <Textarea
+                    value={formData.addressThai}
+                    onChange={(e) => setFormData(prev => ({ ...prev, addressThai: e.target.value }))}
+                    placeholder="ที่อยู่โรงเรียนภาษาไทย"
+                    rows={2}
+                    disabled={!userCanEdit}
+                    className="resize-none"
+                  />
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4" />
+                  Bank Details
+                </h4>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bank Name *</Label>
+                  <Input
+                    value={formData.bankName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                    placeholder="e.g., Kasikorn Bank"
+                    disabled={!userCanEdit}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Account Name *</Label>
+                  <Input
+                    value={formData.bankAccountName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankAccountName: e.target.value }))}
+                    placeholder="Account holder name"
+                    disabled={!userCanEdit}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Account Number *</Label>
+                  <Input
+                    value={formData.bankAccountNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankAccountNumber: e.target.value }))}
+                    placeholder="xxx-x-xxxxx-x"
+                    disabled={!userCanEdit}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Branch</Label>
+                    <Input
+                      value={formData.bankBranch}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bankBranch: e.target.value }))}
+                      placeholder="e.g., Sathu Pradit"
+                      disabled={!userCanEdit}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">SWIFT Code</Label>
+                    <Input
+                      value={formData.swiftCode}
+                      onChange={(e) => setFormData(prev => ({ ...prev, swiftCode: e.target.value }))}
+                      placeholder="KASITHBK"
+                      disabled={!userCanEdit}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={!userCanEdit || isSaving} size="lg">
-          <Save className="w-4 h-4 mr-2" />
-          Save Changes
-        </Button>
-      </div>
     </div>
   )
 }
