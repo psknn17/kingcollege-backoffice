@@ -5196,7 +5196,7 @@ export function InvoiceManagement({
             <Button variant="outline" onClick={() => setIsConfirmSaveOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleSaveChanges}>
               <CheckCircle className="w-4 h-4 mr-2" />
               Confirm Save
             </Button>
