@@ -1067,9 +1067,9 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
         open={confirmDialog.isOpen}
         onOpenChange={confirmDialog.setIsOpen}
         onConfirm={confirmDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้าง invoice นี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
     </div>
   )

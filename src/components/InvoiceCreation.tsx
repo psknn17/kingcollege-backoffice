@@ -5100,9 +5100,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         open={confirmDialog.isOpen}
         onOpenChange={confirmDialog.setIsOpen}
         onConfirm={confirmDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้าง invoices นี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
     </div>
   )

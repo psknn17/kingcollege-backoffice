@@ -1032,9 +1032,9 @@ export function RolesPermissions() {
         open={saveConfirmDialog.isOpen}
         onOpenChange={saveConfirmDialog.setIsOpen}
         onConfirm={saveConfirmDialog.handleConfirm}
-        title="ยืนยันการแก้ไข?"
-        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
-        confirmText="บันทึก"
+        titleKey="confirmDialog.editTitle"
+        descriptionKey="confirmDialog.editDescription"
+        confirmTextKey="common.save"
       />
 
       {/* Add Role Confirmation Dialog */}
@@ -1042,9 +1042,9 @@ export function RolesPermissions() {
         open={addConfirmDialog.isOpen}
         onOpenChange={addConfirmDialog.setIsOpen}
         onConfirm={addConfirmDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้าง role นี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
     </div>
   )

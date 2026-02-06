@@ -1065,9 +1065,9 @@ export function FamilyGroups() {
         open={saveConfirmDialog.isOpen}
         onOpenChange={saveConfirmDialog.setIsOpen}
         onConfirm={saveConfirmDialog.handleConfirm}
-        title="ยืนยันการแก้ไข?"
-        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
-        confirmText="บันทึก"
+        titleKey="confirmDialog.editTitle"
+        descriptionKey="confirmDialog.editDescription"
+        confirmTextKey="common.save"
       />
 
       {/* Add Family Confirmation Dialog */}
@@ -1075,9 +1075,9 @@ export function FamilyGroups() {
         open={addConfirmDialog.isOpen}
         onOpenChange={addConfirmDialog.setIsOpen}
         onConfirm={addConfirmDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้างครอบครัวนี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
     </div>
   )

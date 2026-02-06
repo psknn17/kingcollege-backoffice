@@ -478,8 +478,8 @@ export function AfterSchoolSettings() {
         open={confirmDialog.isOpen}
         onOpenChange={confirmDialog.setIsOpen}
         onConfirm={confirmDialog.handleConfirm}
-        title="ยืนยันการบันทึก?"
-        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
+        titleKey="confirmDialog.saveTitle"
+        descriptionKey="confirmDialog.saveDescription"
       />
     </div>
   )

@@ -8,15 +8,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./alert-dialog"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
-  title?: string
-  description?: string
-  confirmText?: string
-  cancelText?: string
+  titleKey?: string
+  descriptionKey?: string
+  confirmTextKey?: string
+  cancelTextKey?: string
   variant?: "default" | "destructive"
 }
 
@@ -24,12 +25,14 @@ export function ConfirmDialog({
   open,
   onOpenChange,
   onConfirm,
-  title = "ยืนยันการบันทึก?",
-  description = "คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?",
-  confirmText = "บันทึก",
-  cancelText = "ยกเลิก",
+  titleKey = "confirmDialog.saveTitle",
+  descriptionKey = "confirmDialog.saveDescription",
+  confirmTextKey = "common.save",
+  cancelTextKey = "common.cancel",
   variant = "default"
 }: ConfirmDialogProps) {
+  const { t } = useLanguage()
+
   const handleConfirm = () => {
     onConfirm()
     onOpenChange(false)
@@ -39,16 +42,16 @@ export function ConfirmDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{t(titleKey)}</AlertDialogTitle>
+          <AlertDialogDescription>{t(descriptionKey)}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel>{t(cancelTextKey)}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             className={variant === "destructive" ? "bg-red-600 hover:bg-red-700" : ""}
           >
-            {confirmText}
+            {t(confirmTextKey)}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

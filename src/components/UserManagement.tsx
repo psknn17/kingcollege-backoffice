@@ -1193,9 +1193,9 @@ export function UserManagement() {
         open={addConfirmDialog.isOpen}
         onOpenChange={addConfirmDialog.setIsOpen}
         onConfirm={addConfirmDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้างผู้ใช้นี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
 
       {/* Edit User Confirmation Dialog */}
@@ -1203,9 +1203,9 @@ export function UserManagement() {
         open={editConfirmDialog.isOpen}
         onOpenChange={editConfirmDialog.setIsOpen}
         onConfirm={editConfirmDialog.handleConfirm}
-        title="ยืนยันการแก้ไข?"
-        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
-        confirmText="บันทึก"
+        titleKey="confirmDialog.editTitle"
+        descriptionKey="confirmDialog.editDescription"
+        confirmTextKey="common.save"
       />
     </div>
   )

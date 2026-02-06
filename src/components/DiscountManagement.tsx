@@ -2192,9 +2192,9 @@ Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
         open={saveDialog.isOpen}
         onOpenChange={saveDialog.setIsOpen}
         onConfirm={saveDialog.handleConfirm}
-        title="ยืนยันการบันทึก?"
-        description="คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?"
-        confirmText="บันทึก"
+        titleKey="confirmDialog.saveTitle"
+        descriptionKey="confirmDialog.saveDescription"
+        confirmTextKey="common.save"
       />
     </div>
   )

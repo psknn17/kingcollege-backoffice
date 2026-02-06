@@ -2516,9 +2516,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         open={addConfirmDialog.isOpen}
         onOpenChange={addConfirmDialog.setIsOpen}
         onConfirm={addConfirmDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้างนักเรียนนี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
 
       {/* Edit Student Confirmation Dialog */}
@@ -2526,9 +2526,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         open={editConfirmDialog.isOpen}
         onOpenChange={editConfirmDialog.setIsOpen}
         onConfirm={editConfirmDialog.handleConfirm}
-        title="ยืนยันการแก้ไข?"
-        description="คุณต้องการบันทึกการแก้ไขหรือไม่?"
-        confirmText="บันทึก"
+        titleKey="confirmDialog.editTitle"
+        descriptionKey="confirmDialog.editDescription"
+        confirmTextKey="common.save"
       />
 
       {/* Import Students Confirmation Dialog */}
@@ -2536,9 +2536,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         open={importConfirmDialog.isOpen}
         onOpenChange={importConfirmDialog.setIsOpen}
         onConfirm={importConfirmDialog.handleConfirm}
-        title="ยืนยันการนำเข้า?"
-        description="คุณต้องการนำเข้าข้อมูลหรือไม่?"
-        confirmText="นำเข้า"
+        titleKey="confirmDialog.importTitle"
+        descriptionKey="confirmDialog.importDescription"
+        confirmTextKey="common.import"
       />
     </div>
   )

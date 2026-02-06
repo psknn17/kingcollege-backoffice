@@ -1322,9 +1322,9 @@ export function CreditNoteManagement() {
         open={createDialog.isOpen}
         onOpenChange={createDialog.setIsOpen}
         onConfirm={createDialog.handleConfirm}
-        title="ยืนยันการสร้าง?"
-        description="คุณต้องการสร้างรายการนี้หรือไม่?"
-        confirmText="สร้าง"
+        titleKey="confirmDialog.createTitle"
+        descriptionKey="confirmDialog.createDescription"
+        confirmTextKey="common.create"
       />
     </div>
   )
