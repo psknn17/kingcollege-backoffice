@@ -274,9 +274,8 @@ export function TuitionTermSettings() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
                           size="sm"
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-3"
+                          className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleSaveYearClick(year.id)
