@@ -201,15 +201,15 @@ export function TuitionTermSettings() {
     toast.success(t("termSettings.termDeleted"))
   }
 
-  const handleSaveAllChanges = () => {
+  const handleSaveYear = (yearId: string) => {
+    // Save only the specific year
     saveAcademicYears()
-    setIsSaveConfirmDialogOpen(false)
     toast.success(t("termSettings.changesSaved"))
   }
 
-  const handleSaveClick = () => {
+  const handleSaveYearClick = (yearId: string) => {
     confirmDialog.confirm(() => {
-      handleSaveAllChanges()
+      handleSaveYear(yearId)
     })
   }
 
@@ -274,6 +274,19 @@ export function TuitionTermSettings() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-3"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSaveYearClick(year.id)
+                          }}
+                          disabled={!userCanEdit}
+                        >
+                          <Save className="w-4 h-4 mr-1" />
+                          Save
+                        </Button>
                         {academicYears.length > 1 && (
                           <Button
                             variant="ghost"
@@ -415,14 +428,6 @@ export function TuitionTermSettings() {
             </Collapsible>
           )
         })}
-      </div>
-
-      {/* Save All Button */}
-      <div className="flex justify-end">
-        <Button size="lg" onClick={handleSaveClick} disabled={!userCanEdit}>
-          <Save className="w-4 h-4 mr-2" />
-          {t("termSettings.saveAllChanges")}
-        </Button>
       </div>
 
       {/* Add Academic Year Dialog */}
