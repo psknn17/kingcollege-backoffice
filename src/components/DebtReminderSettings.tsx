@@ -13,6 +13,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 // Preset email subject options based on system menus
 const PRESET_EMAIL_SUBJECTS = [
@@ -125,8 +126,8 @@ export function DebtReminderSettings() {
   const { academicYears } = useAcademicYears()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
-  const [reminders, setReminders] = useState<ReminderConfig[]>(initialReminders)
-  const [globalSettings, setGlobalSettings] = useState({
+  const [reminders, setReminders] = usePersistedState<ReminderConfig[]>("debt-reminder:reminders", initialReminders)
+  const [globalSettings, setGlobalSettings] = usePersistedState("debt-reminder:globalSettings", {
     enableReminders: true,
     fromEmail: "noreply@kingscollege.ac.th"
   })
@@ -157,8 +158,11 @@ export function DebtReminderSettings() {
   }
 
   const saveSettings = () => {
-    console.log("Saving reminder settings", { reminders, globalSettings })
-    // In a real app, this would save to backend
+    // Settings are automatically saved via usePersistedState
+    // This function provides user feedback
+    toast.success("Settings saved successfully", {
+      description: "Your debt reminder settings have been saved"
+    })
   }
 
   const handleSendNow = (reminder: ReminderConfig) => {
