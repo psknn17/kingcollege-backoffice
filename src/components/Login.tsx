@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Mail, ArrowRight, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import SchoolLogo from "@/assets/Logo.png"
-import SchoolBg from "@/assets/school-bg.jpg"
+import SchoolImage from "@/assets/school-bg.jpg"
 import { OTPVerification } from "./OTPVerification"
 
 type LoginStep = "email" | "otp"
@@ -81,14 +81,13 @@ export function Login() {
       {/* Left Side - Hero Image */}
       <div
         style={{
-          width: "50%",
+          width: "65%",
           height: "100%",
           position: "relative",
-          backgroundImage: `url(${SchoolLogo})`,
-          backgroundSize: "contain",
+          backgroundImage: `url(${SchoolImage})`,
+          backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundColor: "#FFFFFF"
+          backgroundRepeat: "no-repeat"
         }}
       >
       </div>
@@ -96,7 +95,7 @@ export function Login() {
       {/* Right Side - Login Form */}
       <div
         style={{
-          width: "50%",
+          width: "35%",
           height: "100%",
           display: "flex",
           alignItems: "center",
