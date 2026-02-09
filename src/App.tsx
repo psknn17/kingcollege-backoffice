@@ -188,7 +188,26 @@ const menuItems = {
 export default function App() {
   const { language, setLanguage, t } = useLanguage()
   const { isAuthenticated, user, logout, needsRoleSelection, selectRole } = useAuth()
-  const [activeSection, setActiveSection] = usePersistedState("app:activeSection", "tuition-dashboard")
+  // Initialize activeSection with check for sub-pages
+  const getInitialActiveSection = () => {
+    const stored = localStorage.getItem("app:activeSection")
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        const subPages = ['invoice-creation', 'external-invoice-creation', 'email-history-view', 'email-csv-export', 'view-details', 'waive-fee-year-details']
+        // If stored value is a sub-page, reset to default
+        if (subPages.includes(parsed)) {
+          return "tuition-dashboard"
+        }
+        return parsed
+      } catch {
+        return "tuition-dashboard"
+      }
+    }
+    return "tuition-dashboard"
+  }
+
+  const [activeSection, setActiveSection] = usePersistedState("app:activeSection", getInitialActiveSection())
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
 
   // Filter menu items based on user role
@@ -322,11 +341,15 @@ export default function App() {
   }
 
   const navigateBack = () => {
+    console.log("navigateBack() called, subPageHistory:", subPageHistory)
     if (subPageHistory.length > 0) {
       const previousPage = subPageHistory[subPageHistory.length - 1]
+      console.log("Navigating back to:", previousPage)
       setSubPageHistory(subPageHistory.slice(0, -1))
       setActiveSection(previousPage)
       setSubPageParams(null)
+    } else {
+      console.log("No history to go back, subPageHistory is empty")
     }
   }
 
@@ -824,73 +847,100 @@ export default function App() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="w-64 rounded-lg p-2 border"
+                      className="w-80 rounded-2xl p-0 border-0 overflow-hidden"
                       style={{
                         backgroundColor: '#ffffff',
-                        borderColor: '#e5e7eb',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
                       }}
                       side="right"
                       align="end"
                       sideOffset={8}
                     >
-                      {/* User Info */}
-                      <div className="flex items-center gap-3 px-2 py-3 mb-1">
-                        <Avatar className="h-10 w-10 border-2 border-gray-200">
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold text-sm">
-                            {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{user?.email || 'user@example.com'}</p>
+                      {/* Header with gradient background */}
+                      <div className="relative px-4 pt-5 pb-4 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-14 w-14 border-2 border-white/20 shadow-lg ring-4 ring-white/10">
+                            <AvatarFallback className="bg-white text-blue-600 font-bold text-lg">
+                              {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-bold text-white truncate drop-shadow-sm">{user?.name}</p>
+                            <p className="text-sm text-blue-100 truncate">{user?.email || 'user@example.com'}</p>
+                            <div className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-sm" />
+                              <span className="text-xs font-medium text-white">{user?.role}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <DropdownMenuSeparator className="my-1.5" style={{ backgroundColor: '#f3f4f6' }} />
-
                       {/* Menu Items */}
-                      <div className="space-y-0.5">
+                      <div className="p-2 space-y-1">
                         <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-profile")}
-                          className="flex items-center gap-3 px-3 py-2 cursor-pointer rounded-md text-gray-700 hover:bg-gray-100 focus:bg-gray-100 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-gray-700 hover:bg-blue-50 hover:text-blue-600 focus:bg-blue-50 focus:text-blue-600 transition-all duration-200 group"
                         >
-                          <UserCog className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm font-medium">Profile</span>
+                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 group-hover:bg-blue-100 transition-colors">
+                            <UserCog className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">Profile</p>
+                            <p className="text-xs text-gray-500 group-hover:text-blue-500">Manage your account</p>
+                          </div>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-settings")}
-                          className="flex items-center gap-3 px-3 py-2 cursor-pointer rounded-md text-gray-700 hover:bg-gray-100 focus:bg-gray-100 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-gray-700 hover:bg-purple-50 hover:text-purple-600 focus:bg-purple-50 focus:text-purple-600 transition-all duration-200 group"
                         >
-                          <Settings className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm font-medium">Settings</span>
+                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 group-hover:bg-purple-100 transition-colors">
+                            <Settings className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">Settings</p>
+                            <p className="text-xs text-gray-500 group-hover:text-purple-500">Preferences & privacy</p>
+                          </div>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-activity")}
-                          className="flex items-center gap-3 px-3 py-2 cursor-pointer rounded-md text-gray-700 hover:bg-gray-100 focus:bg-gray-100 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-gray-700 hover:bg-green-50 hover:text-green-600 focus:bg-green-50 focus:text-green-600 transition-all duration-200 group"
                         >
-                          <Activity className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm font-medium">Activity</span>
+                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 group-hover:bg-green-100 transition-colors">
+                            <Activity className="w-5 h-5 text-gray-600 group-hover:text-green-600 transition-colors" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">Activity</p>
+                            <p className="text-xs text-gray-500 group-hover:text-green-500">View your history</p>
+                          </div>
                         </DropdownMenuItem>
                       </div>
 
-                      <DropdownMenuSeparator className="my-1.5" style={{ backgroundColor: '#f3f4f6' }} />
+                      <div className="px-2 pb-2">
+                        <DropdownMenuSeparator className="my-2 bg-gray-100" />
 
-                      {/* Logout */}
-                      <DropdownMenuItem
-                        onClick={logout}
-                        className="flex items-center gap-3 px-3 py-2 cursor-pointer rounded-md text-red-600 hover:bg-red-50 focus:bg-red-50 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span className="text-sm font-medium">Log out</span>
-                      </DropdownMenuItem>
+                        {/* Logout */}
+                        <DropdownMenuItem
+                          onClick={logout}
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-red-600 hover:bg-red-50 focus:bg-red-50 transition-all duration-200 group"
+                        >
+                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition-colors">
+                            <LogOut className="w-5 h-5 text-red-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">Log out</p>
+                            <p className="text-xs text-red-400">Sign out of your account</p>
+                          </div>
+                        </DropdownMenuItem>
+                      </div>
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between px-3 py-2 mt-1.5 border-t" style={{ borderColor: '#f3f4f6' }}>
-                        <span className="text-xs text-gray-400">King's College</span>
-                        <span className="text-xs text-gray-400 font-mono">v{__APP_VERSION__}</span>
+                      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500 font-medium">King's College Backoffice</span>
+                          <span className="px-2 py-1 bg-white rounded-md text-gray-600 font-mono shadow-sm border border-gray-200">v{__APP_VERSION__}</span>
+                        </div>
                       </div>
 
                     </DropdownMenuContent>
