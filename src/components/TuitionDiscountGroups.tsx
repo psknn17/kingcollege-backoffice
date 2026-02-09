@@ -407,6 +407,7 @@ export function TuitionDiscountGroups() {
                           onFocus={() => setIsInputFocused(true)}
                           onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                           placeholder="Search by ID or Name (e.g., KC2024001)"
+                          className="rounded-none"
                           disabled={!userCanEdit}
                         />
                         {/* Search Results Dropdown */}
@@ -429,20 +430,20 @@ export function TuitionDiscountGroups() {
                                     handleAddStudent(student)
                                     toast.success(`Added ${student.name} (${student.id})`)
                                   }}
-                                  className="group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0"
+                                  className="group px-3 py-2.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-1.5 last:mb-0 bg-white"
                                 >
-                                  <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shadow-sm border border-primary/20">
-                                    {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-semibold text-sm truncate uppercase tracking-tight">{student.name}</div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-[10px] font-mono font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
-                                      <span className="text-[11px] text-muted-foreground font-medium">• {student.yearGroup}</span>
+                                  <div>
+                                    <div className="font-semibold text-[15px] text-gray-900 truncate group-hover:text-blue-900 transition-colors">{student.name}</div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="inline-flex items-center text-xs font-mono font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
+                                        ID: {student.id}
+                                      </span>
+                                      <span className="text-xs text-gray-500">•</span>
+                                      <span className="text-xs text-gray-600 font-medium">Year {student.yearGroup}</span>
                                     </div>
                                   </div>
-                                  <div className="h-9 w-9 rounded-full border border-border flex items-center justify-center bg-background group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/20">
-                                    <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
+                                  <div className="h-8 w-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                                    <Plus className="h-4 w-4 stroke-[2.5]" />
                                   </div>
                                 </div>
                               ))
