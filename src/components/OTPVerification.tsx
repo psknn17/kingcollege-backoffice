@@ -3,6 +3,7 @@ import { Button } from "./ui/button"
 import { Mail, ArrowLeft, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import SchoolLogo from "@/assets/Logo.png"
+import SchoolImage from "@/assets/school-bg.jpg"
 
 interface OTPVerificationProps {
   email: string
@@ -106,17 +107,16 @@ export function OTPVerification({
 
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      {/* Left Side - School Logo */}
+      {/* Left Side - Hero Image */}
       <div
         style={{
-          width: "50%",
+          width: "65%",
           height: "100%",
           position: "relative",
-          backgroundImage: `url(${SchoolLogo})`,
-          backgroundSize: "contain",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundColor: "#FFFFFF"
+          backgroundImage: `url(${SchoolImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "50% center",
+          backgroundRepeat: "no-repeat"
         }}
       >
       </div>
@@ -124,7 +124,7 @@ export function OTPVerification({
       {/* Right Side - OTP Form */}
       <div
         style={{
-          width: "50%",
+          width: "35%",
           height: "100%",
           display: "flex",
           alignItems: "center",
@@ -144,8 +144,8 @@ export function OTPVerification({
         >
           {/* School Logo & Name */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "60px", width: "auto", marginBottom: "8px" }} />
-            <p style={{ fontSize: "9px", color: "#6b7280", textAlign: "center", lineHeight: "1.3", letterSpacing: "0.5px" }}>
+            <img src={SchoolLogo} alt="King's College" style={{ height: "120px", width: "auto", marginBottom: "12px" }} />
+            <p style={{ fontSize: "12px", color: "#6b7280", textAlign: "center", lineHeight: "1.4", letterSpacing: "0.5px" }}>
               KING'S COLLEGE<br/>INTERNATIONAL SCHOOL<br/>BANGKOK
             </p>
           </div>
