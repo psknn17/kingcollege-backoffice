@@ -216,8 +216,8 @@ export function EmailDeliveryReport() {
           bVal = b.status
           break
         case "sentAt":
-          aVal = a.sentAt.getTime()
-          bVal = b.sentAt.getTime()
+          aVal = a.sentAt?.getTime() || 0
+          bVal = b.sentAt?.getTime() || 0
           break
         case "language":
           aVal = a.language

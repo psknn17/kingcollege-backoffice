@@ -340,7 +340,7 @@ export function ApprovalQueue() {
         case "issueDate":
           return ((a.issueDate?.getTime() || 0) - (b.issueDate?.getTime() || 0)) * direction
         case "dueDate":
-          return (a.dueDate.getTime() - b.dueDate.getTime()) * direction
+          return ((a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)) * direction
         default:
           return 0
       }

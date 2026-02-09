@@ -527,7 +527,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
         case "term": aVal = a.term; bVal = b.term; break
         case "amount": aVal = a.amount; bVal = b.amount; break
         case "paymentMethod": aVal = a.paymentMethod; bVal = b.paymentMethod; break
-        case "transactionDate": aVal = a.transactionDate.getTime(); bVal = b.transactionDate.getTime(); break
+        case "transactionDate": aVal = a.transactionDate?.getTime() || 0; bVal = b.transactionDate?.getTime() || 0; break
         default: return 0
       }
       if (typeof aVal === "string") {
@@ -762,7 +762,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
         case "term": aVal = a.term; bVal = b.term; break
         case "amount": aVal = a.amount; bVal = b.amount; break
         case "reason": aVal = a.reason; bVal = b.reason; break
-        case "issueDate": aVal = a.issueDate.getTime(); bVal = b.issueDate.getTime(); break
+        case "issueDate": aVal = a.issueDate?.getTime() || 0; bVal = b.issueDate?.getTime() || 0; break
         case "status": aVal = a.status; bVal = b.status; break
         default: return 0
       }

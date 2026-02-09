@@ -168,8 +168,8 @@ export function ExternalParentManagement() {
           bVal = b.paymentStatus
           break
         case "applicationDate":
-          aVal = a.applicationDate.getTime()
-          bVal = b.applicationDate.getTime()
+          aVal = a.applicationDate?.getTime() || 0
+          bVal = b.applicationDate?.getTime() || 0
           break
         default:
           return 0

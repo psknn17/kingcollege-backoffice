@@ -188,7 +188,7 @@ const generateStudentRegistrations = (courseId: string, enrolledCount: number): 
     })
   }
   
-  return students.sort((a, b) => b.registrationDate.getTime() - a.registrationDate.getTime())
+  return students.sort((a, b) => (b.registrationDate?.getTime() || 0) - (a.registrationDate?.getTime() || 0))
 }
 
 interface CourseQuotaOverviewProps {

@@ -688,17 +688,17 @@ export function InvoiceManagement({
         case "finalAmount":
           return ((a.finalAmount || 0) - (b.finalAmount || 0)) * direction
         case "invoiceStatus":
-          return (invoiceStatusOrder[getApprovalStatus(a)] - invoiceStatusOrder[getApprovalStatus(b)]) * direction
+          return ((invoiceStatusOrder[getApprovalStatus(a)] || 0) - (invoiceStatusOrder[getApprovalStatus(b)] || 0)) * direction
         case "emailStatus":
           return (a.status || "").localeCompare(b.status || "") * direction
         case "paymentStatus":
-          return (paymentStatusOrder[getPaymentStatus(a)] - paymentStatusOrder[getPaymentStatus(b)]) * direction
+          return ((paymentStatusOrder[getPaymentStatus(a)] || 0) - (paymentStatusOrder[getPaymentStatus(b)] || 0)) * direction
         case "eventName":
           return (a.eventName || "").localeCompare(b.eventName || "") * direction
         case "issueDate":
           return ((a.issueDate?.getTime() || 0) - (b.issueDate?.getTime() || 0)) * direction
         case "dueDate":
-          return (a.dueDate.getTime() - b.dueDate.getTime()) * direction
+          return ((a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)) * direction
         default:
           return 0
       }

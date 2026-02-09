@@ -333,8 +333,8 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
           bValue = b.amount
           break
         case "dueDate":
-          aValue = a.dueDate.getTime()
-          bValue = b.dueDate.getTime()
+          aValue = a.dueDate?.getTime() || 0
+          bValue = b.dueDate?.getTime() || 0
           break
         case "status":
           aValue = a.status

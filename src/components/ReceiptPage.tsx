@@ -369,7 +369,7 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
         case "studentGrade": aVal = a.studentGrade; bVal = b.studentGrade; break
         case "amount": aVal = a.amount; bVal = b.amount; break
         case "paymentMethod": aVal = a.paymentMethod; bVal = b.paymentMethod; break
-        case "transactionDate": aVal = a.transactionDate.getTime(); bVal = b.transactionDate.getTime(); break
+        case "transactionDate": aVal = a.transactionDate?.getTime() || 0; bVal = b.transactionDate?.getTime() || 0; break
         case "status": aVal = a.status; bVal = b.status; break
         case "downloadCount": aVal = a.downloadCount; bVal = b.downloadCount; break
         default: return 0

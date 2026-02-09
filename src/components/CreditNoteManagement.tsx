@@ -415,8 +415,8 @@ export function CreditNoteManagement() {
           bValue = b.status
           break
         case "issueDate":
-          aValue = a.issueDate.getTime()
-          bValue = b.issueDate.getTime()
+          aValue = a.issueDate?.getTime() || 0
+          bValue = b.issueDate?.getTime() || 0
           break
         default:
           return 0

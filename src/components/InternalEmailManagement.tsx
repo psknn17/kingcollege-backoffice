@@ -324,7 +324,7 @@ export function InternalEmailManagement({
         case "name": aVal = `${a.name} ${a.surname}`; bVal = `${b.name} ${b.surname}`; break
         case "email": aVal = a.email; bVal = b.email; break
         case "remark": aVal = a.remark; bVal = b.remark; break
-        case "createdAt": aVal = a.createdAt.getTime(); bVal = b.createdAt.getTime(); break
+        case "createdAt": aVal = a.createdAt?.getTime() || 0; bVal = b.createdAt?.getTime() || 0; break
         default: return 0
       }
       if (typeof aVal === "string") {

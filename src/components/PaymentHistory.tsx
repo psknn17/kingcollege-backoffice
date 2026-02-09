@@ -189,8 +189,8 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
           bVal = b.status
           break
         case "transactionDate":
-          aVal = a.transactionDate.getTime()
-          bVal = b.transactionDate.getTime()
+          aVal = a.transactionDate?.getTime() || 0
+          bVal = b.transactionDate?.getTime() || 0
           break
         default:
           return 0

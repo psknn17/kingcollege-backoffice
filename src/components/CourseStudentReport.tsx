@@ -84,7 +84,7 @@ const generateStudentRegistrations = (courseId: string, enrolledCount: number): 
     })
   }
   
-  return students.sort((a, b) => b.registrationDate.getTime() - a.registrationDate.getTime())
+  return students.sort((a, b) => (b.registrationDate?.getTime() || 0) - (a.registrationDate?.getTime() || 0))
 }
 
 const mockCourses: Course[] = [
@@ -168,8 +168,8 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
           bVal = b.yearGroup
           break
         case "registrationDate":
-          aVal = a.registrationDate.getTime()
-          bVal = b.registrationDate.getTime()
+          aVal = a.registrationDate?.getTime() || 0
+          bVal = b.registrationDate?.getTime() || 0
           break
         case "paymentStatus":
           aVal = a.paymentStatus

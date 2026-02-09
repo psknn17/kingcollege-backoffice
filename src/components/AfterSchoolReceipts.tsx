@@ -179,8 +179,8 @@ export function AfterSchoolReceipts() {
           bVal = b.paymentType
           break
         case "transactionDate":
-          aVal = a.transactionDate.getTime()
-          bVal = b.transactionDate.getTime()
+          aVal = a.transactionDate?.getTime() || 0
+          bVal = b.transactionDate?.getTime() || 0
           break
         case "downloadCount":
           aVal = a.downloadCount

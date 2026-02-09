@@ -457,7 +457,7 @@ export function InvoiceEmailManagement() {
         case "type": aVal = a.type; bVal = b.type; break
         case "status": aVal = a.status; bVal = b.status; break
         case "progress": aVal = a.sentCount / a.targetCount; bVal = b.sentCount / b.targetCount; break
-        case "createdAt": aVal = a.createdAt.getTime(); bVal = b.createdAt.getTime(); break
+        case "createdAt": aVal = a.createdAt?.getTime() || 0; bVal = b.createdAt?.getTime() || 0; break
         case "createdBy": aVal = a.createdBy; bVal = b.createdBy; break
         default: return 0
       }

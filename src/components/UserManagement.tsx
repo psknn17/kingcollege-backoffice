@@ -235,8 +235,8 @@ export function UserManagement() {
           bVal = b.permissions.length
           break
         case "createdAt":
-          aVal = a.createdAt.getTime()
-          bVal = b.createdAt.getTime()
+          aVal = a.createdAt?.getTime() || 0
+          bVal = b.createdAt?.getTime() || 0
           break
         case "lastLogin":
           aVal = a.lastLogin ? a.lastLogin.getTime() : 0
