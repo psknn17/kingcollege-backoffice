@@ -398,7 +398,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       </div>
 
       {/* Invoice Title */}
-      <h1 className="font-black text-center mb-6" style={{ fontSize: '28px' }}>INVOICE</h1>
+      <h1 className="font-black text-center mb-6" style={{ fontSize: '72px' }}>INVOICE</h1>
 
       {/* Client & Invoice Info */}
       <div className="border border-black p-4 mb-6" style={{ fontSize: '13px' }}>
@@ -515,7 +515,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
             </div>
           </div>
-          <div className="mt-2" style={{ marginLeft: '138px' }}>
+          <div className="mt-2" style={{ marginLeft: '105px' }}>
             <table>
               <tbody>
                 <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td><td className="text-left">099-4-00259063-3</td></tr>
