@@ -209,7 +209,7 @@ export function ViewModal({
           <p className="text-xs text-gray-600">
             {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
           </p>
-          <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
+          <h1 className="text-7xl font-bold mt-3 tracking-wide">INVOICE</h1>
         </div>
 
         {/* Student & Invoice Info - Two Column Layout */}
@@ -411,7 +411,7 @@ export function ViewModal({
               </div>
             </div>
 
-            <div className="mt-2" style={{ marginLeft: '138px' }}>
+            <div className="mt-2" style={{ marginLeft: '178px' }}>
               <table>
                 <tbody>
                   <tr>

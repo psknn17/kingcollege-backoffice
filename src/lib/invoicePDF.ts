@@ -113,7 +113,7 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
         <p style="font-size:9px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.phone)}, ${escapeHtml(SCHOOL_INFO.email)}, ${escapeHtml(SCHOOL_INFO.website)}</p>
       </div>
 
-      <h1 style="font-size:32px; font-weight:900; text-align:center; margin:12px 0;">INVOICE</h1>
+      <h1 style="font-size:72px; font-weight:900; text-align:center; margin:12px 0;">INVOICE</h1>
 
       <div style="border:1px solid black; padding:16px; margin-bottom:24px; font-size:12px;">
         <div style="display:flex; justify-content:space-between;">
@@ -214,7 +214,7 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
               <div style="flex:1;">
                 <span style="font-weight:bold;">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:8px;">
-                  <table style="margin-left:24px;">
+                  <table style="margin-left:10px;">
                     <tbody>
                       <tr><td style="padding-right:24px; padding:2px 0;">Biller ID no.</td><td style="padding:2px 0;">099-4-00259063-3</td></tr>
                       <tr><td style="padding-right:24px; padding:2px 0;">Reference no. (Ref 1)</td><td style="padding:2px 0;">700002</td></tr>
@@ -266,7 +266,7 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
       </div>
 
       <div style="text-align:center; margin:12px 0 10px 0;">
-        <h1 style="font-size:34px; font-weight:900; letter-spacing:0.15em; margin:0;">INVOICE</h1>
+        <h1 style="font-size:72px; font-weight:900; letter-spacing:0.15em; margin:0;">INVOICE</h1>
       </div>
 
       <div style="border:1px solid #000; padding:12px 16px; margin-bottom:12px; font-size:11px;">
@@ -410,7 +410,7 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
 
           <div style="margin-bottom:7px;">
             <span style="font-weight:600;">- Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-            <div style="margin-left:16px; margin-top:5px;">
+            <div style="margin-left:10px; margin-top:5px;">
               <div>Biller ID no.: 099-4-00259063-3</div>
               <div>Reference no. (Ref 1): 700002</div>
               <div>Reference no. (Ref 2): ${escapeHtml(invoiceNumberDisplay || '-')}</div>

@@ -1354,9 +1354,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const term = "term1" // Default term
 
   // Create invoice state - declare early so they can be used in useMemo
-  const [selectedAcademicYear, setSelectedAcademicYear] = usePersistedState("invoice-creation:academicYear", "")
-  const [selectedTerm, setSelectedTerm] = usePersistedState("invoice-creation:term", "")
-  const [selectedGrade, setSelectedGrade] = usePersistedState("invoice-creation:grade", "")
+  // Use regular useState instead of usePersistedState - data should reset on page refresh
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState("")
+  const [selectedTerm, setSelectedTerm] = useState("")
+  const [selectedGrade, setSelectedGrade] = useState("")
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]) // For Trip & Activity multi-select
   const [selectedRoom, setSelectedRoom] = useState("")
 
@@ -2642,10 +2643,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       onNavigateToEmailSending(invoiceData)
     }
 
-    // Reset form
+    // Reset form completely
     setSelectedAcademicYear("")
     setSelectedTerm("")
     setSelectedGrade("")
+    setSelectedGrades([])
     setSelectedRoom("")
     setSelectedStudents([])
     setCsvStudents([])
@@ -2657,6 +2659,46 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setPaymentDeadline(undefined)
     setIsPreviewMode(false)
     setIsConfirmationOpen(false)
+    setStudentSelectionType("individual")
+    setSearchStudentTerm("")
+    setIsStudentSearchFocused(false)
+
+    // Reset Trip & Activity fields
+    setTripName("")
+    setTripDate(undefined)
+    setTripLocation("")
+
+    // Reset Exam fields
+    setExamName("")
+    setExamDate(undefined)
+    setExamType("")
+
+    // Reset Add Item dialog
+    setIsAddItemDialogOpen(false)
+    setAddItemSearchTerm("")
+    setAddItemCategory("all")
+
+    // Reset Edit Item dialog
+    setIsEditItemDialogOpen(false)
+    setEditingItem(null)
+    setEditItemDescription("")
+    setEditItemAmount(0)
+
+    // Reset Add New Student dialog
+    setIsAddNewStudentOpen(false)
+    setNewStudentFirstName("")
+    setNewStudentLastName("")
+    setNewStudentNickname("")
+    setNewStudentGender("other")
+    setNewStudentDob("")
+    setNewStudentFamilyType("new")
+    setNewStudentFamilyId("")
+    setNewStudentChildOrder(1)
+    setNewStudentParentName("")
+    setNewStudentParentRelation("guardian")
+    setNewStudentEmail("")
+    setNewStudentPhone("")
+    setNewStudentAddress("")
   }
 
   const handleFinalConfirmation = () => {
@@ -2787,15 +2829,20 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       setIsPreviewDialogOpen(false)
 
       // Navigate back to Invoice Management
+      console.log("onNavigateBack exists?", !!onNavigateBack)
       if (onNavigateBack) {
+        console.log("Calling onNavigateBack() immediately (no setTimeout)")
         onNavigateBack()
+        console.log("onNavigateBack() called successfully")
         return
       }
+      console.log("onNavigateBack not available, continuing to reset form")
 
-      // Reset form
+      // Reset form completely
       setSelectedAcademicYear("")
       setSelectedTerm("")
       setSelectedGrade("")
+      setSelectedGrades([])
       setSelectedRoom("")
       setSelectedStudents([])
       setCsvStudents([])
@@ -2806,6 +2853,47 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       setSelectedTemplate("")
       setPaymentDeadline(undefined)
       setIsPreviewMode(false)
+      setIsConfirmationOpen(false)
+      setStudentSelectionType("individual")
+      setSearchStudentTerm("")
+      setIsStudentSearchFocused(false)
+
+      // Reset Trip & Activity fields
+      setTripName("")
+      setTripDate(undefined)
+      setTripLocation("")
+
+      // Reset Exam fields
+      setExamName("")
+      setExamDate(undefined)
+      setExamType("")
+
+      // Reset Add Item dialog
+      setIsAddItemDialogOpen(false)
+      setAddItemSearchTerm("")
+      setAddItemCategory("all")
+
+      // Reset Edit Item dialog
+      setIsEditItemDialogOpen(false)
+      setEditingItem(null)
+      setEditItemDescription("")
+      setEditItemAmount(0)
+
+      // Reset Add New Student dialog
+      setIsAddNewStudentOpen(false)
+      setNewStudentFirstName("")
+      setNewStudentLastName("")
+      setNewStudentNickname("")
+      setNewStudentGender("other")
+      setNewStudentDob("")
+      setNewStudentFamilyType("new")
+      setNewStudentFamilyId("")
+      setNewStudentChildOrder(1)
+      setNewStudentParentName("")
+      setNewStudentParentRelation("guardian")
+      setNewStudentEmail("")
+      setNewStudentPhone("")
+      setNewStudentAddress("")
 
       console.log("=== Draft saved successfully ===")
     } catch (error) {
@@ -3518,7 +3606,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
             {/* Step 6 (or Step 4 for simplified views): Select Students/Payer */}
             {selectedItems.length > 0 && paymentDeadline && (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <h3 className="font-medium">{isSimplifiedView ? "4" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "6" : "7")}. {isSimplifiedView ? "Select Payer" : "Select Students"}</h3>
 
                 {/* Payer Selection Type for Simplified Views */}
@@ -3683,9 +3771,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
                     {/* Individual Selection */}
                     {studentSelectionType === "individual" && (
-                      <div className="space-y-3">
+                      <div className="relative space-y-1">
                         <div className="flex gap-2">
-                          <div className="relative flex-1">
+                          <div className="flex-1">
                             <Input
                               placeholder={t('invoiceCreation.placeholderSearchStudent')}
                               value={searchStudentTerm}
@@ -3714,13 +3802,13 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </div>
 
                         {(isStudentSearchFocused || searchStudentTerm.length > 0) && (
-                          <div className="absolute z-50 w-full mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="p-2 border-b mb-1.5 flex items-center justify-between px-3">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground/70">
                                 {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
                               </p>
                               {!isSimplifiedView && selectedGrade && (
-                                <Badge variant="outline" className="text-[10px] font-bold bg-primary/5 text-primary border-primary/20">
+                                <Badge variant="outline" className="text-xs font-semibold bg-primary/5 text-primary border-primary/20">
                                   {selectedGrade} {selectedRoom ? `• ${selectedRoom}` : ''}
                                 </Badge>
                               )}
@@ -3739,34 +3827,28 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                     }}
                                     className={`group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0 ${studentHasDiscounts ? 'bg-green-50/50 hover:bg-green-50' : ''}`}
                                   >
-                                    <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shadow-sm border border-primary/20">
-                                      {student.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                                    </div>
                                     <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-sm truncate uppercase tracking-tight flex items-center gap-2">
+                                      <div className="font-semibold text-sm truncate uppercase tracking-tight">
                                         {student.name}
-                                        {studentHasDiscounts && (
-                                          <CheckCircle className="h-3 w-4 text-green-500" />
-                                        )}
                                       </div>
                                       <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[10px] font-mono font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
-                                        <span className="text-[11px] text-muted-foreground font-medium">• {student.grade}</span>
+                                        <span className="text-xs font-mono font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
+                                        <span className="text-xs text-muted-foreground font-medium">• {student.grade}</span>
                                       </div>
                                       {studentHasDiscounts && (
-                                        <div className="flex flex-wrap gap-1 mt-1.5 scale-[0.85] origin-left">
+                                        <div className="flex flex-wrap gap-1 mt-1.5">
                                           {invoiceStudent.discounts.siblingDiscount > 0 && (
-                                            <Badge variant="outline" className="text-[10px] bg-green-100 text-green-700 border-green-300">
+                                            <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
                                               Sibling {invoiceStudent.discounts.siblingDiscount}%
                                             </Badge>
                                           )}
                                           {invoiceStudent.discounts.staffChild && (
-                                            <Badge variant="outline" className="text-[10px] bg-blue-100 text-blue-700 border-blue-300">
+                                            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
                                               Staff Child
                                             </Badge>
                                           )}
                                           {invoiceStudent.discounts.scholarship && (
-                                            <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-700 border-purple-300">
+                                            <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
                                               Scholarship
                                             </Badge>
                                           )}
@@ -4344,9 +4426,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
       {/* Invoice Preview Dialog */}
       < Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen} >
-        <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0" aria-describedby="preview-description">
           <DialogHeader className="sr-only">
             <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogDescription id="preview-description">
+              Preview of the invoice before saving or sending
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col">
             {/* Content */}
@@ -4375,11 +4460,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <p className="text-xs text-gray-600">
                           {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
                         </p>
-                        <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
+                        <h1 style={{ fontSize: '56px', fontWeight: 'bold', marginTop: '12px', marginBottom: '2px', letterSpacing: '0.05em' }}>INVOICE</h1>
                       </div>
 
                       {/* Client & Invoice Info - Two Column Layout */}
-                      <div className="px-4 py-3">
+                      <div className="px-4" style={{ paddingTop: '2px', paddingBottom: '12px' }}>
                         <div className="border border-black p-4" style={{ fontSize: '11px' }}>
                           <div className="flex justify-between">
                             {/* Left Column - Client Info */}
@@ -4563,7 +4648,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
                             </div>
                           </div>
-                          <div className="mt-2" style={{ marginLeft: '138px' }}>
+                          <div className="mt-2" style={{ marginLeft: '178px' }}>
                             <table>
                               <tbody>
                                 <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td><td className="text-left">099-4-00259063-3</td></tr>
@@ -4662,11 +4747,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <p className="text-xs text-gray-600">
                           {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
                         </p>
-                        <h1 className="text-xl font-semibold mt-3 tracking-wide">INVOICE</h1>
+                        <h1 style={{ fontSize: '56px', fontWeight: 'bold', marginTop: '12px', marginBottom: '2px', letterSpacing: '0.05em' }}>INVOICE</h1>
                       </div>
 
                       {/* Student & Invoice Info - Two Column Layout */}
-                      <div className="px-4 py-3">
+                      <div className="px-4" style={{ paddingTop: '2px', paddingBottom: '12px' }}>
                         <div className="border border-black p-4" style={{ fontSize: '11px' }}>
                           <div className="flex justify-between">
                             {/* Left Column - Student Info */}
@@ -4848,7 +4933,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             </div>
                           </div>
 
-                          <div className="mt-2" style={{ marginLeft: '138px' }}>
+                          <div className="mt-2" style={{ marginLeft: '178px' }}>
                             <table>
                               <tbody>
                                 <tr>

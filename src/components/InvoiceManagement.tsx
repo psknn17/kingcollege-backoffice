@@ -1592,7 +1592,7 @@ export function InvoiceManagement({
             <img src="${SchoolLogo}" style="height:80px; margin:0 auto 8px; display:block;" alt="School Logo" />
             <div style="font-size:12px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.address)}</div>
             <div style="font-size:12px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.phone)}, ${escapeHtml(SCHOOL_INFO.email)}, ${escapeHtml(SCHOOL_INFO.website)}</div>
-            <div style="margin-top:8px; font-size:18px; font-weight:700; letter-spacing:2px;">INVOICE</div>
+            <div style="margin-top:8px; font-size:72px; font-weight:700; letter-spacing:2px;">INVOICE</div>
           </div>
 
           <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:11px;">
@@ -3351,7 +3351,7 @@ export function InvoiceManagement({
 
               {/* Invoice Title */}
               <div className="text-center py-4">
-                <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
+                <h1 className="text-7xl font-bold tracking-wider">INVOICE</h1>
                 <Badge variant="outline" className="mt-2">
                   <Eye className="w-3 h-3 mr-1" />
                   View Only
@@ -5223,7 +5223,7 @@ export function InvoiceManagement({
               </div>
 
               {/* Invoice Title */}
-              <h1 className="font-black text-center my-6" style={{ fontSize: '32px' }}>INVOICE</h1>
+              <h1 className="font-black text-center my-6" style={{ fontSize: '72px' }}>INVOICE</h1>
 
               {/* Client & Invoice Info */}
               <div className="border border-black p-4 mb-6" style={{ fontSize: '12px' }}>
@@ -5366,7 +5366,7 @@ export function InvoiceManagement({
                     </div>
                   </div>
 
-                  <div className="mt-2" style={{ marginLeft: '138px' }}>
+                  <div className="mt-2" style={{ marginLeft: '178px' }}>
                     <table>
                       <tbody>
                         <tr>
