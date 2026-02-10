@@ -1231,19 +1231,19 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                           setStudentInput("")
                                           toast.success(`Added ${student.name} (${student.id})`)
                                         }}
-                                        className="group px-3 py-2.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-1.5 last:mb-0 bg-white"
+                                        className="group flex items-center justify-between px-4 py-3.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-2 last:mb-0 bg-white"
                                       >
-                                        <div>
+                                        <div className="flex-1 min-w-0">
                                           <div className="font-semibold text-[15px] text-gray-900 truncate group-hover:text-blue-900 transition-colors">{student.name}</div>
                                           <div className="flex items-center gap-2 mt-1">
                                             <span className="inline-flex items-center text-xs font-mono font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
                                               ID: {student.id}
                                             </span>
                                             <span className="text-xs text-gray-500">•</span>
-                                            <span className="text-xs text-gray-600 font-medium">Year {student.yearGroup}</span>
+                                            <span className="text-xs text-gray-600 font-medium">{student.yearGroup}</span>
                                           </div>
                                         </div>
-                                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 group-hover:scale-110 flex-shrink-0 ml-3">
                                           <Plus className="h-4 w-4 stroke-[2.5]" />
                                         </div>
                                       </div>
@@ -1689,7 +1689,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 .map(student => (
                                   <div
                                     key={student.id}
-                                    className="group px-3 py-2.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-1.5 last:mb-0 bg-white"
+                                    className="group flex items-center justify-between px-4 py-3.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-2 last:mb-0 bg-white"
                                     onClick={() => {
                                       setGroupForm(prev => ({
                                         ...prev,
@@ -1699,17 +1699,17 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                       toast.success(`Added ${student.name} (${student.id})`)
                                     }}
                                   >
-                                    <div>
+                                    <div className="flex-1 min-w-0">
                                       <div className="font-semibold text-[15px] text-gray-900 truncate group-hover:text-blue-900 transition-colors">{student.name}</div>
                                       <div className="flex items-center gap-2 mt-1">
                                         <span className="inline-flex items-center text-xs font-mono font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
                                           ID: {student.id}
                                         </span>
                                         <span className="text-xs text-gray-500">•</span>
-                                        <span className="text-xs text-gray-600 font-medium">Year {student.yearGroup}</span>
+                                        <span className="text-xs text-gray-600 font-medium">{student.yearGroup}</span>
                                       </div>
                                     </div>
-                                    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                                    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 group-hover:scale-110 flex-shrink-0 ml-3">
                                       <Plus className="h-4 w-4 stroke-[2.5]" />
                                     </div>
                                   </div>
