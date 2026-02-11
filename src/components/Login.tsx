@@ -84,12 +84,19 @@ export function Login() {
           width: "65%",
           height: "100%",
           position: "relative",
-          backgroundImage: `url(${SchoolImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat"
+          overflow: "hidden"
         }}
       >
+        <img
+          src={SchoolImage}
+          alt="School Background"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center"
+          }}
+        />
       </div>
 
       {/* Right Side - Login Form */}
@@ -115,7 +122,7 @@ export function Login() {
         >
           {/* Logo */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "32px" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "120px", width: "auto" }} />
+            <img src={SchoolLogo} alt="King's College" style={{ height: "220px", width: "auto" }} />
           </div>
 
           {/* Header */}

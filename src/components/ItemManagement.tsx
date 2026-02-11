@@ -2276,12 +2276,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       return
     }
 
+    // For external and exam templates, set applicableGrades to empty array (not grade-specific)
+    const applicableGrades = invoiceType === "external" || invoiceType === "exam"
+      ? []
+      : newTemplate.applicableGrades
+
     const templateData: ItemTemplate = {
       id: editingTemplate?.id || `template-${Date.now()}`,
       name: newTemplate.name,
       description: newTemplate.description,
       items: selectedItemsForTemplate,
-      applicableGrades: newTemplate.applicableGrades,
+      applicableGrades: applicableGrades,
       isActive: true,
       invoiceType: editingTemplate?.invoiceType || invoiceType
     }
@@ -2772,26 +2777,28 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
                     <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
 
-                    {/* Applicable Grades */}
-                    <div className="mb-3">
-                      <p className="text-sm font-medium mb-1">Applicable Grades:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {template.applicableGrades.length === grades.length ? (
-                          <Badge variant="secondary" className="text-xs">All Grades</Badge>
-                        ) : template.applicableGrades.length > 5 ? (
-                          <>
-                            {template.applicableGrades.slice(0, 3).map(grade => (
+                    {/* Applicable Grades - Hide for External and Exam (not grade-specific) */}
+                    {invoiceType !== "external" && invoiceType !== "exam" && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium mb-1">Applicable Grades:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {template.applicableGrades.length === grades.length ? (
+                            <Badge variant="secondary" className="text-xs">All Grades</Badge>
+                          ) : template.applicableGrades.length > 5 ? (
+                            <>
+                              {template.applicableGrades.slice(0, 3).map(grade => (
+                                <Badge key={grade} variant="outline" className="text-xs">{grade}</Badge>
+                              ))}
+                              <Badge variant="secondary" className="text-xs">+{template.applicableGrades.length - 3} more</Badge>
+                            </>
+                          ) : (
+                            template.applicableGrades.map(grade => (
                               <Badge key={grade} variant="outline" className="text-xs">{grade}</Badge>
-                            ))}
-                            <Badge variant="secondary" className="text-xs">+{template.applicableGrades.length - 3} more</Badge>
-                          </>
-                        ) : (
-                          template.applicableGrades.map(grade => (
-                            <Badge key={grade} variant="outline" className="text-xs">{grade}</Badge>
-                          ))
-                        )}
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="space-y-2">
                       <p className="text-sm font-medium">{template.items.length} items:</p>
@@ -2947,26 +2954,29 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="font-medium">Applicable Grades *</label>
-              <div className="flex flex-wrap gap-2">
-                {grades.map((grade) => (
-                  <Badge
-                    key={grade}
-                    variant={newTemplate.applicableGrades.includes(grade) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => handleToggleGradeForTemplate(grade)}
-                  >
-                    {grade}
-                  </Badge>
-                ))}
+            {/* Hide Applicable Grades for External and Exam templates (not grade-specific) */}
+            {invoiceType !== "external" && invoiceType !== "exam" && (
+              <div className="space-y-2">
+                <label className="font-medium">Applicable Grades *</label>
+                <div className="flex flex-wrap gap-2">
+                  {grades.map((grade) => (
+                    <Badge
+                      key={grade}
+                      variant={newTemplate.applicableGrades.includes(grade) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => handleToggleGradeForTemplate(grade)}
+                    >
+                      {grade}
+                    </Badge>
+                  ))}
+                </div>
+                {newTemplate.applicableGrades.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {newTemplate.applicableGrades.length} grades selected
+                  </p>
+                )}
               </div>
-              {newTemplate.applicableGrades.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {newTemplate.applicableGrades.length} grades selected
-                </p>
-              )}
-            </div>
+            )}
 
             <div className="space-y-2">
               <label className="font-medium">Select Items *</label>

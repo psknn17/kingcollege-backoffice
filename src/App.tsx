@@ -224,18 +224,38 @@ export default function App() {
   const [subPageParams, setSubPageParams] = useState<any>(null)
 
   // Collapsible menu state - allow multiple groups to be open
-  const [openGroups, setOpenGroups] = usePersistedState<Record<string, boolean>>("app:openGroups", {
-    tuition: true,
-    debtReminder: false,
-    eca: false,
-    tripActivity: false,
-    exam: false,
-    schoolBus: false,
-    externalInvoice: false,
-    studentManagement: false,
-    userManagement: false,
-    settings: false
-  })
+  const getInitialOpenGroups = () => {
+    // For Approver role, only show User Management section open
+    if (user?.role === "Approver") {
+      return {
+        tuition: false,
+        debtReminder: false,
+        eca: false,
+        tripActivity: false,
+        exam: false,
+        schoolBus: false,
+        externalInvoice: false,
+        studentManagement: false,
+        userManagement: true,
+        settings: false
+      }
+    }
+    // Default for other roles
+    return {
+      tuition: true,
+      debtReminder: false,
+      eca: false,
+      tripActivity: false,
+      exam: false,
+      schoolBus: false,
+      externalInvoice: false,
+      studentManagement: false,
+      userManagement: false,
+      settings: false
+    }
+  }
+
+  const [openGroups, setOpenGroups] = usePersistedState<Record<string, boolean>>("app:openGroups", getInitialOpenGroups())
 
   const toggleGroup = (group: string) => {
     setOpenGroups(prev => ({
@@ -287,6 +307,14 @@ export default function App() {
       detail: `Menu: ${activeSection}`
     })
   }, [activeSection, t])
+
+  // Redirect Approver role to approval-queue only
+  useEffect(() => {
+    if (user?.role === "Approver" && activeSection !== "approval-queue") {
+      setActiveSection("approval-queue")
+    }
+  }, [user, activeSection])
+
   const [viewDetailsType, setViewDetailsType] = useState<"invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template">("invoice")
 
   const navigateToSubPage = (subPage: string, params?: any) => {

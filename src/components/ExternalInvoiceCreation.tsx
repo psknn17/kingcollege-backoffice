@@ -236,7 +236,9 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       if (item.id === editingItem.id) {
         return {
           ...item,
-          description: editItemDescription,
+          // Only update description for custom items (no itemId)
+          // For master items, description contains the item name and should not be changed
+          description: editingItem.itemId ? item.description : editItemDescription,
           details: editItemDetails,
           amount: editItemAmount
         }
@@ -549,18 +551,10 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
 
   return (
     <div className="space-y-6">
-      {/* Header with Back button */}
-      <div className="flex items-center gap-4">
-        {onNavigateBack && (
-          <Button variant="ghost" onClick={onNavigateBack} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-        )}
-        <h1 className="text-xl font-semibold">
-          {isEditMode ? "Edit External Invoice" : "Create External Invoice"}
-        </h1>
-      </div>
+      {/* Header */}
+      <h1 className="text-xl font-semibold">
+        {isEditMode ? "Edit External Invoice" : "Create External Invoice"}
+      </h1>
 
       <Card>
           <CardHeader className="pb-4">
@@ -570,7 +564,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-10">
+            <div className="space-y-16">
               {/* Step 1: Client Information */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -703,13 +697,22 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                       )}
                     </>
                   )}
+                </div>
+              </div>
 
-                  <Button variant="outline" onClick={addCustomItem} className="border-dashed border-2">
+              {/* Add Custom Line Item button - shown when no items selected */}
+              {lineItems.length === 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addCustomItem}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Custom Line Item
                   </Button>
                 </div>
-              </div>
+              )}
 
               {/* Step 3: Selected Items */}
               {lineItems.length > 0 && (
@@ -721,13 +724,23 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                         Total: {formatCurrency(total)}
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLineItems([])}
-                    >
-                      Clear All Items
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addCustomItem}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Custom Line Item
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLineItems([])}
+                      >
+                        Clear All Items
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="border rounded-lg">
@@ -918,23 +931,25 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 </div>
               )}
 
-              {/* Description (Editable) */}
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">
-                  {editingItem.itemId ? "Description (Optional)" : "Item Name"}
-                </Label>
-                <Textarea
-                  id="edit-description"
-                  value={editItemDescription}
-                  onChange={(e) => setEditItemDescription(e.target.value)}
-                  placeholder={editingItem.itemId ? "Additional description" : "Enter item name"}
-                  rows={2}
-                />
-              </div>
+              {/* Description - Only editable for custom items (no itemId) */}
+              {!editingItem.itemId && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Item Name</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editItemDescription}
+                    onChange={(e) => setEditItemDescription(e.target.value)}
+                    placeholder="Enter item name"
+                    rows={2}
+                  />
+                </div>
+              )}
 
               {/* Additional Details */}
               <div className="space-y-2">
-                <Label htmlFor="edit-details">Additional Details (Optional)</Label>
+                <Label htmlFor="edit-details">
+                  {editingItem.itemId ? "Description (Optional)" : "Additional Details (Optional)"}
+                </Label>
                 <Textarea
                   id="edit-details"
                   value={editItemDetails}
@@ -970,7 +985,12 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
             </Button>
             <Button
               onClick={handleSaveEditItem}
-              disabled={!editItemDescription || editItemAmount <= 0}
+              disabled={
+                // For custom items (no itemId), description is required
+                // For master items (with itemId), only amount is required
+                (editingItem && !editingItem.itemId && !editItemDescription) ||
+                editItemAmount <= 0
+              }
             >
               Save Changes
             </Button>
@@ -1069,7 +1089,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
         onConfirm={confirmDialog.handleConfirm}
         titleKey="confirmDialog.createTitle"
         descriptionKey="confirmDialog.createDescription"
-        confirmTextKey="common.create"
+        confirmTextKey="Create"
       />
     </div>
   )

@@ -38,20 +38,28 @@ export function ConfirmDialog({
     onOpenChange(false)
   }
 
+  // Helper function to translate or return plain text
+  const getText = (key: string) => {
+    // If the translation returns the same key, it means the key doesn't exist
+    // In that case, return the key as plain text (useful for fallback)
+    const translated = t(key)
+    return translated === key && !key.includes('.') ? key : translated
+  }
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t(titleKey)}</AlertDialogTitle>
-          <AlertDialogDescription>{t(descriptionKey)}</AlertDialogDescription>
+          <AlertDialogTitle>{getText(titleKey)}</AlertDialogTitle>
+          <AlertDialogDescription>{getText(descriptionKey)}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t(cancelTextKey)}</AlertDialogCancel>
+          <AlertDialogCancel>{getText(cancelTextKey)}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             className={variant === "destructive" ? "bg-red-600 hover:bg-red-700" : ""}
           >
-            {t(confirmTextKey)}
+            {getText(confirmTextKey)}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

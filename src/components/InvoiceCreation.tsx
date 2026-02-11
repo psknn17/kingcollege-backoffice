@@ -917,25 +917,9 @@ const defaultTemplates: ItemTemplate[] = [
   {
     id: "template-003",
     name: "Year 10 Full Package",
-    description: "Complete package with tuition and activities",
-    items: ["item-001", "item-002", "item-003", "item-005", "item-009"],
+    description: "Complete package with tuition fees",
+    items: ["item-001", "item-002", "item-003"],
     applicableGrades: ["Year 10"],
-    isActive: true
-  },
-  {
-    id: "template-004",
-    name: "Primary ECA Bundle",
-    description: "Popular ECA activities for primary students",
-    items: ["item-005", "item-007", "item-008"],
-    applicableGrades: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"],
-    isActive: true
-  },
-  {
-    id: "template-005",
-    name: "Secondary Activities",
-    description: "ECA and trip package for secondary students",
-    items: ["item-005", "item-006", "item-009", "item-010"],
-    applicableGrades: ["Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"],
     isActive: true
   }
 ]
@@ -1460,8 +1444,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
+    console.log('[InvoiceCreation] Loading items for invoiceType:', invoiceType, 'category:', category)
     return loadItemsFromStorage(invoiceType)
-  }, [invoiceType])
+  }, [invoiceType, category])
 
   // Get available terms based on selected academic year
   const availableTerms = selectedAcademicYear
@@ -1523,6 +1508,36 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       }
     }
   }, [availableStudents]) // Runs when availableStudents recalculates (due to term/year change)
+
+  // Force initialize items and templates for all invoice types if empty
+  useEffect(() => {
+    const storageKey = getItemsStorageKey(invoiceType)
+    const templatesKey = getTemplatesStorageKey(invoiceType)
+
+    try {
+      // Check items
+      const storedItems = localStorage.getItem(storageKey)
+      if (!storedItems || storedItems === '[]' || JSON.parse(storedItems).length === 0) {
+        const defaultItems = getDefaultItems(invoiceType)
+        if (defaultItems.length > 0) {
+          console.log(`[Force Init] Initializing ${invoiceType} items (${defaultItems.length} items)`)
+          localStorage.setItem(storageKey, JSON.stringify(defaultItems))
+        }
+      }
+
+      // Check templates
+      const storedTemplates = localStorage.getItem(templatesKey)
+      if (!storedTemplates || storedTemplates === '[]' || JSON.parse(storedTemplates).length === 0) {
+        const defaultTemplates = getDefaultTemplates(invoiceType)
+        if (defaultTemplates.length > 0) {
+          console.log(`[Force Init] Initializing ${invoiceType} templates (${defaultTemplates.length} templates)`)
+          localStorage.setItem(templatesKey, JSON.stringify(defaultTemplates))
+        }
+      }
+    } catch (error) {
+      console.error(`[Force Init] Failed to initialize ${invoiceType}:`, error)
+    }
+  }, [invoiceType]) // Runs when invoiceType changes
 
   // Load edit invoice data
   useEffect(() => {
@@ -1675,27 +1690,35 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         console.log(`[exam] Looking for category:`, selectedCategory)
       }
 
-      // For exam invoices, don't filter by grade (exams can apply to any grade)
-      const filteredItems = invoiceType === "exam"
+      // For exam invoices, don't filter by grade or category (exams can apply to any grade, and have sub-categories: International Exam, English Proficiency, Competition, School Exam)
+      // For external invoices, don't filter by grade or category (external items are not grade-specific)
+      // For ECA invoices, don't filter by category (ECA items have sub-categories: Music, Arts, Sports, Academic, Other)
+      const filteredItems = invoiceType === "exam" || invoiceType === "external"
         ? allItems.filter(item =>
-          item.isActive &&
-          item.category === selectedCategory
+          item.isActive
         )
-        : allItems.filter(item =>
-          item.isActive &&
-          item.applicableGrades.includes(selectedGrade) &&
-          item.category === selectedCategory
-        )
+        : invoiceType === "eca"
+          ? allItems.filter(item =>
+            item.isActive &&
+            item.applicableGrades.includes(selectedGrade)
+          )
+          : allItems.filter(item =>
+            item.isActive &&
+            item.applicableGrades.includes(selectedGrade) &&
+            item.category === selectedCategory
+          )
       console.log(`[${invoiceType}] Filtered to ${filteredItems.length} items`)
       setAvailableItems(filteredItems)
 
       const allTemplates = loadTemplatesFromStorage(invoiceType)
-      // For exam templates, also don't filter by grade
-      const filteredTemplates = invoiceType === "exam"
+      console.log('[InvoiceCreation] Loaded templates for invoiceType:', invoiceType, 'templates:', allTemplates.length, allTemplates.map(t => t.name))
+      // For exam and external templates, don't filter by grade
+      const filteredTemplates = invoiceType === "exam" || invoiceType === "external"
         ? allTemplates.filter(template => template.isActive)
         : allTemplates.filter(template =>
           template.isActive && template.applicableGrades.includes(selectedGrade)
         )
+      console.log('[InvoiceCreation] Filtered templates:', filteredTemplates.length, filteredTemplates.map(t => t.name))
       setAvailableTemplates(filteredTemplates)
     }
   }, [selectedGrade, selectedCategory, invoiceType])
@@ -1845,27 +1868,21 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     console.log(`[${invoiceType}] Loaded ${allItems.length} items from storage`)
 
     // Filter available items for this grade
-    // For School Bus (summer), load all items (not grade-specific)
-    // For Exam, load all items (exams can apply to any grade)
-    // For ECA, include all items (Music, Arts, Sports, Academic, Other categories)
-    // For other types, filter by specific category
-    const gradeItems = invoiceType === "summer"
+    // For School Bus (summer), External, and Exam: load all active items (not grade-specific)
+    // For ECA: include all items for the selected grade (ECA items have sub-categories: Music, Arts, Sports, Academic, Other)
+    // For other types, filter by specific category and grade
+    const gradeItems = invoiceType === "summer" || invoiceType === "external" || invoiceType === "exam"
       ? allItems.filter(item => item.isActive)
-      : invoiceType === "exam"
+      : invoiceType === "eca"
         ? allItems.filter(item =>
           item.isActive &&
-          item.category === "International Exam"
+          item.applicableGrades.includes(grade)
         )
-        : invoiceType === "eca"
-          ? allItems.filter(item =>
-            item.isActive &&
-            item.applicableGrades.includes(grade)
-          )
-          : allItems.filter(item =>
-            item.isActive &&
-            item.applicableGrades.includes(grade) &&
-            item.category === (defaultCategory || "Tuition")
-          )
+        : allItems.filter(item =>
+          item.isActive &&
+          item.applicableGrades.includes(grade) &&
+          item.category === (defaultCategory || "Tuition")
+        )
     console.log(`[${invoiceType}] Filtered to ${gradeItems.length} items for grade ${grade}`)
     setAvailableItems(gradeItems)
 
@@ -1874,14 +1891,24 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
     // Load templates from localStorage
     const allTemplates = loadTemplatesFromStorage(invoiceType)
+    console.log(`[${invoiceType}] Loaded ${allTemplates.length} templates from storage`)
 
     // Filter available templates for this grade
-    // For School Bus (summer), load all templates (not grade-specific)
-    const gradeTemplates = invoiceType === "summer"
+    // For summer, student, tuition, external: show all active templates (no grade filtering)
+    // For ECA, Exam, Trip, Bus: filter by grade if template has grade restrictions
+    // This allows flexibility - templates are just quick-start helpers, not strict requirements
+    const gradeTemplates = invoiceType === "summer" || invoiceType === "student" || invoiceType === "tuition" || invoiceType === "external"
       ? allTemplates.filter(template => template.isActive)
-      : allTemplates.filter(template =>
-        template.isActive && template.applicableGrades.includes(grade)
-      )
+      : invoiceType === "eca" || invoiceType === "exam" || invoiceType === "trip" || invoiceType === "bus"
+        ? allTemplates.filter(template =>
+          template.isActive &&
+          (template.applicableGrades.length === 0 || template.applicableGrades.includes(grade))
+        )
+        : allTemplates.filter(template =>
+          template.isActive &&
+          (template.applicableGrades.length === 0 || template.applicableGrades.includes(grade))
+        )
+    console.log(`[${invoiceType}] Filtered to ${gradeTemplates.length} templates for grade ${grade}`)
     setAvailableTemplates(gradeTemplates)
   }
 
@@ -1971,11 +1998,20 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     const allItems = loadItemsFromStorage(invoiceType)
 
     // Filter available items for selected grade and new category
-    const categoryItems = allItems.filter(item =>
-      item.isActive &&
-      item.applicableGrades.includes(selectedGrade) &&
-      item.category === category
-    )
+    // For exam and external: don't filter by grade or category (show all active items)
+    // For ECA: don't filter by category (ECA items have sub-categories: Music, Arts, Sports, etc.)
+    const categoryItems = invoiceType === "exam" || invoiceType === "external"
+      ? allItems.filter(item => item.isActive)
+      : invoiceType === "eca"
+        ? allItems.filter(item =>
+          item.isActive &&
+          item.applicableGrades.includes(selectedGrade)
+        )
+        : allItems.filter(item =>
+          item.isActive &&
+          item.applicableGrades.includes(selectedGrade) &&
+          item.category === category
+        )
     setAvailableItems(categoryItems)
   }
 
@@ -3309,15 +3345,30 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {availableTemplates.map((template) => {
                         const isSelected = selectedTemplate === template.id
-                        const totalAmount = template.items.reduce((sum, itemId) => {
+
+                        // Calculate total amount and track missing items
+                        let totalAmount = 0
+                        let foundItemsCount = 0
+                        let missingItemsCount = 0
+
+                        template.items.forEach(itemId => {
                           const item = allStoredItems.find(i => i.id === itemId)
-                          return sum + (item?.amount || 0)
-                        }, 0)
+                          if (item) {
+                            totalAmount += item.amount
+                            foundItemsCount++
+                          } else {
+                            missingItemsCount++
+                            console.warn(`[Template ${template.name}] Item not found: ${itemId}`)
+                          }
+                        })
+
+                        // Show warning if items are missing
+                        const hasInvalidItems = missingItemsCount > 0
 
                         return (
                           <Card
                             key={template.id}
-                            className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                            className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"} ${hasInvalidItems ? "border-orange-300" : ""}`}
                             onClick={() => handleTemplateSelect(isSelected ? "none" : template.id)}
                           >
                             <CardContent className="p-4">
@@ -3326,17 +3377,26 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                   <Bookmark className="w-4 h-4 text-primary" />
                                   <h4 className="font-medium">{template.name}</h4>
                                 </div>
-                                {isSelected && (
-                                  <CheckCircle className="w-5 h-5 text-primary" />
-                                )}
+                                <div className="flex items-center gap-2">
+                                  {hasInvalidItems && (
+                                    <AlertCircle className="w-4 h-4 text-orange-500" title={`${missingItemsCount} item(s) not found`} />
+                                  )}
+                                  {isSelected && (
+                                    <CheckCircle className="w-5 h-5 text-primary" />
+                                  )}
+                                </div>
                               </div>
 
                               <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
 
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium">Items: {template.items.length}</span>
-                                  <span className="font-medium">{formatCurrency(totalAmount)}</span>
+                                  <span className="text-sm font-medium">
+                                    Items: {foundItemsCount}{missingItemsCount > 0 && <span className="text-orange-500"> ({missingItemsCount} missing)</span>}
+                                  </span>
+                                  <span className={`font-medium ${hasInvalidItems ? "text-orange-500" : ""}`}>
+                                    {hasInvalidItems && foundItemsCount === 0 ? "N/A" : formatCurrency(totalAmount)}
+                                  </span>
                                 </div>
 
                                 <div className="flex flex-wrap gap-1">
