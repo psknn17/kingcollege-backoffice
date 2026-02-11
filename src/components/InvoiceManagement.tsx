@@ -2328,8 +2328,45 @@ export function InvoiceManagement({
   }
 
   const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
+    // Check if invoice is marked as paid
     if (invoice.status === "paid") return "paid"
+
+    // Check if invoice has paid date (payment was recorded)
+    if (invoice.paidDate) return "paid"
+
+    // Check if a receipt exists for this invoice
+    const category = invoice.category || "tuition"
+    let receiptStorageKey = ""
+    if (category === "eca") receiptStorageKey = "receiptRecords_eca"
+    else if (category === "trip") receiptStorageKey = "receiptRecords_trip"
+    else if (category === "exam") receiptStorageKey = "receiptRecords_event"
+    else if (category === "bus") receiptStorageKey = "receiptRecords_summer"
+    else if (category === "external") receiptStorageKey = "receiptRecords_external"
+    else receiptStorageKey = "receiptRecords_tuition"
+
+    try {
+      const storedReceipts = localStorage.getItem(receiptStorageKey)
+      if (storedReceipts) {
+        const receipts = JSON.parse(storedReceipts)
+        const hasReceipt = receipts.some((receipt: any) =>
+          receipt.invoices?.some((inv: any) => inv.id === invoice.id || inv.invoiceNo === invoice.invoiceNumber)
+        )
+        if (hasReceipt) return "paid"
+      }
+    } catch (error) {
+      console.error("Error checking receipt status:", error)
+    }
+
+    // Check if overdue
     if (invoice.status === "overdue") return "overdue"
+
+    // Check if past due date and not paid
+    const now = new Date()
+    const dueDate = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
+    if (dueDate < now && invoice.status !== "paid" && invoice.status !== "draft") {
+      return "overdue"
+    }
+
     return "unpaid"
   }
 
