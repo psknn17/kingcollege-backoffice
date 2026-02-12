@@ -3652,6 +3652,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       mode="single"
                       selected={paymentDeadline}
                       onSelect={setPaymentDeadline}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                       initialFocus
                     />
                   </PopoverContent>

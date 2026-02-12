@@ -481,8 +481,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
           {/* Total row */}
           <tr className="border-t border-black">
             <td className="py-3 px-4 border-r border-black">
-              <div className="flex justify-between items-center">
-                <span>{numberToWords(total)}</span>
+              <div className="flex justify-end items-center">
                 <span className="font-bold">Total</span>
               </div>
             </td>
@@ -626,7 +625,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
               </div>
 
               {/* Step 2: Select Items */}
-              <div className="space-y-3">
+              <div className="space-y-3 mt-6">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-lg">2</span>
                   <h3 className="font-semibold">Select Items</h3>
@@ -719,7 +718,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
 
               {/* Step 3: Selected Items */}
               {lineItems.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3 mt-8">
                   <div className="flex justify-between items-center">
                     <div>
                       <label className="font-medium">Selected Items ({lineItems.length})</label>
@@ -808,18 +807,12 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                       </TableBody>
                     </Table>
                   </div>
-
-                  {total > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {numberToWords(total)}
-                    </p>
-                  )}
                 </div>
               )}
 
               {/* Step 4: Due Date */}
               {lineItems.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3 mt-8">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-lg">4</span>
                     <h3 className="font-semibold">Payment Due Date</h3>
@@ -839,7 +832,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                             mode="single"
                             selected={dueDate}
                             onSelect={(date) => date && setDueDate(date)}
-                            disabled={(date) => date < invoiceDate}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           />
                         </PopoverContent>
                       </Popover>
