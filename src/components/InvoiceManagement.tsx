@@ -445,8 +445,8 @@ export function InvoiceManagement({
   const [currentPage, setCurrentPage] = usePersistedState("invoice-management:page", 1)
   const [pageSize, setPageSize] = usePersistedState("invoice-management:pageSize", 10)
 
-  // Invoice type tab state
-  const [invoiceTypeTab, setInvoiceTypeTab] = usePersistedState<"student" | "external">("invoice-management:invoiceTypeTab", defaultTab)
+  // Invoice type tab state (unique key per category to avoid conflicts)
+  const [invoiceTypeTab, setInvoiceTypeTab] = usePersistedState<"student" | "external">(`invoice-management:invoiceTypeTab:${category || 'default'}`, defaultTab || "student")
 
   // Get available terms based on selected academic year
   const availableTerms = academicYearFilter !== "all"

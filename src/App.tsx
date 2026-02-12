@@ -25,9 +25,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu"
-import { AcademicYearProvider } from "./contexts/AcademicYearContext"
-import { StudentProvider } from "./contexts/StudentContext"
-import { DiscountOptionsProvider } from "./contexts/DiscountOptionsContext"
 import { useLanguage } from "./contexts/LanguageContext"
 import { useAuth } from "./contexts/AuthContext"
 import { Button } from "./components/ui/button"
@@ -532,10 +529,7 @@ export default function App() {
   }
 
   return (
-    <AcademicYearProvider>
-      <DiscountOptionsProvider>
-        <StudentProvider>
-          <SidebarProvider>
+    <SidebarProvider>
             <div className="flex h-screen w-full">
               <Sidebar className="border-r">
                 <SidebarHeader className="p-4">
@@ -1065,9 +1059,6 @@ export default function App() {
               onDownload={handleGlobalDownload}
               onPrint={handleGlobalPrint}
             />
-          </SidebarProvider>
-        </StudentProvider>
-      </DiscountOptionsProvider>
-    </AcademicYearProvider>
+    </SidebarProvider>
   )
 }

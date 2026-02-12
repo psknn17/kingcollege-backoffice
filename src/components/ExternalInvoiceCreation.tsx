@@ -259,6 +259,17 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
 
   // Save invoice
   const performSave = (status: "draft" | "pending") => {
+    // Validate required fields
+    if (!clientName) {
+      toast.error("Please enter client name")
+      return
+    }
+
+    if (lineItems.length === 0) {
+      toast.error("Please add at least one item")
+      return
+    }
+
     if (!isValid && status !== "draft") {
       toast.error("Please fill in all required fields")
       return
@@ -279,8 +290,8 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       clientName,
       contactName,
       address,
-      issueDate: invoiceDate ? format(invoiceDate, 'yyyy-MM-dd') : null,
-      dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
+      issueDate: invoiceDate && invoiceDate instanceof Date ? format(invoiceDate, 'yyyy-MM-dd') : null,
+      dueDate: dueDate && dueDate instanceof Date ? format(dueDate, 'yyyy-MM-dd') : null,
       term: "External",
       items: lineItems.map(item => ({
         itemId: item.itemId,
@@ -339,8 +350,8 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
         onNavigateBack()
       }
     } catch (error) {
-      toast.error("Failed to save invoice")
-      console.error(error)
+      console.error("Failed to save invoice:", error)
+      toast.error(`Failed to save invoice: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
