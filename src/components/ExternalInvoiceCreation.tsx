@@ -271,23 +271,33 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       invoiceType: "external",
       studentId: "EXTERNAL",
       studentName: clientName,
+      recipientName: clientName,
+      recipientAddress: address,
       parentName: contactName,
       status,
       approvalStatus: editInvoice?.approvalStatus || "wait",
       clientName,
       contactName,
       address,
-      issueDate: editInvoice?.issueDate || null, // Will be set on approval
+      issueDate: invoiceDate ? format(invoiceDate, 'yyyy-MM-dd') : null,
       dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
       term: "External",
       items: lineItems.map(item => ({
         itemId: item.itemId,
         name: item.description,
         description: item.details,
-        amount: item.amount
+        amount: item.amount,
+        discountPercent: 0,
+        discountedAmount: item.amount,
+        notes: item.details || ""
       })),
       subtotal,
+      totalDiscount: 0,
+      netAmount: total,
+      discountAmount: 0,
+      finalAmount: total,
       total,
+      notes: "",
       createdAt: editInvoice?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -615,6 +625,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                           mode="single"
                           selected={invoiceDate}
                           onSelect={(date) => date && setInvoiceDate(date)}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         />
                       </PopoverContent>
                     </Popover>
@@ -836,6 +847,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                             mode="single"
                             selected={dueDate}
                             onSelect={(date) => date && setDueDate(date)}
+                            disabled={(date) => date < invoiceDate}
                           />
                         </PopoverContent>
                       </Popover>
