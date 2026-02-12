@@ -613,22 +613,14 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium">Invoice date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full h-9 justify-start font-normal">
-                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                          {format(invoiceDate, 'dd/MM/yyyy')}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={invoiceDate}
-                          onSelect={(date) => date && setInvoiceDate(date)}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Button
+                      variant="outline"
+                      className="w-full h-9 justify-start font-normal cursor-not-allowed opacity-70"
+                      disabled
+                    >
+                      <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                      {format(invoiceDate, 'dd/MM/yyyy')}
+                    </Button>
                   </div>
                 </div>
               </div>
