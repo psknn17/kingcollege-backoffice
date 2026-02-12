@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -6,7 +6,7 @@ import { Label } from "./ui/label"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
-import { CalendarIcon, Save, Plus, Trash2, GraduationCap, ChevronDown, CheckCircle2 } from "lucide-react"
+import { CalendarIcon, Save, Plus, Trash2, GraduationCap, ChevronDown, CheckCircle2, X } from "lucide-react"
 import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
@@ -30,6 +30,18 @@ export function TuitionTermSettings() {
   const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
+
+  // Local state for editing - changes only saved when user clicks Save
+  const [editedYears, setEditedYears] = useState<Record<string, AcademicYear>>({})
+
+  // Initialize edited years when academicYears changes
+  useEffect(() => {
+    const initial: Record<string, AcademicYear> = {}
+    academicYears.forEach(year => {
+      initial[year.id] = JSON.parse(JSON.stringify(year)) // Deep clone
+    })
+    setEditedYears(initial)
+  }, [academicYears])
 
   // Calculate next valid year (must be consecutive)
   const getNextValidYear = (): number => {
@@ -102,29 +114,52 @@ export function TuitionTermSettings() {
 
     const updatedYears = [...academicYears, newYear].sort((a, b) => b.id.localeCompare(a.id))
     setAcademicYears(updatedYears)
+
+    // Also add to editedYears
+    setEditedYears(prev => ({
+      ...prev,
+      [yearId]: JSON.parse(JSON.stringify(newYear))
+    }))
+
     setExpandedYears(prev => [...prev, yearId])
     setIsAddYearDialogOpen(false)
     setNewYearStart("")
+
+    // Save immediately after creating new year
+    setTimeout(() => {
+      saveAcademicYears()
+    }, 100)
+
     toast.success(`${t("termSettings.academicYear")} ${yearId} ${t("termSettings.yearCreated")}`)
   }
 
   const deleteAcademicYear = (yearId: string) => {
     if (academicYears.length <= 1) return
     deleteYear(yearId)
+
+    // Also remove from editedYears
+    setEditedYears(prev => {
+      const newEdited = { ...prev }
+      delete newEdited[yearId]
+      return newEdited
+    })
+
     setExpandedYears(prev => prev.filter(id => id !== yearId))
     toast.success(t("termSettings.yearDeleted"))
   }
 
   const updateTermsForYear = (yearId: string, newTerms: Term[]) => {
-    setAcademicYears(academicYears.map(y =>
-      y.id === yearId ? { ...y, terms: newTerms } : y
-    ))
+    // Update local state only - not context
+    setEditedYears(prev => ({
+      ...prev,
+      [yearId]: { ...prev[yearId], terms: newTerms }
+    }))
   }
 
   const MAX_TERMS_PER_YEAR = 3
 
   const addNewTerm = (yearId: string) => {
-    const year = academicYears.find(y => y.id === yearId)
+    const year = editedYears[yearId]
     if (!year || year.terms.length >= MAX_TERMS_PER_YEAR) return
 
     const newTerm: Term = {
@@ -159,7 +194,8 @@ export function TuitionTermSettings() {
   }
 
   const updateTerm = (yearId: string, termId: string, field: keyof Term, value: any) => {
-    const year = academicYears.find(y => y.id === yearId)
+    // Use edited year instead of academicYears
+    const year = editedYears[yearId]
     if (!year) return
 
     const currentTerm = year.terms.find(t => t.id === termId)
@@ -194,22 +230,52 @@ export function TuitionTermSettings() {
   }
 
   const deleteTerm = (yearId: string, termId: string) => {
-    const year = academicYears.find(y => y.id === yearId)
+    const year = editedYears[yearId]
     if (!year) return
     updateTermsForYear(yearId, year.terms.filter(term => term.id !== termId))
     toast.success(t("termSettings.termDeleted"))
   }
 
   const handleSaveYear = (yearId: string) => {
-    // Save only the specific year
-    saveAcademicYears()
-    toast.success(t("termSettings.changesSaved"))
+    // Update context with edited changes, then save to localStorage
+    const editedYear = editedYears[yearId]
+    if (!editedYear) return
+
+    const updatedYears = academicYears.map(y =>
+      y.id === yearId ? editedYear : y
+    )
+    setAcademicYears(updatedYears)
+
+    // Save to localStorage after a brief delay to ensure state is updated
+    setTimeout(() => {
+      saveAcademicYears()
+      toast.success(t("termSettings.changesSaved"))
+    }, 100)
   }
 
   const handleSaveYearClick = (yearId: string) => {
     confirmDialog.confirm(() => {
       handleSaveYear(yearId)
     })
+  }
+
+  const handleDiscardChanges = (yearId: string) => {
+    // Reset edited year to original from context
+    const originalYear = academicYears.find(y => y.id === yearId)
+    if (originalYear) {
+      setEditedYears(prev => ({
+        ...prev,
+        [yearId]: JSON.parse(JSON.stringify(originalYear))
+      }))
+      toast.success(t("termSettings.changesDiscarded") || "Changes discarded")
+    }
+  }
+
+  const hasUnsavedChanges = (yearId: string): boolean => {
+    const original = academicYears.find(y => y.id === yearId)
+    const edited = editedYears[yearId]
+    if (!original || !edited) return false
+    return JSON.stringify(original) !== JSON.stringify(edited)
   }
 
   const getYearStatus = (year: AcademicYear) => {
@@ -242,8 +308,10 @@ export function TuitionTermSettings() {
       {/* Academic Years List */}
       <div className="space-y-4">
         {academicYears.map((year) => {
-          const { allComplete, termCount } = getYearStatus(year)
+          const editedYear = editedYears[year.id] || year
+          const { allComplete, termCount } = getYearStatus(editedYear)
           const isExpanded = expandedYears.includes(year.id)
+          const hasChanges = hasUnsavedChanges(year.id)
 
           return (
             <Collapsible
@@ -273,6 +341,26 @@ export function TuitionTermSettings() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {hasChanges && (
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                            {t("termSettings.unsavedChanges") || "Unsaved changes"}
+                          </Badge>
+                        )}
+                        {hasChanges && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-3 text-gray-600 hover:text-gray-700"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDiscardChanges(year.id)
+                            }}
+                            disabled={!userCanEdit}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            {t("common.discard") || "Discard"}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           className="h-8 px-3"
@@ -280,7 +368,7 @@ export function TuitionTermSettings() {
                             e.stopPropagation()
                             handleSaveYearClick(year.id)
                           }}
-                          disabled={!userCanEdit}
+                          disabled={!userCanEdit || !hasChanges}
                         >
                           <Save className="w-4 h-4 mr-1" />
                           Save
@@ -323,7 +411,7 @@ export function TuitionTermSettings() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {year.terms.map((term) => {
+                          {editedYear.terms.map((term) => {
                             const duration = getDuration(term.startDate, term.endDate)
                             const isComplete = term.startDate && term.endDate
 
@@ -409,7 +497,7 @@ export function TuitionTermSettings() {
                     </div>
 
                     {/* Add Term Button */}
-                    {year.terms.length < MAX_TERMS_PER_YEAR && (
+                    {editedYear.terms.length < MAX_TERMS_PER_YEAR && (
                       <Button
                         variant="outline"
                         className="w-full mt-4 border-dashed text-gray-500 hover:text-gray-700"
