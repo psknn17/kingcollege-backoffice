@@ -32,9 +32,16 @@ export function TuitionTermSettings() {
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
 
   // Local state for editing - changes only saved when user clicks Save
-  const [editedYears, setEditedYears] = useState<Record<string, AcademicYear>>({})
+  // Initialize with academicYears immediately to prevent white screen
+  const [editedYears, setEditedYears] = useState<Record<string, AcademicYear>>(() => {
+    const initial: Record<string, AcademicYear> = {}
+    academicYears.forEach(year => {
+      initial[year.id] = JSON.parse(JSON.stringify(year))
+    })
+    return initial
+  })
 
-  // Initialize edited years when academicYears changes
+  // Update edited years when academicYears changes
   useEffect(() => {
     const initial: Record<string, AcademicYear> = {}
     academicYears.forEach(year => {
@@ -150,10 +157,13 @@ export function TuitionTermSettings() {
 
   const updateTermsForYear = (yearId: string, newTerms: Term[]) => {
     // Update local state only - not context
-    setEditedYears(prev => ({
-      ...prev,
-      [yearId]: { ...prev[yearId], terms: newTerms }
-    }))
+    setEditedYears(prev => {
+      if (!prev[yearId]) return prev // Safety check
+      return {
+        ...prev,
+        [yearId]: { ...prev[yearId], terms: newTerms }
+      }
+    })
   }
 
   const MAX_TERMS_PER_YEAR = 3
