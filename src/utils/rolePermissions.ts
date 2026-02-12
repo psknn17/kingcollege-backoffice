@@ -13,7 +13,7 @@ export const rolePermissions = {
   },
   accountant: {
     name: "Accountant",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
   viewer: {

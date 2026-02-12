@@ -769,7 +769,7 @@ export default function App() {
                   )}
 
                   {/* Student Management */}
-                  {(user?.role === "Super Admin" || user?.role === "Admin") && (
+                  {canAccessSection(user?.role || "", "studentManagement") && (
                     <Collapsible open={openGroups["studentManagement"]} onOpenChange={() => toggleGroup("studentManagement")}>
                       <SidebarGroup>
                         <CollapsibleTrigger className="w-full">
@@ -831,7 +831,7 @@ export default function App() {
                   )}
 
                   {/* Settings */}
-                  {(user?.role === "Super Admin" || user?.role === "Admin") && (
+                  {canAccessSection(user?.role || "", "settings") && (
                     <Collapsible open={openGroups["settings"]} onOpenChange={() => toggleGroup("settings")}>
                       <SidebarGroup>
                         <CollapsibleTrigger className="w-full">
