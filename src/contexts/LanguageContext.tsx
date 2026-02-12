@@ -75,6 +75,7 @@ const en: Record<string, string> = {
   // Common
   "common.save": "Save",
   "common.cancel": "Cancel",
+  "common.create": "Create",
   "common.edit": "Edit",
   "common.delete": "Delete",
   "common.add": "Add",
@@ -3221,6 +3222,7 @@ const th: Record<string, string> = {
   // Common
   "common.save": "บันทึก",
   "common.cancel": "ยกเลิก",
+  "common.create": "สร้าง",
   "common.edit": "แก้ไข",
   "common.delete": "ลบ",
   "common.add": "เพิ่ม",

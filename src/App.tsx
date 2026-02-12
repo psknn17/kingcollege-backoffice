@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { usePersistedState } from "./hooks/usePersistedState"
 import {
   Sidebar,
@@ -209,6 +209,20 @@ export default function App() {
 
   const [activeSection, setActiveSection] = usePersistedState("app:activeSection", getInitialActiveSection())
   const [subPageHistory, setSubPageHistory] = useState<string[]>([])
+  const hasResetToDashboard = useRef(false)
+
+  // Reset to dashboard when user first logs in
+  useEffect(() => {
+    if (isAuthenticated && !needsRoleSelection && !hasResetToDashboard.current) {
+      setActiveSection("tuition-dashboard")
+      setSubPageHistory([])
+      hasResetToDashboard.current = true
+    }
+    // Reset flag when user logs out
+    if (!isAuthenticated) {
+      hasResetToDashboard.current = false
+    }
+  }, [isAuthenticated, needsRoleSelection])
 
   // Filter menu items based on user role
   const getFilteredMenuItems = (section: string) => {
@@ -884,90 +898,90 @@ export default function App() {
                       align="end"
                       sideOffset={8}
                     >
-                      {/* Header with gradient background */}
-                      <div className="relative px-4 pt-5 pb-4 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-14 w-14 border-2 border-white/20 shadow-lg ring-4 ring-white/10">
-                            <AvatarFallback className="bg-white text-blue-600 font-bold text-lg">
+                      {/* Header */}
+                      <div className="p-6 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-16 w-16 border-4 border-white/20 shadow-xl">
+                            <AvatarFallback className="bg-white/90 text-blue-600 font-bold text-xl">
                               {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="text-base font-bold text-white truncate drop-shadow-sm">{user?.name}</p>
+                            <p className="font-bold text-white text-base truncate drop-shadow-sm">{user?.name}</p>
                             <p className="text-sm text-blue-100 truncate">{user?.email || 'user@example.com'}</p>
-                            <div className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-sm" />
-                              <span className="text-xs font-medium text-white">{user?.role}</span>
+                            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                              <div className="w-2 h-2 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
+                              <span className="text-xs font-semibold text-white">{user?.role}</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Menu Items */}
-                      <div className="p-2 space-y-1">
+                      <div className="p-3 space-y-1">
                         <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-profile")}
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-gray-700 hover:bg-blue-50 hover:text-blue-600 focus:bg-blue-50 focus:text-blue-600 transition-all duration-200 group"
+                          className="flex items-start gap-3 px-4 py-3 cursor-pointer rounded-xl hover:bg-blue-50 transition-all group"
                         >
-                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 group-hover:bg-blue-100 transition-colors">
-                            <UserCog className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
+                          <div className="mt-0.5 p-2 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                            <UserCog className="w-4 h-4 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold">Profile</p>
-                            <p className="text-xs text-gray-500 group-hover:text-blue-500">Manage your account</p>
+                            <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Profile</p>
+                            <p className="text-xs text-gray-500">Manage your account</p>
                           </div>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-settings")}
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-gray-700 hover:bg-purple-50 hover:text-purple-600 focus:bg-purple-50 focus:text-purple-600 transition-all duration-200 group"
+                          className="flex items-start gap-3 px-4 py-3 cursor-pointer rounded-xl hover:bg-purple-50 transition-all group"
                         >
-                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 group-hover:bg-purple-100 transition-colors">
-                            <Settings className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors" />
+                          <div className="mt-0.5 p-2 rounded-lg bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                            <Settings className="w-4 h-4 text-purple-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold">Settings</p>
-                            <p className="text-xs text-gray-500 group-hover:text-purple-500">Preferences & privacy</p>
+                            <p className="text-sm font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">Settings</p>
+                            <p className="text-xs text-gray-500">Preferences & privacy</p>
                           </div>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-activity")}
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-gray-700 hover:bg-green-50 hover:text-green-600 focus:bg-green-50 focus:text-green-600 transition-all duration-200 group"
+                          className="flex items-start gap-3 px-4 py-3 cursor-pointer rounded-xl hover:bg-green-50 transition-all group"
                         >
-                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 group-hover:bg-green-100 transition-colors">
-                            <Activity className="w-5 h-5 text-gray-600 group-hover:text-green-600 transition-colors" />
+                          <div className="mt-0.5 p-2 rounded-lg bg-green-100 group-hover:bg-green-200 transition-colors">
+                            <Activity className="w-4 h-4 text-green-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold">Activity</p>
-                            <p className="text-xs text-gray-500 group-hover:text-green-500">View your history</p>
+                            <p className="text-sm font-semibold text-gray-900 group-hover:text-green-600 transition-colors">Activity</p>
+                            <p className="text-xs text-gray-500">View your history</p>
                           </div>
                         </DropdownMenuItem>
-                      </div>
 
-                      <div className="px-2 pb-2">
-                        <DropdownMenuSeparator className="my-2 bg-gray-100" />
+                        <DropdownMenuSeparator className="my-3" />
 
                         {/* Logout */}
                         <DropdownMenuItem
                           onClick={logout}
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-red-600 hover:bg-red-50 focus:bg-red-50 transition-all duration-200 group"
+                          className="flex items-start gap-3 px-4 py-3 cursor-pointer rounded-xl hover:bg-red-50 transition-all group"
                         >
-                          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition-colors">
-                            <LogOut className="w-5 h-5 text-red-600" />
+                          <div className="mt-0.5 p-2 rounded-lg bg-red-100 group-hover:bg-red-200 transition-colors">
+                            <LogOut className="w-4 h-4 text-red-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold">Log out</p>
-                            <p className="text-xs text-red-400">Sign out of your account</p>
+                            <p className="text-sm font-semibold text-red-600">Log out</p>
+                            <p className="text-xs text-gray-500">Sign out of your account</p>
                           </div>
                         </DropdownMenuItem>
                       </div>
 
                       {/* Footer */}
-                      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-500 font-medium">King's College Backoffice</span>
-                          <span className="px-2 py-1 bg-white rounded-md text-gray-600 font-mono shadow-sm border border-gray-200">v{__APP_VERSION__}</span>
+                      <div className="px-4 py-3 border-t bg-gradient-to-r from-gray-50 to-blue-50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-600">King's College</span>
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                            v{__APP_VERSION__}
+                          </span>
                         </div>
                       </div>
 

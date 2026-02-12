@@ -1089,7 +1089,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
         onConfirm={confirmDialog.handleConfirm}
         titleKey="confirmDialog.createTitle"
         descriptionKey="confirmDialog.createDescription"
-        confirmTextKey="Create"
+        confirmTextKey="common.create"
       />
     </div>
   )

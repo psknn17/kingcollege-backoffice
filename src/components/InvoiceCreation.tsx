@@ -18,7 +18,7 @@ import { Textarea } from "./ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar as CalendarComponent } from "./ui/calendar"
-import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, CreditCard, AlertCircle, Pencil, ArrowLeft, RefreshCw } from "lucide-react"
+import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, CreditCard, AlertCircle, Pencil, ArrowLeft, RefreshCw, Download } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
@@ -3938,6 +3938,34 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     {/* CSV Upload */}
                     {studentSelectionType === "csv" && (
                       <div className="space-y-3">
+                        {/* Download Template Button */}
+                        <div className="flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Create sample CSV content
+                              const csvContent = [
+                                ['Student ID', 'Student Name', 'Year Group', 'Room'].join(','),
+                                ['S001', 'John Doe', 'Year 1', 'Room A'].join(','),
+                                ['S002', 'Jane Smith', 'Year 1', 'Room A'].join(','),
+                                ['S003', 'Bob Johnson', 'Year 2', 'Room B'].join(','),
+                              ].join('\n')
+
+                              // Create and download file
+                              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+                              const link = document.createElement('a')
+                              link.href = URL.createObjectURL(blob)
+                              link.download = 'student_list_template.csv'
+                              link.click()
+                            }}
+                            className="gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download Template
+                          </Button>
+                        </div>
+
                         <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
                           <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                           <p className="text-sm text-muted-foreground mb-2">Upload CSV file with student information</p>
@@ -3947,6 +3975,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             onChange={handleCsvUpload}
                             className="max-w-xs mx-auto"
                           />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Expected format: Student ID, Student Name, Year Group, Room
+                          </p>
                         </div>
                         {csvFile && (
                           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
