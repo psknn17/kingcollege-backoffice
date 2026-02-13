@@ -1151,6 +1151,10 @@ export function InvoiceManagement({
 
   const performDelete = () => {
     if (!selectedInvoice) return
+    if (getApprovalStatus(selectedInvoice) !== "wait") {
+      toast.error("Only invoices with 'Wait' approval status can be deleted")
+      return
+    }
 
     // Remove from state
     const updatedInvoices = invoices.filter(inv => inv.id !== selectedInvoice.id)
@@ -1180,6 +1184,45 @@ export function InvoiceManagement({
     if (!selectedInvoice) return
     deleteConfirmDialog.confirm(performDelete)
     closeEditModal()
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedInvoiceIds.size === 0) return
+
+    // Only delete draft invoices
+    const idsToDelete = Array.from(selectedInvoiceIds).filter(id => {
+      const inv = invoices.find(i => i.id === id)
+      return inv && getApprovalStatus(inv) === "wait"
+    })
+    if (idsToDelete.length === 0) {
+      toast.error("Only invoices with 'Wait' approval status can be deleted")
+      return
+    }
+    const deletedNumbers = invoices.filter(inv => idsToDelete.includes(inv.id)).map(inv => inv.invoiceNumber)
+
+    // Remove from state
+    const updatedInvoices = invoices.filter(inv => !idsToDelete.includes(inv.id))
+    setInvoices(updatedInvoices)
+
+    // Remove from localStorage
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      if (stored) {
+        const savedInvoices = JSON.parse(stored)
+        const updatedSaved = savedInvoices.filter((inv: any) => !idsToDelete.includes(inv.id))
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSaved))
+      }
+    } catch (error) {
+      console.error("Failed to bulk delete invoices:", error)
+    }
+
+    setSelectedInvoiceIds(new Set())
+    toast.success(`Deleted ${idsToDelete.length} invoices`)
+    logActivity({
+      action: `Bulk deleted ${idsToDelete.length} invoices`,
+      module: "Invoices",
+      detail: `Invoices: ${deletedNumbers.join(", ")}`
+    })
   }
 
   const resetCreateForm = () => {
@@ -2482,7 +2525,7 @@ export function InvoiceManagement({
     // Check if past due date and not paid
     const now = new Date()
     const dueDate = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
-    if (dueDate < now && invoice.status !== "paid" && invoice.status !== "draft") {
+    if (dueDate < now && invoice.status !== "paid" && getApprovalStatus(invoice) !== "wait") {
       return "overdue"
     }
 
@@ -2549,7 +2592,7 @@ export function InvoiceManagement({
 
   const summaryStats = {
     total: tabFilteredInvoices.length,
-    draft: tabFilteredInvoices.filter(inv => inv.status === "draft").length,
+    draft: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "wait").length,
     pendingApproval: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "wait").length,
     approved: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length,
     rejected: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length,
@@ -2880,6 +2923,32 @@ export function InvoiceManagement({
             </p>
           </div>
 
+          {/* Bulk Delete Bar */}
+          {selectedInvoiceIds.size > 0 && (
+            <div className="flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <span className="text-sm font-medium text-red-800">
+                {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={!userCanEdit}
+                onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedInvoiceIds(new Set())}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
           {/* Invoices Table */}
           <Card>
             <CardContent className="p-0">
@@ -2888,18 +2957,18 @@ export function InvoiceManagement({
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox
-                        checked={paginatedInvoices.length > 0 && paginatedInvoices.every(invoice => selectedInvoiceIds.has(invoice.id))}
+                        checked={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length > 0 && paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").every(invoice => selectedInvoiceIds.has(invoice.id))}
                         onCheckedChange={(checked) => {
+                          const newSelected = new Set(selectedInvoiceIds)
+                          const draftInvoices = paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait")
                           if (checked) {
-                            selectAllCurrentPage(paginatedInvoices)
+                            draftInvoices.forEach(invoice => newSelected.add(invoice.id))
                           } else {
-                            const newSelected = new Set(selectedInvoiceIds)
-                            paginatedInvoices.forEach(invoice => {
-                              newSelected.delete(invoice.id)
-                            })
-                            setSelectedInvoiceIds(newSelected)
+                            draftInvoices.forEach(invoice => newSelected.delete(invoice.id))
                           }
+                          setSelectedInvoiceIds(newSelected)
                         }}
+                        disabled={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length === 0}
                       />
                     </TableHead>
                     <TableHead>{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
@@ -2921,6 +2990,7 @@ export function InvoiceManagement({
                         <Checkbox
                           checked={selectedInvoiceIds.has(invoice.id)}
                           onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                          disabled={getApprovalStatus(invoice) !== "wait"}
                         />
                       </TableCell>
                       <TableCell className="font-mono text-sm">
@@ -3267,6 +3337,32 @@ export function InvoiceManagement({
             </CardContent>
           </Card>
 
+          {/* Bulk Delete Bar (External) */}
+          {selectedInvoiceIds.size > 0 && (
+            <div className="flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <span className="text-sm font-medium text-red-800">
+                {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={!userCanEdit}
+                onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedInvoiceIds(new Set())}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
           {/* External Invoice Table */}
           <Card>
             <CardContent className="pt-6">
@@ -3281,18 +3377,18 @@ export function InvoiceManagement({
                     <TableRow>
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={paginatedInvoices.length > 0 && paginatedInvoices.every(invoice => selectedInvoiceIds.has(invoice.id))}
+                          checked={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length > 0 && paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").every(invoice => selectedInvoiceIds.has(invoice.id))}
                           onCheckedChange={(checked) => {
+                            const newSelected = new Set(selectedInvoiceIds)
+                            const draftInvoices = paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait")
                             if (checked) {
-                              selectAllCurrentPage(paginatedInvoices)
+                              draftInvoices.forEach(invoice => newSelected.add(invoice.id))
                             } else {
-                              const newSelected = new Set(selectedInvoiceIds)
-                              paginatedInvoices.forEach(invoice => {
-                                newSelected.delete(invoice.id)
-                              })
-                              setSelectedInvoiceIds(newSelected)
+                              draftInvoices.forEach(invoice => newSelected.delete(invoice.id))
                             }
+                            setSelectedInvoiceIds(newSelected)
                           }}
+                          disabled={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length === 0}
                         />
                       </TableHead>
                       <TableHead className="font-semibold">{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
@@ -3314,6 +3410,7 @@ export function InvoiceManagement({
                           <Checkbox
                             checked={selectedInvoiceIds.has(invoice.id)}
                             onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                            disabled={getApprovalStatus(invoice) !== "wait"}
                           />
                         </TableCell>
                         <TableCell className="font-mono text-sm">
