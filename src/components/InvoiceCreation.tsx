@@ -27,6 +27,7 @@ import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { autoCreateTuitionItems, getTermNumber, getTuitionItemCode, getTuitionNominalCode } from "@/utils/itemAutoCreate"
 
 interface PreCreatedItem {
   id: string
@@ -1797,26 +1798,44 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             // Determine which term amount to use
             let termAmount = 0
             let termName = ""
+            let termNumber: 1 | 2 | 3 | null = null
 
             if (selectedTerm.includes("Term 1") || selectedTerm.includes("term1") || selectedTerm === "term1") {
               termAmount = gradeTuition.term1Amount || 0
               termName = "Term 1"
+              termNumber = 1
             } else if (selectedTerm.includes("Term 2") || selectedTerm.includes("term2") || selectedTerm === "term2") {
               termAmount = gradeTuition.term2Amount || 0
               termName = "Term 2"
+              termNumber = 2
             } else if (selectedTerm.includes("Term 3") || selectedTerm.includes("term3") || selectedTerm === "term3") {
               termAmount = gradeTuition.term3Amount || 0
               termName = "Term 3"
+              termNumber = 3
             }
 
-            if (termAmount > 0) {
+            if (termAmount > 0 && termNumber) {
+              // Auto-create item in Item Master if it doesn't exist
+              const createdItems = autoCreateTuitionItems(termNumber, invoiceType || "student")
+
+              // Show notification if items were created
+              if (createdItems.length > 0) {
+                toast.success(`✅ Created ${createdItems.length} new item${createdItems.length > 1 ? 's' : ''} automatically: ${createdItems.join(', ')}`)
+              }
+
+              // Get item code and nominal code for this term
+              const itemCode = getTuitionItemCode(termNumber)
+              const nominalCode = getTuitionNominalCode(termNumber)
+
               const tuitionItem = {
                 id: `tuition-${gradeId}-${selectedTerm}`,
                 name: `${termName} Tuition Fee - ${selectedGrade}`,
                 description: `${termName} tuition payment for ${selectedGrade}`,
                 category: "Tuition",
                 quantity: 1,
-                amount: termAmount
+                amount: termAmount,
+                itemCode: itemCode || undefined,
+                nominalCode: nominalCode || undefined
               }
 
               // Only add if not already in selectedItems
@@ -1943,26 +1962,44 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               // Determine which term amount to use
               let termAmount = 0
               let termName = ""
+              let termNumber: 1 | 2 | 3 | null = null
 
               if (term.includes("Term 1") || term === "term1") {
                 termAmount = gradeTuition.term1Amount || 0
                 termName = "Term 1"
+                termNumber = 1
               } else if (term.includes("Term 2") || term === "term2") {
                 termAmount = gradeTuition.term2Amount || 0
                 termName = "Term 2"
+                termNumber = 2
               } else if (term.includes("Term 3") || term === "term3") {
                 termAmount = gradeTuition.term3Amount || 0
                 termName = "Term 3"
+                termNumber = 3
               }
 
-              if (termAmount > 0) {
+              if (termAmount > 0 && termNumber) {
+                // Auto-create item in Item Master if it doesn't exist
+                const createdItems = autoCreateTuitionItems(termNumber, invoiceType || "student")
+
+                // Show notification if items were created
+                if (createdItems.length > 0) {
+                  toast.success(`✅ Created ${createdItems.length} new item${createdItems.length > 1 ? 's' : ''} automatically: ${createdItems.join(', ')}`)
+                }
+
+                // Get item code and nominal code for this term
+                const itemCode = getTuitionItemCode(termNumber)
+                const nominalCode = getTuitionNominalCode(termNumber)
+
                 setSelectedItems([{
                   id: `tuition-${gradeId}-${term}`,
                   name: `${termName} Tuition Fee - ${selectedGrade}`,
                   description: `${termName} tuition payment for ${selectedGrade}`,
                   category: "Tuition",
                   quantity: 1,
-                  amount: termAmount
+                  amount: termAmount,
+                  itemCode: itemCode || undefined,
+                  nominalCode: nominalCode || undefined
                 }])
               } else {
                 setSelectedItems([])

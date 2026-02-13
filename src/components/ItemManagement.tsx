@@ -2128,14 +2128,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
   const performSaveItem = () => {
     // Applicable grades are now optional
-    if (!newItem.itemCode || !newItem.name || !newItem.amount) {
+    if (!newItem.itemCode || !newItem.name || newItem.amount === undefined || newItem.amount === null || newItem.amount === '') {
       toast.error("Please fill in all required fields")
       return
     }
 
     const amount = parseFloat(newItem.amount)
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount)) {
       toast.error("Please enter a valid amount")
+      return
+    }
+
+    // Allow amount = 0 for tuition fee items
+    // These items are templates - price comes from TuitionByYear data
+    // Check if item code starts with "TUI-T" OR if it's a tuition category item with "tuition fee" in name
+    const isTuitionTemplate =
+      newItem.itemCode.toUpperCase().startsWith('TUI-T') ||
+      (newItem.category === 'Tuition' && newItem.name.toLowerCase().includes('tuition fee'))
+
+    if (!isTuitionTemplate && amount <= 0) {
+      toast.error("Please enter a valid amount (must be greater than 0)")
       return
     }
 
