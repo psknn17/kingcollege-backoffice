@@ -425,6 +425,7 @@ export function ApprovalQueue() {
       : invoice.invoiceNumber
 
     const approvalDate = new Date()
+    const emailSentAt = approvalDate.toISOString()
 
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
@@ -435,6 +436,8 @@ export function ApprovalQueue() {
             approvedBy: "Admin",
             approvedAt: approvalDate,
             issueDate: approvalDate,
+            status: "sent" as const,
+            emailSentAt,
           }
         : inv
     )
@@ -448,15 +451,17 @@ export function ApprovalQueue() {
       approvedBy: "Admin",
       approvedAt: approvalDate.toISOString(),
       issueDate: approvalDate.toISOString().split('T')[0],
+      status: "sent",
+      emailSentAt,
       },
       invoice.invoiceNumber
     )
 
-    toast.success(`Invoice ${finalInvoiceNumber} has been approved`)
+    toast.success(`Invoice ${finalInvoiceNumber} has been approved and sent via email`)
     logActivity({
-      action: `Approved invoice ${finalInvoiceNumber}`,
+      action: `Approved and sent invoice ${finalInvoiceNumber}`,
       module: "Approval Queue",
-      detail: "Approval Status: wait → approved"
+      detail: "Approval Status: wait → approved, Email: sent immediately"
     })
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
