@@ -32,6 +32,8 @@ import {
 import { toast } from "@/components/ui/sonner"
 import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency as formatCurrencyUtil } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface ViewModalProps {
   isOpen: boolean
@@ -100,6 +102,7 @@ export function ViewModal({
 }: ViewModalProps) {
   const { t } = useLanguage()
   const schoolSettings = useSchoolSettings()
+  const deleteConfirmDialog = useConfirmDialog()
   const [activeTab, setActiveTab] = useState("details")
 
   // Track if user manually switched to preview mode
@@ -147,10 +150,14 @@ export function ViewModal({
   }
 
   // Remove item
-  const handleRemoveItem = (index: number) => {
+  const performRemoveItem = (index: number) => {
     if (!editedData) return
     const newItems = editedData.items.filter((_: any, i: number) => i !== index)
     setEditedData({ ...editedData, items: newItems })
+  }
+
+  const handleRemoveItem = (index: number) => {
+    deleteConfirmDialog.confirm(() => performRemoveItem(index))
   }
 
   // Handle field change
@@ -1054,6 +1061,13 @@ export function ViewModal({
           </div>
         </DialogContent>
         </Dialog>
+
+        {/* Delete Item Confirmation Dialog */}
+        <ConfirmDialog
+          {...deleteConfirmDialog.dialogProps}
+          title="Delete Item"
+          description="Are you sure you want to remove this item from the invoice? This action cannot be undone."
+        />
       </>
     )
   }

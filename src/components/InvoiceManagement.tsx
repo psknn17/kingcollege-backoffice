@@ -31,6 +31,8 @@ import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 type ApprovalStatus = "wait" | "approved" | "rejected"
 
@@ -447,6 +449,9 @@ export function InvoiceManagement({
 
   // Invoice type tab state (unique key per category to avoid conflicts)
   const [invoiceTypeTab, setInvoiceTypeTab] = usePersistedState<"student" | "external">(`invoice-management:invoiceTypeTab:${category || 'default'}`, defaultTab || "student")
+
+  // Confirm dialog for delete operations
+  const deleteConfirmDialog = useConfirmDialog()
 
   // Get available terms based on selected academic year
   const availableTerms = academicYearFilter !== "all"
@@ -1144,7 +1149,7 @@ export function InvoiceManagement({
     closeEditModal()
   }
 
-  const deleteInvoice = () => {
+  const performDelete = () => {
     if (!selectedInvoice) return
 
     // Remove from state
@@ -1169,6 +1174,11 @@ export function InvoiceManagement({
       module: "Invoices",
       detail: `Invoice removed by user`
     })
+  }
+
+  const deleteInvoice = () => {
+    if (!selectedInvoice) return
+    deleteConfirmDialog.confirm(performDelete)
     closeEditModal()
   }
 
@@ -5843,6 +5853,15 @@ export function InvoiceManagement({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        {...deleteConfirmDialog.dialogProps}
+        title="Delete Invoice"
+        description={`Are you sure you want to delete invoice ${selectedInvoice?.invoiceNumber}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   )
 }

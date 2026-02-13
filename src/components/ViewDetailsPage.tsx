@@ -32,6 +32,8 @@ import {
   Search
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface ViewDetailsPageProps {
   type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template"
@@ -150,6 +152,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
   const [isItemSelectionOpen, setIsItemSelectionOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const deleteConfirmDialog = useConfirmDialog()
 
   console.log("ViewDetailsPage rendering with type:", type)
   console.log("ViewDetailsPage data:", data)
@@ -193,12 +196,16 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
     })
   }
 
-  const removeItem = (index: number) => {
+  const performRemoveItem = (index: number) => {
     const updatedItems = editData.items.filter((_: any, i: number) => i !== index)
     setEditData({
       ...editData,
       items: updatedItems
     })
+  }
+
+  const removeItem = (index: number) => {
+    deleteConfirmDialog.confirm(() => performRemoveItem(index))
   }
 
   const updateItem = (index: number, field: string, value: any) => {
@@ -875,6 +882,13 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
 
       {/* Item Selection Dialog */}
       {renderItemSelectionDialog()}
+
+      {/* Delete Item Confirmation Dialog */}
+      <ConfirmDialog
+        {...deleteConfirmDialog.dialogProps}
+        title="Remove Item"
+        description="Are you sure you want to remove this item? This action cannot be undone."
+      />
     </div>
   )
 }

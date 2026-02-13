@@ -34,6 +34,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import SchoolLogo from "@/assets/Logo.png"
 
 // ========================
@@ -193,6 +195,7 @@ export function ReceiptManagementFlow({
   const userCanEdit = canPerformActions(user?.role)
   const schoolSettings = useSchoolSettings()
   const printRef = useRef<HTMLDivElement>(null)
+  const deleteConfirmDialog = useConfirmDialog()
 
   // Get payment methods with translations
   const PAYMENT_METHODS = getPaymentMethods(t)
@@ -314,7 +317,7 @@ export function ReceiptManagementFlow({
     }))
   }
 
-  const removeInvoiceRow = (id: string) => {
+  const performRemoveInvoiceRow = (id: string) => {
     if (formData.invoices.length <= 1) {
       toast.error("At least one invoice row is required")
       return
@@ -323,6 +326,14 @@ export function ReceiptManagementFlow({
       ...prev,
       invoices: prev.invoices.filter(inv => inv.id !== id)
     }))
+  }
+
+  const removeInvoiceRow = (id: string) => {
+    if (formData.invoices.length <= 1) {
+      toast.error("At least one invoice row is required")
+      return
+    }
+    deleteConfirmDialog.confirm(() => performRemoveInvoiceRow(id))
   }
 
   const updateInvoiceRow = (id: string, field: keyof InvoiceRow, value: any) => {
@@ -1550,6 +1561,13 @@ export function ReceiptManagementFlow({
 
       {/* Hidden print container */}
       {renderPrintContainer()}
+
+      {/* Delete Invoice Row Confirmation Dialog */}
+      <ConfirmDialog
+        {...deleteConfirmDialog.dialogProps}
+        title="Remove Invoice Row"
+        description="Are you sure you want to remove this invoice row? This action cannot be undone."
+      />
     </div>
   )
 }
