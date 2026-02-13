@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
 import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save, ChevronLeft, ChevronRight } from "lucide-react"
+import { Checkbox } from "./ui/checkbox"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -17,6 +18,7 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { parseTuitionItemName } from "@/utils/itemAutoCreate"
 import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface Item {
@@ -1954,6 +1956,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const addConfirmDialog = useConfirmDialog()
   const editConfirmDialog = useConfirmDialog()
   const importConfirmDialog = useConfirmDialog()
+  const deleteConfirmDialog = useConfirmDialog()
 
   const isExternalView = invoiceType === "external"
   const isCategoryView = ["afterschool", "event", "summer", "eca", "trip", "exam", "bus"].includes(invoiceType)
@@ -1988,6 +1991,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [selectedCategory, setSelectedCategory] = invoiceType === "tuition"
     ? usePersistedState<string>("tuition-item-management:filterCategory", "all")
     : useState("all")
+
+  // Multi-select for bulk delete
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
 
   // Pagination states
   const [currentPage, setCurrentPage] = invoiceType === "tuition"
@@ -2045,23 +2051,28 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     setCurrentPage(1)
   }, [searchItemTerm, selectedCategory])
 
-  // Auto-sync tuition fees on component mount (for tuition invoice type)
+  // One-time cleanup: remove auto-generated tuition items (TUI-T{n}-{GRADE})
   useEffect(() => {
-    if ((invoiceType === "tuition" || invoiceType === "student") && items.length === 0) {
-      try {
-        const tuitionDataRaw = localStorage.getItem("tuitionByYearData")
-        if (tuitionDataRaw) {
-          console.log("[ItemManagement] Auto-syncing tuition fees on mount...")
-          // Use setTimeout to avoid calling during render
-          setTimeout(() => {
-            handleSyncTuitionFees()
-          }, 100)
+    const cleanupKey = "autoSyncItemsCleanedUp"
+    if (localStorage.getItem(cleanupKey)) return
+
+    try {
+      const storageKey = "invoiceItems"
+      const raw = localStorage.getItem(storageKey)
+      if (raw) {
+        const allItems = JSON.parse(raw)
+        const filtered = allItems.filter((item: any) => !/^TUI-T\d+-/i.test(item.itemCode))
+        if (filtered.length < allItems.length) {
+          localStorage.setItem(storageKey, JSON.stringify(filtered))
+          setItems(filtered)
+          console.log(`[Cleanup] Removed ${allItems.length - filtered.length} auto-generated tuition items`)
         }
-      } catch (error) {
-        console.error("[ItemManagement] Failed to auto-sync tuition fees:", error)
       }
+    } catch (e) {
+      console.error("[Cleanup] Failed:", e)
     }
-  }, []) // Run only once on mount
+    localStorage.setItem(cleanupKey, "true")
+  }, [])
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString()
@@ -2259,6 +2270,32 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     saveTemplatesToStorage(updatedTemplates, invoiceType)
 
     toast.success("Item deleted successfully from all templates")
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedItemIds.size === 0) return
+
+    const idsToDelete = Array.from(selectedItemIds)
+    const updatedItems = items.filter(item => !idsToDelete.includes(item.id))
+    setItems(updatedItems)
+
+    // Remove from all templates
+    const updatedTemplates = templates.map(template => ({
+      ...template,
+      items: template.items.filter(item => !idsToDelete.includes(item.itemId))
+    }))
+    setTemplates(updatedTemplates)
+
+    // Add to deleted items list
+    const deletedIds = loadDeletedItemIds(invoiceType)
+    idsToDelete.forEach(id => deletedIds.add(id))
+    saveDeletedItemIds(deletedIds, invoiceType)
+
+    saveItemsToStorage(updatedItems, invoiceType)
+    saveTemplatesToStorage(updatedTemplates, invoiceType)
+
+    setSelectedItemIds(new Set())
+    toast.success(`Deleted ${idsToDelete.length} items successfully`)
   }
 
   // Import functions
@@ -2496,100 +2533,57 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       let updated = 0
       const updatedItems = [...items]
 
-      // For each grade level, create/update 3 items (Term 1, 2, 3) with same nominal code
+      // For each grade level, create/update items for Term 1, 2, 3
+      // Priority: 1) Match imported items by name parsing  2) Match by auto-generated itemCode  3) Create new
       gradeData.forEach((grade: any, index: number) => {
         const gradeLevel = grade.gradeLevel // e.g., "Year 1"
-
-        // Generate ONE nominal code per grade level (base 411 + grade order number padded to 4 digits)
         const gradeOrder = grade.gradeLevelOrder || (index + 1)
         const sharedNominalCode = `411${String(gradeOrder).padStart(4, '0')}`
 
-        // Term 1
-        if (grade.term1Amount > 0) {
-          const itemCode = `TUI-T1-${grade.id.toUpperCase()}`
-          const existingItem = updatedItems.find(item => item.itemCode === itemCode)
+        for (let term = 1; term <= 3; term++) {
+          const amount = grade[`term${term}Amount`] || 0
+          if (amount <= 0) continue
 
-          if (existingItem) {
-            existingItem.amount = grade.term1Amount
-            existingItem.name = `Term 1 Tuition Fee - ${gradeLevel}`
-            existingItem.applicableGrades = [gradeLevel]
-            existingItem.nominalCode = sharedNominalCode
+          // 1) Try to find imported item by name matching (e.g., "Tuition fee - Term 1 / Year 5")
+          const importedItem = updatedItems.find(item => {
+            if (item.category !== "Tuition") return false
+            const parsed = parseTuitionItemName(item.name)
+            return parsed.term === term && parsed.gradeId === grade.id
+          })
+
+          if (importedItem) {
+            // Found imported item → update only amount, keep itemCode & nominalCode
+            importedItem.amount = amount
+            importedItem.applicableGrades = [gradeLevel]
             updated++
-          } else {
-            const newItem: Item = {
-              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              itemCode: itemCode,
-              name: `Term 1 Tuition Fee - ${gradeLevel}`,
-              description: `Term 1 tuition fee for ${gradeLevel} (${latestYear})`,
-              amount: grade.term1Amount,
-              category: "Tuition",
-              nominalCode: sharedNominalCode,
-              documentType: "SI",
-              isActive: true,
-              applicableGrades: [gradeLevel],
-              invoiceType: "student"
-            }
-            updatedItems.push(newItem)
-            created++
+            continue
           }
-        }
 
-        // Term 2
-        if (grade.term2Amount > 0) {
-          const itemCode = `TUI-T2-${grade.id.toUpperCase()}`
-          const existingItem = updatedItems.find(item => item.itemCode === itemCode)
+          // 2) Fallback: match by auto-generated itemCode
+          const autoItemCode = `TUI-T${term}-${grade.id.toUpperCase()}`
+          const autoItem = updatedItems.find(item => item.itemCode === autoItemCode)
 
-          if (existingItem) {
-            existingItem.amount = grade.term2Amount
-            existingItem.name = `Term 2 Tuition Fee - ${gradeLevel}`
-            existingItem.applicableGrades = [gradeLevel]
-            existingItem.nominalCode = sharedNominalCode
+          if (autoItem) {
+            autoItem.amount = amount
+            autoItem.name = `Term ${term} Tuition Fee - ${gradeLevel}`
+            autoItem.applicableGrades = [gradeLevel]
+            autoItem.nominalCode = sharedNominalCode
             updated++
           } else {
-            const newItem: Item = {
+            // 3) No match → create new auto-generated item
+            updatedItems.push({
               id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              itemCode: itemCode,
-              name: `Term 2 Tuition Fee - ${gradeLevel}`,
-              description: `Term 2 tuition fee for ${gradeLevel} (${latestYear})`,
-              amount: grade.term2Amount,
+              itemCode: autoItemCode,
+              name: `Term ${term} Tuition Fee - ${gradeLevel}`,
+              description: `Term ${term} tuition fee for ${gradeLevel} (${latestYear})`,
+              amount,
               category: "Tuition",
               nominalCode: sharedNominalCode,
               documentType: "SI",
               isActive: true,
               applicableGrades: [gradeLevel],
               invoiceType: "student"
-            }
-            updatedItems.push(newItem)
-            created++
-          }
-        }
-
-        // Term 3
-        if (grade.term3Amount > 0) {
-          const itemCode = `TUI-T3-${grade.id.toUpperCase()}`
-          const existingItem = updatedItems.find(item => item.itemCode === itemCode)
-
-          if (existingItem) {
-            existingItem.amount = grade.term3Amount
-            existingItem.name = `Term 3 Tuition Fee - ${gradeLevel}`
-            existingItem.applicableGrades = [gradeLevel]
-            existingItem.nominalCode = sharedNominalCode
-            updated++
-          } else {
-            const newItem: Item = {
-              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              itemCode: itemCode,
-              name: `Term 3 Tuition Fee - ${gradeLevel}`,
-              description: `Term 3 tuition fee for ${gradeLevel} (${latestYear})`,
-              amount: grade.term3Amount,
-              category: "Tuition",
-              nominalCode: sharedNominalCode,
-              documentType: "SI",
-              isActive: true,
-              applicableGrades: [gradeLevel],
-              invoiceType: "student"
-            }
-            updatedItems.push(newItem)
+            })
             created++
           }
         }
@@ -2887,11 +2881,52 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </Select>
             </div>
 
+            {/* Bulk Delete Bar */}
+            {selectedItemIds.size > 0 && (
+              <div className="flex items-center justify-end gap-3 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <span className="text-sm font-medium text-red-800">
+                  {selectedItemIds.size} item{selectedItemIds.size > 1 ? "s" : ""} selected
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!userCanEdit}
+                  onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                  style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete Selected
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedItemIds(new Set())}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+
             {/* Items Table */}
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={paginatedItems.length > 0 && paginatedItems.every(item => selectedItemIds.has(item.id))}
+                        onCheckedChange={(checked) => {
+                          const newSet = new Set(selectedItemIds)
+                          if (checked) {
+                            paginatedItems.forEach(item => newSet.add(item.id))
+                          } else {
+                            paginatedItems.forEach(item => newSet.delete(item.id))
+                          }
+                          setSelectedItemIds(newSet)
+                        }}
+                        disabled={!userCanEdit}
+                      />
+                    </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itemCode")}>
                       <div className="flex items-center gap-1">
                         {t("table.itemCode")}
@@ -2924,7 +2959,22 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 </TableHeader>
                 <TableBody>
                   {paginatedItems.map((item) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={item.id} className={selectedItemIds.has(item.id) ? "bg-red-50/50" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItemIds.has(item.id)}
+                          onCheckedChange={(checked) => {
+                            const newSet = new Set(selectedItemIds)
+                            if (checked) {
+                              newSet.add(item.id)
+                            } else {
+                              newSet.delete(item.id)
+                            }
+                            setSelectedItemIds(newSet)
+                          }}
+                          disabled={!userCanEdit}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
                           {item.itemCode}
@@ -2976,7 +3026,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                             variant="ghost"
                             size="sm"
                             disabled={!userCanEdit}
-                            onClick={() => handleDeleteItem(item.id)}
+                            onClick={() => deleteConfirmDialog.confirm(() => handleDeleteItem(item.id))}
                             title="Delete Item"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -3555,6 +3605,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         titleKey="confirmDialog.importTitle"
         descriptionKey="confirmDialog.importDescription"
         confirmTextKey="common.import"
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="confirmDialog.deleteTitle"
+        descriptionKey="confirmDialog.deleteDescription"
+        confirmTextKey="common.delete"
+        variant="destructive"
       />
     </div>
   )

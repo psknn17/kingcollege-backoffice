@@ -58,6 +58,7 @@ export function ConfirmDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             className={variant === "destructive" ? "bg-red-600 hover:bg-red-700 text-white" : ""}
+            style={variant === "destructive" ? { backgroundColor: '#dc2626', color: '#ffffff' } : undefined}
           >
             {getText(confirmTextKey)}
           </AlertDialogAction>

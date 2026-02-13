@@ -114,6 +114,41 @@ const saveItemsToStorage = (items: Item[], invoiceCategory: string = "student") 
 }
 
 /**
+ * Parse item name to extract term number and grade ID
+ * Matches patterns like:
+ *   "Tuition fee - Term 1 / Year 5"
+ *   "Term 2 Tuition Fee - Nursery"
+ *   "Tuition Term 3 - Pre-Nursery"
+ */
+export const parseTuitionItemName = (name: string): { term: number | null, gradeId: string | null } => {
+  let term: number | null = null
+  let gradeId: string | null = null
+
+  // Extract term number (Term 1, Term 2, Term 3)
+  const termMatch = name.match(/Term\s*(\d)/i)
+  if (termMatch) {
+    const t = parseInt(termMatch[1])
+    if (t >= 1 && t <= 3) term = t
+  }
+
+  // Extract grade - check Pre-Nursery first (contains "Nursery")
+  if (/Pre[- ]?Nursery/i.test(name)) {
+    gradeId = 'pre-nursery'
+  } else if (/Reception/i.test(name)) {
+    gradeId = 'reception'
+  } else {
+    const yearMatch = name.match(/Year\s*(\d+)/i)
+    if (yearMatch) {
+      gradeId = `year${yearMatch[1]}`
+    } else if (/Nursery/i.test(name)) {
+      gradeId = 'nursery'
+    }
+  }
+
+  return { term, gradeId }
+}
+
+/**
  * Get term number from term string
  * @param term - Term string like "Term 1", "term1", "Term 2 (2024)", etc.
  * @returns 1, 2, or 3

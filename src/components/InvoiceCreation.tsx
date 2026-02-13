@@ -27,7 +27,7 @@ import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
-import { autoCreateTuitionItems, getTermNumber, getTuitionItemCode, getTuitionNominalCode } from "@/utils/itemAutoCreate"
+import { autoCreateTuitionItems, getTermNumber, getTuitionItemCode, getTuitionNominalCode, parseTuitionItemName } from "@/utils/itemAutoCreate"
 
 interface PreCreatedItem {
   id: string
@@ -508,9 +508,15 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): PreCreatedIt
 
       return loadedItems
     } else {
-      // Initialize localStorage with default items if empty
-      localStorage.setItem(storageKey, JSON.stringify(categoryDefaults))
-      return categoryDefaults
+      // For tuition: don't initialize defaults if tuitionByYearData exists
+      // ItemManagement will auto-sync the correct items
+      const isTuition = invoiceCategory === "tuition" || invoiceCategory === "student"
+      const hasTuitionData = isTuition && localStorage.getItem("tuitionByYearData")
+
+      if (!hasTuitionData) {
+        localStorage.setItem(storageKey, JSON.stringify(categoryDefaults))
+      }
+      return hasTuitionData ? [] : categoryDefaults
     }
   } catch (error) {
     console.error("Failed to load items from localStorage:", error)
@@ -1511,14 +1517,80 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   }, [availableStudents]) // Runs when availableStudents recalculates (due to term/year change)
 
   // Force initialize items and templates for all invoice types if empty
+  // For tuition/student: auto-sync from tuitionByYearData (same logic as ItemManagement)
   useEffect(() => {
     const storageKey = getItemsStorageKey(invoiceType)
     const templatesKey = getTemplatesStorageKey(invoiceType)
 
     try {
-      // Check items
+      const isTuition = invoiceType === "tuition" || invoiceType === "student"
+      const tuitionDataRaw = isTuition ? localStorage.getItem("tuitionByYearData") : null
+
+      // For tuition: auto-sync items from Tuition By Year data
+      if (isTuition && tuitionDataRaw) {
+        try {
+          const tuitionData: Record<string, any[]> = JSON.parse(tuitionDataRaw)
+          const years = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
+
+          if (years.length > 0) {
+            const latestYear = years[0]
+            const gradeData = tuitionData[latestYear]
+
+            // Load existing items
+            const existingRaw = localStorage.getItem(storageKey)
+            const existingItems: any[] = existingRaw ? JSON.parse(existingRaw) : []
+            let created = 0
+            let updated = 0
+
+            // Only update amounts of existing items (imported or manually created)
+            // Do NOT create new items — only items that staff imported/created get updated
+            gradeData.forEach((grade: any, index: number) => {
+              const gradeLevel = grade.gradeLevel
+
+              for (let term = 1; term <= 3; term++) {
+                const amount = grade[`term${term}Amount`] || 0
+                if (amount <= 0) continue
+
+                // 1) Try to find imported item by name (e.g., "Tuition fee - Term 1 / Year 5")
+                const importedItem = existingItems.find((item: any) => {
+                  if (item.category !== "Tuition") return false
+                  const parsed = parseTuitionItemName(item.name)
+                  return parsed.term === term && parsed.gradeId === grade.id
+                })
+
+                if (importedItem) {
+                  importedItem.amount = amount
+                  importedItem.applicableGrades = [gradeLevel]
+                  updated++
+                  continue
+                }
+
+                // 2) Fallback: match by auto-generated itemCode (if staff created via Sync button)
+                const autoItemCode = `TUI-T${term}-${grade.id.toUpperCase()}`
+                const autoItem = existingItems.find((item: any) => item.itemCode === autoItemCode)
+
+                if (autoItem) {
+                  autoItem.amount = amount
+                  autoItem.applicableGrades = [gradeLevel]
+                  updated++
+                }
+                // No else — do NOT create new items automatically
+              }
+            })
+
+            if (created > 0 || updated > 0) {
+              localStorage.setItem(storageKey, JSON.stringify(existingItems))
+              console.log(`[InvoiceCreation] Auto-synced tuition items: ${created} new, ${updated} updated from ${latestYear}`)
+            }
+          }
+        } catch (e) {
+          console.error("[InvoiceCreation] Failed to auto-sync tuition items:", e)
+        }
+      }
+
+      // For non-tuition: initialize with defaults if empty
       const storedItems = localStorage.getItem(storageKey)
-      if (!storedItems || storedItems === '[]' || JSON.parse(storedItems).length === 0) {
+      if (!isTuition && (!storedItems || storedItems === '[]' || JSON.parse(storedItems).length === 0)) {
         const defaultItems = getDefaultItems(invoiceType)
         if (defaultItems.length > 0) {
           console.log(`[Force Init] Initializing ${invoiceType} items (${defaultItems.length} items)`)
@@ -1815,17 +1887,37 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             }
 
             if (termAmount > 0 && termNumber) {
-              // Auto-create item in Item Master if it doesn't exist
-              const createdItems = autoCreateTuitionItems(termNumber, invoiceType || "student")
+              // Look up item code and nominal code from items (imported or auto-generated)
+              const storageKey = getItemsStorageKey(invoiceType || "student")
+              let itemCode: string | undefined = undefined
+              let nominalCode: string | undefined = undefined
 
-              // Show notification if items were created
-              if (createdItems.length > 0) {
-                toast.success(`✅ Created ${createdItems.length} new item${createdItems.length > 1 ? 's' : ''} automatically: ${createdItems.join(', ')}`)
+              try {
+                const storedItems = localStorage.getItem(storageKey)
+                if (storedItems) {
+                  const allItems = JSON.parse(storedItems)
+                  // 1) Try to find imported item by name matching
+                  const importedMatch = allItems.find((item: any) => {
+                    if (item.category !== "Tuition") return false
+                    const parsed = parseTuitionItemName(item.name)
+                    return parsed.term === termNumber && parsed.gradeId === gradeId
+                  })
+                  if (importedMatch) {
+                    itemCode = importedMatch.itemCode
+                    nominalCode = importedMatch.nominalCode
+                  } else {
+                    // 2) Fallback: match by auto-generated itemCode
+                    const syncedItemCode = `TUI-T${termNumber}-${gradeId.toUpperCase()}`
+                    const autoMatch = allItems.find((item: any) => item.itemCode === syncedItemCode)
+                    if (autoMatch) {
+                      itemCode = autoMatch.itemCode
+                      nominalCode = autoMatch.nominalCode
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error("Failed to look up item:", e)
               }
-
-              // Get item code and nominal code for this term
-              const itemCode = getTuitionItemCode(termNumber)
-              const nominalCode = getTuitionNominalCode(termNumber)
 
               const tuitionItem = {
                 id: `tuition-${gradeId}-${selectedTerm}`,
@@ -1979,17 +2071,37 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               }
 
               if (termAmount > 0 && termNumber) {
-                // Auto-create item in Item Master if it doesn't exist
-                const createdItems = autoCreateTuitionItems(termNumber, invoiceType || "student")
+                // Look up item code and nominal code from items (imported or auto-generated)
+                const storageKey2 = getItemsStorageKey(invoiceType || "student")
+                let itemCode: string | undefined = undefined
+                let nominalCode: string | undefined = undefined
 
-                // Show notification if items were created
-                if (createdItems.length > 0) {
-                  toast.success(`✅ Created ${createdItems.length} new item${createdItems.length > 1 ? 's' : ''} automatically: ${createdItems.join(', ')}`)
+                try {
+                  const storedItems2 = localStorage.getItem(storageKey2)
+                  if (storedItems2) {
+                    const allItems2 = JSON.parse(storedItems2)
+                    // 1) Try to find imported item by name matching
+                    const importedMatch2 = allItems2.find((item: any) => {
+                      if (item.category !== "Tuition") return false
+                      const parsed = parseTuitionItemName(item.name)
+                      return parsed.term === termNumber && parsed.gradeId === gradeId
+                    })
+                    if (importedMatch2) {
+                      itemCode = importedMatch2.itemCode
+                      nominalCode = importedMatch2.nominalCode
+                    } else {
+                      // 2) Fallback: match by auto-generated itemCode
+                      const syncedItemCode = `TUI-T${termNumber}-${gradeId.toUpperCase()}`
+                      const autoMatch2 = allItems2.find((item: any) => item.itemCode === syncedItemCode)
+                      if (autoMatch2) {
+                        itemCode = autoMatch2.itemCode
+                        nominalCode = autoMatch2.nominalCode
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.error("Failed to look up item:", e)
                 }
-
-                // Get item code and nominal code for this term
-                const itemCode = getTuitionItemCode(termNumber)
-                const nominalCode = getTuitionNominalCode(termNumber)
 
                 setSelectedItems([{
                   id: `tuition-${gradeId}-${term}`,

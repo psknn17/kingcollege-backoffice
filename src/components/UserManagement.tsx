@@ -785,7 +785,7 @@ export function UserManagement() {
               <label className="text-sm font-medium">Role</label>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>

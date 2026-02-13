@@ -1963,7 +1963,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 <AlertDialogCancel onClick={() => setDeleteConfirmDialog({ isOpen: false, group: null })}>
                   Cancel
                 </AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" style={{ backgroundColor: '#dc2626', color: '#ffffff' }}>
                   Delete Group
                 </AlertDialogAction>
               </AlertDialogFooter>
