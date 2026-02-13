@@ -239,6 +239,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const addConfirmDialog = useConfirmDialog()
   const editConfirmDialog = useConfirmDialog()
   const importConfirmDialog = useConfirmDialog()
+  const deleteConfirmDialog = useConfirmDialog()
 
   const [searchTerm, setSearchTerm] = usePersistedState("student-list:search", "")
   const [filterGrade, setFilterGrade] = usePersistedState("student-list:gradeFilter", "all")
@@ -256,7 +257,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [formData, setFormData] = useState<Omit<Student, "id">>(emptyStudent)
@@ -445,9 +445,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setIsViewDialogOpen(true)
   }
 
+  const performDeleteStudent = (student: Student) => {
+    deleteStudent(student.id)
+    toast.success("Student deleted successfully")
+  }
+
   const handleDeleteStudent = (student: Student) => {
     setSelectedStudent(student)
-    setIsDeleteDialogOpen(true)
+    deleteConfirmDialog.confirm(() => performDeleteStudent(student))
   }
 
   const performSaveNewStudent = () => {
@@ -493,14 +498,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     })
   }
 
-  const handleConfirmDelete = () => {
-    if (selectedStudent) {
-      deleteStudent(selectedStudent.id)
-      toast.success("Student deleted successfully")
-      setIsDeleteDialogOpen(false)
-      setSelectedStudent(null)
-    }
-  }
 
   const handleAddParent = () => {
     const parent: Parent = {
@@ -2164,27 +2161,15 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle>Delete Student</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-muted-foreground">
-              Are you sure you want to delete <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong>?
-              This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete} disabled={!userCanEdit}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        {...deleteConfirmDialog.dialogProps}
+        title="Delete Student"
+        description={
+          selectedStudent
+            ? `Are you sure you want to delete ${selectedStudent.firstName} ${selectedStudent.lastName}? This action cannot be undone.`
+            : "Are you sure you want to delete this student? This action cannot be undone."
+        }
+      />
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
