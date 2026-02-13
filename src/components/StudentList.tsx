@@ -617,26 +617,76 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       return
     }
 
-    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""))
+    // Auto-detect delimiter (comma, semicolon, or tab)
+    const detectDelimiter = (line: string): string => {
+      const delimiters = [',', ';', '\t']
+      let maxCount = 0
+      let detectedDelimiter = ','
+
+      delimiters.forEach(delimiter => {
+        const count = line.split(delimiter).length
+        if (count > maxCount) {
+          maxCount = count
+          detectedDelimiter = delimiter
+        }
+      })
+
+      return detectedDelimiter
+    }
+
+    const delimiter = detectDelimiter(lines[0])
+    console.log("Detected delimiter:", delimiter === '\t' ? 'TAB' : delimiter)
+
+    // Parse with detected delimiter
+    const parseLineWithDelimiter = (line: string, delim: string): string[] => {
+      // Handle quoted values that might contain the delimiter
+      const regex = delim === '\t'
+        ? /("([^"]*(?:""[^"]*)*)"|[^\t]*)/g
+        : delim === ';'
+        ? /("([^"]*(?:""[^"]*)*)"|[^;]*)/g
+        : /("([^"]*(?:""[^"]*)*)"|[^,]*)/g
+
+      const matches = line.match(regex) || []
+      return matches
+        .map(v => v.trim().replace(/^"|"$/g, "").replace(/""/g, '"'))
+        .filter(v => v !== '' || matches.length > 1) // Keep empty strings if there are multiple columns
+    }
+
+    const headers = parseLineWithDelimiter(lines[0], delimiter)
+    console.log("Parsed headers:", headers)
+    console.log("Total columns:", headers.length)
+
     const requiredHeaders = ["Student ID", "First Name", "Last Name", "Year Group", "Academic Year"]
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
 
     if (missingHeaders.length > 0) {
-      setImportError(`Missing required columns: ${missingHeaders.join(", ")}`)
+      setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${headers.join(", ")}`)
       return
     }
 
     const parsed = lines.slice(1).map((line, index) => {
-      const values = line.match(/("([^"]*(?:""[^"]*)*)"|[^,]*)/g) || []
-      const cleanValues = values.map(v => v.trim().replace(/^"|"$/g, "").replace(/""/g, '"'))
+      const values = parseLineWithDelimiter(line, delimiter)
 
       const row: any = {}
       headers.forEach((header, i) => {
-        row[header] = cleanValues[i] || ""
+        row[header] = values[i] || ""
       })
       row._rowIndex = index + 2
       return row
     })
+
+    // Debug logging
+    console.log("Academic Year column index:", headers.indexOf("Academic Year"))
+    console.log("First row sample:", parsed[0])
+    console.log("Academic Year values (first 5):", parsed.slice(0, 5).map(r => r["Academic Year"]))
+
+    // Check for empty Academic Year values
+    const emptyAcademicYears = parsed.filter(row => !row["Academic Year"] || row["Academic Year"].trim() === "")
+    if (emptyAcademicYears.length > 0) {
+      console.warn(`Warning: ${emptyAcademicYears.length} rows have empty Academic Year values`)
+      setImportError(`Warning: ${emptyAcademicYears.length} student(s) are missing Academic Year values. Please fill in the Academic Year column in your CSV file.`)
+      return
+    }
 
     setImportPreview(parsed)
     setImportError("")
@@ -1647,9 +1697,45 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       {/* Student Table */}
       <Card>
         <CardContent className="pt-6">
+          {selectedStudentIds.size > 0 && (
+            <div className="mb-4 flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+              <span className="text-sm font-medium">
+                {selectedStudentIds.size} student{selectedStudentIds.size > 1 ? 's' : ''} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  deleteConfirmDialog.confirm(() => {
+                    selectedStudentIds.forEach(id => deleteStudent(id))
+                    toast.success(`Deleted ${selectedStudentIds.size} student${selectedStudentIds.size > 1 ? 's' : ''} successfully`)
+                    setSelectedStudentIds(new Set())
+                  })
+                }}
+                disabled={!userCanEdit}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Selected
+              </Button>
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={paginatedStudents.length > 0 && paginatedStudents.every((s: Student) => selectedStudentIds.has(s.id))}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStudentIds(new Set(paginatedStudents.map((s: Student) => s.id)))
+                      } else {
+                        setSelectedStudentIds(new Set())
+                      }
+                    }}
+                    disabled={!userCanEdit}
+                  />
+                </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentId")}>
                   <div className="flex items-center gap-1">
                     {t("student.studentId")}
@@ -1710,7 +1796,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <TableBody>
               {paginatedStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="p-0">
+                  <TableCell colSpan={11} className="p-0">
                     {searchTerm || filterGrade !== "all" || filterStatus !== "all" ? (
                       <EmptySearchResults
                         onClear={() => {
@@ -1728,6 +1814,21 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               ) : (
                 paginatedStudents.map((student: Student) => (
                   <TableRow key={student.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedStudentIds.has(student.id)}
+                        onCheckedChange={(checked) => {
+                          const newSet = new Set(selectedStudentIds)
+                          if (checked) {
+                            newSet.add(student.id)
+                          } else {
+                            newSet.delete(student.id)
+                          }
+                          setSelectedStudentIds(newSet)
+                        }}
+                        disabled={!userCanEdit}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{student.studentId}</TableCell>
                     <TableCell>
                       <div>
