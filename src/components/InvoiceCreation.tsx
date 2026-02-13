@@ -3521,68 +3521,18 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </div>
                 )}
 
-                {/* Available Items */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Available Items ({availableItems.length})</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsAddItemDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add More Items
-                    </Button>
-                  </div>
-                  <div className="space-y-0 border rounded-lg">
-                    {availableItems.slice(0, 5).map((item, index) => {
-                      const isSelected = selectedItems.find(i => i.id === item.id)
-                      const isFromTemplate = selectedTemplate && availableTemplates.find(t => t.id === selectedTemplate)?.items.includes(item.id)
-                      return (
-                        <div
-                          key={item.id}
-                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${index !== 0 ? 'border-t' : ''
-                            } ${isSelected ? 'bg-primary/5' : ''}`}
-                          onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="font-medium">{item.name}</span>
-                              <Badge
-                                variant="outline"
-                                className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                                  item.category === "ECA" ? "border-green-300 text-green-700" :
-                                    "border-orange-300 text-orange-700"
-                                  }`}
-                              >
-                                {item.category}
-                              </Badge>
-                              {isFromTemplate && (
-                                <Badge variant="default" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
-                                  From Template
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-1">{item.description}</p>
-                            <p className="font-medium">{item.amount.toLocaleString()}</p>
-                          </div>
-                          <div className="flex-shrink-0 ml-4">
-                            {isSelected ? (
-                              <CheckCircle className="w-5 h-5 text-primary" />
-                            ) : (
-                              <Plus className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {availableItems.length > 5 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">
-                      Showing 5 of {availableItems.length} items. Click "+ Add More Items" to see all.
-                    </p>
-                  )}
+                {/* Add Item Button */}
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-muted-foreground">Items ({availableItems.length} available)</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddItemDialogOpen(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Item
+                  </Button>
                 </div>
 
                 {/* Selected Items Summary */}
