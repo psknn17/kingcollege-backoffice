@@ -241,7 +241,7 @@ export default function App() {
   // Collapsible menu state - allow multiple groups to be open
   const getInitialOpenGroups = () => {
     // For Approver role, only show User Management section open
-    if (user?.role === "Approver") {
+    if (user?.role === "Approvalver") {
       return {
         tuition: false,
         debtReminder: false,
@@ -329,7 +329,7 @@ export default function App() {
   // Redirect Approver role to approval-queue (allow profile/settings/activity)
   const approverAllowedPages = ["approval-queue", "user-profile", "user-settings", "user-activity"]
   useEffect(() => {
-    if (user?.role === "Approver" && !approverAllowedPages.includes(activeSection)) {
+    if (user?.role === "Approvalver" && !approverAllowedPages.includes(activeSection)) {
       setActiveSection("approval-queue")
     }
   }, [user, activeSection])

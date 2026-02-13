@@ -23,11 +23,11 @@ const USERS_STORAGE_KEY = "users"
 const ROLE_SELECTION_KEY = "needsRoleSelection"
 
 const roleNames: Record<string, string> = {
-  super_admin: "Super Admin",
+  super_admin: "Admin",
   admin: "Admin",
   accountant: "Accountant",
-  viewer: "Viewer",
-  approver: "Approver"
+  viewer: "Viewver",
+  approver: "Approvalver"
 }
 
 // Default admin user

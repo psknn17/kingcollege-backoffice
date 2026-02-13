@@ -2383,9 +2383,9 @@ const en: Record<string, string> = {
 
   // User Roles
   "role.admin": "Admin",
-  "role.approver": "Approver",
+  "role.approver": "Approvalver",
   "role.accounting": "Accounting",
-  "role.viewer": "Viewer",
+  "role.viewer": "Viewver",
 
   // Permission Modules
   "permissionModule.tuition": "Tuition",
@@ -5431,9 +5431,9 @@ const th: Record<string, string> = {
 
   // User Roles
   "role.admin": "ผู้ดูแลระบบ",
-  "role.approver": "ผู้อนุมัติ",
+  "role.approver": "Approvalver",
   "role.accounting": "บัญชี",
-  "role.viewer": "ผู้ดู",
+  "role.viewer": "Viewver",
 
   // Permission Modules
   "permissionModule.tuition": "ค่าเทอม",

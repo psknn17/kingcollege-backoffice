@@ -4074,7 +4074,7 @@ export function InvoiceManagement({
                   )}
                 </Button>
                 {(() => {
-                  const canCancelInvoice = user?.role !== "Approver"
+                  const canCancelInvoice = user?.role !== "Approvalver"
                   const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
                   console.log('[Cancel Button] Visibility check:', {
                     userRole: user?.role,

@@ -137,7 +137,7 @@ interface Role {
 const initialRoles: Role[] = [
   {
     id: "role_superadmin",
-    name: "Super Admin",
+    name: "Admin",
     description: "Full system access with all permissions",
     permissions: permissionModules.map(m => ({ moduleId: m.id, actions: m.actions })),
     isSystem: true,
@@ -159,7 +159,7 @@ const initialRoles: Role[] = [
   },
   {
     id: "role_viewer",
-    name: "Viewer",
+    name: "Viewver",
     description: "Read-only access to reports",
     permissions: [
       { moduleId: "reports", actions: ["view"] }

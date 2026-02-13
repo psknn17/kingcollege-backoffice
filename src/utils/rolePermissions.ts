@@ -2,7 +2,7 @@
 
 export const rolePermissions = {
   super_admin: {
-    name: "Super Admin",
+    name: "Admin",
     sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement", "report"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
@@ -12,12 +12,12 @@ export const rolePermissions = {
     menuItems: [] // Combined permissions from Admin and Accountant
   },
   viewer: {
-    name: "Viewer",
+    name: "Viewver",
     sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement", "report"],
     menuItems: [] // Can view all menus (read-only access)
   },
   approver: {
-    name: "Approver",
+    name: "Approvalver",
     sections: ["userManagement"],
     menuItems: [
       // Only approval queue
@@ -67,10 +67,10 @@ export function getAccessibleMenuItems(userRole: string, section: string, items:
 function normalizeRoleName(role: string): string {
   // Convert role display names back to IDs
   const roleMap: Record<string, string> = {
-    "Super Admin": "super_admin",
+    "Admin": "super_admin",
     "AdminAccountant": "admin_accountant",
-    "Viewer": "viewer",
-    "Approver": "approver"
+    "Viewver": "viewer",
+    "Approvalver": "approver"
   }
 
   return roleMap[role] || role.toLowerCase().replace(/[\/\s]/g, '_')

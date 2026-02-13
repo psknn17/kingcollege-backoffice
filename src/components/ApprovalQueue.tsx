@@ -628,7 +628,7 @@ export function ApprovalQueue() {
   const rejectedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length
 
   // Check if user can approve invoices (not viewer role)
-  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "Super Admin" || user?.role === "Admin" || user?.role === "Approver")
+  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "Admin" || user?.role === "AdminAccountant" || user?.role === "Approvalver")
 
   return (
     <div className="space-y-6">
