@@ -2447,6 +2447,138 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     }
   }
 
+  // Sync Tuition Fees function
+  const handleSyncTuitionFees = () => {
+    if (invoiceType !== "tuition" && invoiceType !== "student") {
+      toast.error("This feature is only available for Tuition invoices")
+      return
+    }
+
+    try {
+      // Load tuition data from localStorage (from TuitionByYear component)
+      const tuitionDataRaw = localStorage.getItem("tuitionByYearData")
+      if (!tuitionDataRaw) {
+        toast.error("No tuition fee data found. Please set up tuition fees in Tuition Management > Tuition Fees by Year Group first.")
+        return
+      }
+
+      const tuitionData: Record<string, any[]> = JSON.parse(tuitionDataRaw)
+
+      // Get the most recent academic year
+      const years = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
+      if (years.length === 0) {
+        toast.error("No tuition fee data found")
+        return
+      }
+
+      const latestYear = years[0]
+      const gradeData = tuitionData[latestYear]
+
+      let created = 0
+      let updated = 0
+      const updatedItems = [...items]
+
+      // For each grade level, create/update 3 items (Term 1, 2, 3)
+      gradeData.forEach((grade: any) => {
+        const gradeLevel = grade.gradeLevel // e.g., "Year 1"
+
+        // Term 1
+        if (grade.term1Amount > 0) {
+          const itemCode = `TUI-T1-${grade.id.toUpperCase()}`
+          const existingItem = updatedItems.find(item => item.itemCode === itemCode)
+
+          if (existingItem) {
+            existingItem.amount = grade.term1Amount
+            existingItem.name = `Term 1 Tuition Fee - ${gradeLevel}`
+            existingItem.applicableGrades = [gradeLevel]
+            updated++
+          } else {
+            const newItem: Item = {
+              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              itemCode: itemCode,
+              name: `Term 1 Tuition Fee - ${gradeLevel}`,
+              description: `Term 1 tuition fee for ${gradeLevel} (${latestYear})`,
+              amount: grade.term1Amount,
+              category: "Tuition",
+              nominalCode: "4110003",
+              documentType: "SI",
+              isActive: true,
+              applicableGrades: [gradeLevel],
+              invoiceType: "student"
+            }
+            updatedItems.push(newItem)
+            created++
+          }
+        }
+
+        // Term 2
+        if (grade.term2Amount > 0) {
+          const itemCode = `TUI-T2-${grade.id.toUpperCase()}`
+          const existingItem = updatedItems.find(item => item.itemCode === itemCode)
+
+          if (existingItem) {
+            existingItem.amount = grade.term2Amount
+            existingItem.name = `Term 2 Tuition Fee - ${gradeLevel}`
+            existingItem.applicableGrades = [gradeLevel]
+            updated++
+          } else {
+            const newItem: Item = {
+              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              itemCode: itemCode,
+              name: `Term 2 Tuition Fee - ${gradeLevel}`,
+              description: `Term 2 tuition fee for ${gradeLevel} (${latestYear})`,
+              amount: grade.term2Amount,
+              category: "Tuition",
+              nominalCode: "4110004",
+              documentType: "SI",
+              isActive: true,
+              applicableGrades: [gradeLevel],
+              invoiceType: "student"
+            }
+            updatedItems.push(newItem)
+            created++
+          }
+        }
+
+        // Term 3
+        if (grade.term3Amount > 0) {
+          const itemCode = `TUI-T3-${grade.id.toUpperCase()}`
+          const existingItem = updatedItems.find(item => item.itemCode === itemCode)
+
+          if (existingItem) {
+            existingItem.amount = grade.term3Amount
+            existingItem.name = `Term 3 Tuition Fee - ${gradeLevel}`
+            existingItem.applicableGrades = [gradeLevel]
+            updated++
+          } else {
+            const newItem: Item = {
+              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              itemCode: itemCode,
+              name: `Term 3 Tuition Fee - ${gradeLevel}`,
+              description: `Term 3 tuition fee for ${gradeLevel} (${latestYear})`,
+              amount: grade.term3Amount,
+              category: "Tuition",
+              nominalCode: "4110007",
+              documentType: "SI",
+              isActive: true,
+              applicableGrades: [gradeLevel],
+              invoiceType: "student"
+            }
+            updatedItems.push(newItem)
+            created++
+          }
+        }
+      })
+
+      setItems(updatedItems)
+      saveItemsToStorage(updatedItems, invoiceType)
+      toast.success(`Sync complete! Created ${created} items, updated ${updated} items from ${latestYear}`)
+    } catch (error) {
+      console.error("Failed to sync tuition fees:", error)
+      toast.error("Failed to sync tuition fees")
+    }
+  }
+
   // Template functions
   const openCreateTemplateModal = () => {
     setNewTemplate({
@@ -2685,6 +2817,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <p className="text-muted-foreground">{isSimplifiedView ? "Create and manage items for activities and events" : "Create and manage invoice items"}</p>
               </div>
               <div className="flex gap-2">
+                {(invoiceType === "tuition" || invoiceType === "student") && (
+                  <Button
+                    variant="outline"
+                    disabled={!userCanEdit}
+                    onClick={handleSyncTuitionFees}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Sync Tuition Fees
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   disabled={!userCanEdit}

@@ -2237,6 +2237,21 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const handleIndividualStudentSelect = (student: any) => {
     setSelectedStudents([...selectedStudents, student])
     setSearchStudentTerm("")
+
+    // Auto-select items based on student's grade (only if no items are selected yet and not in edit mode)
+    if (selectedItems.length === 0 && invoiceType !== "external" && !isEditMode) {
+      const studentGradeLabel = getGradeLabel(student.grade)
+      const matchingItems = availableItems.filter(item =>
+        item.isActive &&
+        item.applicableGrades &&
+        item.applicableGrades.includes(studentGradeLabel)
+      )
+
+      if (matchingItems.length > 0) {
+        setSelectedItems(matchingItems)
+        toast.success(`Auto-selected ${matchingItems.length} item(s) for ${studentGradeLabel}`)
+      }
+    }
   }
 
   const handleRemoveStudent = (studentId: string) => {
@@ -2244,30 +2259,50 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   }
 
   const handleSelectAllStudents = () => {
+    let studentsToSelect: InvoiceStudent[] = []
+
     // For simplified views, select all available students
     if (isSimplifiedView) {
-      const studentsToSelect = availableStudents.filter(s => !hasFullDiscount(s.id))
+      studentsToSelect = availableStudents.filter(s => !hasFullDiscount(s.id))
       setSelectedStudents(studentsToSelect)
     } else if (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") {
       // For Trip & Activity and School Bus, select all students from selected grades
-      const gradeStudents = availableStudents.filter(s =>
+      studentsToSelect = availableStudents.filter(s =>
         selectedGrades.includes(s.grade) && !hasFullDiscount(s.id)
       )
-      setSelectedStudents(gradeStudents)
+      setSelectedStudents(studentsToSelect)
     } else if (invoiceType === "summer") {
       // For Summer Activities, select all students from selected grade (no room filter)
-      const gradeStudents = availableStudents.filter(s =>
+      studentsToSelect = availableStudents.filter(s =>
         s.grade === selectedGrade && !hasFullDiscount(s.id)
       )
-      setSelectedStudents(gradeStudents)
+      setSelectedStudents(studentsToSelect)
     } else {
       // For regular invoices (Tuition, ECA), filter by grade and room
-      const gradeStudents = availableStudents.filter(s =>
+      studentsToSelect = availableStudents.filter(s =>
         s.grade === selectedGrade &&
         (selectedRoom === "" || s.room === selectedRoom) &&
         !hasFullDiscount(s.id)
       )
-      setSelectedStudents(gradeStudents)
+      setSelectedStudents(studentsToSelect)
+    }
+
+    // Auto-select items based on selected students' grades (only if no items are selected yet and not in edit mode)
+    if (selectedItems.length === 0 && invoiceType !== "external" && !isEditMode && studentsToSelect.length > 0) {
+      // Get unique grades from selected students
+      const studentGrades = [...new Set(studentsToSelect.map(s => getGradeLabel(s.grade)))]
+
+      // Find items that are applicable to at least one of the selected grades
+      const matchingItems = availableItems.filter(item =>
+        item.isActive &&
+        item.applicableGrades &&
+        item.applicableGrades.some(grade => studentGrades.includes(grade))
+      )
+
+      if (matchingItems.length > 0) {
+        setSelectedItems(matchingItems)
+        toast.success(`Auto-selected ${matchingItems.length} item(s) for ${studentGrades.join(", ")}`)
+      }
     }
   }
 
