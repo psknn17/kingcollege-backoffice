@@ -24,6 +24,7 @@ const ROLE_SELECTION_KEY = "needsRoleSelection"
 
 const roleNames: Record<string, string> = {
   super_admin: "Admin",
+  admin_accountant: "AdminAccountant",
   admin: "Admin",
   accountant: "Accountant",
   viewer: "Viewver",

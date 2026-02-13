@@ -12,7 +12,7 @@ interface Role {
 const roles: Role[] = [
   {
     id: "super_admin",
-    name: "Admin",
+    name: "Super Admin",
     badge: "FULL ACCESS",
     subtitle: "For system administrators",
     permissions: [
@@ -37,7 +37,7 @@ const roles: Role[] = [
   },
   {
     id: "viewer",
-    name: "Viewver",
+    name: "Viewer",
     badge: "READ ONLY",
     subtitle: "For reporting and oversight",
     permissions: [
@@ -49,7 +49,7 @@ const roles: Role[] = [
   },
   {
     id: "approver",
-    name: "Approvalver",
+    name: "Approver",
     badge: "APPROVAL ONLY",
     subtitle: "For invoice approvers",
     permissions: [
