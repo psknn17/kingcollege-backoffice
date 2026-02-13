@@ -960,7 +960,7 @@ export function ApprovalQueue() {
 
       {/* Approve Confirmation Dialog */}
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
-        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+        <DialogContent className="p-6 bg-white" style={{ width: "50vw", maxWidth: "600px", backgroundColor: "white", opacity: 1 }}>
           <DialogHeader>
             <DialogTitle>Confirm Approval</DialogTitle>
             <DialogDescription>
@@ -979,7 +979,7 @@ export function ApprovalQueue() {
       </Dialog>
 
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+        <DialogContent className="p-6 bg-white" style={{ width: "50vw", maxWidth: "600px", backgroundColor: "white", opacity: 1 }}>
           <DialogHeader>
             <DialogTitle>Reject Invoice</DialogTitle>
             <DialogDescription>
