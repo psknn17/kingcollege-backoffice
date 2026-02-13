@@ -2171,7 +2171,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             ? `Are you sure you want to delete ${selectedStudent.firstName} ${selectedStudent.lastName}? This action cannot be undone.`
             : "Are you sure you want to delete this student? This action cannot be undone."
         }
-        confirmTextKey="Delete"
+        confirmTextKey="common.delete"
         variant="destructive"
       />
 

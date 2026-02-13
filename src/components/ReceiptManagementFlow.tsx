@@ -1569,7 +1569,7 @@ export function ReceiptManagementFlow({
         onConfirm={deleteConfirmDialog.handleConfirm}
         titleKey="Remove Invoice Row"
         descriptionKey="Are you sure you want to remove this invoice row? This action cannot be undone."
-        confirmTextKey="Remove"
+        confirmTextKey="common.delete"
         variant="destructive"
       />
     </div>

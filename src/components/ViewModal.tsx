@@ -1069,7 +1069,7 @@ export function ViewModal({
           onConfirm={deleteConfirmDialog.handleConfirm}
           titleKey="Delete Item"
           descriptionKey="Are you sure you want to remove this item from the invoice? This action cannot be undone."
-          confirmTextKey="Delete"
+          confirmTextKey="common.delete"
           variant="destructive"
         />
       </>

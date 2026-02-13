@@ -890,7 +890,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
         onConfirm={deleteConfirmDialog.handleConfirm}
         titleKey="Remove Item"
         descriptionKey="Are you sure you want to remove this item? This action cannot be undone."
-        confirmTextKey="Remove"
+        confirmTextKey="common.delete"
         variant="destructive"
       />
     </div>
