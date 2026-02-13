@@ -1727,22 +1727,36 @@ export function InvoiceManagement({
 
   const downloadInterfaceTemplate = () => {
     const headers = [
-      "Student ID",
-      "Student Name",
-      "Grade",
-      "Parent Name",
-      "Parent Email",
-      "Amount",
-      "Due Date"
+      "PupilID",
+      "AdultIDNo",
+      "NominalCode",
+      "Type",
+      "DocumentNo",
+      "InvoiceDate",
+      "DueDate",
+      "SchoolYear",
+      "YearGroup",
+      "SchoolTerm",
+      "FinanceCode",
+      "Description",
+      "InvoiceLineItem",
+      "Amount"
     ]
     const sampleRow = [
-      "ST001",
-      "John Doe",
-      "Year 1",
-      "Parent Name",
-      "parent@email.com",
-      "450000",
-      "2026-01-31"
+      "ST001",              // PupilID
+      "A001",               // AdultIDNo
+      "4110003",            // NominalCode
+      "SI",                 // Type (Sales Invoice)
+      "INV-001",            // DocumentNo
+      "2026-01-15",         // InvoiceDate
+      "2026-01-31",         // DueDate
+      "2024-2025",          // SchoolYear
+      "Year 1",             // YearGroup
+      "Term 2",             // SchoolTerm
+      "TUI-T2",             // FinanceCode
+      "Tuition Fee - Term 2", // Description
+      "Term 2 tuition payment for academic year", // InvoiceLineItem
+      "130000"              // Amount
     ]
     const csv = [headers.join(","), sampleRow.join(",")].join("\n")
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
@@ -1754,6 +1768,101 @@ export function InvoiceManagement({
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+  }
+
+  const downloadInterfaceFile = () => {
+    if (filteredInvoices.length === 0) {
+      toast.error("No invoices to export")
+      return
+    }
+
+    const headers = [
+      "PupilID",
+      "AdultIDNo",
+      "NominalCode",
+      "Type",
+      "DocumentNo",
+      "InvoiceDate",
+      "DueDate",
+      "SchoolYear",
+      "YearGroup",
+      "SchoolTerm",
+      "FinanceCode",
+      "Description",
+      "InvoiceLineItem",
+      "Amount"
+    ]
+
+    const rows: string[][] = []
+
+    filteredInvoices.forEach(invoice => {
+      // Get student data
+      const student = students.find(s => s.id === invoice.studentId)
+      const pupilID = invoice.studentId || ""
+      const adultIDNo = student?.parentIdNumber || student?.parentEmail || ""
+      const schoolYear = invoice.academicYear || getAcademicYear(invoice.issueDate || new Date())
+      const yearGroup = invoice.studentGrade || ""
+      const schoolTerm = invoice.term || ""
+      const invoiceDate = invoice.issueDate ? format(new Date(invoice.issueDate), "yyyy-MM-dd") : ""
+      const dueDate = format(new Date(invoice.dueDate), "yyyy-MM-dd")
+
+      // For each line item in the invoice, create a separate row
+      invoice.items.forEach(item => {
+        // Get item details - try to extract from item or use defaults
+        const itemData = item as any // Cast to any to access potential itemCode/nominalCode fields
+        const nominalCode = itemData.nominalCode || "4110000" // Default nominal code
+        const financeCode = itemData.itemCode || itemData.id || ""
+        const description = itemData.name || item.description || ""
+        const invoiceLineItem = item.description || ""
+        const amount = Math.round(item.amount).toString()
+        const documentType = itemData.documentType || "SI" // Default to Sales Invoice
+
+        const row = [
+          pupilID,
+          adultIDNo,
+          nominalCode,
+          documentType,
+          invoice.invoiceNumber,
+          invoiceDate,
+          dueDate,
+          schoolYear,
+          yearGroup,
+          schoolTerm,
+          financeCode,
+          description,
+          invoiceLineItem,
+          amount
+        ]
+
+        rows.push(row)
+      })
+    })
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => {
+        // Escape cells that contain commas or quotes
+        if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
+          return `"${cell.replace(/"/g, '""')}"`
+        }
+        return cell
+      }).join(","))
+    ].join("\n")
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    const timestamp = format(new Date(), "yyyyMMdd_HHmmss")
+    link.setAttribute("download", `invoice_interface_${timestamp}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast.success(`Exported ${rows.length} line items from ${filteredInvoices.length} invoice${filteredInvoices.length > 1 ? 's' : ''}`)
   }
 
   const downloadInvoice = (invoiceId: string) => {
@@ -2453,7 +2562,7 @@ export function InvoiceManagement({
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={downloadInterfaceTemplate}
+            onClick={downloadInterfaceFile}
           >
             <Download className="w-4 h-4" />
             Download Interface File
