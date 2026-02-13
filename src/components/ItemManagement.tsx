@@ -2045,6 +2045,24 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     setCurrentPage(1)
   }, [searchItemTerm, selectedCategory])
 
+  // Auto-sync tuition fees on component mount (for tuition invoice type)
+  useEffect(() => {
+    if ((invoiceType === "tuition" || invoiceType === "student") && items.length === 0) {
+      try {
+        const tuitionDataRaw = localStorage.getItem("tuitionByYearData")
+        if (tuitionDataRaw) {
+          console.log("[ItemManagement] Auto-syncing tuition fees on mount...")
+          // Use setTimeout to avoid calling during render
+          setTimeout(() => {
+            handleSyncTuitionFees()
+          }, 100)
+        }
+      } catch (error) {
+        console.error("[ItemManagement] Failed to auto-sync tuition fees:", error)
+      }
+    }
+  }, []) // Run only once on mount
+
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString()
   }
@@ -2572,10 +2590,15 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
-      toast.success(`Sync complete! Created ${created} items, updated ${updated} items from ${latestYear}`)
+
+      // Only show toast if items were created or updated
+      if (created > 0 || updated > 0) {
+        console.log(`[ItemManagement] Tuition fees synced: Created ${created}, Updated ${updated} from ${latestYear}`)
+        toast.success(`Synced tuition fees: ${created} new, ${updated} updated from ${latestYear}`)
+      }
     } catch (error) {
       console.error("Failed to sync tuition fees:", error)
-      toast.error("Failed to sync tuition fees")
+      // Silent fail for auto-sync, only log error
     }
   }
 
@@ -2817,17 +2840,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <p className="text-muted-foreground">{isSimplifiedView ? "Create and manage items for activities and events" : "Create and manage invoice items"}</p>
               </div>
               <div className="flex gap-2">
-                {(invoiceType === "tuition" || invoiceType === "student") && (
-                  <Button
-                    variant="outline"
-                    disabled={!userCanEdit}
-                    onClick={handleSyncTuitionFees}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Sync Tuition Fees
-                  </Button>
-                )}
                 <Button
                   variant="outline"
                   disabled={!userCanEdit}
