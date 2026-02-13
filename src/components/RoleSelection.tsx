@@ -23,26 +23,15 @@ const roles: Role[] = [
     accentColor: "#DC2626"
   },
   {
-    id: "admin",
-    name: "Admin",
-    badge: "ADMINISTRATIVE ACCESS",
-    subtitle: "For school administrators",
+    id: "admin_accountant",
+    name: "AdminAccountant",
+    badge: "ADMINISTRATIVE & FINANCIAL",
+    subtitle: "For school administrators and accounting staff",
     permissions: [
       "Manage invoices and payments",
       "Configure school settings",
-      "View all reports"
-    ],
-    accentColor: "#F59E0B"
-  },
-  {
-    id: "accountant",
-    name: "Accountant",
-    badge: "FINANCIAL OPERATIONS",
-    subtitle: "For accounting staff",
-    permissions: [
-      "Create and manage invoices",
-      "Process payments",
-      "Generate financial reports"
+      "Process payments and reports",
+      "Manage student data"
     ],
     accentColor: "#3B82F6"
   },

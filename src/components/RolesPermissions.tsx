@@ -146,34 +146,16 @@ const initialRoles: Role[] = [
     updatedAt: new Date("2024-01-01")
   },
   {
-    id: "role_admin",
-    name: "Admin",
-    description: "Administrative access excluding system settings",
+    id: "role_admin_accountant",
+    name: "AdminAccountant",
+    description: "Administrative and financial operations - full access to invoices, payments, settings, and reports",
     permissions: permissionModules
       .filter(m => m.id !== "roles")
       .map(m => ({ moduleId: m.id, actions: m.actions })),
     isSystem: true,
-    userCount: 3,
+    userCount: 5,
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01")
-  },
-  {
-    id: "role_accountant",
-    name: "Accountant",
-    description: "Financial operations - invoices, payments, and reports",
-    permissions: [
-      { moduleId: "students", actions: ["view"] },
-      { moduleId: "families", actions: ["view"] },
-      { moduleId: "tuition", actions: ["view", "create", "edit"] },
-      { moduleId: "invoices", actions: ["view", "create", "edit", "send_email", "download"] },
-      { moduleId: "payments", actions: ["view", "create", "edit", "void"] },
-      { moduleId: "discounts", actions: ["view"] },
-      { moduleId: "reports", actions: ["view", "export"] }
-    ],
-    isSystem: false,
-    userCount: 2,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-02-01")
   },
   {
     id: "role_viewer",

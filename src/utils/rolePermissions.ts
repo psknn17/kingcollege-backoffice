@@ -6,15 +6,10 @@ export const rolePermissions = {
     sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement"],
     menuItems: [] // Empty means ALL items within allowed sections
   },
-  admin: {
-    name: "Admin",
+  admin_accountant: {
+    name: "AdminAccountant",
     sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "studentManagement"],
-    menuItems: [] // All items except userManagement section
-  },
-  accountant: {
-    name: "Accountant",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement"],
-    menuItems: [] // Empty means ALL items within allowed sections
+    menuItems: [] // Combined permissions from Admin and Accountant
   },
   viewer: {
     name: "Viewer",
@@ -73,13 +68,12 @@ function normalizeRoleName(role: string): string {
   // Convert role display names back to IDs
   const roleMap: Record<string, string> = {
     "Super Admin": "super_admin",
-    "Admin": "admin",
-    "Accountant": "accountant",
+    "AdminAccountant": "admin_accountant",
     "Viewer": "viewer",
     "Approver": "approver"
   }
 
-  return roleMap[role] || role.toLowerCase().replace(/ /g, '_')
+  return roleMap[role] || role.toLowerCase().replace(/[\/\s]/g, '_')
 }
 
 // Check if user can perform edit/add/delete actions (read-only check)
