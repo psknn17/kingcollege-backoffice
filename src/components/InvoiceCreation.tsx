@@ -3522,11 +3522,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 )}
 
                 {/* Add Item Button */}
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">Items ({availableItems.length} available)</span>
+                <div className="flex justify-end py-2">
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={() => setIsAddItemDialogOpen(true)}
                     className="gap-2"
                   >
