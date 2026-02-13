@@ -187,3 +187,18 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Solid white opaque dropdown menus */
+[data-slot="dropdown-menu-content"],
+[data-slot="context-menu-content"],
+[data-slot="popover-content"],
+[data-slot="select-content"],
+[data-slot="dialog-content"],
+[data-slot="sheet-content"],
+[data-slot="alert-dialog-content"] {
+  background-color: #FFFFFF !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 2000 !important;
+}
