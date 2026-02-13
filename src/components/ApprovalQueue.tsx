@@ -510,6 +510,7 @@ export function ApprovalQueue() {
           approvalStatus: "approved",
           approvedBy: "Admin",
           approvedAt: now.toISOString(),
+          issueDate: now.toISOString().split('T')[0],
         },
         overrideNumber: inv.invoiceNumber
       })
@@ -520,6 +521,7 @@ export function ApprovalQueue() {
         approvalStatus: "approved",
         approvedBy: "Admin",
         approvedAt: now,
+        issueDate: now,
       }
     })
 
