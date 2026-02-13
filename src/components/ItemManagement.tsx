@@ -2496,9 +2496,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       let updated = 0
       const updatedItems = [...items]
 
-      // For each grade level, create/update 3 items (Term 1, 2, 3)
-      gradeData.forEach((grade: any) => {
+      // For each grade level, create/update 3 items (Term 1, 2, 3) with same nominal code
+      gradeData.forEach((grade: any, index: number) => {
         const gradeLevel = grade.gradeLevel // e.g., "Year 1"
+
+        // Generate ONE nominal code per grade level (base 411 + grade order number padded to 4 digits)
+        const gradeOrder = grade.gradeLevelOrder || (index + 1)
+        const sharedNominalCode = `411${String(gradeOrder).padStart(4, '0')}`
 
         // Term 1
         if (grade.term1Amount > 0) {
@@ -2509,6 +2513,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             existingItem.amount = grade.term1Amount
             existingItem.name = `Term 1 Tuition Fee - ${gradeLevel}`
             existingItem.applicableGrades = [gradeLevel]
+            existingItem.nominalCode = sharedNominalCode
             updated++
           } else {
             const newItem: Item = {
@@ -2518,7 +2523,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               description: `Term 1 tuition fee for ${gradeLevel} (${latestYear})`,
               amount: grade.term1Amount,
               category: "Tuition",
-              nominalCode: "4110003",
+              nominalCode: sharedNominalCode,
               documentType: "SI",
               isActive: true,
               applicableGrades: [gradeLevel],
@@ -2538,6 +2543,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             existingItem.amount = grade.term2Amount
             existingItem.name = `Term 2 Tuition Fee - ${gradeLevel}`
             existingItem.applicableGrades = [gradeLevel]
+            existingItem.nominalCode = sharedNominalCode
             updated++
           } else {
             const newItem: Item = {
@@ -2547,7 +2553,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               description: `Term 2 tuition fee for ${gradeLevel} (${latestYear})`,
               amount: grade.term2Amount,
               category: "Tuition",
-              nominalCode: "4110004",
+              nominalCode: sharedNominalCode,
               documentType: "SI",
               isActive: true,
               applicableGrades: [gradeLevel],
@@ -2567,6 +2573,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             existingItem.amount = grade.term3Amount
             existingItem.name = `Term 3 Tuition Fee - ${gradeLevel}`
             existingItem.applicableGrades = [gradeLevel]
+            existingItem.nominalCode = sharedNominalCode
             updated++
           } else {
             const newItem: Item = {
@@ -2576,7 +2583,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               description: `Term 3 tuition fee for ${gradeLevel} (${latestYear})`,
               amount: grade.term3Amount,
               category: "Tuition",
-              nominalCode: "4110007",
+              nominalCode: sharedNominalCode,
               documentType: "SI",
               isActive: true,
               applicableGrades: [gradeLevel],
