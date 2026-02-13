@@ -2177,6 +2177,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <AlertDialogAction
               onClick={deleteConfirmDialog.handleConfirm}
               className="bg-red-600 hover:bg-red-700 text-white"
+              style={{
+                display: 'inline-flex',
+                visibility: 'visible',
+                opacity: 1,
+                backgroundColor: '#dc2626',
+                color: 'white',
+                padding: '0.5rem 1rem'
+              }}
             >
               Delete
             </AlertDialogAction>
