@@ -446,17 +446,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const performDeleteStudent = (student: Student) => {
-    console.log('performDeleteStudent called for:', student.firstName, student.lastName)
     deleteStudent(student.id)
     toast.success("Student deleted successfully")
   }
 
   const handleDeleteStudent = (student: Student) => {
-    console.log('handleDeleteStudent called for:', student.firstName, student.lastName)
-    console.log('deleteConfirmDialog before confirm:', deleteConfirmDialog)
     setSelectedStudent(student)
     deleteConfirmDialog.confirm(() => performDeleteStudent(student))
-    console.log('deleteConfirmDialog after confirm:', deleteConfirmDialog)
   }
 
   const performSaveNewStudent = () => {
