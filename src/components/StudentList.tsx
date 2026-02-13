@@ -7,6 +7,7 @@ import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog"
 import { Checkbox } from "./ui/checkbox"
 import { Badge } from "./ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
@@ -2161,19 +2162,27 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteConfirmDialog.isOpen}
-        onOpenChange={deleteConfirmDialog.setIsOpen}
-        onConfirm={deleteConfirmDialog.handleConfirm}
-        titleKey="Delete Student"
-        descriptionKey={
-          selectedStudent
-            ? `Are you sure you want to delete ${selectedStudent.firstName} ${selectedStudent.lastName}? This action cannot be undone.`
-            : "Are you sure you want to delete this student? This action cannot be undone."
-        }
-        confirmTextKey="common.delete"
-        variant="destructive"
-      />
+      <AlertDialog open={deleteConfirmDialog.isOpen} onOpenChange={deleteConfirmDialog.setIsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedStudent
+                ? `Are you sure you want to delete ${selectedStudent.firstName} ${selectedStudent.lastName}? This action cannot be undone.`
+                : "Are you sure you want to delete this student? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteConfirmDialog.handleConfirm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
