@@ -934,7 +934,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                 <SelectContent>
                   <SelectItem value="all">{t("common.allTerms")}</SelectItem>
                   {termOptions.map((term) => (
-                    <SelectItem key={term.id} value={term.name}>
+                    <SelectItem key={term.name} value={term.name}>
                       {term.name}
                     </SelectItem>
                   ))}
@@ -1608,7 +1608,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps)
                     <SelectContent>
                       <SelectItem value="all">All Terms</SelectItem>
                       {termOptions.map(term => (
-                        <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                        <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

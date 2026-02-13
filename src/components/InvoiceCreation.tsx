@@ -3183,7 +3183,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     </SelectTrigger>
                     <SelectContent>
                       {availableTerms.map(term => (
-                        <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                        <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -3281,7 +3281,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       </SelectTrigger>
                       <SelectContent>
                         {availableTerms.map(term => (
-                          <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                          <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

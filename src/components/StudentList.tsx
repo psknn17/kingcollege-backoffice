@@ -1698,9 +1698,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       <Card>
         <CardContent className="pt-6">
           {selectedStudentIds.size > 0 && (
-            <div className="mb-4 flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-              <span className="text-sm font-medium">
-                {selectedStudentIds.size} student{selectedStudentIds.size > 1 ? 's' : ''} selected
+            <div className="mb-4 flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <span className="text-sm font-medium text-red-800">
+                {selectedStudentIds.size} item{selectedStudentIds.size > 1 ? 's' : ''} selected
               </span>
               <Button
                 variant="destructive"
@@ -1713,10 +1713,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   })
                 }}
                 disabled={!userCanEdit}
-                className="flex items-center gap-2"
+                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 mr-1" />
                 Delete Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedStudentIds(new Set())}
+              >
+                Cancel
               </Button>
             </div>
           )}

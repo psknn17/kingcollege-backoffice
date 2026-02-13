@@ -493,7 +493,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 <SelectContent>
                   <SelectItem value="all">{t("payment.allTerms")}</SelectItem>
                   {availableTerms.map(term => (
-                    <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>
+                    <SelectItem key={term.name} value={term.id}>{term.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

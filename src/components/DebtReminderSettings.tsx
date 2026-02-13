@@ -6,7 +6,9 @@ import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Textarea } from "./ui/textarea"
 import { Switch } from "./ui/switch"
-import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send } from "lucide-react"
+import { Checkbox } from "./ui/checkbox"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
@@ -27,6 +29,14 @@ const PRESET_EMAIL_SUBJECTS = [
   "External Invoice Payment Reminder"
 ]
 
+type InvoiceStatus = "unpaid" | "overdue" | "sent"
+
+const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
+  { value: "unpaid", label: "Unpaid" },
+  { value: "overdue", label: "Overdue" },
+  { value: "sent", label: "Sent" },
+]
+
 interface ReminderConfig {
   id: string
   name: string
@@ -36,7 +46,9 @@ interface ReminderConfig {
   method: "email" | "sms" | "both"
   enabled: boolean
   subject: string
+  emailTitle: string
   message: string
+  invoiceStatuses: InvoiceStatus[]
 }
 
 // Helper function to format date for display
@@ -59,7 +71,9 @@ const initialReminders: ReminderConfig[] = [
     method: "email",
     enabled: true,
     subject: "Tuition Payment Reminder",
-    message: "Dear Parent, This is a friendly reminder that your child's tuition payment is due soon. Please make your payment to avoid any late fees."
+    emailTitle: "Tuition Payment Reminder - Term 1",
+    message: "Dear Parent, This is a friendly reminder that your child's tuition payment is due soon. Please make your payment to avoid any late fees.",
+    invoiceStatuses: ["unpaid", "overdue"]
   },
   {
     id: "2",
@@ -70,7 +84,9 @@ const initialReminders: ReminderConfig[] = [
     method: "both",
     enabled: true,
     subject: "ECA Payment Reminder",
-    message: "Dear Parent, Your child's ECA payment is due soon. Please complete your payment as soon as possible to ensure continuous enrollment."
+    emailTitle: "ECA Payment Reminder - Term 1",
+    message: "Dear Parent, Your child's ECA payment is due soon. Please complete your payment as soon as possible to ensure continuous enrollment.",
+    invoiceStatuses: ["unpaid", "overdue"]
   },
   {
     id: "3",
@@ -81,7 +97,9 @@ const initialReminders: ReminderConfig[] = [
     method: "both",
     enabled: true,
     subject: "School Bus Payment Reminder",
-    message: "Dear Parent, This is a reminder that your child's school bus payment is due. Please contact our office immediately if you need assistance with payment arrangements."
+    emailTitle: "School Bus - Final Payment Notice",
+    message: "Dear Parent, This is a reminder that your child's school bus payment is due. Please contact our office immediately if you need assistance with payment arrangements.",
+    invoiceStatuses: ["unpaid", "overdue", "sent"]
   }
 ]
 
@@ -145,7 +163,9 @@ export function DebtReminderSettings() {
       method: "email",
       enabled: true,
       subject: "",
-      message: ""
+      emailTitle: "",
+      message: "",
+      invoiceStatuses: ["unpaid", "overdue"]
     }
     setReminders([...reminders, newReminder])
   }
@@ -315,7 +335,7 @@ export function DebtReminderSettings() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Academic Year and Term Selection */}
+                  {/* Row 1: Academic Year & Term */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{t("common.academicYear")}</Label>
@@ -360,6 +380,7 @@ export function DebtReminderSettings() {
                     </div>
                   </div>
 
+                  {/* Row 2: Email Subject & Invoice Status Filter */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{t("debt.emailSubject")}</Label>
@@ -379,6 +400,74 @@ export function DebtReminderSettings() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Invoice Status Filter</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={!userCanEdit}
+                          >
+                            <span className="truncate">
+                              {reminder.invoiceStatuses?.length
+                                ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
+                                : "Select invoice statuses"}
+                            </span>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-2" align="start">
+                          <div className="space-y-1">
+                            {INVOICE_STATUS_OPTIONS.map(option => (
+                              <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                                onClick={() => {
+                                  if (!userCanEdit) return
+                                  const current = reminder.invoiceStatuses || []
+                                  const updated = current.includes(option.value)
+                                    ? current.filter(s => s !== option.value)
+                                    : [...current, option.value]
+                                  updateReminder(reminder.id, "invoiceStatuses", updated)
+                                }}
+                              >
+                                <Checkbox
+                                  id={`status-${reminder.id}-${option.value}`}
+                                  checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
+                                  onCheckedChange={(checked) => {
+                                    const current = reminder.invoiceStatuses || []
+                                    const updated = checked
+                                      ? [...current, option.value]
+                                      : current.filter(s => s !== option.value)
+                                    updateReminder(reminder.id, "invoiceStatuses", updated)
+                                  }}
+                                  disabled={!userCanEdit}
+                                />
+                                <Label
+                                  htmlFor={`status-${reminder.id}-${option.value}`}
+                                  className="text-sm font-normal cursor-pointer flex-1"
+                                >
+                                  {option.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Email Title & Send Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Email Title</Label>
+                      <Input
+                        value={reminder.emailTitle}
+                        onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
+                        placeholder="Enter custom email title..."
+                        disabled={!userCanEdit}
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -416,6 +505,7 @@ export function DebtReminderSettings() {
                       <p><strong>{t("common.academicYear")}:</strong> {reminder.academicYear}</p>
                       <p><strong>{t("common.term")}:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term}</p>
                       <p><strong>{t("debt.sendDate")}:</strong> {formatDisplayDate(reminder.sendDate)}</p>
+                      <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
                       <p><strong>{t("common.status")}:</strong>
                         <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
                           {reminder.enabled ? t("common.active") : t("common.disabled")}

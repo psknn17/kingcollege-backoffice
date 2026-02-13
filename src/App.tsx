@@ -113,6 +113,7 @@ import { logActivity } from "@/lib/activityLog"
 import { StudentList } from "./components/StudentList"
 import { FamilyGroups } from "./components/FamilyGroups"
 import { SchoolSettings } from "./components/SchoolSettings"
+import { ReportOverview } from "./components/ReportOverview"
 import { UserProfile } from "./components/UserProfile"
 import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
@@ -166,6 +167,9 @@ const menuItems = {
     { id: "external-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "external-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+  ],
+  report: [
+    { id: "report-overview", labelKey: "menu.reportOverview", icon: FileBarChart },
   ],
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
@@ -246,6 +250,7 @@ export default function App() {
         exam: false,
         schoolBus: false,
         externalInvoice: false,
+        report: false,
         studentManagement: false,
         userManagement: true,
         settings: false
@@ -260,6 +265,7 @@ export default function App() {
       exam: false,
       schoolBus: false,
       externalInvoice: false,
+      report: false,
       studentManagement: false,
       userManagement: false,
       settings: false
@@ -296,6 +302,7 @@ export default function App() {
       ...menuItems.exam,
       ...menuItems.schoolBus,
       ...menuItems.externalInvoice,
+      ...menuItems.report,
       ...menuItems.userManagement,
       ...menuItems.studentManagement,
       ...menuItems.settings
@@ -513,6 +520,8 @@ export default function App() {
         return <FamilyGroups />
       case "school-settings":
         return <SchoolSettings />
+      case "report-overview":
+        return <ReportOverview />
 
       default:
         return <TuitionDashboard />
@@ -591,6 +600,37 @@ export default function App() {
                           <SidebarGroupContent>
                             <SidebarMenu>
                               {getFilteredMenuItems("debtReminder").map((item) => (
+                                <SidebarMenuItem key={item.id}>
+                                  <SidebarMenuButton
+                                    onClick={() => handleMenuItemClick(item.id)}
+                                    isActive={activeSection === item.id}
+                                  >
+                                    <item.icon className="w-4 h-4" />
+                                    <span>{t(item.labelKey)}</span>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              ))}
+                            </SidebarMenu>
+                          </SidebarGroupContent>
+                        </CollapsibleContent>
+                      </SidebarGroup>
+                    </Collapsible>
+                  )}
+
+                  {/* Report */}
+                  {canAccessMenuSection("report") && (
+                    <Collapsible open={openGroups["report"]} onOpenChange={() => toggleGroup("report")}>
+                      <SidebarGroup>
+                        <CollapsibleTrigger className="w-full">
+                          <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                            {t("menu.report")}
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["report"] ? "rotate-180" : ""}`} />
+                          </SidebarGroupLabel>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarGroupContent>
+                            <SidebarMenu>
+                              {getFilteredMenuItems("report").map((item) => (
                                 <SidebarMenuItem key={item.id}>
                                   <SidebarMenuButton
                                     onClick={() => handleMenuItemClick(item.id)}

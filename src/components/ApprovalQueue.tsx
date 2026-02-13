@@ -765,7 +765,7 @@ export function ApprovalQueue() {
                 <SelectContent>
                   <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
                   {availableTerms.map(term => (
-                    <SelectItem key={term.id} value={term.name}>{term.name}</SelectItem>
+                    <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
