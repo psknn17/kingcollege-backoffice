@@ -2,13 +2,14 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Save, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save, ChevronLeft, ChevronRight } from "lucide-react"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -1952,6 +1953,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   // Confirmation dialog hooks
   const addConfirmDialog = useConfirmDialog()
   const editConfirmDialog = useConfirmDialog()
+  const importConfirmDialog = useConfirmDialog()
 
   const isExternalView = invoiceType === "external"
   const isCategoryView = ["afterschool", "event", "summer", "eca", "trip", "exam", "bus"].includes(invoiceType)
@@ -2013,6 +2015,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [viewModalData, setViewModalData] = useState<any>(null)
   const [viewModalType, setViewModalType] = useState<"item" | "template">("item")
+
+  // Import state
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importError, setImportError] = useState<string>("")
 
   // New item form state
   const [newItem, setNewItem] = useState({
@@ -2234,6 +2241,196 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     saveTemplatesToStorage(updatedTemplates, invoiceType)
 
     toast.success("Item deleted successfully from all templates")
+  }
+
+  // Import functions
+  const downloadTemplate = () => {
+    const headers = [
+      "Item Code",
+      "Name",
+      "Description",
+      "Amount",
+      "Category",
+      "Nominal Code",
+      "Document Type",
+      "Applicable Grades",
+      "Status"
+    ]
+
+    const exampleRow = [
+      "ITEM-001",
+      "Sample Item",
+      "This is a sample item description",
+      "50000",
+      categories[0],
+      "4110001",
+      "SI",
+      "Year 1,Year 2,Year 3",
+      "active"
+    ]
+
+    const csvContent = [
+      headers.join(","),
+      exampleRow.map(cell => `"${cell}"`).join(",")
+    ].join("\n")
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", "item_import_template.csv")
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.success("Template downloaded")
+  }
+
+  const parseCSV = (csvText: string) => {
+    const lines = csvText.split("\n").filter(line => line.trim())
+    if (lines.length < 2) {
+      setImportError("CSV file must have headers and at least one data row")
+      return
+    }
+
+    // Auto-detect delimiter (comma, semicolon, or tab)
+    const detectDelimiter = (line: string): string => {
+      const delimiters = [',', ';', '\t']
+      let maxCount = 0
+      let detectedDelimiter = ','
+
+      delimiters.forEach(delimiter => {
+        const count = line.split(delimiter).length
+        if (count > maxCount) {
+          maxCount = count
+          detectedDelimiter = delimiter
+        }
+      })
+
+      return detectedDelimiter
+    }
+
+    const delimiter = detectDelimiter(lines[0])
+    console.log("Detected delimiter:", delimiter === '\t' ? 'TAB' : delimiter)
+
+    // Parse with detected delimiter
+    const parseLineWithDelimiter = (line: string, delim: string): string[] => {
+      const regex = delim === '\t'
+        ? /("([^"]*(?:""[^"]*)*)"|[^\t]*)/g
+        : delim === ';'
+        ? /("([^"]*(?:""[^"]*)*)"|[^;]*)/g
+        : /("([^"]*(?:""[^"]*)*)"|[^,]*)/g
+
+      const matches = line.match(regex) || []
+      return matches
+        .map(v => v.trim().replace(/^"|"$/g, "").replace(/""/g, '"'))
+        .filter(v => v !== '' || matches.length > 1)
+    }
+
+    const headers = parseLineWithDelimiter(lines[0], delimiter)
+    console.log("Parsed headers:", headers)
+
+    const requiredHeaders = ["Item Code", "Name", "Amount"]
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
+
+    if (missingHeaders.length > 0) {
+      setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${headers.join(", ")}`)
+      return
+    }
+
+    const parsed = lines.slice(1).map((line, index) => {
+      const values = parseLineWithDelimiter(line, delimiter)
+
+      const row: any = {}
+      headers.forEach((header, i) => {
+        row[header] = values[i] || ""
+      })
+      row._rowIndex = index + 2
+      return row
+    })
+
+    console.log("Parsed items (first 3):", parsed.slice(0, 3))
+
+    setImportPreview(parsed)
+    setImportError("")
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith(".csv")) {
+      setImportError("Please upload a CSV file")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      parseCSV(text)
+    }
+    reader.readAsText(file)
+  }
+
+  const performConfirmImport = () => {
+    if (importPreview.length === 0) {
+      toast.error("No data to import")
+      return
+    }
+
+    let imported = 0
+    let skipped = 0
+
+    importPreview.forEach(row => {
+      // Check if item already exists
+      const existingItem = items.find(item => item.itemCode === row["Item Code"])
+      if (existingItem) {
+        skipped++
+        return
+      }
+
+      // Parse applicable grades
+      const gradesString = row["Applicable Grades"] || ""
+      const applicableGrades = gradesString
+        .split(",")
+        .map((g: string) => g.trim())
+        .filter((g: string) => g && grades.includes(g))
+
+      const newItem: Item = {
+        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        itemCode: row["Item Code"],
+        name: row["Name"],
+        description: row["Description"] || "",
+        amount: parseFloat(row["Amount"]) || 0,
+        category: row["Category"] || categories[0],
+        nominalCode: row["Nominal Code"] || "",
+        documentType: (row["Document Type"] === "CI" ? "CI" : "SI") as "SI" | "CI",
+        isActive: (row["Status"] || "active").toLowerCase() === "active",
+        applicableGrades: applicableGrades,
+        invoiceType: invoiceType as "student" | "external" | "eca"
+      }
+
+      const updatedItems = [...items, newItem]
+      setItems(updatedItems)
+      saveItemsToStorage(updatedItems, invoiceType)
+      imported++
+    })
+
+    setIsImportDialogOpen(false)
+    toast.success(`Imported ${imported} item${imported > 1 ? 's' : ''}${skipped > 0 ? `, skipped ${skipped} duplicate${skipped > 1 ? 's' : ''}` : ""}`)
+  }
+
+  const handleImport = () => {
+    setImportPreview([])
+    setImportError("")
+    setIsImportDialogOpen(true)
+  }
+
+  const handleConfirmImport = () => {
+    importConfirmDialog.confirm(() => {
+      performConfirmImport()
+    })
   }
 
   const handleToggleGrade = (grade: string) => {
@@ -2491,18 +2688,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 <Button
                   variant="outline"
                   disabled={!userCanEdit}
-                  onClick={() => {
-                    const input = document.createElement('input')
-                    input.type = 'file'
-                    input.accept = '.csv,.xlsx,.xls'
-                    input.onchange = (e) => {
-                      const file = (e.target as HTMLInputElement).files?.[0]
-                      if (file) {
-                        toast.success(`Importing ${file.name}...`)
-                      }
-                    }
-                    input.click()
-                  }}
+                  onClick={handleImport}
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Import
@@ -3096,6 +3282,117 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         titleKey="confirmDialog.editTitle"
         descriptionKey="confirmDialog.editDescription"
         confirmTextKey="common.save"
+      />
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogHeader>
+            <DialogTitle>Import Items</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file to import items. Download the template for the correct format.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Template Download */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">CSV Template</p>
+                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+              </div>
+              <Button variant="outline" onClick={downloadTemplate}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Download Template
+              </Button>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="csvFile">Upload CSV File</Label>
+              <Input
+                id="csvFile"
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="cursor-pointer"
+                disabled={!userCanEdit}
+              />
+            </div>
+
+            {/* Error Display */}
+            {importError && (
+              <div className="p-3 border border-red-200 bg-red-50 rounded-lg text-red-700 text-sm">
+                {importError}
+              </div>
+            )}
+
+            {/* Preview Table */}
+            {importPreview.length > 0 && (
+              <div className="space-y-2">
+                <Label>Preview ({importPreview.length} items)</Label>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="max-h-[300px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item Code</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importPreview.slice(0, 10).map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-mono text-sm">{row["Item Code"]}</TableCell>
+                            <TableCell>{row["Name"]}</TableCell>
+                            <TableCell>{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{row["Category"] || "-"}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{row["Status"] || "active"}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {importPreview.length > 10 && (
+                    <div className="p-2 text-center text-sm text-muted-foreground border-t">
+                      ... and {importPreview.length - 10} more items
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmImport}
+              disabled={!userCanEdit || importPreview.length === 0 || !!importError}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import {importPreview.length > 0 ? `${importPreview.length} Items` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Confirmation Dialog */}
+      <ConfirmDialog
+        open={importConfirmDialog.isOpen}
+        onOpenChange={importConfirmDialog.setIsOpen}
+        onConfirm={importConfirmDialog.handleConfirm}
+        titleKey="confirmDialog.importTitle"
+        descriptionKey="confirmDialog.importDescription"
+        confirmTextKey="common.import"
       />
     </div>
   )
