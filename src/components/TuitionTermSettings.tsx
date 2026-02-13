@@ -31,12 +31,25 @@ export function TuitionTermSettings() {
   const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
 
+  // Helper function to deep clone academic year with proper Date objects
+  const cloneAcademicYear = (year: AcademicYear): AcademicYear => {
+    return {
+      ...year,
+      terms: year.terms.map(term => ({
+        ...term,
+        startDate: term.startDate ? new Date(term.startDate) : null,
+        endDate: term.endDate ? new Date(term.endDate) : null,
+        paymentDeadline: term.paymentDeadline ? new Date(term.paymentDeadline) : null
+      }))
+    }
+  }
+
   // Local state for editing - changes only saved when user clicks Save
   // Initialize with academicYears immediately to prevent white screen
   const [editedYears, setEditedYears] = useState<Record<string, AcademicYear>>(() => {
     const initial: Record<string, AcademicYear> = {}
     academicYears.forEach(year => {
-      initial[year.id] = JSON.parse(JSON.stringify(year))
+      initial[year.id] = cloneAcademicYear(year)
     })
     return initial
   })
@@ -45,7 +58,7 @@ export function TuitionTermSettings() {
   useEffect(() => {
     const initial: Record<string, AcademicYear> = {}
     academicYears.forEach(year => {
-      initial[year.id] = JSON.parse(JSON.stringify(year)) // Deep clone
+      initial[year.id] = cloneAcademicYear(year)
     })
     setEditedYears(initial)
   }, [academicYears])
@@ -125,7 +138,7 @@ export function TuitionTermSettings() {
     // Also add to editedYears
     setEditedYears(prev => ({
       ...prev,
-      [yearId]: JSON.parse(JSON.stringify(newYear))
+      [yearId]: cloneAcademicYear(newYear)
     }))
 
     setExpandedYears(prev => [...prev, yearId])
@@ -275,7 +288,7 @@ export function TuitionTermSettings() {
     if (originalYear) {
       setEditedYears(prev => ({
         ...prev,
-        [yearId]: JSON.parse(JSON.stringify(originalYear))
+        [yearId]: cloneAcademicYear(originalYear)
       }))
       toast.success(t("termSettings.changesDiscarded") || "Changes discarded")
     }
@@ -351,26 +364,6 @@ export function TuitionTermSettings() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {hasChanges && (
-                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                            {t("termSettings.unsavedChanges") || "Unsaved changes"}
-                          </Badge>
-                        )}
-                        {hasChanges && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-3 text-gray-600 hover:text-gray-700"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDiscardChanges(year.id)
-                            }}
-                            disabled={!userCanEdit}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            {t("common.discard") || "Discard"}
-                          </Button>
-                        )}
                         <Button
                           size="sm"
                           className="h-8 px-3"
@@ -378,7 +371,7 @@ export function TuitionTermSettings() {
                             e.stopPropagation()
                             handleSaveYearClick(year.id)
                           }}
-                          disabled={!userCanEdit || !hasChanges}
+                          disabled={!userCanEdit}
                         >
                           <Save className="w-4 h-4 mr-1" />
                           Save

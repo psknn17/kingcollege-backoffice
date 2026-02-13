@@ -88,6 +88,7 @@ const en: Record<string, string> = {
   "common.timestamp": "Timestamp",
   "common.errorMessage": "Error Message",
   "common.confirm": "Confirm",
+  "common.discard": "Discard",
 
   // Confirmation Dialog
   "confirmDialog.saveTitle": "Confirm Save?",
@@ -1426,6 +1427,8 @@ const en: Record<string, string> = {
   "termSettings.yearDeleted": "Academic year deleted",
   "termSettings.termDeleted": "Term deleted",
   "termSettings.changesSaved": "All changes saved successfully",
+  "termSettings.unsavedChanges": "Unsaved changes",
+  "termSettings.changesDiscarded": "Changes discarded",
   "termSettings.invalidDateRange": "Invalid date range",
   "termSettings.startBeforeEnd": "Start date must be before end date",
   "termSettings.dateOverlap": "Date overlap detected",
@@ -3235,6 +3238,7 @@ const th: Record<string, string> = {
   "common.timestamp": "เวลา",
   "common.errorMessage": "ข้อความ Error",
   "common.confirm": "ยืนยัน",
+  "common.discard": "ยกเลิก",
 
   // Confirmation Dialog
   "confirmDialog.saveTitle": "ยืนยันการบันทึก?",
@@ -4843,6 +4847,8 @@ const th: Record<string, string> = {
   "termSettings.yearDeleted": "ลบปีการศึกษาแล้ว",
   "termSettings.termDeleted": "ลบเทอมแล้ว",
   "termSettings.changesSaved": "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อย",
+  "termSettings.unsavedChanges": "มีการแก้ไขที่ยังไม่ได้บันทึก",
+  "termSettings.changesDiscarded": "ยกเลิกการแก้ไขแล้ว",
   "termSettings.invalidDateRange": "ช่วงวันที่ไม่ถูกต้อง",
   "termSettings.startBeforeEnd": "วันเริ่มต้นต้องมาก่อนวันสิ้นสุด",
   "termSettings.dateOverlap": "พบวันที่ทับซ้อน",
