@@ -885,9 +885,13 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
 
       {/* Delete Item Confirmation Dialog */}
       <ConfirmDialog
-        {...deleteConfirmDialog.dialogProps}
-        title="Remove Item"
-        description="Are you sure you want to remove this item? This action cannot be undone."
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="Remove Item"
+        descriptionKey="Are you sure you want to remove this item? This action cannot be undone."
+        confirmTextKey="Remove"
+        variant="destructive"
       />
     </div>
   )

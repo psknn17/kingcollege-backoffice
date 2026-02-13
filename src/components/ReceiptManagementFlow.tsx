@@ -1564,9 +1564,13 @@ export function ReceiptManagementFlow({
 
       {/* Delete Invoice Row Confirmation Dialog */}
       <ConfirmDialog
-        {...deleteConfirmDialog.dialogProps}
-        title="Remove Invoice Row"
-        description="Are you sure you want to remove this invoice row? This action cannot be undone."
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="Remove Invoice Row"
+        descriptionKey="Are you sure you want to remove this invoice row? This action cannot be undone."
+        confirmTextKey="Remove"
+        variant="destructive"
       />
     </div>
   )

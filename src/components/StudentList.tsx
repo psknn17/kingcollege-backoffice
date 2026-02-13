@@ -2162,13 +2162,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        {...deleteConfirmDialog.dialogProps}
-        title="Delete Student"
-        description={
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="Delete Student"
+        descriptionKey={
           selectedStudent
             ? `Are you sure you want to delete ${selectedStudent.firstName} ${selectedStudent.lastName}? This action cannot be undone.`
             : "Are you sure you want to delete this student? This action cannot be undone."
         }
+        confirmTextKey="Delete"
+        variant="destructive"
       />
 
       {/* Import Dialog */}

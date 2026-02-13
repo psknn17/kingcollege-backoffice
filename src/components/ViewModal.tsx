@@ -1064,9 +1064,13 @@ export function ViewModal({
 
         {/* Delete Item Confirmation Dialog */}
         <ConfirmDialog
-          {...deleteConfirmDialog.dialogProps}
-          title="Delete Item"
-          description="Are you sure you want to remove this item from the invoice? This action cannot be undone."
+          open={deleteConfirmDialog.isOpen}
+          onOpenChange={deleteConfirmDialog.setIsOpen}
+          onConfirm={deleteConfirmDialog.handleConfirm}
+          titleKey="Delete Item"
+          descriptionKey="Are you sure you want to remove this item from the invoice? This action cannot be undone."
+          confirmTextKey="Delete"
+          variant="destructive"
         />
       </>
     )

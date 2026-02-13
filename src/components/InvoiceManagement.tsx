@@ -5856,11 +5856,13 @@ export function InvoiceManagement({
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        {...deleteConfirmDialog.dialogProps}
-        title="Delete Invoice"
-        description={`Are you sure you want to delete invoice ${selectedInvoice?.invoiceNumber}? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="Delete Invoice"
+        descriptionKey={`Are you sure you want to delete invoice ${selectedInvoice?.invoiceNumber}? This action cannot be undone.`}
+        confirmTextKey="Delete"
+        variant="destructive"
       />
     </div>
   )
