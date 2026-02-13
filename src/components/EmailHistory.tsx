@@ -3,15 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { cn } from "./ui/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Calendar } from "./ui/calendar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { format } from "date-fns"
 
-// Mock history data
 const mockHistory = [
   {
     id: "h1",
@@ -60,7 +63,6 @@ const mockHistory = [
   }
 ]
 
-// Load email history from localStorage
 const loadEmailHistoryFromStorage = () => {
   try {
     const stored = localStorage.getItem("emailReminderHistory")
@@ -75,30 +77,39 @@ const loadEmailHistoryFromStorage = () => {
 
 const formatDisplayDate = (dateString: string) => {
   const date = new Date(dateString)
-  const day = date.getDate()
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-  const month = monthNames[date.getMonth()]
-  const year = date.getFullYear()
-  return `${day} ${month} ${year}`
+  return format(date, 'd MMMM yyyy')
 }
 
-// Mock recipient data generator
 const generateMockRecipients = (count: number, subject: string) => {
   const mockNames = [
     "John Smith", "Mary Johnson", "Robert Williams", "Patricia Brown", "Michael Jones",
     "Jennifer Garcia", "William Martinez", "Linda Rodriguez", "David Lee", "Barbara Wilson",
     "Richard Anderson", "Susan Thomas", "Joseph Taylor", "Jessica Moore", "Thomas Jackson"
   ]
+  const failureReasons = [
+    "Invalid email address",
+    "Mailbox full",
+    "Email server rejected",
+    "Recipient blocked sender",
+    "Domain not found",
+    "Connection timeout",
+    "Spam filter blocked"
+  ]
   const recipients = []
   for (let i = 0; i < count; i++) {
     const name = mockNames[i % mockNames.length]
-    recipients.push({
+    const status = Math.random() > 0.05 ? "delivered" : "failed"
+    const recipient: any = {
       id: `recipient-${i}`,
       name: `${name} (${i + 1})`,
       email: `parent${i + 1}@example.com`,
       studentName: `Student ${i + 1}`,
-      status: Math.random() > 0.05 ? "delivered" : "failed"
-    })
+      status
+    }
+    if (status === "failed") {
+      recipient.failureReason = failureReasons[Math.floor(Math.random() * failureReasons.length)]
+    }
+    recipients.push(recipient)
   }
   return recipients
 }
@@ -111,8 +122,9 @@ export function EmailHistory() {
   const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
   const [resendDialog, setResendDialog] = useState<any>(null)
   const [allHistory, setAllHistory] = useState<any[]>([])
+  const [dateFilterOpen, setDateFilterOpen] = useState(false)
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
 
-  // Load history from localStorage on mount and when component becomes visible
   useEffect(() => {
     const loadHistory = () => {
       const storedHistory = loadEmailHistoryFromStorage()
@@ -121,11 +133,30 @@ export function EmailHistory() {
 
     loadHistory()
 
-    // Set up an interval to check for new entries (in case sent from Debt Reminder)
-    const interval = setInterval(loadHistory, 2000) // Check every 2 seconds
+    const interval = setInterval(loadHistory, 2000)
 
     return () => clearInterval(interval)
   }, [])
+
+  const filterHistory = (item: any) => {
+    if (historySearch) {
+      const search = historySearch.toLowerCase()
+      const matchesSearch = (
+        item.subject.toLowerCase().includes(search) ||
+        item.academicYear.toLowerCase().includes(search) ||
+        item.term.toLowerCase().includes(search)
+      )
+      if (!matchesSearch) return false
+    }
+
+    if (dateRange.from || dateRange.to) {
+      const itemDate = new Date(item.sentDate)
+      if (dateRange.from && itemDate < dateRange.from) return false
+      if (dateRange.to && itemDate > dateRange.to) return false
+    }
+
+    return true
+  }
 
   const handleViewDetails = (historyItem: any) => {
     setDetailsDialog(historyItem)
@@ -137,11 +168,9 @@ export function EmailHistory() {
   }
 
   const handleResendReminder = (historyItem: any) => {
-    // Generate recipients to check for failures
     const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
     const failedCount = recipients.filter(r => r.status === "failed").length
 
-    // Show dialog with options
     setResendDialog({
       ...historyItem,
       failedCount,
@@ -152,7 +181,6 @@ export function EmailHistory() {
   const executeResend = (historyItem: any, resendType: 'failed' | 'all') => {
     const recipientCount = resendType === 'failed' ? historyItem.failedCount : historyItem.totalCount
 
-    // Create new history entry
     const newEntry = {
       id: `resend-${Date.now()}`,
       sentDate: new Date().toISOString().split('T')[0],
@@ -163,20 +191,17 @@ export function EmailHistory() {
       status: "sent"
     }
 
-    // Save to localStorage
     try {
       const existingHistory = localStorage.getItem("emailReminderHistory")
       const history = existingHistory ? JSON.parse(existingHistory) : []
       history.unshift(newEntry)
       localStorage.setItem("emailReminderHistory", JSON.stringify(history))
 
-      // Update state to show new entry immediately
       setAllHistory([newEntry, ...allHistory])
     } catch (error) {
       console.error("Failed to save resend history:", error)
     }
 
-    // Close dialog and show success
     setResendDialog(null)
 
     const message = resendType === 'failed'
@@ -189,15 +214,13 @@ export function EmailHistory() {
   }
 
   const handleDownloadReport = (historyItem: any) => {
-    // Generate CSV content
     const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
-    const csvHeader = "No.,Parent Name,Email,Student Name,Status\n"
+    const csvHeader = "No.,Parent Name,Email,Student Name,Status,Failure Reason\n"
     const csvRows = recipients.map((r, idx) =>
-      `${idx + 1},${r.name},${r.email},${r.studentName},${r.status}`
+      `${idx + 1},${r.name},${r.email},${r.studentName},${r.status},${r.failureReason || ''}`
     ).join("\n")
     const csvContent = csvHeader + csvRows
 
-    // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement("a")
     const url = URL.createObjectURL(blob)
@@ -213,9 +236,10 @@ export function EmailHistory() {
     })
   }
 
+  const filteredHistory = allHistory.filter(filterHistory)
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold mb-2">Email History</h2>
         <p className="text-muted-foreground">
@@ -223,7 +247,6 @@ export function EmailHistory() {
         </p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -270,7 +293,6 @@ export function EmailHistory() {
         </Card>
       </div>
 
-      {/* Search and Filter */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
@@ -283,15 +305,57 @@ export function EmailHistory() {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              <CalendarIcon className="w-4 h-4 mr-2" />
-              Filter by Date
-            </Button>
+            <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn(!dateRange.from && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  {dateRange.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "LLL dd")} - {format(dateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    "Filter by Date"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) => setDateRange(range || {})}
+                  numberOfMonths={2}
+                  initialFocus
+                />
+                <div className="border-t p-3 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setDateRange({})
+                      setDateFilterOpen(false)
+                    }}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setDateFilterOpen(false)}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
 
-      {/* History Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -309,93 +373,67 @@ export function EmailHistory() {
                   <th className="text-left p-4 font-semibold text-sm">{t("common.academicYear")}</th>
                   <th className="text-left p-4 font-semibold text-sm">{t("common.term")}</th>
                   <th className="text-right p-4 font-semibold text-sm">Recipients</th>
-                  <th className="text-center p-4 font-semibold text-sm">{t("common.status")}</th>
                   <th className="text-center p-4 font-semibold text-sm">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
-                {allHistory
-                  .filter((item) => {
-                    if (!historySearch) return true
-                    const search = historySearch.toLowerCase()
-                    return (
-                      item.subject.toLowerCase().includes(search) ||
-                      item.academicYear.toLowerCase().includes(search) ||
-                      item.term.toLowerCase().includes(search)
-                    )
-                  })
-                  .map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{formatDisplayDate(item.sentDate)}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-muted-foreground" />
-                          <span>{item.subject}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-muted-foreground">{item.academicYear}</td>
-                      <td className="p-4 text-muted-foreground">{item.term}</td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-semibold">{item.recipients}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <CheckCircle className="w-3 h-3" />
-                          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                              <MoreVertical className="w-4 h-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => handleViewDetails(item)}>
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleViewRecipients(item)}>
-                              <FileText className="w-4 h-4" />
-                              View Recipients
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleResendReminder(item)}>
-                              <Send className="w-4 h-4" />
-                              Resend
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDownloadReport(item)}>
-                              <Download className="w-4 h-4" />
-                              Download Report
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
+                {filteredHistory.map((item) => (
+                  <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{formatDisplayDate(item.sentDate)}</span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <span>{item.subject}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-muted-foreground">{item.academicYear}</td>
+                    <td className="p-4 text-muted-foreground">{item.term}</td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-semibold">{item.recipients}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <MoreVertical className="w-4 h-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleViewDetails(item)} className="cursor-pointer">
+                            <Eye className="w-4 h-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewRecipients(item)} className="cursor-pointer">
+                            <FileText className="w-4 h-4" />
+                            View Recipients
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleResendReminder(item)} className="cursor-pointer">
+                            <Send className="w-4 h-4" />
+                            Resend
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownloadReport(item)} className="cursor-pointer">
+                            <Download className="w-4 h-4" />
+                            Download Report
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
 
-            {/* Empty State */}
-            {allHistory.filter((item) => {
-              if (!historySearch) return true
-              const search = historySearch.toLowerCase()
-              return (
-                item.subject.toLowerCase().includes(search) ||
-                item.academicYear.toLowerCase().includes(search) ||
-                item.term.toLowerCase().includes(search)
-              )
-            }).length === 0 && (
+            {filteredHistory.length === 0 && (
               <div className="text-center py-12">
                 <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No reminders found</h3>
@@ -408,7 +446,6 @@ export function EmailHistory() {
         </CardContent>
       </Card>
 
-      {/* View Details Dialog */}
       <Dialog open={!!detailsDialog} onOpenChange={() => setDetailsDialog(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
@@ -422,13 +459,11 @@ export function EmailHistory() {
           </DialogHeader>
           {detailsDialog && (
             <div className="space-y-10 px-6 py-4">
-              {/* Subject - Full Width */}
               <div className="border-b pb-4">
                 <Label className="text-sm font-medium text-muted-foreground">Subject</Label>
                 <p className="text-xl font-semibold mt-1">{detailsDialog.subject}</p>
               </div>
 
-              {/* Main Details - 3 Columns */}
               <div className="grid grid-cols-3 gap-8">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Sent Date</Label>
@@ -444,7 +479,6 @@ export function EmailHistory() {
                 </div>
               </div>
 
-              {/* Recipients and Status - 2 Columns */}
               <div className="grid grid-cols-2 gap-8">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Recipients</Label>
@@ -453,7 +487,7 @@ export function EmailHistory() {
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Status</Label>
                   <div className="mt-1">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-600 text-white">
                       <CheckCircle className="w-4 h-4" />
                       {detailsDialog.status.charAt(0).toUpperCase() + detailsDialog.status.slice(1)}
                     </span>
@@ -461,7 +495,6 @@ export function EmailHistory() {
                 </div>
               </div>
 
-              {/* Message Preview - Full Width */}
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Message Preview</Label>
                 <div className="mt-2 p-6 bg-muted rounded-lg text-sm leading-relaxed">
@@ -488,7 +521,6 @@ export function EmailHistory() {
         </DialogContent>
       </Dialog>
 
-      {/* View Recipients Dialog */}
       <Dialog open={!!recipientsDialog} onOpenChange={() => setRecipientsDialog(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
@@ -511,6 +543,7 @@ export function EmailHistory() {
                       <th className="text-left p-3 font-semibold text-sm">Email</th>
                       <th className="text-left p-3 font-semibold text-sm">Student Name</th>
                       <th className="text-center p-3 font-semibold text-sm">Status</th>
+                      <th className="text-left p-3 font-semibold text-sm">Failure Reason</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -523,16 +556,23 @@ export function EmailHistory() {
                         <td className="p-3 text-center">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                             recipient.status === "delivered"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}>
+                              ? "bg-green-600 text-white"
+                              : "bg-red-600 text-white"
+                          }`} style={{ opacity: 1, backgroundColor: recipient.status === "delivered" ? "#16a34a" : "#dc2626" }}>
                             {recipient.status === "delivered" ? (
                               <CheckCircle className="w-3 h-3" />
                             ) : (
                               <X className="w-3 h-3" />
                             )}
-                            {recipient.status.charAt(0).toUpperCase() + recipient.status.slice(1)}
+                            {recipient.status?.charAt(0).toUpperCase() + recipient.status?.slice(1)}
                           </span>
+                        </td>
+                        <td className="p-3 text-sm">
+                          {recipient.status === "failed" && recipient.failureReason ? (
+                            <span className="text-red-600 text-xs font-medium" style={{ color: "#dc2626" }}>{recipient.failureReason}</span>
+                          ) : recipient.status === "delivered" ? (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          ) : null}
                         </td>
                       </tr>
                     ))}
@@ -559,7 +599,6 @@ export function EmailHistory() {
         </DialogContent>
       </Dialog>
 
-      {/* Resend Confirmation Dialog */}
       <Dialog open={!!resendDialog} onOpenChange={() => setResendDialog(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
@@ -573,7 +612,6 @@ export function EmailHistory() {
           </DialogHeader>
           {resendDialog && (
             <div className="px-6 py-4 space-y-4">
-              {/* Email Info */}
               <div className="p-4 bg-muted rounded-lg">
                 <p className="font-semibold">{resendDialog.subject}</p>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -581,7 +619,6 @@ export function EmailHistory() {
                 </p>
               </div>
 
-              {/* Show warning if there are failures */}
               {resendDialog.failedCount > 0 && (
                 <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
@@ -596,7 +633,6 @@ export function EmailHistory() {
                 </div>
               )}
 
-              {/* Buttons */}
               <div className="space-y-2">
                 {resendDialog.failedCount > 0 && (
                   <Button
