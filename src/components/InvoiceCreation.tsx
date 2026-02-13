@@ -5131,7 +5131,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
       {/* Add Item from List Dialog */}
       < Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen} >
-        <DialogContent className="max-w-md flex flex-col p-6" style={{ maxHeight: '65vh' }}>
+        <DialogContent className="max-w-md flex flex-col p-6 bg-white" style={{ maxHeight: '65vh', backgroundColor: 'white', opacity: 1 }}>
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add Item from List</DialogTitle>
             <DialogDescription>
