@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "./ui/badge"
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 const mockActivityLogs: ActivityLogEntry[] = [
   {
@@ -137,32 +138,40 @@ export function ActivityLog() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Module</TableHead>
-                <TableHead>Detail</TableHead>
-                <TableHead>IP</TableHead>
-                <TableHead>Device</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Timestamp</TableHead>
+                {/* Timestamp - date column, left aligned */}
+                <TableHead align="left" className="pl-6">Timestamp</TableHead>
+                {/* User - text column, left aligned */}
+                <TableHead align="left">User</TableHead>
+                {/* Action - text column, left aligned */}
+                <TableHead align="left">Action</TableHead>
+                {/* Description (Detail) - text column, left aligned */}
+                <TableHead align="left">Detail</TableHead>
+                {/* IP Address - text column, left aligned */}
+                <TableHead align="left">IP</TableHead>
+                {/* Status - badge column, center aligned */}
+                <TableHead align="center">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredLogs.map(log => (
                 <TableRow key={log.id}>
-                  <TableCell className="font-medium pl-6">{log.user}</TableCell>
-                  <TableCell>{log.action}</TableCell>
-                  <TableCell>{log.module}</TableCell>
-                  <TableCell className="max-w-[360px] truncate" title={log.detail}>{log.detail}</TableCell>
-                  <TableCell>{log.ip}</TableCell>
-                  <TableCell className="max-w-[220px] truncate" title={log.device}>{log.device}</TableCell>
-                  <TableCell>{getStatusBadge(log.status)}</TableCell>
-                  <TableCell>{format(new Date(log.timestamp), "MMM dd, yyyy HH:mm")}</TableCell>
+                  {/* Timestamp - date column, left aligned */}
+                  <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "MMM dd, yyyy HH:mm")}</TableCell>
+                  {/* User - text column, left aligned */}
+                  <TableCell align="left" className="font-medium">{log.user}</TableCell>
+                  {/* Action - text column, left aligned */}
+                  <TableCell align="left">{log.action}</TableCell>
+                  {/* Description (Detail) - text column, left aligned */}
+                  <TableCell align="left" className="max-w-[360px] truncate" title={log.detail}>{log.detail}</TableCell>
+                  {/* IP Address - text column, left aligned */}
+                  <TableCell align="left">{log.ip}</TableCell>
+                  {/* Status - badge column, center aligned */}
+                  <TableCell align="center">{getStatusBadge(log.status)}</TableCell>
                 </TableRow>
               ))}
               {filteredLogs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                     No activity logs found.
                   </TableCell>
                 </TableRow>

@@ -3,6 +3,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -546,91 +547,109 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("batchId")}>
+                {/* Job ID - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("batchId")}>
                   <div className="flex items-center gap-1">
                     {t("emailJobs.batchId")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 {!isSimplifiedView && (
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceType")}>
-                    <div className="flex items-center gap-1">
+                  /* Type - status/center */
+                  <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceType")}>
+                    <div className="flex items-center justify-center gap-1">
                       {t("common.type")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
                 )}
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
+                {/* Year Group - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
                   <div className="flex items-center gap-1">
                     {isExternalView ? t("emailJobs.recipient") : t("emailJobs.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
+                {/* Subject/Description - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
                   <div className="flex items-center gap-1">
                     {t("common.description")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalEmails")}>
-                  <div className="flex items-center gap-1">
+                {/* Recipients - number/right */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalEmails")}>
+                  <div className="flex items-center justify-end gap-1">
                     {t("common.total")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("successRate")}>
-                  <div className="flex items-center gap-1">
+                {/* Sent - number/right */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("successRate")}>
+                  <div className="flex items-center justify-end gap-1">
                     {t("emailJobs.successRate")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                  <div className="flex items-center gap-1">
+                {/* Status - badge/center */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center justify-center gap-1">
                     {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
+                {/* Created - date/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
                   <div className="flex items-center gap-1">
                     {t("emailJobs.created")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
+                {/* Actions - actions/center */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedJobs.map((job) => (
                 <TableRow key={job.id}>
-                  <TableCell className="font-mono">{job.batchId}</TableCell>
+                  {/* Job ID - text/left */}
+                  <TableCell align="left" className="font-mono">{job.batchId}</TableCell>
                   {!isSimplifiedView && (
-                    <TableCell>
+                    /* Type - status/center */
+                    <TableCell align="center">
                       <Badge variant="outline" className="capitalize">
                         {job.invoiceType}
                       </Badge>
                     </TableCell>
                   )}
-                  <TableCell>{job.yearGroup}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">
+                  {/* Year Group - text/left */}
+                  <TableCell align="left">{job.yearGroup}</TableCell>
+                  {/* Subject/Description - text/left */}
+                  <TableCell align="left" className="max-w-[200px] truncate">
                     {job.description}
                   </TableCell>
-                  <TableCell>{job.totalEmails}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                  {/* Recipients - number/right */}
+                  <TableCell align="right">{job.totalEmails}</TableCell>
+                  {/* Sent - number/right */}
+                  <TableCell align="right">
+                    <div className="flex items-center justify-end gap-2">
                       <span>{getSuccessRate(job)}%</span>
                       <div className="text-xs text-muted-foreground">
                         ({job.sentCount}/{job.totalEmails})
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Status - badge/center */}
+                  <TableCell align="center">
                     <Badge variant={getStatusBadgeVariant(job.status)} className="flex items-center gap-1 w-fit">
                       {getStatusIcon(job.status)}
                       <span className="capitalize">{job.status.replace('-', ' ')}</span>
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatDate(job.createdAt)}</TableCell>
-                  <TableCell>
+                  {/* Created - date/left */}
+                  <TableCell align="left">{formatDate(job.createdAt)}</TableCell>
+                  {/* Actions - actions/center */}
+                  <TableCell align="center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">

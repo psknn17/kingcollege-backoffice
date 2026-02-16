@@ -10,6 +10,7 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Textarea } from "./ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Clock, CalendarDays, Edit, Trash2, Plus, AlertTriangle, CheckCircle, Send, Mail } from "lucide-react"
 import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
@@ -20,6 +21,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface PaymentDeadline {
   id: number
@@ -383,67 +385,100 @@ export function EventPaymentDeadline() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {deadlines.map((deadline) => (
-              <div key={deadline.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="font-medium">{deadline.eventName}</h4>
-                    {getStatusBadge(deadline.status)}
-                    <div className="flex items-center gap-1">
-                      <Switch
-                        checked={deadline.isActive}
-                        onCheckedChange={() => toggleActiveStatus(deadline.id)}
-                        size="sm"
-                        disabled={!userCanEdit}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {deadline.isActive ? t("common.active") : t("common.inactive")}
-                      </span>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {/* text: Event Name */}
+                <TableHead align="left">{t("eventPayment.event")}</TableHead>
+                {/* date: Event Date */}
+                <TableHead align="left">{t("eventPayment.eventDate")}</TableHead>
+                {/* date: Payment Deadline */}
+                <TableHead align="left">{t("eventPayment.paymentDeadline")}</TableHead>
+                {/* currency: Amount */}
+                <TableHead align="right">{t("eventPayment.paid")}</TableHead>
+                {/* status: Status Badge */}
+                <TableHead align="center">{t("common.status")}</TableHead>
+                {/* actions: Action Buttons */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {deadlines.map((deadline) => (
+                <TableRow key={deadline.id}>
+                  {/* text: Event Name */}
+                  <TableCell align="left" className="font-medium">
+                    {deadline.eventName}
+                  </TableCell>
+                  {/* date: Event Date */}
+                  <TableCell align="left">
+                    {deadline.eventDate}
+                  </TableCell>
+                  {/* date: Payment Deadline */}
+                  <TableCell align="left">
+                    {format(deadline.paymentDeadline, "MMM dd, yyyy", { locale })}
+                  </TableCell>
+                  {/* currency: Amount */}
+                  <TableCell align="right">
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        {deadline.paidStudents}/{deadline.totalStudents}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        ({Math.round((deadline.paidStudents / deadline.totalStudents) * 100)}%)
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <span>{t("eventPayment.event")}: {deadline.eventDate}</span>
-                    <span>{t("eventPayment.deadline")}: {format(deadline.paymentDeadline, "MMM dd, yyyy", { locale })}</span>
-                    <span>
-                      {t("eventPayment.paid")}: {deadline.paidStudents}/{deadline.totalStudents}
-                      ({Math.round((deadline.paidStudents / deadline.totalStudents) * 100)}%)
-                    </span>
-                    <span>{t("eventPayment.reminders")}: {deadline.reminderDays.join(', ')} {t("eventPayment.days")}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openReminderDialog(deadline)}
-                    disabled={!deadline.isActive || !userCanEdit}
-                  >
-                    <Send className="w-4 h-4 mr-1" />
-                    {t("eventPayment.sendReminder")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(deadline)}
-                    disabled={!userCanEdit}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(deadline.id)}
-                    disabled={!userCanEdit}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </TableCell>
+                  {/* status: Status Badge */}
+                  <TableCell align="center">
+                    <div className="flex flex-col items-center gap-2">
+                      {getStatusBadge(deadline.status)}
+                      <div className="flex items-center gap-1">
+                        <Switch
+                          checked={deadline.isActive}
+                          onCheckedChange={() => toggleActiveStatus(deadline.id)}
+                          size="sm"
+                          disabled={!userCanEdit}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {deadline.isActive ? t("common.active") : t("common.inactive")}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  {/* actions: Action Buttons */}
+                  <TableCell align="center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openReminderDialog(deadline)}
+                        disabled={!deadline.isActive || !userCanEdit}
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        {t("eventPayment.sendReminder")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(deadline)}
+                        disabled={!userCanEdit}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(deadline.id)}
+                        disabled={!userCanEdit}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

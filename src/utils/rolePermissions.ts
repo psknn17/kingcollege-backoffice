@@ -13,7 +13,7 @@ export const rolePermissions = {
   },
   viewer: {
     name: "Viewver",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement", "report"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report"],
     menuItems: [] // Can view all menus (read-only access)
   },
   approver: {

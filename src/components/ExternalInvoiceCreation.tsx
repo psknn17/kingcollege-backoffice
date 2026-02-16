@@ -21,6 +21,7 @@ import { logActivity } from "@/lib/activityLog"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface ExternalItem {
   id: string
@@ -760,10 +761,14 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Actions</TableHead>
+                          {/* Item Name - text */}
+                          <TableHead align="left">Item</TableHead>
+                          {/* Category - badge */}
+                          <TableHead align="center">Category</TableHead>
+                          {/* Amount - currency */}
+                          <TableHead align="right">Amount</TableHead>
+                          {/* Actions - buttons */}
+                          <TableHead align="center">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -775,7 +780,8 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
 
                           return (
                             <TableRow key={item.id}>
-                              <TableCell>
+                              {/* Item Name - text */}
+                              <TableCell align="left">
                                 <div>
                                   <p className="font-medium">{itemName}</p>
                                   {itemDescription && (
@@ -783,7 +789,8 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              {/* Category - badge */}
+                              <TableCell align="center">
                                 <Badge
                                   variant="outline"
                                   className="border-orange-300 text-orange-700"
@@ -791,10 +798,12 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                                   External
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-medium">
+                              {/* Amount - currency */}
+                              <TableCell align="right" className="font-medium">
                                 {item.amount.toLocaleString()}
                               </TableCell>
-                              <TableCell>
+                              {/* Actions - buttons */}
+                              <TableCell align="center">
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="ghost"

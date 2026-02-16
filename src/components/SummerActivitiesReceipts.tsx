@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { CalendarIcon, Search, Download, Filter, Eye, Mail, Receipt, Users, Sun, Clock, Users as UsersIcon, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { InternalEmailManagement } from "./InternalEmailManagement"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 // Student data matching StudentContext
 const studentData = [
@@ -551,57 +552,68 @@ export function SummerActivitiesReceipts() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
+                    {/* Receipt Number - text (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                       <div className="flex items-center gap-1">
                         {t("receipt.receiptNumber")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("activityName")}>
+                    {/* Activity Details - text (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("activityName")}>
                       <div className="flex items-center gap-1">
                         {t("summer.activityDetails")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("participantName")}>
+                    {/* Participant - text (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("participantName")}>
                       <div className="flex items-center gap-1">
                         {t("summer.participant")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
+                    {/* Parent - text (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                       <div className="flex items-center gap-1">
                         {t("common.parent")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Amount - currency (right aligned) */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center justify-end gap-1">
                         {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("common.paymentMethod")}</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
+                    {/* Payment Method - text (left aligned) */}
+                    <TableHead align="left">{t("common.paymentMethod")}</TableHead>
+                    {/* Date - date (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                       <div className="flex items-center gap-1">
                         {t("common.date")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Status - badge (center aligned) */}
+                    <TableHead align="center">{t("common.status")}</TableHead>
+                    {/* Downloads - number (right aligned) */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
+                      <div className="flex items-center justify-end gap-1">
                         {t("common.downloads")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("common.actions")}</TableHead>
+                    {/* Actions - actions (center aligned) */}
+                    <TableHead align="center">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {getSortedReceipts(filteredReceipts).map((receipt) => (
                     <TableRow key={receipt.id}>
-                      <TableCell className="font-mono text-sm">
+                      {/* Receipt Number - text (left aligned) */}
+                      <TableCell align="left" className="font-mono text-sm">
                         {receipt.receiptNumber}
                         {receipt.isEarlyBird && (
                           <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-800">
@@ -609,7 +621,8 @@ export function SummerActivitiesReceipts() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      {/* Activity Details - text (left aligned) */}
+                      <TableCell align="left">
                         <div className="space-y-1">
                           <div className="font-medium">{receipt.activityName}</div>
                           <div className="flex items-center gap-2">
@@ -625,7 +638,8 @@ export function SummerActivitiesReceipts() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Participant - text (left aligned) */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{receipt.participantName}</div>
                           <div className="text-sm text-muted-foreground">
@@ -633,19 +647,26 @@ export function SummerActivitiesReceipts() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Parent - text (left aligned) */}
+                      <TableCell align="left">
                         <div className="text-sm">{receipt.parentName}</div>
                       </TableCell>
-                      <TableCell>₿{receipt.amount.toLocaleString()}</TableCell>
-                      <TableCell>{receipt.paymentMethod}</TableCell>
-                      <TableCell>{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
-                      <TableCell>{getStatusBadge(receipt.status)}</TableCell>
-                      <TableCell>
+                      {/* Amount - currency (right aligned) */}
+                      <TableCell align="right">₿{receipt.amount.toLocaleString()}</TableCell>
+                      {/* Payment Method - text (left aligned) */}
+                      <TableCell align="left">{receipt.paymentMethod}</TableCell>
+                      {/* Date - date (left aligned) */}
+                      <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      {/* Status - badge (center aligned) */}
+                      <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
+                      {/* Downloads - number (right aligned) */}
+                      <TableCell align="right">
                         <div className="text-sm">
                           {receipt.downloadCount} {t("common.times")}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Actions - actions (center aligned) */}
+                      <TableCell align="center">
                         <div className="flex gap-1 justify-center">
                           <Button
                             size="sm"
@@ -654,15 +675,15 @@ export function SummerActivitiesReceipts() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => downloadReceipt(receipt.id)}
                           >
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => resendReceipt(receipt.id)}
                           >

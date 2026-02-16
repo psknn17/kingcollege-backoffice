@@ -16,6 +16,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw } from "lucide-react"
@@ -860,49 +861,69 @@ export function ApprovalQueue() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
+                {/* Checkbox - center aligned */}
+                <TableHead align="center" className="w-12">
                   <Checkbox
                     checked={selectableInvoices.length > 0 && selectableInvoices.every(inv => selectedInvoiceIds.has(inv.id))}
                     onCheckedChange={selectAllVisible}
                   />
                 </TableHead>
-                <TableHead>{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
-                <TableHead>{renderSortHeader("Student", "studentName")}</TableHead>
-                <TableHead>{renderSortHeader("Academic Year", "academicYear")}</TableHead>
-                <TableHead>{renderSortHeader("Term", "term")}</TableHead>
-                <TableHead>{renderSortHeader(t("student.yearGroup"), "studentGrade")}</TableHead>
-                <TableHead>{renderSortHeader("Amount", "finalAmount")}</TableHead>
-                <TableHead>{renderSortHeader("Issue Date", "issueDate")}</TableHead>
-                <TableHead>{renderSortHeader("Due Date", "dueDate")}</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                {/* Invoice No - left aligned */}
+                <TableHead align="left">{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
+                {/* Student - left aligned */}
+                <TableHead align="left">{renderSortHeader("Student", "studentName")}</TableHead>
+                {/* Academic Year - left aligned */}
+                <TableHead align="left">{renderSortHeader("Academic Year", "academicYear")}</TableHead>
+                {/* Term - left aligned */}
+                <TableHead align="left">{renderSortHeader("Term", "term")}</TableHead>
+                {/* Year Group - center aligned (badge likely) */}
+                <TableHead align="center">{renderSortHeader(t("student.yearGroup"), "studentGrade")}</TableHead>
+                {/* Amount - right aligned (currency) */}
+                <TableHead align="right">{renderSortHeader("Amount", "finalAmount")}</TableHead>
+                {/* Issue Date - left aligned */}
+                <TableHead align="left">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
+                {/* Due Date - left aligned */}
+                <TableHead align="left">{renderSortHeader("Due Date", "dueDate")}</TableHead>
+                {/* Actions - center aligned */}
+                <TableHead align="center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedInvoices.map(invoice => (
                 <TableRow key={invoice.id}>
-                  <TableCell>
+                  {/* Checkbox - center aligned */}
+                  <TableCell align="center">
                     <Checkbox
                       checked={selectedInvoiceIds.has(invoice.id)}
                       disabled={!isSelectable(invoice)}
                       onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-mono text-sm">
+                  {/* Invoice No - left aligned */}
+                  <TableCell align="left" className="font-mono text-sm">
                     {displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))}
                   </TableCell>
-                  <TableCell>
+                  {/* Student - left aligned */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{invoice.studentName}</div>
                       <div className="text-sm text-muted-foreground">{invoice.studentId}</div>
                     </div>
                   </TableCell>
-                  <TableCell>{invoice.academicYear || "-"}</TableCell>
-                  <TableCell>{invoice.term || "-"}</TableCell>
-                  <TableCell>{invoice.studentGrade || "-"}</TableCell>
-                  <TableCell className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
-                  <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
-                  <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>
+                  {/* Academic Year - left aligned */}
+                  <TableCell align="left">{invoice.academicYear || "-"}</TableCell>
+                  {/* Term - left aligned */}
+                  <TableCell align="left">{invoice.term || "-"}</TableCell>
+                  {/* Year Group - center aligned */}
+                  <TableCell align="center">{invoice.studentGrade || "-"}</TableCell>
+                  {/* Amount - right aligned (currency) */}
+                  <TableCell align="right" className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
+                  {/* Issue Date - left aligned */}
+                  <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                  {/* Due Date - left aligned */}
+                  <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                  {/* Actions - center aligned */}
+                  <TableCell align="center">
                     <div className="flex justify-center gap-2">
                       <Button
                         size="sm"

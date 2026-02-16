@@ -15,6 +15,7 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface Course {
   id: string
@@ -718,59 +719,69 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("name")}>
+                {/* Course Details - text (left aligned) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("name")}>
                   <div className="flex items-center gap-1">
                     {t("course.courseDetails")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("instructor")}>
+                {/* Instructor - text (left aligned) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("instructor")}>
                   <div className="flex items-center gap-1">
                     {t("course.instructor")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("capacity")}>
-                  <div className="flex items-center gap-1">
+                {/* Capacity - number (right aligned) */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("capacity")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("course.capacity")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("enrolled")}>
-                  <div className="flex items-center gap-1">
+                {/* Enrollment - number (right aligned) */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("enrolled")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("course.enrollment")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("waitlist")}>
-                  <div className="flex items-center gap-1">
+                {/* Waitlist - number (right aligned) */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("waitlist")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("course.waitlist")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("totalRevenue")}>
-                  <div className="flex items-center gap-1">
+                {/* Revenue - currency (right aligned) */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("totalRevenue")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("common.revenue")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("status")}>
-                  <div className="flex items-center gap-1">
+                {/* Status - badge (center aligned) */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleTableSort("status")}>
+                  <div className="flex items-center gap-1 justify-center">
                     {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("course.schedule")}</TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
+                {/* Schedule - text (left aligned) */}
+                <TableHead align="left">{t("course.schedule")}</TableHead>
+                {/* Actions - buttons (center aligned) */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {getSortedCourses(currentPageCourses).map((course) => {
                 const utilization = (course.enrolled / course.capacity) * 100
-                
+
                 return (
                   <TableRow key={course.id}>
-                    <TableCell>
+                    {/* Course Details - text (left aligned) */}
+                    <TableCell align="left">
                       <div>
                         <div className="font-medium flex items-center gap-2">
                           {course.name}
@@ -782,35 +793,40 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                         <div className="text-xs text-muted-foreground">{course.location}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{course.instructor}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    {/* Instructor - text (left aligned) */}
+                    <TableCell align="left">{course.instructor}</TableCell>
+                    {/* Capacity - number (right aligned) */}
+                    <TableCell align="right">
+                      <div className="flex items-center gap-2 justify-end">
                         <span>{course.capacity}</span>
                         <Users className="w-4 h-4 text-muted-foreground" />
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {/* Enrollment - number (right aligned) */}
+                    <TableCell align="right">
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-end gap-2">
                           <span className="text-sm">{course.enrolled}/{course.capacity}</span>
                           <span className="text-xs text-muted-foreground">
-                            {Math.round(utilization)}%
+                            ({Math.round(utilization)}%)
                           </span>
                         </div>
-                        <Progress 
-                          value={utilization} 
+                        <Progress
+                          value={utilization}
                           className="h-2"
                         />
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {/* Waitlist - number (right aligned) */}
+                    <TableCell align="right">
                       {course.waitlist > 0 ? (
                         <Badge variant="outline">{course.waitlist} {t("course.waiting")}</Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    {/* Revenue - currency (right aligned) */}
+                    <TableCell align="right">
                       <div>
                         <div className="font-medium">₿{course.totalRevenue.toLocaleString()}</div>
                         <div className="text-sm text-muted-foreground">
@@ -818,13 +834,16 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(course.status)}</TableCell>
-                    <TableCell>
+                    {/* Status - badge (center aligned) */}
+                    <TableCell align="center">{getStatusBadge(course.status)}</TableCell>
+                    {/* Schedule - text (left aligned) */}
+                    <TableCell align="left">
                       <div className="text-sm">
                         {course.schedule}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {/* Actions - buttons (center aligned) */}
+                    <TableCell align="center">
                       <div className="flex gap-1 justify-center">
                         <Button
                           size="sm"
@@ -833,16 +852,16 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => openStudentReport(course)}
                           title="View Student Details"
                         >
                           <UserCheck className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => exportCourseReport(course)}
                           title="Export Report"

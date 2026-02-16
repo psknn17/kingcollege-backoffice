@@ -9,6 +9,7 @@ import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { useAuth } from "@/contexts/AuthContext"
 import { Activity, Search, Filter, Calendar, Clock } from "lucide-react"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 export function UserActivity() {
   const { user } = useAuth()
@@ -210,14 +211,19 @@ export function UserActivity() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[180px]">
+                  {/* Timestamp - date column, left aligned */}
+                  <TableHead align="left" className="w-[180px]">
                     <Clock className="w-4 h-4 inline mr-2" />
                     Timestamp
                   </TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead className="w-[150px]">Module</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead>Details</TableHead>
+                  {/* Action - text column, left aligned */}
+                  <TableHead align="left">Action</TableHead>
+                  {/* Module - text column, left aligned */}
+                  <TableHead align="left" className="w-[150px]">Module</TableHead>
+                  {/* Status - badge column, center aligned */}
+                  <TableHead align="center" className="w-[120px]">Status</TableHead>
+                  {/* Details - text column, left aligned */}
+                  <TableHead align="left">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -230,7 +236,8 @@ export function UserActivity() {
                 ) : (
                   filteredLogs.map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell className="font-mono text-xs">
+                      {/* Timestamp - date column, left aligned */}
+                      <TableCell align="left" className="font-mono text-xs">
                         <div className="flex flex-col">
                           <span className="font-medium text-gray-900">
                             {formatTimestamp(log.timestamp)}
@@ -240,18 +247,22 @@ export function UserActivity() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{log.action}</TableCell>
-                      <TableCell>
+                      {/* Action - text column, left aligned */}
+                      <TableCell align="left" className="font-medium">{log.action}</TableCell>
+                      {/* Module - text column, left aligned */}
+                      <TableCell align="left">
                         <Badge variant="outline" className="font-medium">
                           {log.module}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      {/* Status - badge column, center aligned */}
+                      <TableCell align="center">
                         <Badge className={getStatusColor(log.status)}>
                           {log.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600 max-w-md truncate">
+                      {/* Details - text column, left aligned */}
+                      <TableCell align="left" className="text-sm text-gray-600 max-w-md truncate">
                         {log.detail}
                       </TableCell>
                     </TableRow>

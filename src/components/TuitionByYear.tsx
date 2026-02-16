@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface GradeLevelTuition {
   id: string
@@ -341,12 +342,15 @@ export function TuitionByYear() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60px]">{t("tuition.no")}</TableHead>
-                <TableHead className="w-[140px]">{t("tuition.yearGroup")}</TableHead>
-                <TableHead className="text-center">{t("tuition.term1")} (THB)</TableHead>
-                <TableHead className="text-center">{t("tuition.term2")} (THB)</TableHead>
-                <TableHead className="text-center">{t("tuition.term3")} (THB)</TableHead>
-                <TableHead className="text-right w-[140px]">{t("common.total")} (THB)</TableHead>
+                {/* Number column - right aligned */}
+                <TableHead align="right" className="w-[60px]">{t("tuition.no")}</TableHead>
+                {/* Text column - left aligned */}
+                <TableHead align="left" className="w-[140px]">{t("tuition.yearGroup")}</TableHead>
+                {/* Currency columns - right aligned */}
+                <TableHead align="right">{t("tuition.term1")} (THB)</TableHead>
+                <TableHead align="right">{t("tuition.term2")} (THB)</TableHead>
+                <TableHead align="right">{t("tuition.term3")} (THB)</TableHead>
+                <TableHead align="right" className="w-[140px]">{t("common.total")} (THB)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -354,60 +358,65 @@ export function TuitionByYear() {
                 .sort((a, b) => a.gradeLevelOrder - b.gradeLevelOrder)
                 .map((grade, index) => (
                   <TableRow key={grade.id}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-medium">{grade.gradeLevel}</TableCell>
-                    <TableCell>
+                    {/* Number column - right aligned */}
+                    <TableCell align="right" className="font-medium">{index + 1}</TableCell>
+                    {/* Text column - left aligned */}
+                    <TableCell align="left" className="font-medium">{grade.gradeLevel}</TableCell>
+                    {/* Currency columns - right aligned */}
+                    <TableCell align="right">
                       <Input
                         type="number"
                         value={grade.term1Amount || ""}
                         onChange={(e) => updateTuitionAmount(grade.id, 'term1Amount', parseFloat(e.target.value) || 0)}
                         placeholder={t("tuition.term1")}
-                        className="w-full text-center"
+                        className="w-full text-right"
                         min={0}
                         disabled={!userCanEdit}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="right">
                       <Input
                         type="number"
                         value={grade.term2Amount || ""}
                         onChange={(e) => updateTuitionAmount(grade.id, 'term2Amount', parseFloat(e.target.value) || 0)}
                         placeholder={t("tuition.term2")}
-                        className="w-full text-center"
+                        className="w-full text-right"
                         min={0}
                         disabled={!userCanEdit}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="right">
                       <Input
                         type="number"
                         value={grade.term3Amount || ""}
                         onChange={(e) => updateTuitionAmount(grade.id, 'term3Amount', parseFloat(e.target.value) || 0)}
                         placeholder={t("tuition.term3")}
-                        className="w-full text-center"
+                        className="w-full text-right"
                         min={0}
                         disabled={!userCanEdit}
                       />
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    {/* Currency column - right aligned */}
+                    <TableCell align="right" className="font-semibold">
                       {formatCurrency(getRowTotal(grade))}
                     </TableCell>
                   </TableRow>
                 ))}
               {/* Total Row */}
               <TableRow className="bg-muted/50 font-bold border-t-2">
-                <TableCell></TableCell>
-                <TableCell className="font-bold">{t("common.total")}</TableCell>
-                <TableCell className="text-center font-bold text-primary">
+                <TableCell align="right"></TableCell>
+                <TableCell align="left" className="font-bold">{t("common.total")}</TableCell>
+                {/* Currency columns - right aligned */}
+                <TableCell align="right" className="font-bold text-primary">
                   {formatCurrency(getTerm1Total())}
                 </TableCell>
-                <TableCell className="text-center font-bold text-primary">
+                <TableCell align="right" className="font-bold text-primary">
                   {formatCurrency(getTerm2Total())}
                 </TableCell>
-                <TableCell className="text-center font-bold text-primary">
+                <TableCell align="right" className="font-bold text-primary">
                   {formatCurrency(getTerm3Total())}
                 </TableCell>
-                <TableCell className="text-right font-bold text-primary text-lg">
+                <TableCell align="right" className="font-bold text-primary text-lg">
                   {formatCurrency(getGrandTotal())}
                 </TableCell>
               </TableRow>

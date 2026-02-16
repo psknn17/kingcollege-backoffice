@@ -28,6 +28,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
@@ -2606,7 +2607,6 @@ export function InvoiceManagement({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">{t("invoice.title")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("invoice.subtitle")}
           </p>
@@ -2955,7 +2955,8 @@ export function InvoiceManagement({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">
+                    {/* Checkbox - CENTER */}
+                    <TableHead align="center" className="w-12">
                       <Checkbox
                         checked={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length > 0 && paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").every(invoice => selectedInvoiceIds.has(invoice.id))}
                         onCheckedChange={(checked) => {
@@ -2971,41 +2972,56 @@ export function InvoiceManagement({
                         disabled={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length === 0}
                       />
                     </TableHead>
-                    <TableHead>{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
-                    <TableHead>{renderSortHeader(t("invoice.student"), "studentName")}</TableHead>
-                    <TableHead>{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
-                    <TableHead>{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
-                    <TableHead>{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
-                    <TableHead>{renderSortHeader("E-mail Status", "emailStatus")}</TableHead>
-                    <TableHead>{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
-                    <TableHead>{renderSortHeader(t("invoice.issueDate"), "issueDate")}</TableHead>
-                    <TableHead>{renderSortHeader(t("invoice.dueDate"), "dueDate")}</TableHead>
-                    <TableHead className="text-center">{t("common.actions")}</TableHead>
+                    {/* Invoice Number - LEFT */}
+                    <TableHead align="left">{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
+                    {/* Student - LEFT */}
+                    <TableHead align="left">{renderSortHeader(t("invoice.student"), "studentName")}</TableHead>
+                    {/* Year Group - CENTER */}
+                    <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
+                    {/* Amount - RIGHT */}
+                    <TableHead align="right">{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
+                    {/* Approval Status - CENTER */}
+                    <TableHead align="center">{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
+                    {/* Email Status - CENTER */}
+                    <TableHead align="center">{renderSortHeader("E-mail Status", "emailStatus")}</TableHead>
+                    {/* Invoice Status - CENTER */}
+                    <TableHead align="center">{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
+                    {/* Issue Date - LEFT */}
+                    <TableHead align="left">{renderSortHeader(t("invoice.issueDate"), "issueDate")}</TableHead>
+                    {/* Due Date - LEFT */}
+                    <TableHead align="left">{renderSortHeader(t("invoice.dueDate"), "dueDate")}</TableHead>
+                    {/* Actions - CENTER */}
+                    <TableHead align="center">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
-                      <TableCell>
+                      {/* Checkbox - CENTER */}
+                      <TableCell align="center">
                         <Checkbox
                           checked={selectedInvoiceIds.has(invoice.id)}
                           onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
                           disabled={getApprovalStatus(invoice) !== "wait"}
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
+                      {/* Invoice Number - LEFT */}
+                      <TableCell align="left" className="font-mono text-sm">
                         {displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))}
                       </TableCell>
-                      <TableCell>
+                      {/* Student - LEFT */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{invoice.studentName}</div>
                           <div className="text-sm text-muted-foreground">{invoice.studentId}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Year Group - CENTER */}
+                      <TableCell align="center">
                         <Badge variant="secondary">{invoice.studentGrade}</Badge>
                       </TableCell>
-                      <TableCell>
+                      {/* Amount - RIGHT */}
+                      <TableCell align="right">
                         <div className="font-medium">
                           {invoice.finalAmount.toLocaleString()}
                         </div>
@@ -3015,23 +3031,30 @@ export function InvoiceManagement({
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
+                      {/* Approval Status - CENTER */}
+                      <TableCell align="center">{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
+                      {/* Email Status - CENTER */}
                       <TableCell
+                        align="center"
                         className={getEmailStatus(invoice) === "sent" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
                         onClick={getEmailStatus(invoice) === "sent" ? () => handleViewEmailDetails(invoice) : undefined}
                       >
                         {getStatusBadge(getEmailStatus(invoice))}
                       </TableCell>
-                      <TableCell>
+                      {/* Invoice Status - CENTER */}
+                      <TableCell align="center">
                         {invoice.status === "cancelled" ? (
                           <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
                         ) : (
                           getPaymentStatusBadge(getPaymentStatus(invoice))
                         )}
                       </TableCell>
-                      <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
-                      <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
-                      <TableCell>
+                      {/* Issue Date - LEFT */}
+                      <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                      {/* Due Date - LEFT */}
+                      <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                      {/* Actions - CENTER */}
+                      <TableCell align="center">
                         <div className="flex gap-1 justify-center">
                           <Button
                             size="sm"
@@ -3375,7 +3398,8 @@ export function InvoiceManagement({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
+                      {/* Checkbox - CENTER */}
+                      <TableHead align="center" className="w-12">
                         <Checkbox
                           checked={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length > 0 && paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").every(invoice => selectedInvoiceIds.has(invoice.id))}
                           onCheckedChange={(checked) => {
@@ -3391,58 +3415,80 @@ export function InvoiceManagement({
                           disabled={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length === 0}
                         />
                       </TableHead>
-                      <TableHead className="font-semibold">{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
-                      <TableHead className="font-semibold">{renderSortHeader("Client Name", "studentName")}</TableHead>
-                      <TableHead className="font-semibold">{renderSortHeader("Description", "eventName")}</TableHead>
-                      <TableHead className="font-semibold text-right">{renderSortHeader("Amount", "finalAmount")}</TableHead>
-                      <TableHead className="font-semibold text-center">{renderSortHeader("Approval", "invoiceStatus")}</TableHead>
-                      <TableHead className="font-semibold text-center">{renderSortHeader("Email", "emailStatus")}</TableHead>
-                      <TableHead className="font-semibold text-center">{renderSortHeader("Payment", "paymentStatus")}</TableHead>
-                      <TableHead className="font-semibold">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
-                      <TableHead className="font-semibold">{renderSortHeader("Due Date", "dueDate")}</TableHead>
-                      <TableHead className="text-center font-semibold">Actions</TableHead>
+                      {/* Invoice No - LEFT */}
+                      <TableHead align="left" className="font-semibold">{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
+                      {/* Client Name - LEFT */}
+                      <TableHead align="left" className="font-semibold">{renderSortHeader("Client Name", "studentName")}</TableHead>
+                      {/* Description - LEFT */}
+                      <TableHead align="left" className="font-semibold">{renderSortHeader("Description", "eventName")}</TableHead>
+                      {/* Amount - RIGHT */}
+                      <TableHead align="right" className="font-semibold">{renderSortHeader("Amount", "finalAmount")}</TableHead>
+                      {/* Approval - CENTER */}
+                      <TableHead align="center" className="font-semibold">{renderSortHeader("Approval", "invoiceStatus")}</TableHead>
+                      {/* Email - CENTER */}
+                      <TableHead align="center" className="font-semibold">{renderSortHeader("Email", "emailStatus")}</TableHead>
+                      {/* Payment - CENTER */}
+                      <TableHead align="center" className="font-semibold">{renderSortHeader("Payment", "paymentStatus")}</TableHead>
+                      {/* Issue Date - LEFT */}
+                      <TableHead align="left" className="font-semibold">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
+                      {/* Due Date - LEFT */}
+                      <TableHead align="left" className="font-semibold">{renderSortHeader("Due Date", "dueDate")}</TableHead>
+                      {/* Actions - CENTER */}
+                      <TableHead align="center" className="font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedInvoices.map((invoice) => (
                       <TableRow key={invoice.id}>
-                        <TableCell>
+                        {/* Checkbox - CENTER */}
+                        <TableCell align="center">
                           <Checkbox
                             checked={selectedInvoiceIds.has(invoice.id)}
                             onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
                             disabled={getApprovalStatus(invoice) !== "wait"}
                           />
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
+                        {/* Invoice No - LEFT */}
+                        <TableCell align="left" className="font-mono text-sm">
                           {displayInvoiceNumber(invoice.invoiceNumber)}
                         </TableCell>
-                        <TableCell>
+                        {/* Client Name - LEFT */}
+                        <TableCell align="left">
                           <div>
                             <div className="font-medium">{invoice.recipientName || invoice.studentName}</div>
                             <div className="text-sm text-muted-foreground">{invoice.parentEmail}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        {/* Description - LEFT */}
+                        <TableCell align="left">
                           <Badge variant="outline">{invoice.eventName || "-"}</Badge>
                         </TableCell>
-                        <TableCell className="font-medium">{invoice.finalAmount.toLocaleString()}</TableCell>
-                        <TableCell>{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
+                        {/* Amount - RIGHT */}
+                        <TableCell align="right" className="font-medium">{invoice.finalAmount.toLocaleString()}</TableCell>
+                        {/* Approval - CENTER */}
+                        <TableCell align="center">{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
+                        {/* Email - CENTER */}
                         <TableCell
+                          align="center"
                           className={getEmailStatus(invoice) === "sent" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
                           onClick={getEmailStatus(invoice) === "sent" ? () => handleViewEmailDetails(invoice) : undefined}
                         >
                           {getStatusBadge(getEmailStatus(invoice))}
                         </TableCell>
-                        <TableCell>
+                        {/* Payment - CENTER */}
+                        <TableCell align="center">
                         {invoice.status === "cancelled" ? (
                           <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
                         ) : (
                           getPaymentStatusBadge(getPaymentStatus(invoice))
                         )}
                       </TableCell>
-                        <TableCell>{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
-                        <TableCell>{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
-                        <TableCell>
+                        {/* Issue Date - LEFT */}
+                        <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                        {/* Due Date - LEFT */}
+                        <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                        {/* Actions - CENTER */}
+                        <TableCell align="center">
                           <div className="flex items-center gap-1 justify-center">
                             <Button
                               variant="ghost"
@@ -4228,28 +4274,32 @@ export function InvoiceManagement({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Item</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Actions</TableHead>
+                            {/* Item - LEFT */}
+                            <TableHead align="left">Item</TableHead>
+                            {/* Category - CENTER */}
+                            <TableHead align="center">Category</TableHead>
+                            {/* Amount - RIGHT */}
+                            <TableHead align="right">Amount</TableHead>
+                            {/* Actions - CENTER */}
+                            <TableHead align="center">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {selectedItems.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell>
+                              <TableCell align="left">
                                 <div>
                                   <p className="font-medium">{item.name}</p>
                                   <p className="text-sm text-muted-foreground">{item.description}</p>
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell align="center">
                                 <Badge variant="outline">{item.category}</Badge>
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell align="right" className="font-medium">
                                 {item.amount.toLocaleString()}
                               </TableCell>
-                              <TableCell>
+                              <TableCell align="center">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -4809,19 +4859,23 @@ export function InvoiceManagement({
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50">
-                            <TableHead>Student ID</TableHead>
-                            <TableHead>Student Name</TableHead>
-                            <TableHead>Year Group</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
+                            {/* Student ID - LEFT */}
+                            <TableHead align="left">Student ID</TableHead>
+                            {/* Student Name - LEFT */}
+                            <TableHead align="left">Student Name</TableHead>
+                            {/* Year Group - LEFT */}
+                            <TableHead align="left">Year Group</TableHead>
+                            {/* Amount - RIGHT */}
+                            <TableHead align="right">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {importPreview.map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell className="font-mono">{row.studentId}</TableCell>
-                              <TableCell>{row.studentName}</TableCell>
-                              <TableCell>{row.grade}</TableCell>
-                              <TableCell className="text-right">{row.amount.toLocaleString()}</TableCell>
+                              <TableCell align="left" className="font-mono">{row.studentId}</TableCell>
+                              <TableCell align="left">{row.studentName}</TableCell>
+                              <TableCell align="left">{row.grade}</TableCell>
+                              <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

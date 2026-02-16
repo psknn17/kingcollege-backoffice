@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { useAuth } from "@/contexts/AuthContext"
-import { Mail, ArrowRight, ArrowLeft } from "lucide-react"
+import { Mail, Lock, ArrowRight, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import SchoolLogo from "@/assets/Logo.png"
 import SchoolImage from "@/assets/school-bg.jpg"
@@ -13,19 +13,32 @@ type LoginStep = "email" | "otp"
 export function Login() {
   const { login } = useAuth()
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [loginStep, setLoginStep] = useState<LoginStep>("email")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) {
-      toast.error("Please enter email")
+    if (!email || !password) {
+      toast.error("Please enter both email and password")
       return
     }
+
     setIsLoading(true)
     try {
-      // Simulate sending OTP
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Simulate network delay for a better UX
+      await new Promise(resolve => setTimeout(resolve, 800))
+
+      // Whitelist check (Disabled for development as requested)
+      /*
+      if (email !== "admin@kingscollege.ac.th" || password !== "admin123") {
+        toast.error("Invalid credentials or unauthorized email")
+        setIsLoading(false)
+        return
+      }
+      */
+
+      // Simulate sending OTP (already had a delay above, so we can proceed)
       toast.success("OTP sent to your email!")
       setLoginStep("otp")
     } catch (error) {
@@ -41,8 +54,8 @@ export function Login() {
       // Simulate OTP verification
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Complete login after OTP verification
-      const success = await login(email, "password")
+      // Complete login after OTP verification using the entered password
+      const success = await login(email, password)
       if (success) {
         toast.success("Login successful!")
       } else {
@@ -152,6 +165,25 @@ export function Login() {
               </div>
             </div>
 
+            {/* Password */}
+            <div style={{ marginBottom: "24px" }}>
+              <label htmlFor="password" style={{ display: "block", fontSize: "15px", fontWeight: "500", color: "#111827", marginBottom: "10px" }}>
+                Password
+              </label>
+              <div style={{ position: "relative" }}>
+                <Lock style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", width: "18px", height: "18px", color: "#9ca3af" }} />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  style={{ width: "100%", height: "48px", paddingLeft: "44px", fontSize: "15px" }}
+                  className="border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+
             {/* Continue Button */}
             <Button
               type="submit"
@@ -173,13 +205,7 @@ export function Login() {
             </Button>
           </form>
 
-          {/* Sign Up Link */}
-          <p style={{ textAlign: "center", fontSize: "15px", color: "#6b7280", marginTop: "32px" }}>
-            Don't have an account?{" "}
-            <a href="#" style={{ color: "#3b82f6", fontWeight: "500" }}>
-              Sign up here
-            </a>
-          </p>
+
 
           {/* Info Text */}
           <div style={{ marginTop: "32px", textAlign: "center", color: "#6b7280", paddingTop: "32px" }}>

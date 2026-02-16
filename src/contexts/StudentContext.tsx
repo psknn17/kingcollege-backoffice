@@ -43,9 +43,13 @@ export interface Family {
   primaryContactId: string
   address: string
   email: string
-  phone: string
+  phone?: string
   invoiceEmails?: string[]
   createdAt: Date
+  // Parent Portal invitation tracking
+  portalStatus?: "not_invited" | "invited" | "active" | "expired"
+  invitationSentAt?: Date
+  invitationAcceptedAt?: Date
 }
 
 interface StudentContextType {

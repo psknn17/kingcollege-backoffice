@@ -20,6 +20,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 export function TuitionTermSettings() {
   const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear, saveAcademicYears } = useAcademicYears()
@@ -406,11 +407,16 @@ export function TuitionTermSettings() {
                       <table className="w-full">
                         <thead className="bg-gray-50">
                           <tr>
+                            {/* Term Name - text column */}
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[200px]">{t("termSettings.termName")}</th>
+                            {/* Start Date - date column */}
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">{t("termSettings.startDate")}</th>
+                            {/* End Date - date column */}
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3">{t("termSettings.endDate")}</th>
+                            {/* Duration - text column */}
                             <th className="text-left text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[100px]">{t("termSettings.duration")}</th>
-                            <th className="text-right text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[60px]"></th>
+                            {/* Actions - center aligned */}
+                            <th className="text-center text-xs font-medium text-gray-500 uppercase px-4 py-3 w-[60px]"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -420,7 +426,8 @@ export function TuitionTermSettings() {
 
                             return (
                               <tr key={term.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3">
+                                {/* Term Name - text column */}
+                                <td className="text-left px-4 py-3">
                                   <Input
                                     value={term.name}
                                     onChange={(e) => updateTerm(year.id, term.id, "name", e.target.value)}
@@ -428,7 +435,8 @@ export function TuitionTermSettings() {
                                     disabled={!userCanEdit}
                                   />
                                 </td>
-                                <td className="px-4 py-3">
+                                {/* Start Date - date column */}
+                                <td className="text-left px-4 py-3">
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button
@@ -452,7 +460,8 @@ export function TuitionTermSettings() {
                                     </PopoverContent>
                                   </Popover>
                                 </td>
-                                <td className="px-4 py-3">
+                                {/* End Date - date column */}
+                                <td className="text-left px-4 py-3">
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button
@@ -476,12 +485,14 @@ export function TuitionTermSettings() {
                                     </PopoverContent>
                                   </Popover>
                                 </td>
-                                <td className="px-4 py-3">
+                                {/* Duration - text column */}
+                                <td className="text-left px-4 py-3">
                                   <span className="text-sm text-gray-600">
                                     {duration ? `${duration} ${t("termSettings.days")}` : "-"}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right">
+                                {/* Actions - center aligned */}
+                                <td className="text-center px-4 py-3">
                                   <Button
                                     variant="ghost"
                                     size="icon"

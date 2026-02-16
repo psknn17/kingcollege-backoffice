@@ -17,6 +17,7 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 type UserRole = "admin" | "approver" | "accounting" | "viewer"
 type UserStatus = "active" | "inactive" | "suspended"
@@ -713,37 +714,7 @@ export function UserManagement() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Permissions</Label>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Default permissions for {formData.role} role are pre-selected. You can customize below.
-                </p>
-                <div className="border rounded-lg p-4 max-h-64 overflow-y-auto space-y-4">
-                  {Object.entries(groupedPermissions).map(([module, permissions]) => (
-                    <div key={module} className="space-y-2">
-                      <h4 className="font-medium text-sm">{module}</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {permissions.map(permission => (
-                          <div key={permission.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={permission.id}
-                              checked={selectedPermissions.includes(permission.id)}
-                              onCheckedChange={() => togglePermission(permission.id)}
-                            />
-                            <label
-                              htmlFor={permission.id}
-                              className="text-sm cursor-pointer"
-                              title={permission.description}
-                            >
-                              {permission.name}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>{t("common.cancel")}</Button>
@@ -828,80 +799,78 @@ export function UserManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                {/* User (Name + Email) - LEFT aligned */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                   <div className="flex items-center gap-1">
                     {t("table.user")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("username")}>
+                {/* Username - LEFT aligned */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("username")}>
                   <div className="flex items-center gap-1">
                     {t("table.username")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("role")}>
-                  <div className="flex items-center gap-1">
+                {/* Role Badge - CENTER aligned */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("role")}>
+                  <div className="flex items-center justify-center gap-1">
                     {t("table.role")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                  <div className="flex items-center gap-1">
+                {/* Status Badge - CENTER aligned */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center justify-center gap-1">
                     {t("table.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("permissions")}>
-                  <div className="flex items-center gap-1">
-                    {t("table.permissions")}
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
+                {/* Created Date - LEFT aligned */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("createdAt")}>
                   <div className="flex items-center gap-1">
                     {t("table.created")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("lastLogin")}>
+                {/* Last Login Date - LEFT aligned */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("lastLogin")}>
                   <div className="flex items-center gap-1">
                     {t("table.lastLogin")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("table.actions")}</TableHead>
+                {/* Actions - CENTER aligned */}
+                <TableHead align="center">{t("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell>
+                  {/* User (Name + Email) - LEFT aligned */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{user.firstName} {user.lastName}</div>
                       <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                   </TableCell>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell>{getRoleBadge(user.role)}</TableCell>
-                  <TableCell>{getStatusBadge(user.status)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{user.permissions.length} permissions</Badge>
-                  </TableCell>
-                  <TableCell>{format(user.createdAt, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>
+                  {/* Username - LEFT aligned */}
+                  <TableCell align="left">{user.username}</TableCell>
+                  {/* Role Badge - CENTER aligned */}
+                  <TableCell align="center">{getRoleBadge(user.role)}</TableCell>
+                  {/* Status Badge - CENTER aligned */}
+                  <TableCell align="center">{getStatusBadge(user.status)}</TableCell>
+                  {/* Created Date - LEFT aligned */}
+                  <TableCell align="left">{format(user.createdAt, "MMM dd, yyyy")}</TableCell>
+                  {/* Last Login Date - LEFT aligned */}
+                  <TableCell align="left">
                     {user.lastLogin ? format(user.lastLogin, "MMM dd, yyyy") : "-"}
                   </TableCell>
-                  <TableCell>
+                  {/* Actions - CENTER aligned */}
+                  <TableCell align="center">
                     <div className="flex gap-1 justify-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openPermissionDialog(user)}
-                        title="Manage Permissions"
-                      >
-                        <Shield className="w-4 h-4 text-blue-600" />
-                      </Button>
+
                       <Button
                         size="sm"
                         variant="ghost"

@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import {
   Plus,
   Edit,
@@ -586,17 +587,23 @@ export function TuitionDiscountGroups() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Year Group</TableHead>
+                  {/* Student ID - left aligned (text/ID) */}
+                  <TableHead align="left">Student ID</TableHead>
+                  {/* Name - left aligned (text) */}
+                  <TableHead align="left">Name</TableHead>
+                  {/* Year Group - left aligned (text) */}
+                  <TableHead align="left">Year Group</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {viewingGroup?.students.map(student => (
                   <TableRow key={student.id}>
-                    <TableCell className="font-mono text-sm">{student.id}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.yearGroup}</TableCell>
+                    {/* Student ID - left aligned (text/ID) */}
+                    <TableCell align="left" className="font-mono text-sm">{student.id}</TableCell>
+                    {/* Name - left aligned (text) */}
+                    <TableCell align="left">{student.name}</TableCell>
+                    {/* Year Group - left aligned (text) */}
+                    <TableCell align="left">{student.yearGroup}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

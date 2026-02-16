@@ -11,13 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -47,6 +47,7 @@ import {
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface PaymentRecord {
   id: number
@@ -641,60 +642,74 @@ export function SummerPaymentReports() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                    {/* Student - text (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
                         {t("payment.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("activityName")}>
+                    {/* Activity - text (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("activityName")}>
                       <div className="flex items-center gap-1">
                         {t("summerPayment.activity")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Amount - currency (right aligned) */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center justify-end gap-1">
                         {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentDate")}>
+                    {/* Payment Date - date (left aligned) */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentDate")}>
                       <div className="flex items-center gap-1">
                         {t("summerPayment.paymentDate")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("payment.paymentChannel")}</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                      <div className="flex items-center gap-1">
+                    {/* Payment Channel - text (left aligned) */}
+                    <TableHead align="left">{t("payment.paymentChannel")}</TableHead>
+                    {/* Status - badge (center aligned) */}
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                      <div className="flex items-center justify-center gap-1">
                         {t("common.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("summerPayment.transactionId")}</TableHead>
+                    {/* Transaction ID - text (left aligned) */}
+                    <TableHead align="left">{t("summerPayment.transactionId")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {getSortedPayments(currentPagePayments).map((payment) => (
                     <TableRow key={payment.id}>
-                      <TableCell>
+                      {/* Student - text (left aligned) */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{payment.studentName}</div>
                           <div className="text-sm text-muted-foreground">{payment.studentId}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Activity - text (left aligned) */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{payment.activityName}</div>
                           <div className="text-sm text-muted-foreground">{payment.category}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">฿{payment.amount.toLocaleString()}</TableCell>
-                      <TableCell>{payment.paymentDate}</TableCell>
-                      <TableCell>{getPaymentMethodLabel(payment.paymentMethod)}</TableCell>
-                      <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                      <TableCell className="font-mono text-sm">{payment.transactionId}</TableCell>
+                      {/* Amount - currency (right aligned) */}
+                      <TableCell align="right" className="font-medium">฿{payment.amount.toLocaleString()}</TableCell>
+                      {/* Payment Date - date (left aligned) */}
+                      <TableCell align="left">{payment.paymentDate}</TableCell>
+                      {/* Payment Channel - text (left aligned) */}
+                      <TableCell align="left">{getPaymentMethodLabel(payment.paymentMethod)}</TableCell>
+                      {/* Status - badge (center aligned) */}
+                      <TableCell align="center">{getStatusBadge(payment.status)}</TableCell>
+                      {/* Transaction ID - text (left aligned) */}
+                      <TableCell align="left" className="font-mono text-sm">{payment.transactionId}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

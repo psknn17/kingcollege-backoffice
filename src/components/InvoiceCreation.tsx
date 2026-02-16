@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -3668,10 +3669,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>{t("table.item")}</TableHead>
-                            <TableHead>{t("table.category")}</TableHead>
-                            <TableHead>{t("table.amount")}</TableHead>
-                            <TableHead>{t("table.actions")}</TableHead>
+                            {/* Item Name - text */}
+                            <TableHead align="left">{t("table.item")}</TableHead>
+                            {/* Category - badge */}
+                            <TableHead align="center">{t("table.category")}</TableHead>
+                            {/* Amount - currency */}
+                            <TableHead align="right">{t("table.amount")}</TableHead>
+                            {/* Actions - buttons */}
+                            <TableHead align="center">{t("table.actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -3680,7 +3685,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             const isCustomItem = item.id.startsWith("custom-")
                             return (
                               <TableRow key={item.id}>
-                                <TableCell>
+                                {/* Item Name - text */}
+                                <TableCell align="left">
                                   <div>
                                     <div className="flex items-center gap-2 mb-1">
                                       <p className="font-medium">{item.name}</p>
@@ -3698,7 +3704,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                     <p className="text-sm text-muted-foreground">{item.description}</p>
                                   </div>
                                 </TableCell>
-                                <TableCell>
+                                {/* Category - badge */}
+                                <TableCell align="center">
                                   <Badge
                                     variant="outline"
                                     className={`${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
@@ -3709,10 +3716,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                     {item.category}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="font-medium">
+                                {/* Amount - currency */}
+                                <TableCell align="right" className="font-medium">
                                   {item.amount.toLocaleString()}
                                 </TableCell>
-                                <TableCell>
+                                {/* Actions - buttons */}
+                                <TableCell align="center">
                                   <div className="flex items-center gap-1">
                                     <Button
                                       variant="ghost"

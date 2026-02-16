@@ -9,6 +9,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import {
   X,
   User,
@@ -326,18 +327,24 @@ export function ViewModal({
           <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>
               <tr className="border-b border-black bg-gray-50">
+                {/* Number column: align="left" */}
                 <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
+                {/* Description column: align="left" */}
                 <th className="py-1.5 px-2 text-left font-semibold">Description</th>
+                {/* Amount (currency) column: align="right" */}
                 <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
               </tr>
             </thead>
             <tbody>
               {data.items && data.items.map((item: any, index: number) => (
                 <tr key={index} className="border-b border-gray-200">
+                  {/* Number cell: align="left" (matches header) */}
                   <td className="py-1.5 px-2 align-top">{index + 1}</td>
+                  {/* Description cell: align="left" (matches header) */}
                   <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
                     <div>{item.name || item.description}</div>
                   </td>
+                  {/* Amount cell: align="right" (matches header) */}
                   <td className="py-1.5 px-2 text-right align-top">{formatCurrencyUtil(item.discountedAmount || item.amount || 0)}</td>
                 </tr>
               ))}
@@ -349,6 +356,7 @@ export function ViewModal({
                     <span className="font-bold ml-4">TOTAL</span>
                   </div>
                 </td>
+                {/* Total amount: align="right" (matches header) */}
                 <td className="py-2 px-2 text-right font-bold">{formatCurrencyUtil(total)}</td>
               </tr>
             </tbody>

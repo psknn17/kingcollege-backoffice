@@ -12,6 +12,7 @@ import { CalendarIcon, Search, Download, Filter, Eye, Mail, Receipt, Users, Cale
 import { format } from "date-fns"
 import { InternalEmailManagement } from "./InternalEmailManagement"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 // Student data matching StudentContext (for internal SISB students)
 const studentData = [
@@ -534,61 +535,73 @@ export function EventReceipts() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
+                    {/* Receipt Number - text/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                       <div className="flex items-center gap-1">
                         {t("receipt.receiptNumber")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("eventName")}>
+                    {/* Event Details - text/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("eventName")}>
                       <div className="flex items-center gap-1">
                         {t("eventReceipt.eventDetails")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("participantName")}>
+                    {/* Participant - text/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("participantName")}>
                       <div className="flex items-center gap-1">
                         {t("eventReceipt.participant")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
+                    {/* Parent - text/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                       <div className="flex items-center gap-1">
                         {t("eventReceipt.parent")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Amount - currency/right */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center gap-1 justify-end">
                         {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("receipt.paymentMethod")}</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
+                    {/* Payment Method - text/left */}
+                    <TableHead align="left">{t("receipt.paymentMethod")}</TableHead>
+                    {/* Date - date/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                       <div className="flex items-center gap-1">
                         {t("common.date")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Status - badge/center */}
+                    <TableHead align="center">{t("common.status")}</TableHead>
+                    {/* Downloads - number/right */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
+                      <div className="flex items-center gap-1 justify-end">
                         {t("receipt.downloads")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("common.actions")}</TableHead>
+                    {/* Actions - actions/center */}
+                    <TableHead align="center">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {getSortedReceipts(filteredReceipts).map((receipt) => (
                     <TableRow key={receipt.id}>
-                      <TableCell className="font-mono text-sm">
+                      {/* Receipt Number - text/left */}
+                      <TableCell align="left" className="font-mono text-sm">
                         {receipt.receiptNumber}
                         {receipt.isExternal && <Badge variant="secondary" className="ml-2 text-xs">{t("eventReceipt.external")}</Badge>}
                       </TableCell>
-                      <TableCell>
+                      {/* Event Details - text/left */}
+                      <TableCell align="left">
                         <div className="space-y-1">
                           <div className="font-medium">{receipt.eventName}</div>
                           <div className="flex items-center gap-2">
@@ -604,7 +617,8 @@ export function EventReceipts() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Participant - text/left */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{receipt.participantName}</div>
                           <div className="text-sm text-muted-foreground">
@@ -612,19 +626,26 @@ export function EventReceipts() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Parent - text/left */}
+                      <TableCell align="left">
                         <div className="text-sm">{receipt.parentName}</div>
                       </TableCell>
-                      <TableCell>₿{receipt.amount.toLocaleString()}</TableCell>
-                      <TableCell>{receipt.paymentMethod}</TableCell>
-                      <TableCell>{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
-                      <TableCell>{getStatusBadge(receipt.status)}</TableCell>
-                      <TableCell>
+                      {/* Amount - currency/right */}
+                      <TableCell align="right">₿{receipt.amount.toLocaleString()}</TableCell>
+                      {/* Payment Method - text/left */}
+                      <TableCell align="left">{receipt.paymentMethod}</TableCell>
+                      {/* Date - date/left */}
+                      <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      {/* Status - badge/center */}
+                      <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
+                      {/* Downloads - number/right */}
+                      <TableCell align="right">
                         <div className="text-sm">
                           {receipt.downloadCount} {t("receipt.times")}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Actions - actions/center */}
+                      <TableCell align="center">
                         <div className="flex gap-1 justify-center">
                           <Button
                             size="sm"
@@ -633,15 +654,15 @@ export function EventReceipts() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => downloadReceipt(receipt.id)}
                           >
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => resendReceipt(receipt.id)}
                           >

@@ -17,6 +17,7 @@ import { toast } from "@/components/ui/sonner"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface PaymentRecord {
   id: string
@@ -680,95 +681,117 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
+                {/* Invoice Number - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
                   <div className="flex items-center gap-1">
                     {t("payment.invoiceNumber")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                {/* Student - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
                     {t("payment.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
-                  <div className="flex items-center gap-1">
+                {/* Year Group - badge/center */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
+                  <div className="flex items-center gap-1 justify-center">
                     {t("student.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                  <div className="flex items-center gap-1">
+                {/* Amount - currency/right */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("common.amount")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
+                {/* Term - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
                   <div className="flex items-center gap-1">
                     {t("payment.term")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
+                {/* Payment Method - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
                   <div className="flex items-center gap-1">
                     {t("paymentMethod.label")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentChannel")}>
+                {/* Payment Channel - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentChannel")}>
                   <div className="flex items-center gap-1">
                     {t("payment.channel")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                {type === "afterschool" && <TableHead>{t("receipt.parentType")}</TableHead>}
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                  <div className="flex items-center gap-1">
+                {/* Parent Type - badge/center */}
+                {type === "afterschool" && <TableHead align="center">{t("receipt.parentType")}</TableHead>}
+                {/* Status - badge/center */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center gap-1 justify-center">
                     {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
+                {/* Transaction Date - date/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                   <div className="flex items-center gap-1">
                     {t("common.date")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
+                {/* Actions - actions/center */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {currentPagePayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell className="font-mono text-sm">
+                  {/* Invoice Number - text/left */}
+                  <TableCell align="left" className="font-mono text-sm">
                     {payment.invoiceNumber}
                   </TableCell>
-                  <TableCell>
+                  {/* Student - text/left */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{payment.studentName}</div>
                       <div className="text-sm text-muted-foreground">{payment.studentId}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Year Group - badge/center */}
+                  <TableCell align="center">
                     <Badge variant="secondary">{payment.studentGrade}</Badge>
                   </TableCell>
-                  <TableCell>฿{payment.amount.toLocaleString()}</TableCell>
-                  <TableCell>
+                  {/* Amount - currency/right */}
+                  <TableCell align="right">฿{payment.amount.toLocaleString()}</TableCell>
+                  {/* Term - text/left */}
+                  <TableCell align="left">
                     <Badge variant="outline">Term {payment.term}</Badge>
                   </TableCell>
-                  <TableCell>{payment.paymentMethod}</TableCell>
-                  <TableCell>{getPaymentChannelLabel(payment.paymentChannel, t)}</TableCell>
+                  {/* Payment Method - text/left */}
+                  <TableCell align="left">{payment.paymentMethod}</TableCell>
+                  {/* Payment Channel - text/left */}
+                  <TableCell align="left">{getPaymentChannelLabel(payment.paymentChannel, t)}</TableCell>
+                  {/* Parent Type - badge/center */}
                   {type === "afterschool" && (
-                    <TableCell>
+                    <TableCell align="center">
                       <Badge variant={payment.parentType === "external" ? "secondary" : "outline"}>
                         {payment.parentType === "external" ? t("common.external") : t("common.internal")}
                       </Badge>
                     </TableCell>
                   )}
-                  <TableCell>{getStatusBadge(payment.status, t)}</TableCell>
-                  <TableCell>{format(payment.transactionDate, "MMM dd, yyyy", { locale })}</TableCell>
-                  <TableCell>
+                  {/* Status - badge/center */}
+                  <TableCell align="center">{getStatusBadge(payment.status, t)}</TableCell>
+                  {/* Transaction Date - date/left */}
+                  <TableCell align="left">{format(payment.transactionDate, "MMM dd, yyyy", { locale })}</TableCell>
+                  {/* Actions - actions/center */}
+                  <TableCell align="center">
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button 

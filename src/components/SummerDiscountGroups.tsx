@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import {
   Plus,
   Edit,
@@ -704,21 +705,31 @@ export function SummerDiscountGroups() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Year Group</TableHead>
-                  <TableHead>Parent Name</TableHead>
-                  <TableHead>Status</TableHead>
+                  {/* Student ID - left aligned (text/ID) */}
+                  <TableHead align="left">Student ID</TableHead>
+                  {/* Name - left aligned (text) */}
+                  <TableHead align="left">Name</TableHead>
+                  {/* Year Group - left aligned (text) */}
+                  <TableHead align="left">Year Group</TableHead>
+                  {/* Parent Name - left aligned (text) */}
+                  <TableHead align="left">Parent Name</TableHead>
+                  {/* Status - center aligned (badge) */}
+                  <TableHead align="center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {viewingGroup?.students.map((student) => (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.id}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.yearGroup}</TableCell>
-                    <TableCell>{student.parentName}</TableCell>
-                    <TableCell>
+                    {/* Student ID - left aligned (text/ID) */}
+                    <TableCell align="left" className="font-medium">{student.id}</TableCell>
+                    {/* Name - left aligned (text) */}
+                    <TableCell align="left">{student.name}</TableCell>
+                    {/* Year Group - left aligned (text) */}
+                    <TableCell align="left">{student.yearGroup}</TableCell>
+                    {/* Parent Name - left aligned (text) */}
+                    <TableCell align="left">{student.parentName}</TableCell>
+                    {/* Status - center aligned (badge) */}
+                    <TableCell align="center">
                       <Badge variant={student.isActive !== false ? "default" : "secondary"}>
                         {student.isActive !== false ? "Active" : "Inactive"}
                       </Badge>

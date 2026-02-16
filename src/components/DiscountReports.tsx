@@ -22,6 +22,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 // Standard Year Groups (grade levels) - consistent with StudentContext
 const STANDARD_YEAR_GROUPS = [
@@ -99,6 +100,19 @@ const hasEarlyBirdDiscount = (studentId: string): boolean => {
   }
 }
 
+const hasSchoolBusDiscount = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem("schoolBusRecords")
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) =>
+      record.studentId === studentId || record === studentId
+    )
+  } catch {
+    return false
+  }
+}
+
 // Get Student Groups that a student belongs to (same as StudentList)
 const getStudentGroupDiscounts = (studentId: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number }[] => {
   try {
@@ -122,7 +136,7 @@ const getStudentGroupDiscounts = (studentId: string): { name: string; discountTy
 
 // Discount item interface
 interface DiscountItem {
-  type: "sibling" | "scholarship" | "staff" | "early_bird" | "group" | "campaign" | "fee_waiver"
+  type: "sibling" | "scholarship" | "staff" | "early_bird" | "group" | "campaign" | "fee_waiver" | "school_bus"
   name: string
   mode: "percentage" | "fixed"
   value: number  // percentage value or fixed amount
@@ -437,7 +451,8 @@ export function DiscountReports() {
       early_bird: t("discountReports.earlyBird"),
       group: t("discountReports.group"),
       campaign: t("discountReports.campaign"),
-      fee_waiver: t("discountReports.feeWaiver")
+      fee_waiver: t("discountReports.feeWaiver"),
+      school_bus: "School Bus Discount"
     }
     return labelMap[type] || type
   }
@@ -566,7 +581,21 @@ export function DiscountReports() {
         })
       }
 
-      // 6. Fee Waiver (Registration Fee Waiver - from checkFeePrivilegeEligibility)
+      // 6. School Bus Discount
+      const schoolBus = hasSchoolBusDiscount(student.studentId) || student.notes?.toLowerCase().includes('school bus')
+      if (schoolBus) {
+        const schoolBusAmount = 15000 // Fixed amount per term
+        discounts.push({
+          type: "school_bus",
+          name: "School Bus Discount",
+          mode: "fixed",
+          value: schoolBusAmount,
+          amount: schoolBusAmount,
+          appliedTo: ["School Bus Fee"]
+        })
+      }
+
+      // 7. Fee Waiver (Registration Fee Waiver - from checkFeePrivilegeEligibility)
       const feeWaiverEligibility = checkFeePrivilegeEligibility(
         student,
         student.academicYear || "2025-2026",
@@ -912,6 +941,7 @@ export function DiscountReports() {
                   <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
                   <SelectItem value="sibling">{t("discountReports.sibling")}</SelectItem>
                   <SelectItem value="fee_waiver">{t("discountReports.feeWaiver")}</SelectItem>
+                  <SelectItem value="school_bus">School Bus</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -948,46 +978,55 @@ export function DiscountReports() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentId")}>
+                  {/* Student ID - LEFT aligned (text/ID) */}
+                  <TableHead align="left" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentId")}>
                     <div className="flex items-center gap-1">
                       {t("discountReports.studentId")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentName")}>
+                  {/* Student Name - LEFT aligned (text) */}
+                  <TableHead align="left" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentName")}>
                     <div className="flex items-center gap-1">
                       {t("discountReports.studentName")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("yearGroup")}>
-                    <div className="flex items-center gap-1">
+                  {/* Year Group/Grade - CENTER aligned (badge/status) */}
+                  <TableHead align="center" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("yearGroup")}>
+                    <div className="flex items-center justify-center gap-1">
                       {t("discountReports.yearGroup")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("academicYear")}>
+                  {/* Academic Year - LEFT aligned (text) */}
+                  <TableHead align="left" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("academicYear")}>
                     <div className="flex items-center gap-1">
                       {t("discountReports.academicYear")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("term")}>
+                  {/* Term - LEFT aligned (text) */}
+                  <TableHead align="left" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("term")}>
                     <div className="flex items-center gap-1">
                       {t("discountReports.term")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead>{t("discountReports.discountTypes")}</TableHead>
-                  <TableHead>{t("discountReports.discountsDetail")}</TableHead>
-                  <TableHead className="text-right cursor-pointer hover:bg-muted" onClick={() => handleSort("totalDiscountAmount")}>
+                  {/* Discount Types - LEFT aligned (text/badges) */}
+                  <TableHead align="left">{t("discountReports.discountTypes")}</TableHead>
+                  {/* Discount Details - LEFT aligned (text) */}
+                  <TableHead align="left">{t("discountReports.discountsDetail")}</TableHead>
+                  {/* Discount Amount - RIGHT aligned (currency) */}
+                  <TableHead align="right" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("totalDiscountAmount")}>
                     <div className="flex items-center justify-end gap-1">
                       {t("discountReports.discount")}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort("status")}>
-                    <div className="flex items-center gap-1">
+                  {/* Status - CENTER aligned (badge) */}
+                  <TableHead align="center" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("status")}>
+                    <div className="flex items-center justify-center gap-1">
                       {t("discountReports.studentStatus") || "Student Status"}
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
@@ -1004,13 +1043,19 @@ export function DiscountReports() {
                 ) : (
                   paginatedStudents.map((student) => (
                     <TableRow key={student.id}>
-                      <TableCell className="font-mono text-sm">{student.studentId}</TableCell>
-                      <TableCell className="font-medium">{student.studentName}</TableCell>
-                      <TableCell>{student.yearGroup}</TableCell>
-                      <TableCell>{student.academicYear}</TableCell>
-                      <TableCell>{student.term}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 flex-wrap justify-center">
+                      {/* Student ID - LEFT aligned (matches header) */}
+                      <TableCell align="left" className="font-mono text-sm">{student.studentId}</TableCell>
+                      {/* Student Name - LEFT aligned (matches header) */}
+                      <TableCell align="left" className="font-medium">{student.studentName}</TableCell>
+                      {/* Year Group/Grade - CENTER aligned (matches header) */}
+                      <TableCell align="center">{student.yearGroup}</TableCell>
+                      {/* Academic Year - LEFT aligned (matches header) */}
+                      <TableCell align="left">{student.academicYear}</TableCell>
+                      {/* Term - LEFT aligned (matches header) */}
+                      <TableCell align="left">{student.term}</TableCell>
+                      {/* Discount Types - LEFT aligned (matches header) */}
+                      <TableCell align="left">
+                        <div className="flex gap-1 flex-wrap">
                           {student.discounts.map((d, idx) => (
                             <Badge key={idx} variant="outline" style={discountTypeStyles[d.type]}>
                               {getDiscountTypeLabel(d.type)}
@@ -1018,7 +1063,8 @@ export function DiscountReports() {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* Discount Details - LEFT aligned (matches header) */}
+                      <TableCell align="left">
                         <div className="space-y-1">
                           {student.discounts.map((d, idx) => (
                             <div key={idx} className="text-sm">
@@ -1035,10 +1081,12 @@ export function DiscountReports() {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm text-green-600">
+                      {/* Discount Amount - RIGHT aligned (matches header) */}
+                      <TableCell align="right" className="font-mono text-sm text-green-600">
                         {student.totalDiscountAmount > 0 ? `-${formatCurrency(student.totalDiscountAmount)}` : "-"}
                       </TableCell>
-                      <TableCell>
+                      {/* Status - CENTER aligned (matches header) */}
+                      <TableCell align="center">
                         <Badge
                           variant="outline"
                           className={

@@ -12,13 +12,13 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { usePersistedState } from "@/hooks/usePersistedState"
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -41,6 +41,7 @@ import {
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface EventRegistration {
   id: number
@@ -321,24 +322,36 @@ export function EventRegistrationReports() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("eventReports.eventName")}</TableHead>
-                    <TableHead>{t("eventReports.totalReg")}</TableHead>
-                    <TableHead>{t("common.paid")}</TableHead>
-                    <TableHead>{t("common.pending")}</TableHead>
-                    <TableHead>{t("common.revenue")}</TableHead>
-                    <TableHead>{t("eventReports.trend")}</TableHead>
+                    {/* Event Name - text/left */}
+                    <TableHead align="left">{t("eventReports.eventName")}</TableHead>
+                    {/* Total Registrations - number/right */}
+                    <TableHead align="right">{t("eventReports.totalReg")}</TableHead>
+                    {/* Paid - number/right */}
+                    <TableHead align="right">{t("common.paid")}</TableHead>
+                    {/* Pending - number/right */}
+                    <TableHead align="right">{t("common.pending")}</TableHead>
+                    {/* Revenue - currency/right */}
+                    <TableHead align="right">{t("common.revenue")}</TableHead>
+                    {/* Trend - center */}
+                    <TableHead align="center">{t("eventReports.trend")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {eventSummaryData.map((event, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">{event.eventName}</TableCell>
-                      <TableCell>{event.totalRegistrations}</TableCell>
-                      <TableCell className="text-green-600">{event.paidRegistrations}</TableCell>
-                      <TableCell className="text-amber-600">{event.pendingPayments}</TableCell>
-                      <TableCell>฿{event.totalRevenue.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
+                      {/* Event Name - text/left */}
+                      <TableCell align="left" className="font-medium">{event.eventName}</TableCell>
+                      {/* Total Registrations - number/right */}
+                      <TableCell align="right">{event.totalRegistrations}</TableCell>
+                      {/* Paid - number/right */}
+                      <TableCell align="right" className="text-green-600">{event.paidRegistrations}</TableCell>
+                      {/* Pending - number/right */}
+                      <TableCell align="right" className="text-amber-600">{event.pendingPayments}</TableCell>
+                      {/* Revenue - currency/right */}
+                      <TableCell align="right">฿{event.totalRevenue.toLocaleString()}</TableCell>
+                      {/* Trend - center */}
+                      <TableCell align="center">
+                        <div className="flex items-center gap-1 justify-center">
                           {getTrendIcon(event.registrationTrend)}
                           <span className={event.registrationTrend > 0 ? "text-green-600" : "text-red-600"}>
                             {Math.abs(event.registrationTrend)}%
@@ -529,62 +542,78 @@ export function EventRegistrationReports() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                    {/* Student - text/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
                         {t("eventReports.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("eventName")}>
+                    {/* Event - text/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("eventName")}>
                       <div className="flex items-center gap-1">
                         {t("eventReports.event")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
-                      <div className="flex items-center gap-1">
+                    {/* Year Group - badge/center */}
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("student.yearGroup")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("registrationDate")}>
+                    {/* Registration Date - date/left */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("registrationDate")}>
                       <div className="flex items-center gap-1">
                         {t("eventReports.regDate")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Amount - currency/right */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center gap-1 justify-end">
                         {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("eventReports.channel")}</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
-                      <div className="flex items-center gap-1">
+                    {/* Payment Channel - text/left */}
+                    <TableHead align="left">{t("eventReports.channel")}</TableHead>
+                    {/* Status - badge/center */}
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("common.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("eventReports.parentEmail")}</TableHead>
+                    {/* Parent Email - text/left */}
+                    <TableHead align="left">{t("eventReports.parentEmail")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {getSortedRegistrations(currentPageRegistrations).map((registration) => (
                     <TableRow key={registration.id}>
-                      <TableCell>
+                      {/* Student - text/left */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{registration.studentName}</div>
                           <div className="text-sm text-muted-foreground">{registration.studentId}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{registration.eventName}</TableCell>
-                      <TableCell>{registration.yearGroup}</TableCell>
-                      <TableCell>{registration.registrationDate}</TableCell>
-                      <TableCell>฿{registration.amount}</TableCell>
-                      <TableCell>{getPaymentChannelLabel(registration.paymentChannel)}</TableCell>
-                      <TableCell>{getStatusBadge(registration.paymentStatus)}</TableCell>
-                      <TableCell>{registration.parentEmail}</TableCell>
+                      {/* Event - text/left */}
+                      <TableCell align="left">{registration.eventName}</TableCell>
+                      {/* Year Group - badge/center */}
+                      <TableCell align="center">{registration.yearGroup}</TableCell>
+                      {/* Registration Date - date/left */}
+                      <TableCell align="left">{registration.registrationDate}</TableCell>
+                      {/* Amount - currency/right */}
+                      <TableCell align="right">฿{registration.amount}</TableCell>
+                      {/* Payment Channel - text/left */}
+                      <TableCell align="left">{getPaymentChannelLabel(registration.paymentChannel)}</TableCell>
+                      {/* Status - badge/center */}
+                      <TableCell align="center">{getStatusBadge(registration.paymentStatus)}</TableCell>
+                      {/* Parent Email - text/left */}
+                      <TableCell align="left">{registration.parentEmail}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -48,6 +48,7 @@ import {
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useStudents, Student, Parent, Family, convertTermFormat } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
@@ -230,7 +231,7 @@ interface StudentListProps {
 
 export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { t } = useLanguage()
-  const { students, families, addStudent, updateStudent, deleteStudent, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
+  const { students, families, addStudent, updateStudent, deleteStudent, addFamily, updateFamily, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
   const { getSiblingDiscountPercentage } = useDiscountOptions()
   const { user } = useAuth()
@@ -417,16 +418,34 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     return families.find((f: Family) => f.id === familyId)?.familyCode || "-"
   }
 
-  const generateStudentId = () => {
-    const year = new Date().getFullYear()
-    const count = students.length + 1
-    return `KC${year}${count.toString().padStart(3, "0")}`
+  // Get or create family by family code
+  const getOrCreateFamily = (familyCode: string, parentEmail?: string): string => {
+    if (!familyCode || familyCode.trim() === "") return ""
+
+    // Check if family already exists
+    const existingFamily = families.find((f: Family) => f.familyCode === familyCode)
+    if (existingFamily) {
+      return existingFamily.id
+    }
+
+    // Create new family with parent email
+    const newFamily: Family = {
+      id: `FAM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      familyCode: familyCode,
+      familyName: familyCode, // Default to family code as name
+      studentIds: [],
+      primaryContactId: "",
+      address: "",
+      email: parentEmail || "", // Use parent email if provided
+      createdAt: new Date()
+    }
+    addFamily(newFamily)
+    return newFamily.id
   }
 
   const handleAddStudent = () => {
     setFormData({
       ...emptyStudent,
-      studentId: generateStudentId(),
       academicYear: availableYears[0] || ""
     })
     setActiveTab("basic")
@@ -459,15 +478,33 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const performSaveNewStudent = () => {
     const now = new Date()
     const currentUser = "Admin" // TODO: Replace with actual logged-in user
+
+    // Get primary parent email for family sync
+    const primaryParent = formData.parents.find(p => p.isPrimary)
+    const parentEmail = primaryParent?.email || ""
+
+    // Get or create family from family code (with parent email)
+    const familyId = formData.familyCode ? getOrCreateFamily(formData.familyCode, parentEmail) : ""
+
     const newStudent: Student = {
       id: `STU${Date.now()}`,
       ...formData,
+      familyId: familyId,
       createdBy: currentUser,
       createdAt: now,
       updatedBy: currentUser,
       updatedAt: now
     }
     addStudent(newStudent)
+
+    // Auto-sync primary parent email to family group (for existing families)
+    if (primaryParent?.email && familyId) {
+      const existingFamily = families.find(f => f.id === familyId)
+      if (existingFamily && existingFamily.email !== primaryParent.email) {
+        updateFamily(familyId, { email: primaryParent.email })
+      }
+    }
+
     toast.success("Student added successfully")
     setIsAddDialogOpen(false)
     setFormData(emptyStudent)
@@ -482,11 +519,29 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const performSaveEditStudent = () => {
     if (selectedStudent) {
       const currentUser = "Admin" // TODO: Replace with actual logged-in user
+
+      // Get primary parent email for family sync
+      const primaryParent = formData.parents.find(p => p.isPrimary)
+      const parentEmail = primaryParent?.email || ""
+
+      // Get or create family from family code (with parent email)
+      const familyId = formData.familyCode ? getOrCreateFamily(formData.familyCode, parentEmail) : ""
+
       updateStudent(selectedStudent.id, {
         ...formData,
+        familyId: familyId,
         updatedBy: currentUser,
         updatedAt: new Date()
       })
+
+      // Auto-sync primary parent email to family group (for existing families)
+      if (primaryParent?.email && familyId) {
+        const existingFamily = families.find(f => f.id === familyId)
+        if (existingFamily && existingFamily.email !== primaryParent.email) {
+          updateFamily(familyId, { email: primaryParent.email })
+        }
+      }
+
       toast.success("Student updated successfully")
       setIsEditDialogOpen(false)
       setSelectedStudent(null)
@@ -729,6 +784,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         return
       }
 
+      // Get parent email first
+      const parentEmail = row["Parent 1 Email"] || ""
+
+      // Get or create family from Family Code with parent email
+      const familyCode = row["Family Code"] || ""
+      const familyId = familyCode ? getOrCreateFamily(familyCode, parentEmail) : ""
+
       const newStudent: Student = {
         id: `STU-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         studentId: row["Student ID"],
@@ -740,7 +802,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         gradeLevel: row["Year Group"]?.toLowerCase().replace(" ", "") || "",
         academicYear: row["Academic Year"] || availableYears[0] || "",
         status: (row["Status"]?.toLowerCase() || "active") as "active" | "graduated" | "withdrawn" | "on_leave",
-        familyId: "",
+        familyId: familyId,
+        familyCode: familyCode,
         childOrder: parseInt(row["Child Order"]) || 1,
         parents: [],
         enrollmentTerm: "term1",
@@ -776,6 +839,16 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       }
 
       addStudent(newStudent)
+
+      // Auto-sync primary parent email to family group
+      const primaryParent = newStudent.parents.find(p => p.isPrimary)
+      if (primaryParent?.email && familyId) {
+        const family = families.find(f => f.id === familyId)
+        if (family && family.email !== primaryParent.email) {
+          updateFamily(familyId, { email: primaryParent.email })
+        }
+      }
+
       imported++
     })
 
@@ -1388,39 +1461,39 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
           <div className="space-y-2">
             <Label>Family Code</Label>
-            <Select
-              value={formData.familyId || "no-family"}
-              onValueChange={(value) => {
-                if (value === "no-family") {
-                  setFormData(prev => ({ ...prev, familyId: "", childOrder: 1 }))
+            <Input
+              value={formData.familyCode || ""}
+              onChange={(e) => {
+                const inputCode = e.target.value
+
+                // Auto-calculate child order if family exists
+                if (inputCode) {
+                  const existingFamily = families.find((f: Family) => f.familyCode === inputCode)
+                  if (existingFamily) {
+                    const familyStudents = students.filter((s: Student) =>
+                      s.familyId === existingFamily.id && s.studentId !== formData.studentId
+                    )
+                    const newChildOrder = familyStudents.length + 1
+                    setFormData(prev => ({ ...prev, familyCode: inputCode, childOrder: newChildOrder }))
+                  } else {
+                    // New family - default to first child
+                    setFormData(prev => ({ ...prev, familyCode: inputCode, childOrder: 1 }))
+                  }
                 } else {
-                  // Auto-calculate child order based on existing family members
-                  const family = families.find((f: Family) => f.id === value)
-                  const familyStudents = students.filter((s: Student) => s.familyId === value && s.studentId !== formData.studentId)
-                  const newChildOrder = familyStudents.length + 1
-                  setFormData(prev => ({
-                    ...prev,
-                    familyId: value,
-                    familyCode: family?.familyCode || "",
-                    childOrder: newChildOrder
-                  }))
+                  setFormData(prev => ({ ...prev, familyCode: inputCode, childOrder: 1 }))
                 }
               }}
+              placeholder="Enter family code (e.g., FAM001)"
               disabled={!userCanEdit}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select family" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no-family">No Family</SelectItem>
-                {families.map((family: Family) => (
-                  <SelectItem key={family.id} value={family.id}>
-                    <span className="font-mono">{family.familyCode || family.id}</span>
-                    <span className="text-muted-foreground ml-2">({family.familyName})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              className="font-mono"
+            />
+            <p className="text-xs text-muted-foreground">
+              {formData.familyCode && families.find((f: Family) => f.familyCode === formData.familyCode)
+                ? `✓ Existing family: ${families.find((f: Family) => f.familyCode === formData.familyCode)?.familyName}`
+                : formData.familyCode
+                ? "⚠ New family will be created"
+                : "Optional - leave empty if no family"}
+            </p>
           </div>
         </div>
 
@@ -1730,7 +1803,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
+                {/* Checkbox - Center */}
+                <TableHead className="w-12" align="center">
                   <Checkbox
                     checked={paginatedStudents.length > 0 && paginatedStudents.every((s: Student) => selectedStudentIds.has(s.id))}
                     onCheckedChange={(checked) => {
@@ -1743,61 +1817,71 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     disabled={!userCanEdit}
                   />
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentId")}>
+                {/* Student ID - Left */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentId")} align="left">
                   <div className="flex items-center gap-1">
                     {t("student.studentId")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                {/* Name - Left */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")} align="left">
                   <div className="flex items-center gap-1">
                     {t("common.name")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("gradeLevel")}>
+                {/* Year Group - Left */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("gradeLevel")} align="left">
                   <div className="flex items-center gap-1">
                     {t("invoice.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")}>
+                {/* Academic Year - Left */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")} align="left">
                   <div className="flex items-center gap-1">
                     {t("common.academicYear")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("enrollmentTerm")}>
+                {/* Term - Center (Badge) */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("enrollmentTerm")} align="center">
                   <div className="flex items-center gap-1">
                     {t("student.term")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyCode")}>
+                {/* Family Code - Center (Badge) */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("familyCode")} align="center">
                   <div className="flex items-center gap-1">
                     {t("student.familyCode")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("childOrder")}>
+                {/* Discounts/Benefits - Left */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("childOrder")} align="left">
                   <div className="flex items-center gap-1">
                     {t("student.discountsBenefits")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                {/* Status - Center (Badge) */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")} align="center">
                   <div className="flex items-center gap-1">
                     {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("updatedAt")}>
+                {/* Updated - Left (Date) */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("updatedAt")} align="left">
                   <div className="flex items-center gap-1">
                     {t("student.updated")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
+                {/* Actions - Center */}
+                <TableHead className="text-right" align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1821,7 +1905,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               ) : (
                 paginatedStudents.map((student: Student) => (
                   <TableRow key={student.id}>
-                    <TableCell>
+                    {/* Checkbox - Center */}
+                    <TableCell align="center">
                       <Checkbox
                         checked={selectedStudentIds.has(student.id)}
                         onCheckedChange={(checked) => {
@@ -1836,8 +1921,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         disabled={!userCanEdit}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{student.studentId}</TableCell>
-                    <TableCell>
+                    {/* Student ID - Left */}
+                    <TableCell className="font-medium" align="left">{student.studentId}</TableCell>
+                    {/* Name - Left */}
+                    <TableCell align="left">
                       <div>
                         <p className="font-medium">{student.firstName} {student.lastName}</p>
                         {student.nickname && (
@@ -1845,17 +1932,22 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getGradeLabel(student.gradeLevel)}</TableCell>
-                    <TableCell>{student.academicYear}</TableCell>
-                    <TableCell>
+                    {/* Year Group - Left */}
+                    <TableCell align="left">{getGradeLabel(student.gradeLevel)}</TableCell>
+                    {/* Academic Year - Left */}
+                    <TableCell align="left">{student.academicYear}</TableCell>
+                    {/* Term - Center (Badge) */}
+                    <TableCell align="center">
                       <Badge variant="outline">{getTermLabel(student.enrollmentTerm)}</Badge>
                     </TableCell>
-                    <TableCell>
+                    {/* Family Code - Center (Badge) */}
+                    <TableCell align="center">
                       <Badge variant="outline" className="font-mono">
                         {getFamilyCode(student.familyId, student.familyCode)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    {/* Discounts/Benefits - Left */}
+                    <TableCell align="left">
                       {(() => {
                         const discounts: any[] = []
                         const siblingDiscount = getSiblingDiscount(student, student.enrollmentTerm)
@@ -1931,15 +2023,18 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         )
                       })()}
                     </TableCell>
-                    <TableCell>{getStatusBadge(student.status)}</TableCell>
-                    <TableCell>
+                    {/* Status - Center (Badge) */}
+                    <TableCell align="center">{getStatusBadge(student.status)}</TableCell>
+                    {/* Updated - Left (Date) */}
+                    <TableCell align="left">
                       <div className="text-sm">
                         <p>{student.updatedAt ? format(student.updatedAt, "dd/MM/yyyy") : "-"}</p>
                         <p className="text-xs text-muted-foreground">{student.updatedBy || "-"}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                    {/* Actions - Center */}
+                    <TableCell align="center">
+                      <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => handleViewStudent(student)}>
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -2352,21 +2447,23 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>{t("table.studentId")}</TableHead>
-                          <TableHead>{t("table.name")}</TableHead>
-                          <TableHead>{t("table.yearGroup")}</TableHead>
-                          <TableHead>{t("table.year")}</TableHead>
-                          <TableHead>{t("table.status")}</TableHead>
+                          {/* Preview Table - All Left (Simple Data Display) */}
+                          <TableHead align="left">{t("table.studentId")}</TableHead>
+                          <TableHead align="left">{t("table.name")}</TableHead>
+                          <TableHead align="left">{t("table.yearGroup")}</TableHead>
+                          <TableHead align="left">{t("table.year")}</TableHead>
+                          <TableHead align="left">{t("table.status")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {importPreview.slice(0, 10).map((row, index) => (
                           <TableRow key={index}>
-                            <TableCell className="font-mono text-sm">{row["Student ID"]}</TableCell>
-                            <TableCell>{row["First Name"]} {row["Last Name"]}</TableCell>
-                            <TableCell>{row["Year Group"]}</TableCell>
-                            <TableCell>{row["Academic Year"]}</TableCell>
-                            <TableCell>
+                            {/* Preview Table - All Left */}
+                            <TableCell className="font-mono text-sm" align="left">{row["Student ID"]}</TableCell>
+                            <TableCell align="left">{row["First Name"]} {row["Last Name"]}</TableCell>
+                            <TableCell align="left">{row["Year Group"]}</TableCell>
+                            <TableCell align="left">{row["Academic Year"]}</TableCell>
+                            <TableCell align="left">
                               <Badge variant="outline">{row["Status"] || "active"}</Badge>
                             </TableCell>
                           </TableRow>

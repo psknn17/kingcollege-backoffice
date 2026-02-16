@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { parseTuitionItemName } from "@/utils/itemAutoCreate"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface Item {
   id: string
@@ -2912,7 +2913,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10">
+                    {/* Checkbox - center aligned */}
+                    <TableHead align="center" className="w-10">
                       <Checkbox
                         checked={paginatedItems.length > 0 && paginatedItems.every(item => selectedItemIds.has(item.id))}
                         onCheckedChange={(checked) => {
@@ -2927,40 +2929,47 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         disabled={!userCanEdit}
                       />
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itemCode")}>
+                    {/* Item Code - left aligned */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itemCode")}>
                       <div className="flex items-center gap-1">
                         {t("table.itemCode")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                    {/* Item Name/Description - left aligned */}
+                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                       <div className="flex items-center gap-1">
                         {t("table.itemName")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-
-                    <TableHead>Nominal Code</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center gap-1">
+                    {/* Nominal Code - left aligned */}
+                    <TableHead align="left">Nominal Code</TableHead>
+                    {/* Type - left aligned */}
+                    <TableHead align="left">Type</TableHead>
+                    {/* Amount - right aligned (currency) */}
+                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center justify-end gap-1">
                         {t("table.amountTHB")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("isActive")}>
-                      <div className="flex items-center gap-1">
+                    {/* Status - center aligned (badge) */}
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("isActive")}>
+                      <div className="flex items-center justify-center gap-1">
                         {t("table.status")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead>{t("table.actions")}</TableHead>
+                    {/* Actions - center aligned */}
+                    <TableHead align="center">{t("table.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedItems.map((item) => (
                     <TableRow key={item.id} className={selectedItemIds.has(item.id) ? "bg-red-50/50" : ""}>
-                      <TableCell>
+                      {/* Checkbox - center aligned */}
+                      <TableCell align="center">
                         <Checkbox
                           checked={selectedItemIds.has(item.id)}
                           onCheckedChange={(checked) => {
@@ -2975,36 +2984,42 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           disabled={!userCanEdit}
                         />
                       </TableCell>
-                      <TableCell>
+                      {/* Item Code - left aligned */}
+                      <TableCell align="left">
                         <Badge variant="outline" className="font-mono">
                           {item.itemCode}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      {/* Item Name/Description - left aligned */}
+                      <TableCell align="left">
                         <div>
                           <p className="font-medium">{item.name}</p>
                           <p className="text-sm text-muted-foreground">{item.description}</p>
                         </div>
                       </TableCell>
-
-                      <TableCell className="text-muted-foreground font-mono text-sm">
+                      {/* Nominal Code - left aligned */}
+                      <TableCell align="left" className="text-muted-foreground font-mono text-sm">
                         {item.nominalCode || "-"}
                       </TableCell>
-                      <TableCell className="text-sm">
+                      {/* Type - left aligned */}
+                      <TableCell align="left" className="text-sm">
                         <Badge variant="outline" className="font-mono">
                           {item.documentType || "SI"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium">
+                      {/* Amount - right aligned (currency) */}
+                      <TableCell align="right" className="font-medium">
                         {formatCurrency(item.amount)}
                       </TableCell>
-                      <TableCell>
+                      {/* Status - center aligned (badge) */}
+                      <TableCell align="center">
                         <Badge variant={item.isActive ? "default" : "secondary"}>
                           {item.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
+                      {/* Actions - center aligned */}
+                      <TableCell align="center">
+                        <div className="flex gap-2 justify-center">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -3548,23 +3563,33 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Item Code</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Status</TableHead>
+                          {/* Item Code - left aligned */}
+                          <TableHead align="left">Item Code</TableHead>
+                          {/* Name - left aligned */}
+                          <TableHead align="left">Name</TableHead>
+                          {/* Amount - right aligned (currency) */}
+                          <TableHead align="right">Amount</TableHead>
+                          {/* Category - left aligned */}
+                          <TableHead align="left">Category</TableHead>
+                          {/* Status - center aligned (badge) */}
+                          <TableHead align="center">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {importPreview.slice(0, 10).map((row, index) => (
                           <TableRow key={index}>
-                            <TableCell className="font-mono text-sm">{row["Item Code"]}</TableCell>
-                            <TableCell>{row["Name"]}</TableCell>
-                            <TableCell>{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
-                            <TableCell>
+                            {/* Item Code - left aligned */}
+                            <TableCell align="left" className="font-mono text-sm">{row["Item Code"]}</TableCell>
+                            {/* Name - left aligned */}
+                            <TableCell align="left">{row["Name"]}</TableCell>
+                            {/* Amount - right aligned (currency) */}
+                            <TableCell align="right">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
+                            {/* Category - left aligned */}
+                            <TableCell align="left">
                               <Badge variant="outline">{row["Category"] || "-"}</Badge>
                             </TableCell>
-                            <TableCell>
+                            {/* Status - center aligned (badge) */}
+                            <TableCell align="center">
                               <Badge variant="outline">{row["Status"] || "active"}</Badge>
                             </TableCell>
                           </TableRow>

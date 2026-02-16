@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface CreditNote {
   id: string
@@ -461,28 +462,58 @@ export function CreditNoteManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end items-center gap-2">
-        <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
-          <Save className="w-4 h-4" />
-          Save Changes
-        </Button>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          {t("invoice.exportReport")}
-        </Button>
-        <Button variant="outline" className="flex items-center gap-2" disabled={!userCanEdit}>
-          <Upload className="w-4 h-4" />
-          Import Excel
-        </Button>
-        <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!userCanEdit}>
-          <Plus className="w-4 h-4" />
-          {t("creditNote.createCreditNote")}
-        </Button>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle>Credit Notes</CardTitle>
+            <p className="text-sm text-muted-foreground">View and manage credit notes</p>
+          </div>
+        </CardHeader>
+      </Card>
 
-      {/* Credit Notes Content */}
-      <div className="space-y-6 mt-6">
-        {/* Summary Cards */}
+      {/* Tabs for Receipts and Credit Notes */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "receipts" | "credit-notes")}>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="receipts" className="flex items-center gap-2">
+              <Receipt className="w-4 h-4" />
+              Receipts
+            </TabsTrigger>
+            <TabsTrigger value="credit-notes" className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Credit Notes
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
+              <Save className="w-4 h-4" />
+              Save Changes
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              {t("invoice.exportReport")}
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2" disabled={!userCanEdit}>
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
+            {activeTab === "receipts" ? (
+              <Button onClick={() => setIsCreateReceiptModalOpen(true)} className="flex items-center gap-2" disabled={!userCanEdit}>
+                <Plus className="w-4 h-4" />
+                Create Receipt
+              </Button>
+            ) : (
+              <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!userCanEdit}>
+                <Plus className="w-4 h-4" />
+                {t("creditNote.createCreditNote")}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Receipts Tab Content */}
+        <TabsContent value="receipts" className="space-y-6 mt-0">
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
@@ -495,9 +526,9 @@ export function CreditNoteManagement() {
             <CardContent>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <Input placeholder="Search by receipt number, student name..." disabled={!userCanEdit} />
+                  <Input placeholder="Search by receipt number, student name..." />
                 </div>
-                <Select defaultValue="all" disabled={!userCanEdit}>
+                <Select defaultValue="all">
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder={t("paymentMethod.label")} />
                   </SelectTrigger>
@@ -519,40 +550,57 @@ export function CreditNoteManagement() {
               <CardTitle>Receipt List</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Receipts Table - Standard Alignment */}
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("table.receiptNo")}</TableHead>
-                    <TableHead>{t("table.invoiceNo")}</TableHead>
-                    <TableHead>{t("table.student")}</TableHead>
-                    <TableHead>{t("table.amount")}</TableHead>
-                    <TableHead>{t("table.paymentMethod")}</TableHead>
-                    <TableHead>{t("table.issueDate")}</TableHead>
-                    <TableHead>{t("table.status")}</TableHead>
-                    <TableHead className="text-right">{t("table.actions")}</TableHead>
+                    {/* Receipt # - text/left */}
+                    <TableHead align="left">{t("table.receiptNo")}</TableHead>
+                    {/* Invoice # - text/left */}
+                    <TableHead align="left">{t("table.invoiceNo")}</TableHead>
+                    {/* Student - text/left */}
+                    <TableHead align="left">{t("table.student")}</TableHead>
+                    {/* Amount - currency/right */}
+                    <TableHead align="right">{t("table.amount")}</TableHead>
+                    {/* Payment Method - badge/center */}
+                    <TableHead align="center">{t("table.paymentMethod")}</TableHead>
+                    {/* Issue Date - date/left */}
+                    <TableHead align="left">{t("table.issueDate")}</TableHead>
+                    {/* Status - badge/center */}
+                    <TableHead align="center">{t("table.status")}</TableHead>
+                    {/* Actions - actions/center */}
+                    <TableHead align="center">{t("table.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {receipts.map((receipt) => (
                     <TableRow key={receipt.id}>
-                      <TableCell className="font-medium">{receipt.id}</TableCell>
-                      <TableCell>{receipt.invoiceNumber}</TableCell>
-                      <TableCell>
+                      {/* Receipt # - text/left */}
+                      <TableCell align="left" className="font-medium">{receipt.id}</TableCell>
+                      {/* Invoice # - text/left */}
+                      <TableCell align="left">{receipt.invoiceNumber}</TableCell>
+                      {/* Student - text/left */}
+                      <TableCell align="left">
                         <div>
                           <div className="font-medium">{receipt.studentName}</div>
                           <div className="text-xs text-muted-foreground">{receipt.studentId}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">฿{receipt.amount.toLocaleString()}</TableCell>
-                      <TableCell>
+                      {/* Amount - currency/right */}
+                      <TableCell align="right" className="font-medium">฿{receipt.amount.toLocaleString()}</TableCell>
+                      {/* Payment Method - badge/center */}
+                      <TableCell align="center">
                         <Badge variant="outline">{receipt.paymentMethod}</Badge>
                       </TableCell>
-                      <TableCell>{format(receipt.issueDate, "dd/MM/yyyy")}</TableCell>
-                      <TableCell>
+                      {/* Issue Date - date/left */}
+                      <TableCell align="left">{format(receipt.issueDate, "dd/MM/yyyy")}</TableCell>
+                      {/* Status - badge/center */}
+                      <TableCell align="center">
                         <Badge className="bg-green-100 text-green-800">{t("creditNote.issued")}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                      {/* Actions - actions/center */}
+                      <TableCell align="center">
+                        <div className="flex justify-center gap-1">
                           <Button variant="ghost" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -570,6 +618,10 @@ export function CreditNoteManagement() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Credit Notes Tab Content */}
+        <TabsContent value="credit-notes" className="space-y-6 mt-0">
 
         {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -727,82 +779,82 @@ export function CreditNoteManagement() {
         </p>
       </div>
 
-      {/* Credit Notes Table */}
+      {/* Credit Notes Table - Standard Alignment */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
+                {/* Credit Note # - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
                   <div className="flex items-center gap-1">
                     Credit Note Number
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
+                {/* Date - date/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
                   <div className="flex items-center gap-1">
-                    Invoice Reference
+                    Date
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                {/* Student - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
                     Student
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
+                {/* Original Invoice - text/left */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
                   <div className="flex items-center gap-1">
-                    Year Group
+                    Original Invoice
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditAmount")}>
-                  <div className="flex items-center gap-1">
+                {/* Amount - currency/right */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditAmount")}>
+                  <div className="flex items-center gap-1 justify-end">
                     Amount
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("type")}>
-                  <div className="flex items-center gap-1">
-                    Type
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                  <div className="flex items-center gap-1">
+                {/* Reason - text/left */}
+                <TableHead align="left">Reason</TableHead>
+                {/* Status - badge/center */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center gap-1 justify-center">
                     Status
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
-                  <div className="flex items-center gap-1">
-                    Issue Date
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead>Actions</TableHead>
+                {/* Actions - actions/center */}
+                <TableHead align="center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedCreditNotes.map((creditNote) => (
                 <TableRow key={creditNote.id}>
-                  <TableCell className="font-mono text-sm">
+                  {/* Credit Note # - text/left */}
+                  <TableCell align="left" className="font-mono text-sm">
                     {creditNote.creditNoteNumber}
                   </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {creditNote.invoiceNumber}
-                  </TableCell>
-                  <TableCell>
+                  {/* Date - date/left */}
+                  <TableCell align="left">{format(creditNote.issueDate, "dd MMM yyyy")}</TableCell>
+                  {/* Student - text/left */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{creditNote.studentName}</div>
                       <div className="text-sm text-muted-foreground">{creditNote.studentId}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{creditNote.studentGrade}</Badge>
+                  {/* Original Invoice - text/left */}
+                  <TableCell align="left" className="font-mono text-sm">
+                    {creditNote.invoiceNumber}
                   </TableCell>
-                  <TableCell>
+                  {/* Amount - currency/right */}
+                  <TableCell align="right">
                     <div className="font-medium text-red-600">
                       -₿{creditNote.creditAmount.toLocaleString()}
                     </div>
@@ -810,10 +862,12 @@ export function CreditNoteManagement() {
                       of ₿{creditNote.originalAmount.toLocaleString()}
                     </div>
                   </TableCell>
-                  <TableCell>{getTypeBadge(creditNote.type)}</TableCell>
-                  <TableCell>{getStatusBadge(creditNote.status)}</TableCell>
-                  <TableCell>{format(creditNote.issueDate, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>
+                  {/* Reason - text/left */}
+                  <TableCell align="left">{creditNote.reason}</TableCell>
+                  {/* Status - badge/center */}
+                  <TableCell align="center">{getStatusBadge(creditNote.status)}</TableCell>
+                  {/* Actions - actions/center */}
+                  <TableCell align="center">
                     <div className="flex gap-1 justify-center">
                       <Button
                         size="sm"
@@ -822,15 +876,15 @@ export function CreditNoteManagement() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="ghost"
                         onClick={() => downloadCreditNote(creditNote.id)}
                       >
                         <Download className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="ghost"
                         onClick={() => sendCreditNote(creditNote.id)}
                       >
@@ -915,6 +969,8 @@ export function CreditNoteManagement() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
 
       {/* Credit Note Detail Modal */}

@@ -513,61 +513,73 @@ export function AfterSchoolReceipts() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
+                {/* Receipt Number - LEFT */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                   <div className="flex items-center gap-1">
                     {t("receipt.receiptNumber")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
+                {/* Parent & Student - LEFT */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                   <div className="flex items-center gap-1">
                     {t("receipt.parentAndStudent")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("receipt.activities")}</TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalAmount")}>
-                  <div className="flex items-center gap-1">
+                {/* Activities - LEFT */}
+                <TableHead align="left">{t("receipt.activities")}</TableHead>
+                {/* Amount - RIGHT */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("totalAmount")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("common.amount")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
+                {/* Payment Method - LEFT */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
                   <div className="flex items-center gap-1">
                     {t("receipt.paymentMethod")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentType")}>
-                  <div className="flex items-center gap-1">
+                {/* Type - CENTER */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentType")}>
+                  <div className="flex items-center gap-1 justify-center">
                     {t("common.type")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
+                {/* Date - LEFT */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
                   <div className="flex items-center gap-1">
                     {t("common.date")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
-                  <div className="flex items-center gap-1">
+                {/* Status - CENTER */}
+                <TableHead align="center">{t("common.status")}</TableHead>
+                {/* Downloads - RIGHT */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
+                  <div className="flex items-center gap-1 justify-end">
                     {t("receipt.downloads")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
+                {/* Actions - CENTER */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {getSortedReceipts(filteredReceipts).map((receipt) => (
                 <TableRow key={receipt.id}>
-                  <TableCell className="font-mono text-sm">
+                  {/* Receipt Number - LEFT */}
+                  <TableCell align="left" className="font-mono text-sm">
                     {receipt.receiptNumber}
                     {receipt.isExternal && <Badge variant="secondary" className="ml-2 text-xs">External</Badge>}
                   </TableCell>
-                  <TableCell>
+                  {/* Parent & Student - LEFT */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{receipt.parentName}</div>
                       <div className="text-sm text-muted-foreground">
@@ -575,7 +587,8 @@ export function AfterSchoolReceipts() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Activities - LEFT */}
+                  <TableCell align="left">
                     <div className="space-y-1">
                       {receipt.activities.slice(0, 2).map((activity, index) => (
                         <Badge key={index} variant="outline" className="block w-fit text-xs">
@@ -589,17 +602,24 @@ export function AfterSchoolReceipts() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>₿{receipt.totalAmount.toLocaleString()}</TableCell>
-                  <TableCell>{receipt.paymentMethod}</TableCell>
-                  <TableCell>{getPaymentTypeBadge(receipt.paymentType)}</TableCell>
-                  <TableCell>{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>{getStatusBadge(receipt.status)}</TableCell>
-                  <TableCell>
+                  {/* Amount - RIGHT */}
+                  <TableCell align="right">₿{receipt.totalAmount.toLocaleString()}</TableCell>
+                  {/* Payment Method - LEFT */}
+                  <TableCell align="left">{receipt.paymentMethod}</TableCell>
+                  {/* Type - CENTER */}
+                  <TableCell align="center">{getPaymentTypeBadge(receipt.paymentType)}</TableCell>
+                  {/* Date - LEFT */}
+                  <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                  {/* Status - CENTER */}
+                  <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
+                  {/* Downloads - RIGHT */}
+                  <TableCell align="right">
                     <div className="text-sm">
                       {receipt.downloadCount} times
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Actions - CENTER */}
+                  <TableCell align="center">
                     <div className="flex gap-1 justify-center">
                       <Button
                         size="sm"

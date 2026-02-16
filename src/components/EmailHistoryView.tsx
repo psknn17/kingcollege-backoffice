@@ -34,6 +34,7 @@ import {
   Eye,
   History
 } from "lucide-react"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface AttemptRecord {
   attemptNumber: number
@@ -533,99 +534,117 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("recipientName")}>
+                {/* Recipient - text (left) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("recipientName")}>
                   <div className="flex items-center gap-1">
                     {t("emailHistory.recipient")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                {/* Student - text (left) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
                     {t("emailHistory.student")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                  <div className="flex items-center gap-1">
+                {/* Status - badge (center) */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center justify-center gap-1">
                     {t("common.status")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("sentAt")}>
+                {/* Sent At - date (left) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("sentAt")}>
                   <div className="flex items-center gap-1">
                     {t("emailHistory.sentAt")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("deliveredAt")}>
+                {/* Delivered At - date (left) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("deliveredAt")}>
                   <div className="flex items-center gap-1">
                     {t("emailHistory.deliveredAt")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("openedAt")}>
+                {/* Opened At - date (left) */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("openedAt")}>
                   <div className="flex items-center gap-1">
                     {t("emailHistory.openedAt")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("attempts")}>
-                  <div className="flex items-center gap-1">
+                {/* Attempts - number (right) */}
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("attempts")}>
+                  <div className="flex items-center justify-end gap-1">
                     {t("emailHistory.attempts")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("emailHistory.failureReason")}</TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
+                {/* Failure Reason - text (left) */}
+                <TableHead align="left">{t("emailHistory.failureReason")}</TableHead>
+                {/* Actions - actions (center) */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedHistory.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell>
+                  {/* Recipient - text (left) */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{record.recipientName}</div>
                       <div className="text-sm text-muted-foreground">{record.recipientEmail}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Student - text (left) */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{record.studentName}</div>
                       <div className="text-sm text-muted-foreground">{record.yearGroup}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Status - badge (center) */}
+                  <TableCell align="center">
                     <Badge variant={getStatusBadgeVariant(record.status)} className="flex items-center gap-1 w-fit">
                       {getStatusIcon(record.status)}
                       <span className="capitalize">{record.status}</span>
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  {/* Sent At - date (left) */}
+                  <TableCell align="left">
                     <div className="text-sm">
                       {formatDate(record.sentAt)}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Delivered At - date (left) */}
+                  <TableCell align="left">
                     <div className="text-sm">
                       {record.deliveredAt ? formatDate(record.deliveredAt) : "-"}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Opened At - date (left) */}
+                  <TableCell align="left">
                     <div className="text-sm">
                       {record.openedAt ? formatDate(record.openedAt) : "-"}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Attempts - number (right) */}
+                  <TableCell align="right">
                     <div className="text-sm">
                       {record.attempts}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Failure Reason - text (left) */}
+                  <TableCell align="left">
                     <div className="text-sm text-red-600 max-w-[200px]">
                       {record.failureReason || "-"}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Actions - actions (center) */}
+                  <TableCell align="center">
                     {(record.status === "failed" || record.status === "bounced") && (
                       <Button
                         variant="ghost"
@@ -748,17 +767,23 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="w-16 text-center">#</TableHead>
-                          <TableHead className="w-24">{t("common.status")}</TableHead>
-                          <TableHead className="w-44">{t("common.timestamp")}</TableHead>
-                          <TableHead>{t("common.errorMessage")}</TableHead>
+                          {/* Attempt Number - number (center) */}
+                          <TableHead align="center" className="w-16">#</TableHead>
+                          {/* Status - badge (center) */}
+                          <TableHead align="center" className="w-24">{t("common.status")}</TableHead>
+                          {/* Timestamp - date (left) */}
+                          <TableHead align="left" className="w-44">{t("common.timestamp")}</TableHead>
+                          {/* Error Message - text (left) */}
+                          <TableHead align="left">{t("common.errorMessage")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedRecord.attemptHistory.map((attempt, index) => (
                           <TableRow key={index}>
-                            <TableCell className="text-center font-medium">{attempt.attemptNumber}</TableCell>
-                            <TableCell>
+                            {/* Attempt Number - number (center) */}
+                            <TableCell align="center" className="font-medium">{attempt.attemptNumber}</TableCell>
+                            {/* Status - badge (center) */}
+                            <TableCell align="center">
                               <Badge
                                 variant={attempt.status === "bounced" || attempt.status === "failed" ? "destructive" : "default"}
                                 className="capitalize"
@@ -766,10 +791,12 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                                 {attempt.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
+                            {/* Timestamp - date (left) */}
+                            <TableCell align="left" className="text-sm text-muted-foreground">
                               {formatDate(attempt.timestamp)}
                             </TableCell>
-                            <TableCell className="text-sm text-red-600">
+                            {/* Error Message - text (left) */}
+                            <TableCell align="left" className="text-sm text-red-600">
                               {attempt.errorMessage || "-"}
                             </TableCell>
                           </TableRow>

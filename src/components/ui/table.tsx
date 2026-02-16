@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { cn } from "./utils";
+import type { TableAlignment } from "@/utils/tableAlignment";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -65,12 +66,18 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+interface TableHeadProps extends React.ComponentProps<"th"> {
+  align?: TableAlignment;
+}
+
+function TableHead({ className, align, ...props }: TableHeadProps) {
+  const alignClass = align ? `text-${align}` : "";
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "text-foreground h-10 px-2 align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        align ? alignClass : "text-left",
         className,
       )}
       {...props}
@@ -78,12 +85,18 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+interface TableCellProps extends React.ComponentProps<"td"> {
+  align?: TableAlignment;
+}
+
+function TableCell({ className, align, ...props }: TableCellProps) {
+  const alignClass = align ? `text-${align}` : "";
   return (
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 text-left align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        align ? alignClass : "text-left",
         className,
       )}
       {...props}

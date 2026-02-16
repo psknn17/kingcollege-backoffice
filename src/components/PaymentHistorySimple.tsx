@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "./ui/utils"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface PaymentRecord {
   id: string
@@ -207,8 +208,8 @@ export function PaymentHistorySimple() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">{t("payment.tuitionHistory")}</h2>
-          <p className="text-sm text-muted-foreground">{t("payment.viewRecordsDesc")}</p>
+          <h2 className="text-xl font-semibold">Payment History</h2>
+          <p className="text-sm text-muted-foreground">View payment records and transaction details</p>
         </div>
         <Button onClick={exportData} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
@@ -468,15 +469,24 @@ export function PaymentHistorySimple() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Reference Order</TableHead>
-                <TableHead>{t("payment.student")}</TableHead>
-                <TableHead>{t("student.yearGroup")}</TableHead>
-                <TableHead>{t("common.amount")} (THB)</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>{t("common.actions")}</TableHead>
+                {/* Date alignment */}
+                <TableHead align="left">Timestamp</TableHead>
+                {/* Text/ID alignment */}
+                <TableHead align="left">Reference Order</TableHead>
+                {/* Text alignment */}
+                <TableHead align="left">{t("payment.student")}</TableHead>
+                {/* Badge alignment */}
+                <TableHead align="center">{t("student.yearGroup")}</TableHead>
+                {/* Currency alignment */}
+                <TableHead align="right">{t("common.amount")} (THB)</TableHead>
+                {/* Status badge alignment */}
+                <TableHead align="center">{t("common.status")}</TableHead>
+                {/* Text alignment */}
+                <TableHead align="left">Method</TableHead>
+                {/* Text alignment */}
+                <TableHead align="left">Email</TableHead>
+                {/* Actions alignment */}
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -489,24 +499,33 @@ export function PaymentHistorySimple() {
               ) : (
                 filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="text-sm">{format(payment.transactionDate, "dd-MM-yyyy HH:mm:ss")}</TableCell>
-                    <TableCell className="font-mono text-sm">{payment.referenceOrder}</TableCell>
-                    <TableCell>
+                    {/* Date alignment */}
+                    <TableCell align="left" className="text-sm">{format(payment.transactionDate, "dd-MM-yyyy HH:mm:ss")}</TableCell>
+                    {/* Text/ID alignment */}
+                    <TableCell align="left" className="font-mono text-sm">{payment.referenceOrder}</TableCell>
+                    {/* Text alignment */}
+                    <TableCell align="left">
                       <div>
                         <div className="font-medium">{payment.studentName}</div>
                         <div className="text-sm text-muted-foreground">{payment.studentId}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {/* Badge alignment */}
+                    <TableCell align="center">
                       <Badge className="bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-100">
                         {payment.studentGrade}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                    <TableCell>{payment.paymentMethod}</TableCell>
-                    <TableCell className="text-sm">{payment.email}</TableCell>
-                    <TableCell>
+                    {/* Currency alignment */}
+                    <TableCell align="right">{payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    {/* Status badge alignment */}
+                    <TableCell align="center">{getStatusBadge(payment.status)}</TableCell>
+                    {/* Text alignment */}
+                    <TableCell align="left">{payment.paymentMethod}</TableCell>
+                    {/* Text alignment */}
+                    <TableCell align="left" className="text-sm">{payment.email}</TableCell>
+                    {/* Actions alignment */}
+                    <TableCell align="center">
                       <Button
                         size="sm"
                         variant="ghost"

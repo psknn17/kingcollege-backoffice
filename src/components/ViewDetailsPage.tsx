@@ -9,6 +9,7 @@ import { Textarea } from "./ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { ColumnPresets } from "@/utils/tableAlignment"
 import { 
   User, 
   Mail, 
@@ -515,18 +516,26 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("table.item")}</TableHead>
-                      <TableHead>{t("table.description")}</TableHead>
-                      <TableHead>{t("table.quantity")}</TableHead>
+                      {/* Item column: align="left" */}
+                      <TableHead className="text-left">{t("table.item")}</TableHead>
+                      {/* Description column: align="left" */}
+                      <TableHead className="text-left">{t("table.description")}</TableHead>
+                      {/* Quantity (number) column: align="right" */}
+                      <TableHead className="text-right">{t("table.quantity")}</TableHead>
+                      {/* Amount (currency) column: align="right" */}
                       <TableHead className="text-right">{t("table.amount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data.items.map((item: any, index: number) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{item.description}</TableCell>
-                        <TableCell>{item.quantity || 1}</TableCell>
+                        {/* Item cell: align="left" (matches header) */}
+                        <TableCell className="font-medium text-left">{item.name}</TableCell>
+                        {/* Description cell: align="left" (matches header) */}
+                        <TableCell className="text-muted-foreground text-left">{item.description}</TableCell>
+                        {/* Quantity cell: align="right" (matches header) */}
+                        <TableCell className="text-right">{item.quantity || 1}</TableCell>
+                        {/* Amount cell: align="right" (matches header) */}
                         <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
                       </TableRow>
                     ))}

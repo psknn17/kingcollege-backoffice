@@ -11,6 +11,7 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface Course {
   id: string
@@ -503,49 +504,57 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                {/* Student Name - text */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                   <div className="flex items-center gap-1">
                     {t("course.studentDetails")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
+                {/* Parent Name - text */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("parentName")}>
                   <div className="flex items-center gap-1">
                     {t("course.parentInformation")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
+                {/* Year Group - badge */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("yearGroup")}>
                   <div className="flex items-center gap-1">
                     {t("student.yearGroup")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("registrationDate")}>
+                {/* Registration Date - date */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("registrationDate")}>
                   <div className="flex items-center gap-1">
                     {t("course.registration")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
+                {/* Payment Status & Amount - status badge + currency */}
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentStatus")}>
                   <div className="flex items-center gap-1">
                     {t("common.payment")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>{t("common.contact")}</TableHead>
+                {/* Contact - text */}
+                <TableHead align="left">{t("common.contact")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {getSortedStudents(currentPageStudents).map((student) => (
                 <TableRow key={student.id}>
-                  <TableCell>
+                  {/* Student Name - text */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{student.studentName}</div>
                       <div className="text-sm text-muted-foreground">{student.studentEmail}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Parent Name - text */}
+                  <TableCell align="left">
                     <div>
                       <div className="font-medium">{student.parentName}</div>
                       <div className="flex items-center gap-1">
@@ -558,21 +567,24 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Year Group - badge */}
+                  <TableCell align="center">
                     <Badge variant="outline">{student.yearGroup}</Badge>
                   </TableCell>
-                  <TableCell>
+                  {/* Registration Date - date */}
+                  <TableCell align="left">
                     <div className="text-sm">
                       <div>{format(student.registrationDate, "dd MMM yyyy")}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Payment Status & Amount - status badge + currency */}
+                  <TableCell align="center">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 justify-center">
                         {getPaymentStatusBadge(student.paymentStatus)}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 justify-center">
                           <span>{getPaymentChannelIcon(student.paymentChannel)}</span>
                           <span>₿{student.amount}</span>
                         </div>
@@ -584,7 +596,8 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Contact - text */}
+                  <TableCell align="left">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1 text-sm">
                         <Mail className="w-3 h-3" />

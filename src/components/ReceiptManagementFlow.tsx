@@ -37,6 +37,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import SchoolLogo from "@/assets/Logo.png"
+import { ColumnPresets } from "@/utils/tableAlignment"
 
 // ========================
 // TYPE DEFINITIONS
@@ -889,37 +890,52 @@ export function ReceiptManagementFlow({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("table.receiptNo")}</TableHead>
-                  <TableHead>{t("table.date")}</TableHead>
-                  <TableHead>{t("table.client")}</TableHead>
-                  <TableHead>{t("table.yearGroup")}</TableHead>
-                  <TableHead className="text-right">{t("table.amount")}</TableHead>
-                  <TableHead>{t("table.payment")}</TableHead>
-                  <TableHead>{t("table.status")}</TableHead>
-                  <TableHead className="text-right">{t("table.actions")}</TableHead>
+                  {/* Receipt Number - text/ID */}
+                  <TableHead align="left">{t("table.receiptNo")}</TableHead>
+                  {/* Date - date */}
+                  <TableHead align="left">{t("table.date")}</TableHead>
+                  {/* Client Name - text */}
+                  <TableHead align="left">{t("table.client")}</TableHead>
+                  {/* Year Group - badge */}
+                  <TableHead align="center">{t("table.yearGroup")}</TableHead>
+                  {/* Amount - currency */}
+                  <TableHead align="right">{t("table.amount")}</TableHead>
+                  {/* Payment Method - badge */}
+                  <TableHead align="center">{t("table.payment")}</TableHead>
+                  {/* Status - badge */}
+                  <TableHead align="center">{t("table.status")}</TableHead>
+                  {/* Actions - buttons */}
+                  <TableHead align="center">{t("table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReceipts.map((receipt) => (
                   <TableRow key={receipt.id}>
-                    <TableCell className="font-medium">{receipt.receiptNo}</TableCell>
-                    <TableCell>{format(new Date(receipt.receiptDate), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>
+                    {/* Receipt Number - text/ID */}
+                    <TableCell align="left" className="font-medium">{receipt.receiptNo}</TableCell>
+                    {/* Date - date */}
+                    <TableCell align="left">{format(new Date(receipt.receiptDate), "dd/MM/yyyy")}</TableCell>
+                    {/* Client Name - text */}
+                    <TableCell align="left">
                       <div>
                         <p className="font-medium">{receipt.clientName}</p>
                         <p className="text-sm text-muted-foreground">{receipt.clientNo}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{receipt.yearGroup || "-"}</TableCell>
-                    <TableCell className="text-right font-medium">
+                    {/* Year Group - badge */}
+                    <TableCell align="center">{receipt.yearGroup || "-"}</TableCell>
+                    {/* Amount - currency */}
+                    <TableCell align="right" className="font-medium">
                       {formatCurrency(receipt.totalAmount)} THB
                     </TableCell>
-                    <TableCell>
+                    {/* Payment Method - badge */}
+                    <TableCell align="center">
                       <Badge variant="outline">
                         {PAYMENT_METHODS.find(p => p.value === receipt.paymentMethod)?.label}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    {/* Status - badge */}
+                    <TableCell align="center">
                       <Badge
                         variant={
                           receipt.status === "generated" ? "secondary" :
@@ -929,8 +945,9 @@ export function ReceiptManagementFlow({
                         {t(`receiptStatus.${receipt.status}`)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                    {/* Actions - buttons */}
+                    <TableCell align="center">
+                      <div className="flex justify-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1176,28 +1193,35 @@ export function ReceiptManagementFlow({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-100 border-b">
-                      <TableHead className="w-[180px] font-semibold text-xs text-gray-900 h-10">
+                      {/* Invoice No - text/ID */}
+                      <TableHead align="left" className="w-[180px] font-semibold text-xs text-gray-900 h-10">
                         Invoice No. <span className="text-red-500">*</span>
                       </TableHead>
-                      <TableHead className="w-[130px] font-semibold text-xs text-gray-900 h-10">
+                      {/* Invoice Date - date */}
+                      <TableHead align="left" className="w-[130px] font-semibold text-xs text-gray-900 h-10">
                         Invoice Date
                       </TableHead>
-                      <TableHead className="w-[140px] font-semibold text-xs text-gray-900 text-right h-10">
+                      {/* Invoice Amount - currency */}
+                      <TableHead align="right" className="w-[140px] font-semibold text-xs text-gray-900 h-10">
                         Invoice Amount
                       </TableHead>
-                      <TableHead className="w-[140px] font-semibold text-xs text-gray-900 text-right h-10">
+                      {/* Received Amount - currency */}
+                      <TableHead align="right" className="w-[140px] font-semibold text-xs text-gray-900 h-10">
                         Received <span className="text-red-500">*</span>
                       </TableHead>
-                      <TableHead className="w-[130px] font-semibold text-xs text-gray-900 text-right h-10">
+                      {/* Outstanding - currency */}
+                      <TableHead align="right" className="w-[130px] font-semibold text-xs text-gray-900 h-10">
                         Outstanding
                       </TableHead>
-                      <TableHead className="w-[50px] h-10"></TableHead>
+                      {/* Actions - button */}
+                      <TableHead align="center" className="w-[50px] h-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {formData.invoices.map((invoice, index) => (
                       <TableRow key={invoice.id} className="hover:bg-gray-100/50 even:bg-gray-50/50 transition-colors">
-                        <TableCell className="py-2.5">
+                        {/* Invoice No - text/ID */}
+                        <TableCell align="left" className="py-2.5">
                           <Input
                             placeholder="INV-XXXX"
                             value={invoice.invoiceNo}
@@ -1206,7 +1230,8 @@ export function ReceiptManagementFlow({
                             disabled={!userCanEdit}
                           />
                         </TableCell>
-                        <TableCell className="py-2.5">
+                        {/* Invoice Date - date */}
+                        <TableCell align="left" className="py-2.5">
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button variant="outline" size="sm" className="w-full h-9 text-xs justify-start border-gray-300 focus:ring-2 focus:ring-primary" disabled={!userCanEdit}>
@@ -1224,7 +1249,8 @@ export function ReceiptManagementFlow({
                             </PopoverContent>
                           </Popover>
                         </TableCell>
-                        <TableCell className="py-2.5">
+                        {/* Invoice Amount - currency */}
+                        <TableCell align="right" className="py-2.5">
                           <Input
                             type="number"
                             placeholder="0.00"
@@ -1234,7 +1260,8 @@ export function ReceiptManagementFlow({
                             disabled={!userCanEdit}
                           />
                         </TableCell>
-                        <TableCell className="py-2.5">
+                        {/* Received Amount - currency */}
+                        <TableCell align="right" className="py-2.5">
                           <Input
                             type="number"
                             placeholder="0.00"
@@ -1244,12 +1271,14 @@ export function ReceiptManagementFlow({
                             disabled={!userCanEdit}
                           />
                         </TableCell>
-                        <TableCell className="py-2.5">
+                        {/* Outstanding - currency */}
+                        <TableCell align="right" className="py-2.5">
                           <div className="h-9 flex items-center justify-end font-mono text-sm text-gray-600 px-3 py-2 bg-gray-100 rounded-md border border-gray-200">
                             {invoice.outstandingAmount > 0 ? formatCurrency(invoice.outstandingAmount) : "0.00"}
                           </div>
                         </TableCell>
-                        <TableCell className="py-2.5">
+                        {/* Actions - button */}
+                        <TableCell align="center" className="py-2.5">
                           <Button
                             variant="ghost"
                             size="sm"
