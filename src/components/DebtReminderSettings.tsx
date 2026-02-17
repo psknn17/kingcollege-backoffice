@@ -10,7 +10,7 @@ import { Checkbox } from "./ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
-import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit } from "lucide-react"
+import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy } from "lucide-react"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
@@ -29,12 +29,11 @@ const PRESET_EMAIL_SUBJECTS = [
   "External Invoice Payment Reminder"
 ]
 
-type InvoiceStatus = "unpaid" | "overdue" | "sent"
+type InvoiceStatus = "unpaid" | "overdue"
 
 const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: "unpaid", label: "Unpaid" },
   { value: "overdue", label: "Overdue" },
-  { value: "sent", label: "Sent" },
 ]
 
 type ReminderStatus = "draft" | "scheduled" | "sent" | "cancelled"
@@ -184,6 +183,8 @@ export function DebtReminderSettings() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
   const [previewReminder, setPreviewReminder] = useState<ReminderConfig | null>(null)
   const [isScheduledCollapsed, setIsScheduledCollapsed] = useState(false)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [reminderHistory, setReminderHistory] = useState<{ id: string; sentDate: string; subject: string; academicYear: string; term: string; recipients: number; status: string }[]>([])
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -250,6 +251,35 @@ export function DebtReminderSettings() {
     setReminders((currentReminders) => (currentReminders || []).filter(reminder => reminder.id !== id))
   }
 
+  const handleDuplicateReminder = (reminder: ReminderConfig) => {
+    const duplicate: ReminderConfig = {
+      ...reminder,
+      id: Date.now().toString(),
+      name: `${reminder.name} (Copy)`,
+      status: "draft",
+      sendDate: "",
+      sendTime: reminder.sendTime || "09:00",
+      scheduledAt: undefined,
+      sentAt: undefined,
+      recipientCount: undefined,
+    }
+    setReminders((currentReminders) => [...(currentReminders || []), duplicate])
+    toast.success("Reminder duplicated", {
+      description: `"${duplicate.name}" created as draft`
+    })
+  }
+
+  const handleOpenHistory = () => {
+    try {
+      const stored = localStorage.getItem("emailReminderHistory")
+      const history = stored ? JSON.parse(stored) : []
+      setReminderHistory(history)
+    } catch {
+      setReminderHistory([])
+    }
+    setIsHistoryModalOpen(true)
+  }
+
   const handleDateChange = (id: string, newDate: string) => {
     const reminder = (reminders || []).find(r => r.id === id)
     if (!reminder) return
@@ -313,6 +343,13 @@ export function DebtReminderSettings() {
   // Helper to check if reminder is locked (scheduled reminders are read-only)
   const isReminderLocked = (reminder: ReminderConfig): boolean => {
     return reminder.status === "scheduled"
+  }
+
+  // Helper to check if scheduled send time is still in the future
+  const isScheduledInFuture = (reminder: ReminderConfig): boolean => {
+    if (!reminder.sendDate || !reminder.sendTime) return false
+    const scheduledTime = new Date(`${reminder.sendDate}T${reminder.sendTime}`)
+    return scheduledTime > new Date()
   }
 
 
@@ -529,13 +566,19 @@ export function DebtReminderSettings() {
           </CardContent>
         </Card>
 
-        <Card className="border-green-300 bg-green-50">
+        <Card
+          className="border-green-300 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+          onClick={handleOpenHistory}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Sent Today</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700 flex items-center gap-1">
+              Remind History
+              <span className="text-xs font-normal text-green-600 ml-1">(click to view)</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">{summaryStats.sentToday}</div>
-            <p className="text-xs text-green-600 mt-1">Successfully delivered</p>
+            <p className="text-xs text-green-600 mt-1">Sent today</p>
           </CardContent>
         </Card>
 
@@ -607,7 +650,7 @@ export function DebtReminderSettings() {
 
           {/* Draft and Sent Reminders */}
           <div className="space-y-4">
-            {(reminders || []).filter(r => r.status !== "scheduled").map((reminder, index) => (
+            {(reminders || []).filter(r => r.status !== "scheduled" && r.status !== "sent").map((reminder, index) => (
               <Card key={reminder.id}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -632,6 +675,15 @@ export function DebtReminderSettings() {
                         onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
                         disabled={!userCanEdit || isReminderLocked(reminder)}
                       />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDuplicateReminder(reminder)}
+                        disabled={!userCanEdit}
+                        title="Duplicate reminder"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"
@@ -874,7 +926,8 @@ export function DebtReminderSettings() {
                         <Button
                           variant="destructive"
                           onClick={() => handleCancelSchedule(reminder)}
-                          disabled={!userCanEdit}
+                          disabled={!userCanEdit || !isScheduledInFuture(reminder)}
+                          title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
                           className="flex items-center gap-2"
                         >
                           <XCircle className="w-4 h-4" />
@@ -945,6 +998,15 @@ export function DebtReminderSettings() {
                                 onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
                                 disabled={!userCanEdit || isReminderLocked(reminder)}
                               />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDuplicateReminder(reminder)}
+                                disabled={!userCanEdit}
+                                title="Duplicate reminder"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
@@ -1165,7 +1227,8 @@ export function DebtReminderSettings() {
                             <Button
                               variant="destructive"
                               onClick={() => handleCancelSchedule(reminder)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                              disabled={!userCanEdit || !isScheduledInFuture(reminder)}
+                              title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
                               className="flex items-center gap-2"
                             >
                               <XCircle className="w-4 h-4" />
@@ -1297,6 +1360,80 @@ export function DebtReminderSettings() {
               </Button>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remind History Modal */}
+      <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
+        <DialogContent className="max-w-4xl w-full max-h-[85vh] flex flex-col p-0 gap-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Remind History</h2>
+                <p className="text-xs text-muted-foreground">All reminder emails sent to parents</p>
+              </div>
+            </div>
+            <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+              {reminderHistory.length} record{reminderHistory.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-2">
+            {reminderHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <Mail className="w-12 h-12 mb-4 opacity-20" />
+                <p className="text-sm font-medium">No reminder history yet</p>
+                <p className="text-xs mt-1">Sent reminders will appear here</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm rounded-lg overflow-hidden border">
+                <thead className="sticky top-0 bg-muted/60 backdrop-blur border-b">
+                  <tr>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date Sent</th>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subject</th>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Academic Year</th>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Term</th>
+                    <th className="text-right py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recipients</th>
+                    <th className="text-center py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {[...reminderHistory].reverse().map((entry, idx) => (
+                    <tr key={entry.id ?? idx} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-3.5 px-5 text-muted-foreground whitespace-nowrap text-sm">
+                        {entry.sentDate ? formatDisplayDate(entry.sentDate) : "-"}
+                      </td>
+                      <td className="py-3.5 px-5 font-medium text-sm">{entry.subject}</td>
+                      <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.academicYear || "-"}</td>
+                      <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.term || "-"}</td>
+                      <td className="py-3.5 px-5 text-right">
+                        <span className="font-semibold text-sm">{entry.recipients?.toLocaleString() ?? "-"}</span>
+                        <span className="text-xs text-muted-foreground ml-1">recipients</span>
+                      </td>
+                      <td className="py-3.5 px-5 text-center">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Sent
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end px-6 py-4 border-t bg-muted/20">
+            <Button variant="outline" onClick={() => setIsHistoryModalOpen(false)}>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

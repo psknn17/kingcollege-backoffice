@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -466,33 +467,23 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   }
 
   const exportToExcel = () => {
-    // In production, this would generate an Excel file with all receipt data
-    toast.success("Exporting all receipts to Excel...")
+    // Export all receipts as Excel file
+    const headers = ['Receipt Number', 'Invoice Number', 'Student Name', 'Student ID', 'Grade', 'Amount', 'Payment Method', 'Date', 'Academic Year', 'Term']
+    const rows = filteredReceipts.map(r => [
+      r.receiptNumber,
+      r.invoiceNumber,
+      r.studentName,
+      r.studentId,
+      r.studentGrade,
+      r.amount,
+      r.paymentMethod,
+      format(r.transactionDate, 'yyyy-MM-dd'),
+      r.academicYear,
+      r.term
+    ])
 
-    // Simulate Excel export
-    const csvContent = [
-      ['Receipt Number', 'Invoice Number', 'Student Name', 'Student ID', 'Grade', 'Amount', 'Payment Method', 'Date', 'Academic Year', 'Term'],
-      ...filteredReceipts.map(r => [
-        r.receiptNumber,
-        r.invoiceNumber,
-        r.studentName,
-        r.studentId,
-        r.studentGrade,
-        r.amount,
-        r.paymentMethod,
-        format(r.transactionDate, 'yyyy-MM-dd'),
-        r.academicYear,
-        r.term
-      ])
-    ].map(row => row.join(',')).join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `receipts-export-${format(new Date(), 'yyyy-MM-dd')}.csv`
-    link.click()
-    window.URL.revokeObjectURL(url)
+    downloadAsXlsx(headers, rows, `receipts-export-${format(new Date(), 'yyyy-MM-dd')}`)
+    toast.success("Receipts exported to Excel successfully")
   }
 
   const toggleReceiptSelection = (receiptId: string) => {

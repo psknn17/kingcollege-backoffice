@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -2325,108 +2326,38 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       "active"
     ]
 
-    const csvContent = [
-      headers.join(","),
-      exampleRow.map(cell => `"${cell}"`).join(",")
-    ].join("\n")
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", "item_import_template.csv")
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    downloadAsXlsx(headers, [exampleRow], "item_import_template")
 
     toast.success("Template downloaded")
   }
 
-  const parseCSV = (csvText: string) => {
-    const lines = csvText.split("\n").filter(line => line.trim())
-    if (lines.length < 2) {
-      setImportError("CSV file must have headers and at least one data row")
-      return
-    }
-
-    // Auto-detect delimiter (comma, semicolon, or tab)
-    const detectDelimiter = (line: string): string => {
-      const delimiters = [',', ';', '\t']
-      let maxCount = 0
-      let detectedDelimiter = ','
-
-      delimiters.forEach(delimiter => {
-        const count = line.split(delimiter).length
-        if (count > maxCount) {
-          maxCount = count
-          detectedDelimiter = delimiter
-        }
-      })
-
-      return detectedDelimiter
-    }
-
-    const delimiter = detectDelimiter(lines[0])
-    console.log("Detected delimiter:", delimiter === '\t' ? 'TAB' : delimiter)
-
-    // Parse with detected delimiter
-    const parseLineWithDelimiter = (line: string, delim: string): string[] => {
-      const regex = delim === '\t'
-        ? /("([^"]*(?:""[^"]*)*)"|[^\t]*)/g
-        : delim === ';'
-        ? /("([^"]*(?:""[^"]*)*)"|[^;]*)/g
-        : /("([^"]*(?:""[^"]*)*)"|[^,]*)/g
-
-      const matches = line.match(regex) || []
-      return matches
-        .map(v => v.trim().replace(/^"|"$/g, "").replace(/""/g, '"'))
-        .filter(v => v !== '' || matches.length > 1)
-    }
-
-    const headers = parseLineWithDelimiter(lines[0], delimiter)
-    console.log("Parsed headers:", headers)
-
-    const requiredHeaders = ["Item Code", "Name", "Amount"]
-    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
-
-    if (missingHeaders.length > 0) {
-      setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${headers.join(", ")}`)
-      return
-    }
-
-    const parsed = lines.slice(1).map((line, index) => {
-      const values = parseLineWithDelimiter(line, delimiter)
-
-      const row: any = {}
-      headers.forEach((header, i) => {
-        row[header] = values[i] || ""
-      })
-      row._rowIndex = index + 2
-      return row
-    })
-
-    console.log("Parsed items (first 3):", parsed.slice(0, 3))
-
-    setImportPreview(parsed)
-    setImportError("")
-  }
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.name.endsWith(".csv")) {
-      setImportError("Please upload a CSV file")
-      return
-    }
+    try {
+      const rows = await parseXlsxOrCsvFile(file)
+      if (rows.length === 0) {
+        setImportError("File has no data rows")
+        return
+      }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      parseCSV(text)
+      const requiredHeaders = ["Item Code", "Name", "Amount"]
+      const fileHeaders = Object.keys(rows[0])
+      const missingHeaders = requiredHeaders.filter(h => !fileHeaders.includes(h))
+
+      if (missingHeaders.length > 0) {
+        setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${fileHeaders.join(", ")}`)
+        return
+      }
+
+      const parsed = rows.map((row, index) => ({ ...row, _rowIndex: index + 2 }))
+      console.log("Parsed items (first 3):", parsed.slice(0, 3))
+      setImportPreview(parsed)
+      setImportError("")
+    } catch {
+      setImportError("Failed to parse file. Please use the provided template.")
     }
-    reader.readAsText(file)
   }
 
   const performConfirmImport = () => {
@@ -2437,10 +2368,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
     let imported = 0
     let skipped = 0
+    let updatedItems = [...items]
 
     importPreview.forEach(row => {
-      // Check if item already exists
-      const existingItem = items.find(item => item.itemCode === row["Item Code"])
+      // Check if item already exists (check against running list)
+      const existingItem = updatedItems.find(item => item.itemCode === row["Item Code"])
       if (existingItem) {
         skipped++
         return
@@ -2467,12 +2399,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         invoiceType: invoiceType as "student" | "external" | "eca"
       }
 
-      const updatedItems = [...items, newItem]
-      setItems(updatedItems)
-      saveItemsToStorage(updatedItems, invoiceType)
+      updatedItems = [...updatedItems, newItem]
       imported++
     })
 
+    // Save once after all items are accumulated
+    setItems(updatedItems)
+    saveItemsToStorage(updatedItems, invoiceType)
     setIsImportDialogOpen(false)
     toast.success(`Imported ${imported} item${imported > 1 ? 's' : ''}${skipped > 0 ? `, skipped ${skipped} duplicate${skipped > 1 ? 's' : ''}` : ""}`)
   }
@@ -3525,7 +3458,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
-                <p className="font-medium">CSV Template</p>
+                <p className="font-medium">Excel Template</p>
                 <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
               </div>
               <Button variant="outline" onClick={downloadTemplate}>
@@ -3536,11 +3469,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="csvFile">Upload CSV File</Label>
+              <Label htmlFor="csvFile">Upload File</Label>
               <Input
                 id="csvFile"
                 type="file"
-                accept=".csv"
+                accept={XLSX_ACCEPT}
                 onChange={handleFileUpload}
                 className="cursor-pointer"
                 disabled={!userCanEdit}

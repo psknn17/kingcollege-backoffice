@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -115,22 +116,13 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
   }
 
   const downloadFile = () => {
-    // Mock CSV content
-    const csvContent = generateCsvContent()
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `email-export-${jobData?.batchId || 'email-job'}-${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const { headers, rows } = generateExportData()
+    downloadAsXlsx(headers, rows, `email-export-${jobData?.batchId || 'email-job'}-${new Date().toISOString().split('T')[0]}`)
   }
 
-  const generateCsvContent = () => {
-    let headers: string[] = []
-    
+  const generateExportData = (): { headers: string[], rows: string[][] } => {
+    const headers: string[] = []
+
     if (exportSettings.includeColumns.recipientInfo) {
       headers.push("Recipient Name", "Recipient Email")
     }
@@ -157,7 +149,7 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
       ["Lisa Chen", "invalid@nonexistent.com", "Olivia Chen", "Year 10", "bounced", "2024-01-15 10:30", "", "", "3", "2024-01-15 11:15", "Recipient address rejected: User unknown"],
     ]
 
-    return [headers.join(","), ...rows.map(row => row.join(","))].join("\n")
+    return { headers, rows }
   }
 
   const getPreviewCount = () => {

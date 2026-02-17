@@ -506,7 +506,7 @@ export function SummerDiscountGroups() {
                         <input
                           id="csv-file-input"
                           type="file"
-                          accept=".csv"
+                          accept=".xlsx,.xls,.csv"
                           className="hidden"
                           onChange={handleFileUpload}
                           disabled={!userCanEdit}

@@ -22,13 +22,33 @@ const STORAGE_KEY = "authUser"
 const USERS_STORAGE_KEY = "users"
 const ROLE_SELECTION_KEY = "needsRoleSelection"
 
-const roleNames: Record<string, string> = {
+// Display names for roles (for UI only)
+const roleDisplayNames: Record<string, string> = {
   super_admin: "Admin",
   admin_accountant: "AdminAccountant",
   admin: "Admin",
   accountant: "Accountant",
   viewer: "Viewver",
   approver: "Approvalver"
+}
+
+// Migration map: old display names -> new role IDs
+const roleMigrationMap: Record<string, string> = {
+  "Admin": "super_admin",
+  "AdminAccountant": "admin_accountant",
+  "Approvalver": "approver",
+  "Viewver": "viewer",
+  "Accountant": "accountant"
+}
+
+// Helper function to migrate old role display names to role IDs
+function migrateRole(role: string): string {
+  // If it's already a role ID (contains underscore or is lowercase), return as is
+  if (role.includes('_') || role === role.toLowerCase()) {
+    return role
+  }
+  // Otherwise, migrate from old display name to role ID
+  return roleMigrationMap[role] || role
 }
 
 // Default admin user
@@ -52,6 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (stored) {
         const userData = JSON.parse(stored)
+
+        // Migrate old role display names to role IDs
+        if (userData.role) {
+          const migratedRole = migrateRole(userData.role)
+          if (migratedRole !== userData.role) {
+            userData.role = migratedRole
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+          }
+        }
+
         setUser(userData)
 
         // Check if role selection is needed
@@ -91,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       const updatedUser = {
         ...user,
-        role: roleNames[roleId] || roleId
+        role: roleId
       }
       setUser(updatedUser)
       setNeedsRoleSelection(false)
@@ -122,4 +152,9 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
+}
+
+// Helper function to get display name from role ID
+export function getRoleDisplayName(roleId: string): string {
+  return roleDisplayNames[roleId] || roleId
 }

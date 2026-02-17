@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
+import { triggerDownload } from "@/utils/downloadUtils"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useStudents } from "@/contexts/StudentContext"
@@ -27,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import { parseTuitionItemName } from "@/utils/itemAutoCreate"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import SchoolLogo from "@/assets/Logo.png"
@@ -34,6 +37,7 @@ import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import * as XLSX from "xlsx"
 
 type ApprovalStatus = "wait" | "approved" | "rejected"
 
@@ -81,6 +85,8 @@ interface Invoice {
   // Academic info
   term?: string
   academicYear?: string
+  // Import fields
+  adultIdNo?: string
 }
 
 interface InvoiceItem {
@@ -167,26 +173,16 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
     if (stored) {
       const savedInvoices = JSON.parse(stored)
       return savedInvoices.map((inv: any) => {
-        // Handle empty or invalid dates - parse as local time to avoid timezone issues
-        let issueDate: Date | null = null
-        if (inv.issueDate) {
-          if (inv.issueDate.includes('-')) {
-            const [year, month, day] = inv.issueDate.split('-').map(Number)
-            issueDate = new Date(year, month - 1, day)
-          } else {
-            issueDate = new Date(inv.issueDate)
-          }
+        // Parse date as LOCAL time - handles "YYYY-MM-DD" and "YYYY-MM-DDTHH:mm:ss.sssZ"
+        const parseLocalDate = (val: any): Date | null => {
+          if (!val) return null
+          const isoMatch = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/)
+          if (isoMatch) return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
+          const d = new Date(val)
+          return isNaN(d.getTime()) ? null : d
         }
-
-        let dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        if (inv.dueDate) {
-          if (inv.dueDate.includes('-')) {
-            const [year, month, day] = inv.dueDate.split('-').map(Number)
-            dueDate = new Date(year, month - 1, day)
-          } else {
-            dueDate = new Date(inv.dueDate)
-          }
-        }
+        const issueDate = parseLocalDate(inv.issueDate)
+        const dueDate = parseLocalDate(inv.dueDate) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
         const approvalStatus: ApprovalStatus = inv.approvalStatus
           ?? (inv.status === "approved"
@@ -429,6 +425,10 @@ export function InvoiceManagement({
   const [dateTo, setDateTo] = usePersistedState<Date | null>("invoice-management:dateTo", null)
   const [isExportingAll, setIsExportingAll] = useState(false)
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
+  const [isImportInterfaceUploadOpen, setIsImportInterfaceUploadOpen] = useState(false)
+  const [isImportInterfaceOpen, setIsImportInterfaceOpen] = useState(false)
+  const [importInterfaceRows, setImportInterfaceRows] = useState<Record<string, string>[]>([])
+  const [importInterfaceError, setImportInterfaceError] = useState("")
   const [sortKey, setSortKey] = usePersistedState<
     | "invoiceNumber"
     | "studentName"
@@ -458,6 +458,15 @@ export function InvoiceManagement({
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
     : [...new Map(academicYears.flatMap(y => y.terms).map(t => [t.name, t])).values()]
+
+  // Get the effective display amount: finalAmount if > 0, else recalculate from items
+  const getDisplayAmount = (invoice: Invoice): number => {
+    if (invoice.finalAmount && invoice.finalAmount > 0) return invoice.finalAmount
+    if (invoice.items && invoice.items.length > 0) {
+      return invoice.items.reduce((sum, item) => sum + (item.discountedAmount ?? item.amount ?? 0), 0)
+    }
+    return 0
+  }
 
   const getApprovalStatus = (invoice: Invoice): ApprovalStatus => (
     invoice.approvalStatus
@@ -1463,15 +1472,8 @@ export function InvoiceManagement({
     if (!invoice) return
     const resolvedCategory = category ?? invoice.category ?? ""
 
-    const escapeCsvValue = (value: unknown) => {
-      const text = value === null || value === undefined ? "" : String(value)
-      if (/[",\n]/.test(text)) {
-        return `"${text.replace(/"/g, '""')}"`
-      }
-      return text
-    }
-
-    const headerRows: string[][] = [
+    const infoHeaders = ["Field", "Value"]
+    const infoRows: (string | number)[][] = [
       ["Invoice Number", invoice.invoiceNumber],
       ["Student Name", invoice.studentName],
       ["Student ID", invoice.studentId],
@@ -1493,7 +1495,7 @@ export function InvoiceManagement({
       ["Notes", invoice.notes || ""]
     ]
 
-    const itemHeader = ["Item ID", "Description", "Amount", "Discount %", "Discounted Amount", "Notes"]
+    const itemHeaders = ["Item ID", "Description", "Amount", "Discount %", "Discounted Amount", "Notes"]
     const itemRows = invoice.items.map(item => [
       item.id,
       item.description,
@@ -1503,28 +1505,16 @@ export function InvoiceManagement({
       item.notes || ""
     ])
 
-    const csvRows = [
-      ["Field", "Value"],
-      ...headerRows,
+    // Build combined sheet: info block + blank row + items block
+    const allRows: (string | number)[][] = [
+      ...infoRows,
       [""],
       ["Items"],
-      itemHeader,
+      itemHeaders,
       ...itemRows
     ]
 
-    const csvContent = csvRows
-      .map(row => row.map(escapeCsvValue).join(","))
-      .join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `${invoice.invoiceNumber || invoice.id}_data.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadAsXlsx(infoHeaders, allRows, `${invoice.invoiceNumber || invoice.id}_data`)
 
     toast.success(`Invoice ${invoice.invoiceNumber} data downloaded`)
   }
@@ -1533,14 +1523,6 @@ export function InvoiceManagement({
     if (filteredInvoices.length === 0) {
       toast.error("No invoices to export")
       return
-    }
-
-    const escapeCsvValue = (value: unknown) => {
-      const text = value === null || value === undefined ? "" : String(value)
-      if (/[",\n]/.test(text)) {
-        return `"${text.replace(/"/g, '""')}"`
-      }
-      return text
     }
 
     const headers = [
@@ -1579,21 +1561,355 @@ export function InvoiceManagement({
       inv.finalAmount
     ]))
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(escapeCsvValue).join(","))
-      .join("\n")
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `invoice-report-${format(new Date(), "yyyyMMdd_HHmmss")}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadAsXlsx(headers, rows, `invoice-report-${format(new Date(), "yyyyMMdd_HHmmss")}`)
 
     toast.success(`Exported ${filteredInvoices.length} invoices`)
+  }
+
+  // ดึงราคา tuition จาก TuitionByYear data
+  const getTuitionPriceFromYearData = (
+    description: string,
+    yearGroup: string,
+    schoolTerm: string,
+    schoolYear: string
+  ): number | null => {
+    try {
+      const stored = localStorage.getItem("tuitionByYearData")
+      if (!stored) return null
+      const tuitionData = JSON.parse(stored)
+
+      // Parse gradeId & termField: use Description FIRST (primary for tuition items), fallback to columns
+      const parsedFromDesc = parseTuitionItemName(description)
+      let gradeId: string | null = parsedFromDesc.gradeId
+      let termField: string | null = parsedFromDesc.term ? `term${parsedFromDesc.term}Amount` : null
+
+      // Fallback to YearGroup column if description parsing didn't yield gradeId
+      if (!gradeId) {
+        const yg = yearGroup.toLowerCase().trim()
+        if (yg === "nursery") gradeId = "nursery"
+        else if (yg === "pre-nursery" || yg === "pre nursery") gradeId = "pre-nursery"
+        else if (yg === "reception") gradeId = "reception"
+        else {
+          const m = yearGroup.match(/Year\s*(\d+)/i)
+          if (m) gradeId = `year${m[1]}`
+        }
+      }
+
+      if (!gradeId) return null
+
+      // Fallback to SchoolTerm column if description parsing didn't yield termField
+      if (!termField) {
+        const termMatch = schoolTerm.match(/Term\s*(\d)/i)
+        if (termMatch) {
+          const n = parseInt(termMatch[1])
+          if (n >= 1 && n <= 3) termField = `term${n}Amount`
+        }
+      }
+
+      if (!termField) return null
+
+      // Normalize school year format: "2025/2026" ↔ "2025-2026"
+      const normalizeYear = (y: string) => y.replace(/\//g, "-").replace(/\s/g, "")
+      const normalizedInput = normalizeYear(schoolYear)
+
+      const tryYearData = (data: any[]): number | null => {
+        const gradeRow = data.find((g: any) => g.id === gradeId)
+        if (!gradeRow) return null
+        const price = gradeRow[termField!]
+        return typeof price === "number" && price > 0 ? price : null
+      }
+
+      // Try matching any stored year whose normalized form matches
+      const allYears = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
+
+      // First pass: exact or normalized match
+      for (const yr of allYears) {
+        if (normalizeYear(yr) === normalizedInput) {
+          const price = tryYearData(tuitionData[yr] || [])
+          if (price !== null) return price
+        }
+      }
+
+      // Second pass: fallback search all years (most recent first)
+      for (const yr of allYears) {
+        const price = tryYearData(tuitionData[yr] || [])
+        if (price !== null) return price
+      }
+
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  const handleImportInterfaceFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const nameLower = file.name.toLowerCase()
+    const isXlsx = nameLower.endsWith(".xlsx") || nameLower.endsWith(".xls")
+    const isCsv = nameLower.endsWith(".csv")
+
+    if (!isXlsx && !isCsv) {
+      toast.error("Please upload a CSV or Excel (.xlsx) file")
+      event.target.value = ""
+      return
+    }
+
+    const reader = new FileReader()
+    if (isXlsx) {
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result as string
+          const wb = XLSX.read(data, { type: "binary", cellDates: false })
+          const ws = wb.Sheets[wb.SheetNames[0]]
+          // Get all rows as arrays (raw values, no date conversion)
+          const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false })
+          parseInterfaceRows(allRows)
+        } catch {
+          setImportInterfaceError("Failed to read Excel file")
+          setIsImportInterfaceOpen(true)
+        }
+      }
+      reader.readAsBinaryString(file)
+    } else {
+      reader.onload = (e) => {
+        const text = e.target?.result as string
+        const lines = text.split(/\r?\n/).filter(l => l.trim())
+        const parseCSVLine = (line: string): string[] => {
+          const result: string[] = []
+          let current = "", inQuotes = false
+          for (const char of line) {
+            if (char === '"') { inQuotes = !inQuotes }
+            else if (char === ',' && !inQuotes) { result.push(current.trim()); current = "" }
+            else { current += char }
+          }
+          result.push(current.trim())
+          return result
+        }
+        const allRows: string[][] = lines.map(l => parseCSVLine(l).map(v => v.replace(/^"|"$/g, "").trim()))
+        parseInterfaceRows(allRows)
+      }
+      reader.readAsText(file)
+    }
+    event.target.value = ""
+  }
+
+  const parseInterfaceRows = (allRows: any[][]) => {
+    const required = ["PupilID", "DocumentNo", "Description", "Amount"]
+
+    // Find the header row - it's the first row that contains "PupilID"
+    let headerRowIdx = -1
+    for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+      const row = allRows[i].map((v: any) => String(v ?? "").trim())
+      if (row.includes("PupilID")) {
+        headerRowIdx = i
+        break
+      }
+    }
+
+    if (headerRowIdx === -1) {
+      setImportInterfaceError(`Missing required columns: ${required.join(", ")}`)
+      setIsImportInterfaceOpen(true)
+      return
+    }
+
+    const headers = allRows[headerRowIdx].map((v: any) => String(v ?? "").trim())
+
+    const missing = required.filter(r => !headers.includes(r))
+    if (missing.length > 0) {
+      setImportInterfaceError(`Missing required columns: ${missing.join(", ")}`)
+      setIsImportInterfaceOpen(true)
+      return
+    }
+
+    // Group rows by PupilID for auto-generating DocumentNo
+    const generatedDocNos: Record<string, string> = {}
+
+    const rows = allRows.slice(headerRowIdx + 1)
+      .map(rawRow => {
+        const row: Record<string, string> = {}
+        headers.forEach((h, i) => { row[h] = String(rawRow[i] ?? "").trim() })
+        return row
+      })
+      .filter(row => row["PupilID"])
+      .map(row => {
+        // Auto-generate DocumentNo if missing - group same PupilID into one invoice
+        if (!row["DocumentNo"]) {
+          if (!generatedDocNos[row["PupilID"]]) {
+            generatedDocNos[row["PupilID"]] = `IMP-${row["PupilID"]}-${Date.now()}`
+          }
+          row["DocumentNo"] = generatedDocNos[row["PupilID"]]
+        }
+        return row
+      })
+
+    setImportInterfaceRows(rows)
+    setImportInterfaceError("")
+    setIsImportInterfaceOpen(true)
+  }
+
+  const performImportInterface = () => {
+    if (importInterfaceRows.length === 0) return
+
+    const parseDate = (dateStr: string): Date => {
+      if (!dateStr) return new Date()
+      // Handle Excel serial dates (e.g. "46070")
+      const serial = Number(dateStr)
+      if (!isNaN(serial) && serial > 40000 && serial < 60000 && String(serial) === String(dateStr).trim()) {
+        return new Date((serial - 25569) * 86400 * 1000)
+      }
+      // Handle ISO strings (YYYY-MM-DDTHH:mm:ss or YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        const d = new Date(dateStr)
+        if (!isNaN(d.getTime())) return d
+      }
+      // Handle D/M/YY, DD/MM/YYYY, MM/DD/YYYY
+      const parts = dateStr.split(/[\/\-\.]/)
+      if (parts.length === 3) {
+        const p0 = parseInt(parts[0])
+        const p1 = parseInt(parts[1])
+        let p2 = parseInt(parts[2])
+        // YYYY/MM/DD
+        if (p0 > 1000) return new Date(p0, p1 - 1, p2)
+        // Handle 2-digit year in last position
+        if (p2 < 100) p2 += p2 < 50 ? 2000 : 1900
+        // DD/MM/YYYY: first part > 12 → must be day
+        if (p0 > 12) return new Date(p2, p1 - 1, p0)
+        // MM/DD/YYYY: second part > 12 → must be day
+        if (p1 > 12) return new Date(p2, p0 - 1, p1)
+        // Ambiguous (both ≤ 12): default DD/MM/YYYY (Thai/UK convention)
+        return new Date(p2, p1 - 1, p0)
+      }
+      return new Date(dateStr)
+    }
+
+    // Group rows by DocumentNo
+    const grouped: Record<string, Record<string, string>[]> = {}
+    importInterfaceRows.forEach(row => {
+      const docNo = row["DocumentNo"]
+      if (!grouped[docNo]) grouped[docNo] = []
+      grouped[docNo].push(row)
+    })
+
+    const newInvoices: Invoice[] = Object.entries(grouped).map(([docNo, rows]) => {
+      const first = rows[0]
+      const pupilId = first["PupilID"] || ""
+      const student = students.find(s => s.studentId === pupilId)
+
+      const items: InvoiceItem[] = rows
+        .sort((a, b) => parseInt(a["InvoiceLineItem"] || "0") - parseInt(b["InvoiceLineItem"] || "0"))
+        .map(row => {
+          const rawAmt = row["Amount"]
+          const csvAmt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
+          const desc = row["Description"] || ""
+          const isTuitionDesc = /tuition/i.test(desc)
+          const tuitionPrice = isTuitionDesc
+            ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
+            : null
+          const amt = tuitionPrice ?? csvAmt
+          return {
+            id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            description: desc,
+            amount: amt,
+            discountPercent: 0,
+            discountedAmount: amt,
+            notes: row["FinanceCode"] || row["NominalCode"] || ""
+          }
+        })
+
+      const totalAmount = items.reduce((sum, i) => sum + i.amount, 0)
+
+      return {
+        id: `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        invoiceNumber: docNo,
+        studentName: student ? `${student.firstName} ${student.lastName}` : pupilId,
+        studentId: pupilId,
+        studentGrade: first["YearGroup"] || "",
+        parentName: "",
+        parentEmail: student?.parents?.find((p: any) => p.isPrimary)?.email || "",
+        totalAmount,
+        discountAmount: 0,
+        finalAmount: totalAmount,
+        status: "pending_approval" as const,
+        approvalStatus: "wait" as const,
+        issueDate: parseDate(first["InvoiceDate"]),
+        dueDate: parseDate(first["DueDate"]),
+        issuedBy: "Import",
+        items,
+        notes: "",
+        term: first["SchoolTerm"] || "",
+        academicYear: first["SchoolYear"] || "",
+        category: (category || "tuition") as "tuition" | "eca" | "trip" | "exam" | "bus" | "external",
+        adultIdNo: first["AdultIDNo"] || ""
+      }
+    })
+
+    // Auto-create missing items in ItemManagement catalog (fallback)
+    const getItemStorageKey = (cat: string) => {
+      const keyMap: Record<string, string> = {
+        afterschool: "afterschoolItems", eca: "ecaItems", event: "eventItems",
+        summer: "summerItems", external: "externalItems", trip: "tripItems",
+        exam: "examItems", bus: "busItems", tuition: "invoiceItems"
+      }
+      return keyMap[cat] || "invoiceItems"
+    }
+    const itemsStorageKey = getItemStorageKey(category || "tuition")
+    let catalogItems: any[] = []
+    try {
+      const stored = localStorage.getItem(itemsStorageKey)
+      catalogItems = stored ? JSON.parse(stored) : []
+    } catch { catalogItems = [] }
+
+    let newItemsAdded = 0
+    importInterfaceRows.forEach(row => {
+      const desc = (row["Description"] || "").trim()
+      if (!desc) return
+      const alreadyExists = catalogItems.some((item: any) =>
+        (item.name || "").toLowerCase().trim() === desc.toLowerCase() ||
+        (item.description || "").toLowerCase().trim() === desc.toLowerCase()
+      )
+      if (!alreadyExists) {
+        const rawAmt = row["Amount"]
+        const amt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
+        catalogItems.push({
+          id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          itemCode: row["FinanceCode"] || row["NominalCode"] || `AUTO-${Date.now()}`,
+          name: desc,
+          description: desc,
+          amount: amt,
+          nominalCode: row["NominalCode"] || "",
+          documentType: row["Type"] || "SI",
+          isActive: true,
+          applicableGrades: [],
+          category: category || "tuition"
+        })
+        newItemsAdded++
+      }
+    })
+    if (newItemsAdded > 0) {
+      try {
+        localStorage.setItem(itemsStorageKey, JSON.stringify(catalogItems))
+      } catch (e) {
+        console.error("Failed to auto-create items:", e)
+      }
+    }
+
+    try {
+      const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+      const existing = stored ? JSON.parse(stored) : []
+      localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify([...existing, ...newInvoices]))
+    } catch (e) {
+      console.error("Failed to save imported invoices:", e)
+    }
+
+    reloadInvoices()
+    setIsImportInterfaceOpen(false)
+    setImportInterfaceRows([])
+    const itemNote = newItemsAdded > 0 ? ` (auto-created ${newItemsAdded} item${newItemsAdded > 1 ? "s" : ""})` : ""
+    toast.success(`Imported ${newInvoices.length} invoice${newInvoices.length > 1 ? "s" : ""} successfully${itemNote}`)
+    logActivity({ action: `Imported ${newInvoices.length} invoices from interface file`, module: "Invoice Management", detail: `Invoice numbers: ${newInvoices.map(inv => inv.invoiceNumber).join(", ")}` })
+    window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
 
   const exportAllInvoicesZip = async () => {
@@ -1684,7 +2000,7 @@ export function InvoiceManagement({
               ${itemsRows}
               <tr>
                 <td colspan="3" style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">Total</td>
-                <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">${invoice.finalAmount.toLocaleString()}</td>
+                <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">${getDisplayAmount(invoice).toLocaleString()}</td>
               </tr>
             </tbody>
           </table>
@@ -1760,14 +2076,7 @@ export function InvoiceManagement({
       }
 
       const zipBlob = await zip.generateAsync({ type: "blob" })
-      const url = URL.createObjectURL(zipBlob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `invoices-export-${format(new Date(), "yyyyMMdd_HHmmss")}.zip`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      triggerDownload(zipBlob, `invoices-export-${format(new Date(), "yyyyMMdd_HHmmss")}.zip`, "application/zip")
 
       toast.success(`Exported ${filteredInvoices.length} invoices`)
     } catch (error) {
@@ -1812,16 +2121,7 @@ export function InvoiceManagement({
       "Term 2 tuition payment for academic year", // InvoiceLineItem
       "130000"              // Amount
     ]
-    const csv = [headers.join(","), sampleRow.join(",")].join("\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.setAttribute("download", "invoice_interface_template.csv")
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadAsXlsx(headers, [sampleRow], "invoice_interface_template")
   }
 
   const downloadInterfaceFile = () => {
@@ -1853,22 +2153,22 @@ export function InvoiceManagement({
       // Get student data
       const student = students.find(s => s.id === invoice.studentId)
       const pupilID = invoice.studentId || ""
-      const adultIDNo = student?.parentIdNumber || student?.parentEmail || ""
-      const schoolYear = invoice.academicYear || getAcademicYear(invoice.issueDate || new Date())
+      const adultIDNo = invoice.adultIdNo ?? student?.parentIdNumber ?? student?.parentEmail ?? ""
+      const schoolYear = (invoice.academicYear || getAcademicYear(invoice.issueDate || new Date())).replace(/\//g, "-")
       const yearGroup = invoice.studentGrade || ""
       const schoolTerm = invoice.term || ""
       const invoiceDate = invoice.issueDate ? format(new Date(invoice.issueDate), "yyyy-MM-dd") : ""
       const dueDate = format(new Date(invoice.dueDate), "yyyy-MM-dd")
 
       // For each line item in the invoice, create a separate row
-      invoice.items.forEach(item => {
+      invoice.items.forEach((item, lineIdx) => {
         // Get item details - try to extract from item or use defaults
         const itemData = item as any // Cast to any to access potential itemCode/nominalCode fields
         const nominalCode = itemData.nominalCode || "4110000" // Default nominal code
-        const financeCode = itemData.itemCode || itemData.id || ""
-        const description = itemData.name || item.description || ""
-        const invoiceLineItem = item.description || ""
-        const amount = Math.round(item.amount).toString()
+        const financeCode = item.notes || itemData.itemCode || ""
+        const description = item.description || itemData.name || ""
+        const invoiceLineItem = (lineIdx + 1).toString() // Line item number (1, 2, 3...)
+        const amount = Math.round(item.discountedAmount ?? item.amount).toString()
         const documentType = itemData.documentType || "SI" // Default to Sales Invoice
 
         const row = [
@@ -1892,29 +2192,9 @@ export function InvoiceManagement({
       })
     })
 
-    // Create CSV content
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => {
-        // Escape cells that contain commas or quotes
-        if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
-          return `"${cell.replace(/"/g, '""')}"`
-        }
-        return cell
-      }).join(","))
-    ].join("\n")
-
-    // Download CSV
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
+    // Download as Excel
     const timestamp = format(new Date(), "yyyyMMdd_HHmmss")
-    link.setAttribute("download", `invoice_interface_${timestamp}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadAsXlsx(headers, rows, `invoice_interface_${timestamp}`)
 
     toast.success(`Exported ${rows.length} line items from ${filteredInvoices.length} invoice${filteredInvoices.length > 1 ? 's' : ''}`)
   }
@@ -2065,7 +2345,7 @@ export function InvoiceManagement({
   }
 
   const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?: ApprovalStatus) => {
-    if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+    if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-") || invoiceNumber.startsWith("IMP-")) {
       return ""
     }
     if (approvalStatus === "rejected") {
@@ -2077,12 +2357,13 @@ export function InvoiceManagement({
   // Approval handlers
   const handleApproveInvoice = (invoice: Invoice) => {
     // Generate proper invoice number if it's a draft number
-    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.startsWith('DRAFT-')
+    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.startsWith('DRAFT-') || invoice.invoiceNumber.startsWith('IMP-')
     const finalInvoiceNumber = needsNewInvoiceNumber
       ? generateInvoiceNumber(invoice.studentId)
       : invoice.invoiceNumber
 
     const approvalDate = new Date()
+    const emailSentAt = approvalDate.toISOString()
 
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
@@ -2092,7 +2373,9 @@ export function InvoiceManagement({
           approvalStatus: "approved",
           approvedBy: "Admin",
           approvedAt: approvalDate,
-          issueDate: approvalDate
+          issueDate: approvalDate,
+          status: "sent" as const,
+          emailSentAt: approvalDate
         }
         : inv
     )
@@ -2110,8 +2393,10 @@ export function InvoiceManagement({
               invoiceNumber: finalInvoiceNumber,
               approvalStatus: "approved",
               approvedBy: "Admin",
-              approvedAt: approvalDate.toISOString(),
-              issueDate: approvalDate.toISOString().split('T')[0]
+              approvedAt: emailSentAt,
+              issueDate: approvalDate.toISOString().split('T')[0],
+              status: "sent",
+              emailSentAt
             }
             : inv
         )
@@ -2121,11 +2406,13 @@ export function InvoiceManagement({
       console.error("Failed to update invoice approval in localStorage:", error)
     }
 
-    toast.success(`Invoice ${finalInvoiceNumber} has been approved`)
+    applyFilters()
+    window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+    toast.success(`Invoice ${finalInvoiceNumber} approved & email sent`)
     logActivity({
       action: `Approved invoice ${finalInvoiceNumber}`,
       module: "Invoices",
-      detail: "Approval Status: wait → approved"
+      detail: "Approval Status: wait → approved, Email: sent immediately"
     })
     setIsApprovalDialogOpen(false)
     setSelectedInvoiceForApproval(null)
@@ -2623,6 +2910,22 @@ export function InvoiceManagement({
           <Button
             variant="outline"
             className="flex items-center gap-2"
+            onClick={() => setIsImportInterfaceUploadOpen(true)}
+            disabled={!userCanEdit}
+          >
+            <Upload className="w-4 h-4" />
+            Import Interface File
+          </Button>
+          <input
+            id="import-interface-input"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            className="hidden"
+            onChange={handleImportInterfaceFile}
+          />
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
             onClick={exportAllInvoicesZip}
             disabled={isExportingAll}
           >
@@ -3023,7 +3326,7 @@ export function InvoiceManagement({
                       {/* Amount - RIGHT */}
                       <TableCell align="right">
                         <div className="font-medium">
-                          {invoice.finalAmount.toLocaleString()}
+                          {getDisplayAmount(invoice).toLocaleString()}
                         </div>
                         {invoice.discountAmount > 0 && (
                           <div className="text-xs text-muted-foreground">
@@ -3464,7 +3767,7 @@ export function InvoiceManagement({
                           <Badge variant="outline">{invoice.eventName || "-"}</Badge>
                         </TableCell>
                         {/* Amount - RIGHT */}
-                        <TableCell align="right" className="font-medium">{invoice.finalAmount.toLocaleString()}</TableCell>
+                        <TableCell align="right" className="font-medium">{getDisplayAmount(invoice).toLocaleString()}</TableCell>
                         {/* Approval - CENTER */}
                         <TableCell align="center">{getInvoiceStatusBadge(getApprovalStatus(invoice))}</TableCell>
                         {/* Email - CENTER */}
@@ -3736,7 +4039,15 @@ export function InvoiceManagement({
                         <span className="text-sm font-medium text-gray-800">
                           {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
                             ? (selectedInvoice.eventName || "-")
-                            : (selectedInvoice.issueDate ? getAcademicYear(selectedInvoice.issueDate) : "-")}
+                            : (() => {
+                                if (selectedInvoice.academicYear) return selectedInvoice.academicYear
+                                if (selectedInvoice.issueDate) return getAcademicYear(selectedInvoice.issueDate)
+                                // Extract year from term field e.g. "2025-2026 - Term 2 ..."
+                                const termYearMatch = (selectedInvoice.term || "").match(/(\d{4}[-\/]\d{4})/)
+                                if (termYearMatch) return termYearMatch[1]
+                                if (selectedInvoice.dueDate) return getAcademicYear(selectedInvoice.dueDate)
+                                return "-"
+                              })()}
                         </span>
                       </div>
                     </div>
@@ -4443,20 +4754,15 @@ export function InvoiceManagement({
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          // Create sample CSV content
-                          const csvContent = [
-                            ['Student ID', 'Student Name', 'Year Group', 'Room'].join(','),
-                            ['S001', 'John Doe', 'Year 1', 'Room A'].join(','),
-                            ['S002', 'Jane Smith', 'Year 1', 'Room A'].join(','),
-                            ['S003', 'Bob Johnson', 'Year 2', 'Room B'].join(','),
-                          ].join('\n')
-
-                          // Create and download file
-                          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-                          const link = document.createElement('a')
-                          link.href = URL.createObjectURL(blob)
-                          link.download = 'student_list_template.csv'
-                          link.click()
+                          downloadAsXlsx(
+                            ['Student ID', 'Student Name', 'Year Group', 'Room'],
+                            [
+                              ['S001', 'John Doe', 'Year 1', 'Room A'],
+                              ['S002', 'Jane Smith', 'Year 1', 'Room A'],
+                              ['S003', 'Bob Johnson', 'Year 2', 'Room B'],
+                            ],
+                            'student_list_template'
+                          )
                         }}
                         className="gap-2"
                       >
@@ -4467,10 +4773,10 @@ export function InvoiceManagement({
 
                     <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
                       <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground mb-2">Upload CSV file with student information</p>
+                      <p className="text-sm text-muted-foreground mb-2">Upload file with student information</p>
                       <Input
                         type="file"
-                        accept=".csv"
+                        accept=".xlsx,.xls,.csv"
                         onChange={handleCsvUpload}
                         className="max-w-xs mx-auto"
                       />
@@ -4933,7 +5239,7 @@ export function InvoiceManagement({
 
       {/* Mark Paid Dialog */}
       <Dialog open={isMarkPaidOpen} onOpenChange={setIsMarkPaidOpen}>
-        <DialogContent className="p-6" style={{ width: "50vw", maxWidth: "600px" }}>
+        <DialogContent className="p-6 bg-white dark:bg-gray-950" style={{ width: "50vw", maxWidth: "600px" }}>
           <DialogHeader>
             <DialogTitle>Mark Invoice as Paid</DialogTitle>
             <DialogDescription>
@@ -6015,6 +6321,124 @@ export function InvoiceManagement({
         confirmTextKey="common.delete"
         variant="destructive"
       />
+
+      {/* Import Interface File — Upload Dialog */}
+      <Dialog open={isImportInterfaceUploadOpen} onOpenChange={setIsImportInterfaceUploadOpen}>
+        <DialogContent className="p-6 bg-white" style={{ maxWidth: "480px" }}>
+          <DialogHeader>
+            <DialogTitle>Import Interface File</DialogTitle>
+            <DialogDescription>
+              Upload a CSV or Excel file in the interface format to create invoices.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Template download */}
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+              <div>
+                <p className="text-sm font-medium">CSV Template</p>
+                <p className="text-xs text-muted-foreground">Download the template with correct column headers</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={downloadInterfaceTemplate} className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Download Template
+              </Button>
+            </div>
+            {/* File upload */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Upload CSV / Excel File</label>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
+                onChange={(e) => {
+                  setIsImportInterfaceUploadOpen(false)
+                  handleImportInterfaceFile(e)
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportInterfaceUploadOpen(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Interface File Dialog */}
+      <Dialog open={isImportInterfaceOpen} onOpenChange={setIsImportInterfaceOpen}>
+        <DialogContent className="p-6 bg-white" style={{ width: "95vw", maxWidth: "1400px" }}>
+          <DialogHeader>
+            <DialogTitle>Import Interface File</DialogTitle>
+            <DialogDescription>
+              Preview invoices to be imported. Rows are grouped by DocumentNo into invoices.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importInterfaceError ? (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {importInterfaceError}
+            </div>
+          ) : importInterfaceRows.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้างเป็น <strong>
+                  {new Set(importInterfaceRows.map(r => r["DocumentNo"])).size}
+                </strong> invoices
+              </p>
+              <div className="border rounded-lg overflow-auto max-h-96">
+                <Table style={{ minWidth: "700px" }}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead align="left" className="min-w-[110px]">Student ID</TableHead>
+                      <TableHead align="left" className="min-w-[80px]">Year Group</TableHead>
+                      <TableHead align="left" className="min-w-[200px]">School Term</TableHead>
+                      <TableHead align="left" className="min-w-[90px]">Invoice Date</TableHead>
+                      <TableHead align="left" className="min-w-[90px]">Due Date</TableHead>
+                      <TableHead align="left" className="min-w-[220px]">Description</TableHead>
+                      <TableHead align="right" className="min-w-[100px]">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {importInterfaceRows.map((row, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell align="left">{row["PupilID"]}</TableCell>
+                        <TableCell align="left">{row["YearGroup"]}</TableCell>
+                        <TableCell align="left" className="text-xs">{row["SchoolTerm"]}</TableCell>
+                        <TableCell align="left">{row["InvoiceDate"]}</TableCell>
+                        <TableCell align="left">{row["DueDate"]}</TableCell>
+                        <TableCell align="left">{row["Description"]}</TableCell>
+                        <TableCell align="right">{(() => {
+                          const csvAmt = parseFloat(String(row["Amount"] ?? "").replace(/,/g, "")) || 0
+                          const desc = row["Description"] || ""
+                          const isTuition = /tuition/i.test(desc)
+                          const tuitionPrice = isTuition
+                            ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
+                            : null
+                          const displayAmt = tuitionPrice ?? csvAmt
+                          return displayAmt.toLocaleString("th-TH", { minimumFractionDigits: 2 })
+                        })()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">ไม่พบข้อมูล</p>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsImportInterfaceOpen(false); setImportInterfaceRows([]) }}>
+              Cancel
+            </Button>
+            {!importInterfaceError && importInterfaceRows.length > 0 && (
+              <Button onClick={performImportInterface}>
+                <Upload className="w-4 h-4 mr-2" />
+                Import {new Set(importInterfaceRows.map(r => r["DocumentNo"])).size} Invoice{new Set(importInterfaceRows.map(r => r["DocumentNo"])).size > 1 ? "s" : ""}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

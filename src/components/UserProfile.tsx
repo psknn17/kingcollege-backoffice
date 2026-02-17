@@ -6,7 +6,7 @@ import { Label } from "./ui/label"
 import { Avatar, AvatarFallback } from "./ui/avatar"
 import { Separator } from "./ui/separator"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth, getRoleDisplayName } from "@/contexts/AuthContext"
 import { User, Mail, Phone, Building, Calendar, Upload, Save, Lock, Eye, EyeOff } from "lucide-react"
 import { format } from "date-fns"
 
@@ -195,7 +195,7 @@ export function UserProfile() {
             <div className="space-y-2">
               <Label className="text-gray-500">Role</Label>
               <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
-                <span className="font-medium text-gray-700">{user?.role}</span>
+                <span className="font-medium text-gray-700">{getRoleDisplayName(user?.role || "")}</span>
               </div>
             </div>
 

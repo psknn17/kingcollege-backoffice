@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -267,36 +268,24 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   }
 
   const exportStudentReport = () => {
-    const csvContent = [
-      // Headers
-      "Student Name,Parent Name,Parent Type,Year Group,Registration Date,Payment Date,Payment Status,Payment Channel,Amount,Student Email,Parent Email,Parent Phone",
-      // Data rows
-      ...filteredStudents.map(student => [
-        student.studentName,
-        student.parentName,
-        student.parentType,
-        student.yearGroup,
-        format(student.registrationDate, "yyyy-MM-dd"),
-        student.paymentDate ? format(student.paymentDate, "yyyy-MM-dd") : "",
-        student.paymentStatus,
-        student.paymentChannel,
-        student.amount,
-        student.studentEmail,
-        student.parentEmail,
-        student.parentPhone
-      ].join(","))
-    ].join("\n")
+    const headers = ["Student Name", "Parent Name", "Parent Type", "Year Group", "Registration Date", "Payment Date", "Payment Status", "Payment Channel", "Amount", "Student Email", "Parent Email", "Parent Phone"]
+    const rows = filteredStudents.map(student => [
+      student.studentName,
+      student.parentName,
+      student.parentType,
+      student.yearGroup,
+      format(student.registrationDate, "yyyy-MM-dd"),
+      student.paymentDate ? format(student.paymentDate, "yyyy-MM-dd") : "",
+      student.paymentStatus,
+      student.paymentChannel,
+      student.amount,
+      student.studentEmail,
+      student.parentEmail,
+      student.parentPhone
+    ])
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_student_report.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    
+    downloadAsXlsx(headers, rows, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_student_report`)
+
     toast.success(`Student report exported for ${course.name}`)
   }
 

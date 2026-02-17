@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -685,20 +686,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   const downloadStudentTemplate = () => {
-    const csvContent = "Student ID\n" +
-      "KC2024001\n" +
-      "KC2024002\n" +
-      "KC2024003\n" +
-      "KC2024004\n" +
-      "KC2024005"
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'student_ids_template.csv'
-    a.click()
-    window.URL.revokeObjectURL(url)
+    downloadAsXlsx(
+      ["Student ID"],
+      [["KC2024001"], ["KC2024002"], ["KC2024003"], ["KC2024004"], ["KC2024005"]],
+      "student_ids_template"
+    )
     toast.success("Student ID template downloaded")
   }
 
@@ -1280,7 +1272,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             </p>
                             <input
                               type="file"
-                              accept=".csv"
+                              accept=".xlsx,.xls,.csv"
                               onChange={handleFileUpload}
                               className="hidden"
                               id="csv-file-upload"
@@ -1776,7 +1768,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               <input
                                 id="edit-csv-file"
                                 type="file"
-                                accept=".csv"
+                                accept=".xlsx,.xls,.csv"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0]
                                   if (file) {
@@ -2025,7 +2017,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   </p>
                   <input
                     type="file"
-                    accept=".csv"
+                    accept=".xlsx,.xls,.csv"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
                       if (file) handleCsvUpload(file)

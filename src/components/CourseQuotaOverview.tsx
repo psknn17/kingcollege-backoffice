@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -475,46 +476,34 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
   const exportCourseReport = (course: Course) => {
     const students = generateStudentRegistrations(course.id, course.enrolled)
-    
-    const csvContent = [
-      // Headers
-      "Student Name,Parent Name,Parent Type,Year Group,Registration Date,Payment Date,Payment Status,Payment Channel,Amount,Student Email,Parent Email,Parent Phone",
-      // Data rows
-      ...students.map(student => [
-        student.studentName,
-        student.parentName,
-        student.parentType,
-        student.yearGroup,
-        format(student.registrationDate, "yyyy-MM-dd"),
-        student.paymentDate ? format(student.paymentDate, "yyyy-MM-dd") : "",
-        student.paymentStatus,
-        student.paymentChannel,
-        student.amount,
-        student.studentEmail,
-        student.parentEmail,
-        student.parentPhone
-      ].join(","))
-    ].join("\n")
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_student_report.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    
+    const headers = ["Student Name", "Parent Name", "Parent Type", "Year Group", "Registration Date", "Payment Date", "Payment Status", "Payment Channel", "Amount", "Student Email", "Parent Email", "Parent Phone"]
+    const rows = students.map(student => [
+      student.studentName,
+      student.parentName,
+      student.parentType,
+      student.yearGroup,
+      format(student.registrationDate, "yyyy-MM-dd"),
+      student.paymentDate ? format(student.paymentDate, "yyyy-MM-dd") : "",
+      student.paymentStatus,
+      student.paymentChannel,
+      student.amount,
+      student.studentEmail,
+      student.parentEmail,
+      student.parentPhone
+    ])
+
+    downloadAsXlsx(headers, rows, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_student_report`)
+
     toast.success(`Student report exported for ${course.name}`)
   }
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file && file.type === "text/csv") {
+    if (file) {
       setCsvFile(file)
     } else {
-      toast.error("Please select a valid CSV file")
+      toast.error("Please select a valid file")
     }
   }
 
@@ -535,22 +524,12 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   }
 
   const downloadCsvTemplate = () => {
-    const csvTemplate = [
-      "Course Name,Category,Instructor,Capacity,Fee,Schedule,Location,Age Group,Start Date,End Date",
-      "Example Course,Sports,John Doe,20,300,Mon Wed Fri 3:00-4:00 PM,Gymnasium,8-12 years,2025-09-01,2025-12-20"
-    ].join("\n")
-    
-    const blob = new Blob([csvTemplate], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'course_import_template.csv'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    
-    toast.success("CSV template downloaded")
+    const headers = ["Course Name", "Category", "Instructor", "Capacity", "Fee", "Schedule", "Location", "Age Group", "Start Date", "End Date"]
+    const exampleRow = ["Example Course", "Sports", "John Doe", "20", "300", "Mon Wed Fri 3:00-4:00 PM", "Gymnasium", "8-12 years", "2025-09-01", "2025-12-20"]
+
+    downloadAsXlsx(headers, [exampleRow], 'course_import_template')
+
+    toast.success("Excel template downloaded")
   }
 
   return (
@@ -1366,7 +1345,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 <div>
                   <input
                     type="file"
-                    accept=".csv"
+                    accept=".xlsx,.xls,.csv"
                     onChange={handleCsvUpload}
                     className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                   />

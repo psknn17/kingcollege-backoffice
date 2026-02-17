@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { triggerDownload } from "@/utils/downloadUtils"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -284,40 +286,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
   }
 
   const exportData = () => {
-    // Helper function to escape CSV values
-    const escapeCsvValue = (value: any): string => {
-      if (value === null || value === undefined) return ''
-      const stringValue = String(value)
-      // If value contains comma, newline, or quotes, wrap in quotes and escape internal quotes
-      if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
-        return `"${stringValue.replace(/"/g, '""')}"`
-      }
-      return stringValue
-    }
-    
-    // Create metadata section
-    const currentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss')
-    const totalAmount = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0)
-    
-    const metadata = [
-      'King\'s College Payment History Export',
-      `Export Date: ${currentDate}`,
-      `Report Type: ${type === 'tuition' ? 'Tuition Management' : 'After School Management'}`,
-      `Total Records: ${filteredPayments.length}`,
-      `Total Amount: ฿${totalAmount.toLocaleString()}`,
-      '',
-      'Applied Filters:',
-      `- Status: ${statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}`,
-      `- Term: ${termFilter === 'all' ? 'All Terms' : availableTerms.find(t => t.id === termFilter)?.name || termFilter}`,
-      `- Year Group: ${gradeFilter === 'all' ? 'All Year Groups' : gradeFilter}`,
-      `- Date Range: ${dateFrom ? format(dateFrom, 'yyyy-MM-dd') : 'No start date'} to ${dateTo ? format(dateTo, 'yyyy-MM-dd') : 'No end date'}`,
-      `- Search Term: ${searchTerm || 'No search applied'}`,
-      '',
-      '--- Payment Data ---',
-      ''
-    ]
-    
-    // Create CSV headers
+    // Create data headers
     const headers = [
       'Invoice Number',
       'Student Name',
@@ -335,64 +304,38 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       'Notes'
     ]
 
-    // Create CSV rows
-    const csvRows = [
-      ...metadata.map(line => escapeCsvValue(line)),
-      headers.join(','), // Header row
-      ...filteredPayments.map(payment => [
-        escapeCsvValue(payment.invoiceNumber),
-        escapeCsvValue(payment.studentName),
-        escapeCsvValue(payment.studentId),
-        escapeCsvValue(payment.studentGrade),
-        escapeCsvValue(payment.amount),
-        escapeCsvValue(`Term ${payment.term}`),
-        escapeCsvValue(payment.paymentMethod),
-        escapeCsvValue(payment.paymentChannel),
-        escapeCsvValue(payment.payerName),
-        escapeCsvValue(payment.status.charAt(0).toUpperCase() + payment.status.slice(1)),
-        escapeCsvValue(format(payment.transactionDate, 'yyyy-MM-dd HH:mm:ss')),
-        escapeCsvValue(payment.referenceNumber || ''),
-        escapeCsvValue(payment.dueDate ? format(payment.dueDate, 'yyyy-MM-dd') : ''),
-        escapeCsvValue(payment.notes || '')
-      ].join(','))
-    ]
-    
-    // Create CSV content
-    const csvContent = csvRows.join('\n')
-    
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob)
-      link.setAttribute('href', url)
-      
-      // Generate filename with current date and filter info
-      const currentDate = format(new Date(), 'yyyy-MM-dd')
-      const termText = termFilter === 'all' ? 'all' : `term${termFilter}`
-      const statusText = statusFilter === 'all' ? 'all' : statusFilter
-      const gradeText = gradeFilter === 'all' ? 'all-grades' : gradeFilter.replace(/\s+/g, '-').toLowerCase()
+    // Build data rows
+    const dataRows = filteredPayments.map(payment => [
+      payment.invoiceNumber,
+      payment.studentName,
+      payment.studentId,
+      payment.studentGrade,
+      payment.amount,
+      `Term ${payment.term}`,
+      payment.paymentMethod,
+      payment.paymentChannel,
+      payment.payerName,
+      payment.status.charAt(0).toUpperCase() + payment.status.slice(1),
+      format(payment.transactionDate, 'yyyy-MM-dd HH:mm:ss'),
+      payment.referenceNumber || '',
+      payment.dueDate ? format(payment.dueDate, 'yyyy-MM-dd') : '',
+      payment.notes || ''
+    ])
 
-      const filename = `payment-history-${type}-${termText}-${statusText}-${gradeText}-${currentDate}.csv`
-      link.setAttribute('download', filename)
-      
-      link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      // Show success toast
-      toast.success(`Successfully exported ${filteredPayments.length} payment records`, {
-        description: `File: ${filename}`,
-        duration: 4000,
-      })
-    } else {
-      toast.error("Export failed", {
-        description: "Your browser does not support file downloads",
-        duration: 4000,
-      })
-    }
+    // Generate filename with current date and filter info
+    const currentDate = format(new Date(), 'yyyy-MM-dd')
+    const termText = termFilter === 'all' ? 'all' : `term${termFilter}`
+    const statusText = statusFilter === 'all' ? 'all' : statusFilter
+    const gradeText = gradeFilter === 'all' ? 'all-grades' : gradeFilter.replace(/\s+/g, '-').toLowerCase()
+
+    const filename = `payment-history-${type}-${termText}-${statusText}-${gradeText}-${currentDate}`
+    downloadAsXlsx(headers, dataRows, filename)
+
+    // Show success toast
+    toast.success(`Successfully exported ${filteredPayments.length} payment records`, {
+      description: `File: ${filename}.xlsx`,
+      duration: 4000,
+    })
   }
 
 
@@ -410,14 +353,8 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     // In a real app, this would generate and download a PDF receipt
     console.log("Downloading receipt for payment:", payment.invoiceNumber)
     // Create a mock download
-    const element = document.createElement('a')
     const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nYear Group: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "MMM dd, yyyy", { locale })}`
-    const file = new Blob([content], { type: 'text/plain' })
-    element.href = URL.createObjectURL(file)
-    element.download = `receipt-${payment.invoiceNumber}.txt`
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+    triggerDownload(content, `receipt-${payment.invoiceNumber}.txt`, 'text/plain')
   }
 
   return (

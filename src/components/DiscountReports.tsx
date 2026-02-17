@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -787,14 +788,7 @@ export function DiscountReports() {
       })
     })
 
-    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n")
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `discount-report-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadAsXlsx(headers, rows, `discount-report-${new Date().toISOString().split('T')[0]}`)
   }
 
   return (

@@ -19,7 +19,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
-import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw } from "lucide-react"
+import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { formatCurrency, numberToWords, getAcademicYear } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
@@ -46,6 +46,8 @@ interface Invoice {
   studentGrade: string
   parentName: string
   parentEmail: string
+  totalAmount?: number
+  discountAmount?: number
   finalAmount: number
   items: {
     id: string
@@ -57,11 +59,14 @@ interface Invoice {
   approvalStatus?: ApprovalStatus
   issueDate?: Date | null
   dueDate: Date
+  paidDate?: Date | null
+  emailSentAt?: Date | null
   academicYear?: string
   term?: string
   approvedBy?: string
   approvedAt?: Date
   rejectedReason?: string
+  category?: string
 }
 
 const grades = [
@@ -76,25 +81,24 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
       const savedInvoices = JSON.parse(stored)
       console.log('[ApprovalQueue] Loading invoices from storage:', savedInvoices.length, 'invoices')
       return savedInvoices.map((inv: any) => {
-        let issueDate: Date | null = null
-        if (inv.issueDate) {
-          if (inv.issueDate.includes?.("-")) {
-            const [year, month, day] = inv.issueDate.split("-").map(Number)
-            issueDate = new Date(year, month - 1, day)
-          } else {
-            issueDate = new Date(inv.issueDate)
+        const parseStoredDate = (val: any): Date | null => {
+          if (!val) return null
+          // Handle Excel serial numbers (e.g. "46071" → 2026-02-17)
+          const num = Number(val)
+          if (!isNaN(num) && num > 40000 && num < 100000 && String(val).trim() === String(Math.floor(num))) {
+            return new Date((num - 25569) * 86400 * 1000)
           }
+          // Parse YYYY-MM-DD (with optional time) as LOCAL time to match InvoiceManagement
+          const isoMatch = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/)
+          if (isoMatch) {
+            return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
+          }
+          const d = new Date(val)
+          return isNaN(d.getTime()) ? null : d
         }
 
-        let dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        if (inv.dueDate) {
-          if (inv.dueDate.includes?.("-")) {
-            const [year, month, day] = inv.dueDate.split("-").map(Number)
-            dueDate = new Date(year, month - 1, day)
-          } else {
-            dueDate = new Date(inv.dueDate)
-          }
-        }
+        const issueDate = parseStoredDate(inv.issueDate)
+        const dueDate = parseStoredDate(inv.dueDate) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
         const approvalStatus: ApprovalStatus = inv.approvalStatus
           ?? (inv.status === "approved"
@@ -111,22 +115,33 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           studentGrade: inv.studentGrade || "-",
           parentName: inv.parentName || inv.recipientName || "Parent",
           parentEmail: inv.parentEmail || "",
-          finalAmount: inv.netAmount ?? inv.subtotal ?? 0,
+          totalAmount: inv.totalAmount ?? inv.subtotal ?? inv.finalAmount ?? 0,
+          discountAmount: inv.discountAmount ?? inv.totalDiscount ?? 0,
+          finalAmount: (() => {
+            const stored = inv.finalAmount ?? inv.netAmount ?? inv.subtotal ?? 0
+            if (stored > 0) return stored
+            // Fallback: sum from items (same as InvoiceManagement.getDisplayAmount)
+            return (inv.items || []).reduce((sum: number, item: any) =>
+              sum + (item.discountedAmount ?? item.amount ?? 0), 0)
+          })(),
           items: (inv.items || []).map((item: any, idx: number) => ({
             id: String(idx + 1),
             description: item.name || item.description,
-            amount: item.amount,
-            discountedAmount: item.amount,
+            amount: item.amount ?? 0,
+            discountedAmount: item.discountedAmount ?? item.amount ?? 0,
           })),
           status: (inv.status === "pending" ? "draft" : inv.status) as InvoiceStatus,
           approvalStatus,
-          issueDate: issueDate && !isNaN(issueDate.getTime()) ? issueDate : null,
-          dueDate: isNaN(dueDate.getTime()) ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : dueDate,
+          issueDate,
+          dueDate,
+          paidDate: parseStoredDate(inv.paidDate),
+          emailSentAt: parseStoredDate(inv.emailSentAt),
           academicYear: inv.academicYear || "",
           term: inv.term || "",
           approvedBy: inv.approvedBy,
           approvedAt: inv.approvedAt ? new Date(inv.approvedAt) : undefined,
           rejectedReason: inv.rejectedReason,
+          category: inv.category || "tuition",
         }
       })
     }
@@ -148,10 +163,30 @@ const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?
   if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
     return ""
   }
-  if (approvalStatus === "rejected") {
+  if (approvalStatus === "wait" || approvalStatus === "rejected") {
     return ""
   }
   return invoiceNumber
+}
+
+const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" => {
+  if (invoice.status === "cancelled") return "cancelled"
+  if (invoice.status === "paid") {
+    if (!invoice.emailSentAt) return "cancelled"
+    return "sent"
+  }
+  if (invoice.status === "sent") return "sent"
+  return "wait"
+}
+
+const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
+  if (invoice.status === "paid" || invoice.paidDate) return "paid"
+  if (invoice.status === "overdue") return "overdue"
+  const now = new Date()
+  const due = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
+  const approval: ApprovalStatus = invoice.approvalStatus ?? (invoice.status === "approved" ? "approved" : invoice.status === "rejected" ? "rejected" : "wait")
+  if (due < now && invoice.status !== "paid" && approval !== "wait") return "overdue"
+  return "unpaid"
 }
 
 export function ApprovalQueue() {
@@ -183,7 +218,7 @@ export function ApprovalQueue() {
   const [rejectReason, setRejectReason] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
-  const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", null)
+  const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "approvalStatus" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", null)
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "asc")
   const [currentPage, setCurrentPage] = usePersistedState("approval-queue:page", 1)
   const [pageSize, setPageSize] = usePersistedState("approval-queue:pageSize", 10)
@@ -420,7 +455,7 @@ export function ApprovalQueue() {
   }
 
   const approveInvoice = (invoice: Invoice) => {
-    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.startsWith("DRAFT-")
+    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.startsWith("DRAFT-") || invoice.invoiceNumber.startsWith("IMP-")
     const finalInvoiceNumber = needsNewInvoiceNumber
       ? generateInvoiceNumber(invoice.studentId)
       : invoice.invoiceNumber
@@ -443,6 +478,7 @@ export function ApprovalQueue() {
         : inv
     )
     setInvoices(updatedInvoices)
+    applyFilters(updatedInvoices)
 
     updateLocalStorage(
       invoice,
@@ -503,7 +539,7 @@ export function ApprovalQueue() {
     const updatedInvoices = invoices.map(inv => {
       if (!selectedInvoiceIds.has(inv.id) || !isSelectable(inv)) return inv
 
-      const needsNewInvoiceNumber = !inv.invoiceNumber || inv.invoiceNumber.startsWith("DRAFT-")
+      const needsNewInvoiceNumber = !inv.invoiceNumber || inv.invoiceNumber.startsWith("DRAFT-") || inv.invoiceNumber.startsWith("IMP-")
       const finalInvoiceNumber = needsNewInvoiceNumber
         ? generateInvoiceNumber(inv.studentId)
         : inv.invoiceNumber
@@ -599,6 +635,7 @@ export function ApprovalQueue() {
         : inv
     )
     setInvoices(updatedInvoices)
+    applyFilters(updatedInvoices)
 
     updateLocalStorage(
       selectedInvoice,
@@ -629,7 +666,7 @@ export function ApprovalQueue() {
   const rejectedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length
 
   // Check if user can approve invoices (not viewer role)
-  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "Admin" || user?.role === "AdminAccountant" || user?.role === "Approvalver")
+  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "super_admin" || user?.role === "admin_accountant" || user?.role === "approver")
 
   return (
     <div className="space-y-6">
@@ -876,10 +913,16 @@ export function ApprovalQueue() {
                 <TableHead align="left">{renderSortHeader("Academic Year", "academicYear")}</TableHead>
                 {/* Term - left aligned */}
                 <TableHead align="left">{renderSortHeader("Term", "term")}</TableHead>
-                {/* Year Group - center aligned (badge likely) */}
+                {/* Year Group - center aligned */}
                 <TableHead align="center">{renderSortHeader(t("student.yearGroup"), "studentGrade")}</TableHead>
-                {/* Amount - right aligned (currency) */}
+                {/* Amount - right aligned */}
                 <TableHead align="right">{renderSortHeader("Amount", "finalAmount")}</TableHead>
+                {/* Approval Status - center */}
+                <TableHead align="center">{renderSortHeader("Approval Status", "approvalStatus")}</TableHead>
+                {/* Email Status - center */}
+                <TableHead align="center">E-mail Status</TableHead>
+                {/* Invoice Status - center */}
+                <TableHead align="center">Invoice Status</TableHead>
                 {/* Issue Date - left aligned */}
                 <TableHead align="left">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
                 {/* Due Date - left aligned */}
@@ -915,9 +958,46 @@ export function ApprovalQueue() {
                   {/* Term - left aligned */}
                   <TableCell align="left">{invoice.term || "-"}</TableCell>
                   {/* Year Group - center aligned */}
-                  <TableCell align="center">{invoice.studentGrade || "-"}</TableCell>
-                  {/* Amount - right aligned (currency) */}
-                  <TableCell align="right" className="font-medium">฿{invoice.finalAmount.toLocaleString()}</TableCell>
+                  <TableCell align="center">
+                    <Badge variant="secondary">{invoice.studentGrade || "-"}</Badge>
+                  </TableCell>
+                  {/* Amount - right aligned */}
+                  <TableCell align="right" className="font-medium">
+                    <div>฿{invoice.finalAmount.toLocaleString()}</div>
+                    {(invoice.discountAmount ?? 0) > 0 && (
+                      <div className="text-xs text-green-600">-฿{(invoice.discountAmount ?? 0).toLocaleString()}</div>
+                    )}
+                  </TableCell>
+                  {/* Approval Status - center */}
+                  <TableCell align="center">
+                    {invoice.status === "cancelled" ? (
+                      <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
+                    ) : getApprovalStatus(invoice) === "approved" ? (
+                      <Badge className="bg-green-100 text-green-800">Approve</Badge>
+                    ) : getApprovalStatus(invoice) === "rejected" ? (
+                      <Badge className="bg-red-100 text-red-800">Reject</Badge>
+                    ) : (
+                      <Badge className="bg-yellow-100 text-yellow-800">Wait</Badge>
+                    )}
+                  </TableCell>
+                  {/* Email Status - center */}
+                  <TableCell align="center">
+                    {(() => {
+                      const es = getEmailStatus(invoice)
+                      if (es === "sent") return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
+                      if (es === "cancelled") return <span className="text-muted-foreground text-sm">—</span>
+                      return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
+                    })()}
+                  </TableCell>
+                  {/* Invoice Status - center */}
+                  <TableCell align="center">
+                    {(() => {
+                      const ps = getPaymentStatus(invoice)
+                      if (ps === "paid") return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+                      if (ps === "overdue") return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+                      return <Badge className="bg-gray-100 text-gray-800">Unpaid</Badge>
+                    })()}
+                  </TableCell>
                   {/* Issue Date - left aligned */}
                   <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                   {/* Due Date - left aligned */}
@@ -933,13 +1013,7 @@ export function ApprovalQueue() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      {invoice.status === "cancelled" ? (
-                        <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
-                      ) : getApprovalStatus(invoice) === "approved" ? (
-                        <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                      ) : getApprovalStatus(invoice) === "rejected" ? (
-                        <Badge className="bg-red-100 text-red-800">Rejected</Badge>
-                      ) : canApproveInvoices ? (
+                      {invoice.status !== "cancelled" && getApprovalStatus(invoice) === "wait" && canApproveInvoices && (
                         <>
                           <Button
                             size="sm"
@@ -960,8 +1034,6 @@ export function ApprovalQueue() {
                             <X className="w-4 h-4" />
                           </Button>
                         </>
-                      ) : (
-                        <Badge className="bg-yellow-100 text-yellow-800">Wait</Badge>
                       )}
                     </div>
                   </TableCell>
@@ -969,7 +1041,7 @@ export function ApprovalQueue() {
               ))}
               {filteredInvoices.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={13} className="text-center text-sm text-muted-foreground">
                     No invoices found.
                   </TableCell>
                 </TableRow>

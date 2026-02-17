@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
@@ -369,6 +370,21 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
     // Implementation for resending failed/bounced emails
   }
 
+  const handleExportCSV = () => {
+    const headers = ["Recipient Name", "Recipient Email", "Student Name", "Year Group", "Status", "Sent At", "Attempts"]
+    const rows = emailHistory.map(record => [
+      record.recipientName,
+      record.recipientEmail,
+      record.studentName,
+      record.yearGroup,
+      record.status,
+      record.sentAt,
+      String(record.attempts)
+    ])
+    const filename = `email-history-${jobData?.batchId || "export"}-${new Date().toISOString().split("T")[0]}`
+    downloadAsXlsx(headers, rows, filename)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -384,7 +400,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
             <Send className="w-4 h-4 mr-2" />
             {t("emailHistory.resendFailed")}
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportCSV}>
             <Download className="w-4 h-4 mr-2" />
             {t("emailHistory.exportHistory")}
           </Button>

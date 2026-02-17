@@ -1,4 +1,5 @@
 import { useState, useRef } from "react"
+import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -156,38 +157,31 @@ export function InternalEmailManagement({
     toast.success(t("internalEmail.emailRemovedSuccess"))
   }
 
-  // CSV Upload Functions
+  // File Upload Functions
   const downloadCsvTemplate = () => {
-    const csvContent = "name,surname,email,remark\nJohn,Doe,john.doe@example.com,Sample remark\nJane,Smith,jane.smith@example.com,Another remark"
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", "internal-email-template.csv")
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    downloadAsXlsx(
+      ["name", "surname", "email", "remark"],
+      [
+        ["John", "Doe", "john.doe@example.com", "Sample remark"],
+        ["Jane", "Smith", "jane.smith@example.com", "Another remark"]
+      ],
+      "internal-email-template"
+    )
     toast.success(t("internalEmail.templateDownloadSuccess"))
   }
 
-  const processCsvFile = (file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const csv = e.target?.result as string
-      const lines = csv.split('\n').filter(line => line.trim() !== '')
-      
-      if (lines.length === 0) {
+  const processCsvFile = async (file: File) => {
+    try {
+      const rows = await parseXlsxOrCsvFile(file)
+
+      if (rows.length === 0) {
         toast.error(t("internalEmail.csvFileEmpty"))
         return
       }
 
-      // Parse header
-      const header = lines[0].split(',').map(h => h.trim())
       const expectedHeaders = ['name', 'surname', 'email', 'remark']
-      
-      // Check if headers match expected format
-      const hasValidHeaders = expectedHeaders.every(h => header.includes(h))
+      const fileHeaders = Object.keys(rows[0]).map(h => h.toLowerCase().trim())
+      const hasValidHeaders = expectedHeaders.every(h => fileHeaders.includes(h))
       if (!hasValidHeaders) {
         toast.error(t("internalEmail.invalidCsvFormat"))
         return
@@ -196,40 +190,31 @@ export function InternalEmailManagement({
       const errors: string[] = []
       const validEmails: InternalEmail[] = []
 
-      // Process data rows
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
-        
-        if (values.length < 4) {
-          errors.push(`Row ${i + 1}: Missing required fields`)
-          continue
-        }
+      rows.forEach((row, i) => {
+        const name = row['name']?.trim() || ""
+        const surname = row['surname']?.trim() || ""
+        const email = row['email']?.trim() || ""
+        const remark = row['remark']?.trim() || ""
 
-        const [name, surname, email, remark] = values
-        
-        // Validate required fields
         if (!name || !surname || !email) {
-          errors.push(`Row ${i + 1}: Name, surname, and email are required`)
-          continue
+          errors.push(`Row ${i + 2}: Name, surname, and email are required`)
+          return
         }
 
-        // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(email)) {
-          errors.push(`Row ${i + 1}: Invalid email format`)
-          continue
+          errors.push(`Row ${i + 2}: Invalid email format`)
+          return
         }
 
-        // Check for duplicate emails in CSV
         if (validEmails.some(e => e.email === email)) {
-          errors.push(`Row ${i + 1}: Duplicate email in CSV`)
-          continue
+          errors.push(`Row ${i + 2}: Duplicate email in file`)
+          return
         }
 
-        // Check for existing emails in system
         if (internalEmails.some(e => e.email === email)) {
-          errors.push(`Row ${i + 1}: Email already exists in system`)
-          continue
+          errors.push(`Row ${i + 2}: Email already exists in system`)
+          return
         }
 
         validEmails.push({
@@ -237,10 +222,10 @@ export function InternalEmailManagement({
           name,
           surname,
           email,
-          remark: remark || "",
+          remark,
           createdAt: new Date()
         })
-      }
+      })
 
       setCsvData(validEmails)
       setCsvErrors(errors)
@@ -250,22 +235,14 @@ export function InternalEmailManagement({
       } else {
         toast.success(`${validEmails.length} ${t("internalEmail.validRecordsFound")}${errors.length > 0 ? `, ${errors.length} ${t("internalEmail.errors")}` : ''}`)
       }
-    }
-
-    reader.onerror = () => {
+    } catch {
       toast.error(t("internalEmail.errorReadingCsv"))
     }
-    
-    reader.readAsText(file)
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-        toast.error(t("internalEmail.pleaseSelectCsv"))
-        return
-      }
       setCsvFile(file)
       processCsvFile(file)
     }
@@ -460,7 +437,7 @@ export function InternalEmailManagement({
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv,text/csv"
+                        accept={XLSX_ACCEPT}
                         onChange={handleFileUpload}
                         className="hidden"
                         id="csv-upload"

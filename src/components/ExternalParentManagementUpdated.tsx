@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -254,34 +255,26 @@ export function ExternalParentManagement() {
   const downloadApplication = (parentId: string) => {
     const parent = parents.find(p => p.id === parentId)
     if (parent) {
-      // Generate CSV content for the application
-      const csvContent = [
-        "Field,Value",
-        `Parent Name,${parent.parentName}`,
-        `Parent Email,${parent.parentEmail}`,
-        `Parent Phone,${parent.parentPhone}`,
-        `Student Name,${parent.studentName}`,
-        `Student Age,${parent.studentAge}`,
-        `Student Grade,${parent.studentGrade}`,
-        `Activities,"${parent.activities.join('; ')}"`,
-        `Application Date,${format(parent.applicationDate, "yyyy-MM-dd")}`,
-        `Status,${parent.status}`,
-        `Payment Status,${parent.paymentStatus}`,
-        `Total Amount,${parent.totalAmount}`,
-        `Notes,"${parent.notes}"`,
-        `Documents,"${parent.documents.join('; ')}"`,
-      ].join("\n")
+      // Generate Excel content for the application
+      const headers = ["Field", "Value"]
+      const rows: (string | number)[][] = [
+        ["Parent Name", parent.parentName],
+        ["Parent Email", parent.parentEmail],
+        ["Parent Phone", parent.parentPhone],
+        ["Student Name", parent.studentName],
+        ["Student Age", parent.studentAge],
+        ["Student Grade", parent.studentGrade],
+        ["Activities", parent.activities.join('; ')],
+        ["Application Date", format(parent.applicationDate, "yyyy-MM-dd")],
+        ["Status", parent.status],
+        ["Payment Status", parent.paymentStatus],
+        ["Total Amount", parent.totalAmount],
+        ["Notes", parent.notes],
+        ["Documents", parent.documents.join('; ')],
+      ]
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${parent.studentName.replace(/[^a-zA-Z0-9]/g, '_')}_application.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      
+      downloadAsXlsx(headers, rows, `${parent.studentName.replace(/[^a-zA-Z0-9]/g, '_')}_application`)
+
       toast.success(t("externalParent.toast.applicationDownloaded").replace("{studentName}", parent.studentName))
     }
   }

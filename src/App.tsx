@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu"
 import { useLanguage } from "./contexts/LanguageContext"
-import { useAuth } from "./contexts/AuthContext"
+import { useAuth, getRoleDisplayName } from "./contexts/AuthContext"
 import { Button } from "./components/ui/button"
 import { Globe } from "lucide-react"
 import { Login } from "./components/Login"
@@ -174,6 +174,7 @@ const menuItems = {
   studentManagement: [
     { id: "student-list", labelKey: "menu.studentList", icon: GraduationCap },
     { id: "family-groups", labelKey: "menu.familyGroups", icon: Users },
+    { id: "credit-notes", labelKey: "invoice.creditNotes", icon: FileCheck },
   ],
   settings: [
     { id: "school-settings", labelKey: "menu.schoolSettings", icon: Settings2 },
@@ -236,7 +237,7 @@ export default function App() {
   // Collapsible menu state - allow multiple groups to be open
   const getInitialOpenGroups = () => {
     // For Approver role, only show User Management section open
-    if (user?.role === "Approvalver") {
+    if (user?.role === "approver") {
       return {
         tuition: false,
         debtReminder: false,
@@ -324,7 +325,7 @@ export default function App() {
   // Redirect Approver role to approval-queue (allow profile/settings/activity)
   const approverAllowedPages = ["approval-queue", "user-profile", "user-settings", "user-activity"]
   useEffect(() => {
-    if (user?.role === "Approvalver" && !approverAllowedPages.includes(activeSection)) {
+    if (user?.role === "approver" && !approverAllowedPages.includes(activeSection)) {
       setActiveSection("approval-queue")
     }
   }, [user, activeSection])
@@ -556,7 +557,6 @@ export default function App() {
                 <SidebarMenu>
                   {[
                     { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
-                    { id: "credit-notes", labelKey: "invoice.creditNotes", icon: FileCheck },
                     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
                   ].map((item) => {
                     if (!user?.role || !canAccessMenuItem(user.role, item.id)) return null;
@@ -896,7 +896,7 @@ export default function App() {
                   className="w-full justify-between h-[52px] px-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 border border-gray-200 shadow-sm hover:shadow-md group transition-all duration-200 hover:scale-[1.02]"
                 >
                   <span className="font-bold text-sm text-gray-900">
-                    {user?.role}
+                    {getRoleDisplayName(user?.role || "")}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
                 </Button>
@@ -909,7 +909,7 @@ export default function App() {
               >
                 {/* Header */}
                 <div className="px-4 py-3 border-b">
-                  <p className="text-sm font-semibold text-gray-900">{user?.role}</p>
+                  <p className="text-sm font-semibold text-gray-900">{getRoleDisplayName(user?.role || "")}</p>
                 </div>
 
                 {/* Menu Items */}

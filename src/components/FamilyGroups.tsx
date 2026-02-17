@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -30,13 +31,11 @@ import {
   UserPlus,
   ArrowUpDown,
   Send,
-  CheckCircle2,
   Clock,
+  CheckCircle2,
   XCircle,
   Download,
-  History,
-  AlertTriangle,
-  RotateCcw
+  AlertTriangle
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -120,8 +119,8 @@ export function FamilyGroups() {
   const [selectedFamilyIds, setSelectedFamilyIds] = useState<string[]>([])
   const [isInvitationDialogOpen, setIsInvitationDialogOpen] = useState(false)
   const [invitationTarget, setInvitationTarget] = useState<"single" | "bulk">("single")
-  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false)
-  const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
+  const [isMarkRegisteredDialogOpen, setIsMarkRegisteredDialogOpen] = useState(false)
+const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
   const [emailIssueType, setEmailIssueType] = useState<"without" | "invalid" | "duplicate">("without")
 
   // Get students without family
@@ -134,10 +133,9 @@ export function FamilyGroups() {
     const total = families.length
     const notInvited = families.filter((f: Family) => !f.portalStatus || f.portalStatus === "not_invited").length
     const invited = families.filter((f: Family) => f.portalStatus === "invited").length
-    const active = families.filter((f: Family) => f.portalStatus === "active").length
-    const expired = families.filter((f: Family) => f.portalStatus === "expired").length
+    const registered = families.filter((f: Family) => f.portalStatus === "registered").length
 
-    return { total, notInvited, invited, active, expired }
+    return { total, notInvited, invited, registered }
   }, [families])
 
   // Email validation warnings
@@ -425,32 +423,21 @@ export function FamilyGroups() {
     setIsInvitationDialogOpen(true)
   }
 
-  const handleBulkResendExpired = () => {
-    const expiredFamilies = families.filter((f: Family) => f.portalStatus === "expired")
-
-    if (expiredFamilies.length === 0) {
-      toast.info("No expired invitations found")
-      return
-    }
-
-    let successCount = 0
-    expiredFamilies.forEach((family: Family) => {
-      if (family.email) {
-        updateFamily(family.id, {
-          portalStatus: "invited",
-          invitationSentAt: new Date()
-        })
-        successCount++
-        console.log(`Resending invitation to ${family.email} for family ${family.familyCode}`)
-      }
-    })
-
-    toast.success(`Resent ${successCount} invitation(s) to expired families`)
+  const handleMarkAsRegistered = (family: Family) => {
+    setSelectedFamily(family)
+    setIsMarkRegisteredDialogOpen(true)
   }
 
-  const handleViewHistory = (family: Family) => {
-    setSelectedFamily(family)
-    setIsHistoryDialogOpen(true)
+  const performMarkAsRegistered = () => {
+    if (selectedFamily) {
+      updateFamily(selectedFamily.id, {
+        portalStatus: "registered",
+        invitationAcceptedAt: new Date()
+      })
+      toast.success(`${selectedFamily.familyName} marked as registered`)
+      setIsMarkRegisteredDialogOpen(false)
+      setSelectedFamily(null)
+    }
   }
 
   const performSendInvitation = () => {
@@ -482,13 +469,6 @@ export function FamilyGroups() {
     const status = family.portalStatus || "not_invited"
 
     switch (status) {
-      case "active":
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Active
-          </Badge>
-        )
       case "invited":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
@@ -496,11 +476,11 @@ export function FamilyGroups() {
             Invited
           </Badge>
         )
-      case "expired":
+      case "registered":
         return (
-          <Badge className="bg-red-100 text-red-800 border-red-200">
-            <XCircle className="w-3 h-3 mr-1" />
-            Expired
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Registered
           </Badge>
         )
       default:
@@ -544,30 +524,16 @@ export function FamilyGroups() {
         family.address || "",
         familyStudents.length,
         status === "not_invited" ? "Not Invited" :
-        status === "invited" ? "Invited" :
-        status === "active" ? "Active" : "Expired",
+        status === "invited" ? "Invited" : "Registered",
         family.invitationSentAt ? new Date(family.invitationSentAt).toLocaleDateString() : "",
         family.invitationAcceptedAt ? new Date(family.invitationAcceptedAt).toLocaleDateString() : "",
         totalDiscount > 0 ? `${totalDiscount}%` : "0%"
       ]
     })
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row: any[]) => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    ].join("\n")
+    downloadAsXlsx(headers, rows, `family_groups_${new Date().toISOString().split('T')[0]}`)
 
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `family_groups_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    toast.success(`Exported ${filteredFamilies.length} families to CSV`)
+    toast.success(`Exported ${filteredFamilies.length} families to Excel`)
   }
 
   return (
@@ -587,7 +553,7 @@ export function FamilyGroups() {
       </div>
 
       {/* Portal Status Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Families</CardTitle>
@@ -611,25 +577,16 @@ export function FamilyGroups() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-700">{summaryStats.invited}</div>
-            <p className="text-xs text-yellow-600 mt-1">Waiting activation</p>
+            <p className="text-xs text-yellow-600 mt-1">Waiting registration</p>
           </CardContent>
         </Card>
         <Card className="border-green-300 bg-green-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Active</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700">Registered</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">{summaryStats.active}</div>
+            <div className="text-2xl font-bold text-green-700">{summaryStats.registered}</div>
             <p className="text-xs text-green-600 mt-1">Connected</p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-300 bg-red-50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Expired</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700">{summaryStats.expired}</div>
-            <p className="text-xs text-red-600 mt-1">Need resend</p>
           </CardContent>
         </Card>
       </div>
@@ -698,35 +655,6 @@ export function FamilyGroups() {
         </Card>
       )}
 
-      {/* Bulk Actions for Expired Invitations */}
-      {summaryStats.expired > 0 && (
-        <Card className="border-red-300 bg-red-50">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-red-600" />
-                <div>
-                  <p className="font-semibold text-red-900">
-                    {summaryStats.expired} invitation(s) have expired
-                  </p>
-                  <p className="text-sm text-red-700">
-                    Parents haven't activated their accounts within the valid period
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={handleBulkResendExpired}
-                disabled={!userCanEdit}
-                className="gap-2 bg-red-600 hover:bg-red-700"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Resend All Expired
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Search & Filters */}
       <Card>
         <CardContent className="pt-6">
@@ -759,16 +687,10 @@ export function FamilyGroups() {
                       Invited
                     </span>
                   </SelectItem>
-                  <SelectItem value="active">
+                  <SelectItem value="registered">
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
-                      Active
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="expired">
-                    <span className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4" />
-                      Expired
+                      Registered
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -884,30 +806,34 @@ export function FamilyGroups() {
                             </Badge>
                           )}
                           <div className="flex items-center gap-2">
-                            <Button
-                              variant={family.portalStatus === "active" ? "outline" : "default"}
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleSendInvitation(family)
-                              }}
-                              disabled={!userCanEdit || !family.email}
-                              className="gap-2"
-                            >
-                              <Send className="w-3 h-3" />
-                              {family.portalStatus === "invited" ? "Resend" : family.portalStatus === "active" ? "Active" : "Invite"}
-                            </Button>
-                            {(family.portalStatus && family.portalStatus !== "not_invited") && (
+                            {family.portalStatus !== "registered" && (
                               <Button
-                                variant="ghost"
-                                size="icon"
+                                variant="default"
+                                size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleViewHistory(family)
+                                  handleSendInvitation(family)
                                 }}
-                                title="View invitation history"
+                                disabled={!userCanEdit || !family.email}
+                                className="gap-2"
                               >
-                                <History className="w-4 h-4" />
+                                <Send className="w-3 h-3" />
+                                {family.portalStatus === "invited" ? "Resend" : "Invite"}
+                              </Button>
+                            )}
+                            {family.portalStatus === "invited" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleMarkAsRegistered(family)
+                                }}
+                                disabled={!userCanEdit}
+                                className="gap-2 text-green-700 border-green-300 hover:bg-green-50"
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                Mark as Registered
                               </Button>
                             )}
                             <Button
@@ -1519,104 +1445,6 @@ export function FamilyGroups() {
         </DialogContent>
       </Dialog>
 
-      {/* Invitation History Dialog */}
-      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
-        <DialogContent className="max-w-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5" />
-              Invitation History
-            </DialogTitle>
-          </DialogHeader>
-          {selectedFamily ? (
-            <div className="space-y-4 py-4">
-              <div className="rounded-lg border p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Family</span>
-                  <Badge variant="secondary" className="font-mono">
-                    {selectedFamily.familyCode}
-                  </Badge>
-                </div>
-                <div className="text-base font-semibold">
-                  {selectedFamily.familyName}
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4" />
-                  <span>{selectedFamily.email}</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Current Status</h4>
-                <div className="flex items-center gap-3">
-                  {getPortalStatusBadge(selectedFamily)}
-                  <span className="text-sm text-muted-foreground">
-                    {selectedFamily.portalStatus === "active" && "Parent has successfully activated their account"}
-                    {selectedFamily.portalStatus === "invited" && "Invitation sent, waiting for activation"}
-                    {selectedFamily.portalStatus === "expired" && "Invitation link has expired"}
-                    {(!selectedFamily.portalStatus || selectedFamily.portalStatus === "not_invited") && "No invitation has been sent"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Timeline</h4>
-                <div className="space-y-2">
-                  {selectedFamily.invitationSentAt && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <Send className="w-4 h-4 mt-0.5 text-blue-600" />
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">Invitation Sent</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(selectedFamily.invitationSentAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {selectedFamily.invitationAcceptedAt && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-600" />
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">Account Activated</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(selectedFamily.invitationAcceptedAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {(!selectedFamily.invitationSentAt && !selectedFamily.invitationAcceptedAt) && (
-                    <div className="text-center py-6 text-muted-foreground text-sm">
-                      No activity yet
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-gray-50 border p-3">
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="font-medium">Note:</div>
-                  <div>• Email open/click tracking will be available in a future update</div>
-                  <div>• Invitation links are valid for 7 days from the sent date</div>
-                  <div>• Resending an invitation will generate a new link</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              No family selected
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsHistoryDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Email Issue Details Dialog */}
       <Dialog open={emailIssueDialogOpen} onOpenChange={setEmailIssueDialogOpen}>
         <DialogContent className="max-w-3xl p-6 max-h-[80vh] flex flex-col">
@@ -1856,6 +1684,49 @@ export function FamilyGroups() {
         descriptionKey="confirmDialog.createDescription"
         confirmTextKey="common.create"
       />
+
+      {/* Mark as Registered Dialog */}
+      <Dialog open={isMarkRegisteredDialogOpen} onOpenChange={setIsMarkRegisteredDialogOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              Mark as Registered
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedFamily && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="font-mono">{selectedFamily.familyCode}</Badge>
+                  <span className="font-semibold">{selectedFamily.familyName}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="w-4 h-4" />
+                  {selectedFamily.email}
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Confirm that this family's parent has successfully registered on the Parent Portal. The status will be updated to <span className="font-medium text-green-700">Registered</span>.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMarkRegisteredDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={performMarkAsRegistered}
+              disabled={!userCanEdit}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Confirm Registered
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

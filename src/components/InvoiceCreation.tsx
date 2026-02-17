@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -2602,7 +2603,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     toast.success("Item updated successfully")
   }
 
-  // Get all items for Add Item dialog (filtered by search and category)
+  // Get all items for Add Item dialog (filtered by search only - same for all invoice types)
   const getItemsForDialog = () => {
     const allItems = loadItemsFromStorage(invoiceType)
     return allItems.filter(item => {
@@ -2610,14 +2611,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const matchesSearch = addItemSearchTerm === "" ||
         (item.name || '').toLowerCase().includes(searchLower) ||
         (item.description || '').toLowerCase().includes(searchLower)
-      const matchesCategory = addItemCategory === "all" || item.category === addItemCategory
       const notAlreadySelected = !selectedItems.find(s => s.id === item.id)
-
-      // Filter items based on allowed categories for this invoice type
-      const allowedCategories = getAllowedCategories(invoiceType)
-      const matchesInvoiceType = allowedCategories === null || allowedCategories.includes(item.category)
-
-      return item.isActive && matchesSearch && matchesCategory && notAlreadySelected && matchesInvoiceType
+      return item.isActive && matchesSearch && notAlreadySelected
     })
   }
 
@@ -2820,6 +2815,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         issueDate: format(now, 'yyyy-MM-dd'),
         status: "sent",
         term: `${selectedAcademicYear} - ${selectedTerm}`,
+        academicYear: selectedAcademicYear || effectiveAcademicYear,
         paymentType: "termly",
         createdAt: now.toISOString(),
         invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
@@ -3764,11 +3760,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 ? `No ${selectedCategory.toLowerCase()} items available`
                                 : `No ${selectedCategory.toLowerCase()} items available for ${selectedGrade}`}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {isSimplifiedView || invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "eca" || invoiceType === "exam"
-                        ? "Contact admin to add items"
-                        : "Try selecting a different category or contact admin to add items"}
-                    </p>
                   </div>
                 )}
               </div>
@@ -4086,20 +4077,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              // Create sample CSV content
-                              const csvContent = [
-                                ['Student ID', 'Student Name', 'Year Group', 'Room'].join(','),
-                                ['S001', 'John Doe', 'Year 1', 'Room A'].join(','),
-                                ['S002', 'Jane Smith', 'Year 1', 'Room A'].join(','),
-                                ['S003', 'Bob Johnson', 'Year 2', 'Room B'].join(','),
-                              ].join('\n')
-
-                              // Create and download file
-                              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-                              const link = document.createElement('a')
-                              link.href = URL.createObjectURL(blob)
-                              link.download = 'student_list_template.csv'
-                              link.click()
+                              downloadAsXlsx(
+                                ['Student ID', 'Student Name', 'Year Group', 'Room'],
+                                [
+                                  ['S001', 'John Doe', 'Year 1', 'Room A'],
+                                  ['S002', 'Jane Smith', 'Year 1', 'Room A'],
+                                  ['S003', 'Bob Johnson', 'Year 2', 'Room B'],
+                                ],
+                                'student_list_template'
+                              )
                             }}
                             className="gap-2"
                           >
@@ -4113,7 +4099,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <p className="text-sm text-muted-foreground mb-2">Upload CSV file with student information</p>
                           <Input
                             type="file"
-                            accept=".csv"
+                            accept=".xlsx,.xls,.csv"
                             onChange={handleCsvUpload}
                             className="max-w-xs mx-auto"
                           />
@@ -5258,31 +5244,13 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             </DialogDescription>
           </DialogHeader>
 
-          {/* Search and Filter - Fixed */}
-          <div className="flex gap-2 flex-shrink-0 pb-3">
-            <div className="flex-1 relative">
-              <Input
-                placeholder={t('common.search')}
-                value={addItemSearchTerm}
-                onChange={(e) => setAddItemSearchTerm(e.target.value)}
-                className=""
-              />
-            </div>
-            {/* Only show category filter for non-tuition invoice types */}
-            {invoiceType !== "student" && invoiceType !== "tuition" && invoiceType && (
-              <Select disabled={!userCanEdit} value={addItemCategory} onValueChange={setAddItemCategory}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="Tuition">Tuition</SelectItem>
-                  <SelectItem value="ECA">ECA</SelectItem>
-                  <SelectItem value="Trip & Other Activity">Trip</SelectItem>
-                  <SelectItem value="School Bus">Bus</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+          {/* Search - Fixed */}
+          <div className="flex-shrink-0 pb-3">
+            <Input
+              placeholder={t('common.search')}
+              value={addItemSearchTerm}
+              onChange={(e) => setAddItemSearchTerm(e.target.value)}
+            />
           </div>
 
           {/* Items List - Scrollable */}

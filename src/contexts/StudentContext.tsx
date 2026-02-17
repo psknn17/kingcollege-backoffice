@@ -47,7 +47,7 @@ export interface Family {
   invoiceEmails?: string[]
   createdAt: Date
   // Parent Portal invitation tracking
-  portalStatus?: "not_invited" | "invited" | "active" | "expired"
+  portalStatus?: "not_invited" | "invited" | "registered"
   invitationSentAt?: Date
   invitationAcceptedAt?: Date
 }
@@ -78,7 +78,7 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined)
 
 const STUDENTS_STORAGE_KEY = "students_v3" // เปลี่ยนชื่อ Key เพื่อบังคับ Hard Reset
-const FAMILIES_STORAGE_KEY = "families_v3"
+const FAMILIES_STORAGE_KEY = "families_v4" // bump to regenerate with portalStatus mock
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const STUDENT_DATA_VERSION_KEY = "student_data_version_v3"
 const CURRENT_DATA_VERSION = "3.1" // เวอร์ชันข้อมูล - ไม่ reset ข้อมูลเมื่อเปลี่ยน version
@@ -322,6 +322,12 @@ const generateMockData = () => {
       familyStudentIds.push(student.id)
     }
 
+    // Mock portal status: 40% not_invited, 30% invited, 30% registered
+    const portalRand = Math.random()
+    const portalStatus = portalRand < 0.4 ? "not_invited" : portalRand < 0.7 ? "invited" : "registered"
+    const invitationSentAt = portalStatus !== "not_invited" ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) : undefined
+    const invitationAcceptedAt = portalStatus === "registered" ? new Date(Date.now() - Math.random() * 15 * 24 * 60 * 60 * 1000) : undefined
+
     families.push({
       id: familyId,
       familyCode: familyCode,
@@ -331,7 +337,10 @@ const generateMockData = () => {
       address: `${Math.floor(Math.random() * 999) + 1} Sukhumvit Rd, Bangkok ${10110 + Math.floor(Math.random() * 100)}`,
       email: familyParents[0].email,
       phone: familyParents[0].phone,
-      createdAt: new Date()
+      createdAt: new Date(),
+      portalStatus,
+      invitationSentAt,
+      invitationAcceptedAt
     })
   }
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -233,32 +234,24 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
   const downloadInvoice = (invoiceId: string) => {
     const invoice = invoices.find(inv => inv.id === invoiceId)
     if (invoice) {
-      // Generate CSV content for the invoice
-      const csvContent = [
-        "Field,Value",
-        `Invoice Number,${invoice.invoiceNumber}`,
-        `Student Name,${invoice.studentName}`,
-        `Student ID,${invoice.studentId}`,
-        `Year Group,${invoice.studentGrade}`,
-        `Amount,${invoice.amount}`,
-        `Due Date,${format(invoice.dueDate, "yyyy-MM-dd")}`,
-        `Issue Date,${invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending"}`,
-        `Status,${invoice.status}`,
-        `Term,${invoice.term}`,
-        `Payment Type,${invoice.paymentType}`,
-        `Reminders Sent,${invoice.remindersSent}`,
-      ].join("\n")
+      // Generate Excel content for the invoice
+      const headers = ["Field", "Value"]
+      const rows: (string | number)[][] = [
+        ["Invoice Number", invoice.invoiceNumber],
+        ["Student Name", invoice.studentName],
+        ["Student ID", invoice.studentId],
+        ["Year Group", invoice.studentGrade],
+        ["Amount", invoice.amount],
+        ["Due Date", format(invoice.dueDate, "yyyy-MM-dd")],
+        ["Issue Date", invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending"],
+        ["Status", invoice.status],
+        ["Term", invoice.term],
+        ["Payment Type", invoice.paymentType],
+        ["Reminders Sent", invoice.remindersSent],
+      ]
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${invoice.invoiceNumber}_invoice.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      
+      downloadAsXlsx(headers, rows, `${invoice.invoiceNumber}_invoice`)
+
       toast.success(t("invoiceOverview.invoiceDownloaded").replace("{number}", invoice.invoiceNumber))
     }
   }

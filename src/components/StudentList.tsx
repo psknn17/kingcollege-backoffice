@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -268,6 +269,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const [importData, setImportData] = useState<string>("")
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [importError, setImportError] = useState<string>("")
+  const [showAllPreview, setShowAllPreview] = useState(false)
 
   // Promote Grade states
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false)
@@ -419,24 +421,34 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   // Get or create family by family code
-  const getOrCreateFamily = (familyCode: string, parentEmail?: string): string => {
+  const getOrCreateFamily = (
+    familyCode: string,
+    studentId: string,
+    familyData?: { familyName?: string; email?: string; phone?: string }
+  ): string => {
     if (!familyCode || familyCode.trim() === "") return ""
 
-    // Check if family already exists
+    // เงื่อนไขที่ 3: มี familycode และมีในระบบ → เพิ่มนักเรียนเข้า family เดิม
     const existingFamily = families.find((f: Family) => f.familyCode === familyCode)
     if (existingFamily) {
+      if (!existingFamily.studentIds.includes(studentId)) {
+        updateFamily(existingFamily.id, {
+          studentIds: [...existingFamily.studentIds, studentId]
+        })
+      }
       return existingFamily.id
     }
 
-    // Create new family with parent email
+    // เงื่อนไขที่ 2: มี familycode แต่ไม่มีในระบบ → สร้าง family ใหม่พร้อมข้อมูลทั้งหมด
     const newFamily: Family = {
       id: `FAM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       familyCode: familyCode,
-      familyName: familyCode, // Default to family code as name
-      studentIds: [],
+      familyName: familyData?.familyName || familyCode,
+      studentIds: [studentId],
       primaryContactId: "",
       address: "",
-      email: parentEmail || "", // Use parent email if provided
+      email: familyData?.email || "",
+      phone: familyData?.phone,
       createdAt: new Date()
     }
     addFamily(newFamily)
@@ -477,17 +489,28 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
   const performSaveNewStudent = () => {
     const now = new Date()
-    const currentUser = "Admin" // TODO: Replace with actual logged-in user
+    const currentUser = "Admin"
 
-    // Get primary parent email for family sync
     const primaryParent = formData.parents.find(p => p.isPrimary)
     const parentEmail = primaryParent?.email || ""
+    const parentPhone = primaryParent?.phone || ""
+    const familyName = formData.lastName || formData.familyCode || ""
 
-    // Get or create family from family code (with parent email)
-    const familyId = formData.familyCode ? getOrCreateFamily(formData.familyCode, parentEmail) : ""
+    // สร้าง ID ล่วงหน้าเพื่อส่งให้ family
+    const studentId = `STU${Date.now()}`
+
+    // เงื่อนไขที่ 1: ไม่มี familyCode → ไม่เพิ่มเข้า family ใดๆ
+    // เงื่อนไขที่ 2-3: มี familyCode → สร้างใหม่หรือเพิ่มเข้าของเดิม พร้อมข้อมูลทั้งหมด
+    const familyId = formData.familyCode
+      ? getOrCreateFamily(formData.familyCode, studentId, {
+          familyName,
+          email: parentEmail,
+          phone: parentPhone
+        })
+      : ""
 
     const newStudent: Student = {
-      id: `STU${Date.now()}`,
+      id: studentId,
       ...formData,
       familyId: familyId,
       createdBy: currentUser,
@@ -496,14 +519,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       updatedAt: now
     }
     addStudent(newStudent)
-
-    // Auto-sync primary parent email to family group (for existing families)
-    if (primaryParent?.email && familyId) {
-      const existingFamily = families.find(f => f.id === familyId)
-      if (existingFamily && existingFamily.email !== primaryParent.email) {
-        updateFamily(familyId, { email: primaryParent.email })
-      }
-    }
 
     toast.success("Student added successfully")
     setIsAddDialogOpen(false)
@@ -518,14 +533,20 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
   const performSaveEditStudent = () => {
     if (selectedStudent) {
-      const currentUser = "Admin" // TODO: Replace with actual logged-in user
+      const currentUser = "Admin"
 
-      // Get primary parent email for family sync
       const primaryParent = formData.parents.find(p => p.isPrimary)
       const parentEmail = primaryParent?.email || ""
+      const parentPhone = primaryParent?.phone || ""
+      const familyName = formData.lastName || formData.familyCode || ""
 
-      // Get or create family from family code (with parent email)
-      const familyId = formData.familyCode ? getOrCreateFamily(formData.familyCode, parentEmail) : ""
+      const familyId = formData.familyCode
+        ? getOrCreateFamily(formData.familyCode, selectedStudent.id, {
+            familyName,
+            email: parentEmail,
+            phone: parentPhone
+          })
+        : ""
 
       updateStudent(selectedStudent.id, {
         ...formData,
@@ -533,14 +554,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         updatedBy: currentUser,
         updatedAt: new Date()
       })
-
-      // Auto-sync primary parent email to family group (for existing families)
-      if (primaryParent?.email && familyId) {
-        const existingFamily = families.find(f => f.id === familyId)
-        if (existingFamily && existingFamily.email !== primaryParent.email) {
-          updateFamily(familyId, { email: primaryParent.email })
-        }
-      }
 
       toast.success("Student updated successfully")
       setIsEditDialogOpen(false)
@@ -639,23 +652,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       ]
     })
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row: any[]) => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    ].join("\n")
+    downloadAsXlsx(headers, rows, `students_export_${format(new Date(), "yyyyMMdd_HHmmss")}`)
 
-    // Create and download file
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `students_export_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    toast.success(`Exported ${filteredStudents.length} students to CSV`)
+    toast.success(`Exported ${filteredStudents.length} students to Excel`)
   }
 
   const handleImport = () => {
@@ -665,104 +664,49 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setIsImportDialogOpen(true)
   }
 
-  const parseCSV = (csvText: string) => {
-    const lines = csvText.split("\n").filter(line => line.trim())
-    if (lines.length < 2) {
-      setImportError("CSV file must have headers and at least one data row")
-      return
-    }
-
-    // Auto-detect delimiter (comma, semicolon, or tab)
-    const detectDelimiter = (line: string): string => {
-      const delimiters = [',', ';', '\t']
-      let maxCount = 0
-      let detectedDelimiter = ','
-
-      delimiters.forEach(delimiter => {
-        const count = line.split(delimiter).length
-        if (count > maxCount) {
-          maxCount = count
-          detectedDelimiter = delimiter
-        }
-      })
-
-      return detectedDelimiter
-    }
-
-    const delimiter = detectDelimiter(lines[0])
-    console.log("Detected delimiter:", delimiter === '\t' ? 'TAB' : delimiter)
-
-    // Parse with detected delimiter
-    const parseLineWithDelimiter = (line: string, delim: string): string[] => {
-      // Handle quoted values that might contain the delimiter
-      const regex = delim === '\t'
-        ? /("([^"]*(?:""[^"]*)*)"|[^\t]*)/g
-        : delim === ';'
-        ? /("([^"]*(?:""[^"]*)*)"|[^;]*)/g
-        : /("([^"]*(?:""[^"]*)*)"|[^,]*)/g
-
-      const matches = line.match(regex) || []
-      return matches
-        .map(v => v.trim().replace(/^"|"$/g, "").replace(/""/g, '"'))
-        .filter(v => v !== '' || matches.length > 1) // Keep empty strings if there are multiple columns
-    }
-
-    const headers = parseLineWithDelimiter(lines[0], delimiter)
-    console.log("Parsed headers:", headers)
-    console.log("Total columns:", headers.length)
-
-    const requiredHeaders = ["Student ID", "First Name", "Last Name", "Year Group", "Academic Year"]
-    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
-
-    if (missingHeaders.length > 0) {
-      setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${headers.join(", ")}`)
-      return
-    }
-
-    const parsed = lines.slice(1).map((line, index) => {
-      const values = parseLineWithDelimiter(line, delimiter)
-
-      const row: any = {}
-      headers.forEach((header, i) => {
-        row[header] = values[i] || ""
-      })
-      row._rowIndex = index + 2
-      return row
-    })
-
-    // Debug logging
-    console.log("Academic Year column index:", headers.indexOf("Academic Year"))
-    console.log("First row sample:", parsed[0])
-    console.log("Academic Year values (first 5):", parsed.slice(0, 5).map(r => r["Academic Year"]))
-
-    // Check for empty Academic Year values
-    const emptyAcademicYears = parsed.filter(row => !row["Academic Year"] || row["Academic Year"].trim() === "")
-    if (emptyAcademicYears.length > 0) {
-      console.warn(`Warning: ${emptyAcademicYears.length} rows have empty Academic Year values`)
-      setImportError(`Warning: ${emptyAcademicYears.length} student(s) are missing Academic Year values. Please fill in the Academic Year column in your CSV file.`)
-      return
-    }
-
-    setImportPreview(parsed)
-    setImportError("")
-  }
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.name.endsWith(".csv")) {
-      setImportError("Please upload a CSV file")
-      return
-    }
+    try {
+      const rows = await parseXlsxOrCsvFile(file)
+      if (rows.length === 0) {
+        setImportError("File has no data rows")
+        return
+      }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      setImportData(text)
-      parseCSV(text)
+      const fileHeaders = Object.keys(rows[0])
+      console.log("Parsed headers:", fileHeaders)
+      console.log("Total columns:", fileHeaders.length)
+
+      const requiredHeaders = ["Student ID", "First Name", "Last Name", "Year Group", "Academic Year"]
+      const missingHeaders = requiredHeaders.filter(h => !fileHeaders.includes(h))
+
+      if (missingHeaders.length > 0) {
+        setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${fileHeaders.join(", ")}`)
+        return
+      }
+
+      const parsed = rows.map((row, index) => ({ ...row, _rowIndex: index + 2 }))
+
+      // Debug logging
+      console.log("First row sample:", parsed[0])
+      console.log("Academic Year values (first 5):", parsed.slice(0, 5).map(r => r["Academic Year"]))
+
+      // Check for empty Academic Year values
+      const emptyAcademicYears = parsed.filter(row => !row["Academic Year"] || row["Academic Year"].trim() === "")
+      if (emptyAcademicYears.length > 0) {
+        console.warn(`Warning: ${emptyAcademicYears.length} rows have empty Academic Year values`)
+        setImportError(`Warning: ${emptyAcademicYears.length} student(s) are missing Academic Year values. Please fill in the Academic Year column in your file.`)
+        return
+      }
+
+      setImportPreview(parsed)
+      setImportError("")
+      setShowAllPreview(false)
+    } catch {
+      setImportError("Failed to parse file. Please use the provided template.")
     }
-    reader.readAsText(file)
   }
 
   const performConfirmImport = () => {
@@ -784,15 +728,26 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         return
       }
 
-      // Get parent email first
       const parentEmail = row["Parent 1 Email"] || ""
-
-      // Get or create family from Family Code with parent email
+      const parentPhone = row["Parent 1 Phone"] || ""
       const familyCode = row["Family Code"] || ""
-      const familyId = familyCode ? getOrCreateFamily(familyCode, parentEmail) : ""
+      const familyName = row["Last Name"] || familyCode
+
+      // สร้าง ID ล่วงหน้าเพื่อส่งให้ family
+      const studentId = `STU-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+      // เงื่อนไขที่ 1: ไม่มี familyCode → ไม่เพิ่มเข้า family ใดๆ
+      // เงื่อนไขที่ 2-3: มี familyCode → สร้างใหม่หรือเพิ่มเข้าของเดิม พร้อมข้อมูลทั้งหมด
+      const familyId = familyCode
+        ? getOrCreateFamily(familyCode, studentId, {
+            familyName,
+            email: parentEmail,
+            phone: parentPhone
+          })
+        : ""
 
       const newStudent: Student = {
-        id: `STU-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: studentId,
         studentId: row["Student ID"],
         firstName: row["First Name"],
         lastName: row["Last Name"],
@@ -839,16 +794,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       }
 
       addStudent(newStudent)
-
-      // Auto-sync primary parent email to family group
-      const primaryParent = newStudent.parents.find(p => p.isPrimary)
-      if (primaryParent?.email && familyId) {
-        const family = families.find(f => f.id === familyId)
-        if (family && family.email !== primaryParent.email) {
-          updateFamily(familyId, { email: primaryParent.email })
-        }
-      }
-
       imported++
     })
 
@@ -875,6 +820,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "Status",
       "Child Order",
       "Enrollment Date",
+      "Family Code",
       "Parent 1 Name",
       "Parent 1 Relationship",
       "Parent 1 Phone",
@@ -898,6 +844,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "active",
       "1",
       "2024-08-15",
+      "FAM001",
       "James Doe",
       "father",
       "081-234-5678",
@@ -909,20 +856,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "Sample notes"
     ]
 
-    const csvContent = [
-      headers.join(","),
-      exampleRow.map(cell => `"${cell}"`).join(",")
-    ].join("\n")
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", "student_import_template.csv")
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    downloadAsXlsx(headers, [exampleRow], "student_import_template")
 
     toast.success("Template downloaded")
   }
@@ -2409,7 +2343,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
-                <p className="font-medium">CSV Template</p>
+                <p className="font-medium">Excel Template</p>
                 <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
               </div>
               <Button variant="outline" onClick={downloadTemplate}>
@@ -2420,11 +2354,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="csvFile">Upload CSV File</Label>
+              <Label htmlFor="csvFile">Upload File</Label>
               <Input
                 id="csvFile"
                 type="file"
-                accept=".csv"
+                accept={XLSX_ACCEPT}
                 onChange={handleFileUpload}
                 className="cursor-pointer"
                 disabled={!userCanEdit}
@@ -2452,17 +2386,21 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                           <TableHead align="left">{t("table.name")}</TableHead>
                           <TableHead align="left">{t("table.yearGroup")}</TableHead>
                           <TableHead align="left">{t("table.year")}</TableHead>
+                          <TableHead align="left">Family Code</TableHead>
                           <TableHead align="left">{t("table.status")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {importPreview.slice(0, 10).map((row, index) => (
+                        {(showAllPreview ? importPreview : importPreview.slice(0, 10)).map((row, index) => (
                           <TableRow key={index}>
                             {/* Preview Table - All Left */}
                             <TableCell className="font-mono text-sm" align="left">{row["Student ID"]}</TableCell>
                             <TableCell align="left">{row["First Name"]} {row["Last Name"]}</TableCell>
                             <TableCell align="left">{row["Year Group"]}</TableCell>
                             <TableCell align="left">{row["Academic Year"]}</TableCell>
+                            <TableCell align="left" className="font-mono text-xs text-muted-foreground">
+                              {row["Family Code"] || <span className="text-orange-400 text-xs">— no family</span>}
+                            </TableCell>
                             <TableCell align="left">
                               <Badge variant="outline">{row["Status"] || "active"}</Badge>
                             </TableCell>
@@ -2472,9 +2410,15 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     </Table>
                   </div>
                   {importPreview.length > 10 && (
-                    <div className="p-2 text-center text-sm text-muted-foreground border-t">
-                      ... and {importPreview.length - 10} more students
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPreview(v => !v)}
+                      className="w-full p-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 border-t transition-colors"
+                    >
+                      {showAllPreview
+                        ? "▲ Show less"
+                        : `... and ${importPreview.length - 10} more students (click to show all)`}
+                    </button>
                   )}
                 </div>
               </div>

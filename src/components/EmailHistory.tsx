@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -215,24 +216,20 @@ export function EmailHistory() {
 
   const handleDownloadReport = (historyItem: any) => {
     const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
-    const csvHeader = "No.,Parent Name,Email,Student Name,Status,Failure Reason\n"
-    const csvRows = recipients.map((r, idx) =>
-      `${idx + 1},${r.name},${r.email},${r.studentName},${r.status},${r.failureReason || ''}`
-    ).join("\n")
-    const csvContent = csvHeader + csvRows
+    const headers = ["No.", "Parent Name", "Email", "Student Name", "Status", "Failure Reason"]
+    const rows = recipients.map((r: any, idx: number) => [
+      idx + 1,
+      r.name,
+      r.email,
+      r.studentName,
+      r.status,
+      r.failureReason || ''
+    ])
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `email-report-${historyItem.id}-${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    downloadAsXlsx(headers, rows, `email-report-${historyItem.id}-${new Date().toISOString().split('T')[0]}`)
 
     toast.success("Report downloaded successfully", {
-      description: `${historyItem.recipients} recipients exported to CSV`
+      description: `${historyItem.recipients} recipients exported to Excel`
     })
   }
 
