@@ -104,16 +104,27 @@ export function SchoolSettings() {
       "app-language", "currentUser", "username", "mockIp"
     ])
 
+    // Item storage keys — write [] so loadItemsFromStorage knows they're explicitly cleared
+    const ITEM_KEYS = [
+      "invoiceItems", "afterschoolItems", "ecaItems", "tripItems",
+      "examItems", "busItems", "eventItems", "summerItems", "externalItems",
+      "invoiceTemplates", "afterschoolTemplates", "ecaTemplates", "tripTemplates",
+      "examTemplates", "busTemplates", "eventTemplates", "summerTemplates", "externalTemplates"
+    ]
+
     const keysToRemove: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && !KEEP_KEYS.has(key)) {
+      if (key && !KEEP_KEYS.has(key) && !ITEM_KEYS.includes(key)) {
         keysToRemove.push(key)
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key))
 
-    toast.success(`System data cleared (${keysToRemove.length} items removed)`, {
+    // Write empty arrays to item keys so components know they're explicitly cleared
+    ITEM_KEYS.forEach(key => localStorage.setItem(key, "[]"))
+
+    toast.success(`System data cleared (${keysToRemove.length + ITEM_KEYS.length} items reset)`, {
       description: "User accounts have been preserved. Reloading..."
     })
     setTimeout(() => window.location.reload(), 1500)

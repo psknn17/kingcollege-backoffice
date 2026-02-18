@@ -1827,8 +1827,11 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): Item[] => {
 
   try {
     const stored = localStorage.getItem(storageKey)
-    if (stored) {
+    if (stored !== null) {
       const storedItems = JSON.parse(stored)
+
+      // Explicitly cleared (empty array written by reset) — return empty, no mock fallback
+      if (storedItems.length === 0) return []
 
       // Validate stored data belongs to correct category
       if (!isValidStoredData(storedItems, invoiceCategory)) {
