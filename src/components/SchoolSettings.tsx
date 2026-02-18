@@ -118,7 +118,9 @@ export function SchoolSettings() {
       "studentGroups", "studentGroups_tuition", "studentGroups_bus",
       "studentGroups_eca", "studentGroups_trip", "studentGroups_exam",
       "studentGroups_event", "studentGroups_summer", "studentGroups_external",
-      "summerDiscountGroups"
+      "summerDiscountGroups",
+      // Tuition fees
+      "tuitionByYearData"
     ]
 
     const keysToRemove: string[] = []

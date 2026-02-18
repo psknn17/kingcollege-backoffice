@@ -160,8 +160,10 @@ const migrateGradeData = (oldGrades: GradeLevelTuition[]): GradeLevelTuition[] =
 const loadTuitionFromStorage = (): Record<string, GradeLevelTuition[]> | null => {
   try {
     const stored = localStorage.getItem(TUITION_STORAGE_KEY)
-    if (stored) {
+    if (stored !== null) {
       const data = JSON.parse(stored)
+      // Empty object written by reset — return {} to skip mock data population
+      if (Object.keys(data).length === 0) return {}
       // Migrate each year's data to new format
       const migratedData: Record<string, GradeLevelTuition[]> = {}
       for (const year of Object.keys(data)) {
@@ -191,7 +193,8 @@ export function TuitionByYear() {
 
   // Initialize tuition data from localStorage or empty object
   const [tuitionData, setTuitionData] = useState<Record<string, GradeLevelTuition[]>>(() => {
-    return loadTuitionFromStorage() || {}
+    const stored = loadTuitionFromStorage()
+    return stored !== null ? stored : {}
   })
   const [selectedYear, setSelectedYear] = usePersistedState<string>("tuition-by-year:selectedYear", "")
 
@@ -228,24 +231,14 @@ export function TuitionByYear() {
     }
   }, [availableYears, selectedYear])
 
-  // Years that should have mock data pre-populated
-  const yearsWithMockData = ["2024-2025"]
-
-  // Initialize tuition data for new academic years
+  // Initialize tuition data for new academic years (always empty - no mock data)
   useEffect(() => {
     setTuitionData(prev => {
       const updated = { ...prev }
       let hasChanges = false
       for (const year of availableYears) {
         if (!updated[year]) {
-          // Use mock data for specified years, empty grades for others
-          if (yearsWithMockData.includes(year)) {
-            updated[year] = createDefaultGrades()
-            console.log(`[TuitionByYear] Created default grades with mock data for year: ${year}`)
-          } else {
-            updated[year] = createEmptyGrades()
-            console.log(`[TuitionByYear] Created empty grades for new year: ${year}`)
-          }
+          updated[year] = createEmptyGrades()
           hasChanges = true
         }
       }
