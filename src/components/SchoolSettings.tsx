@@ -8,7 +8,8 @@ import { Separator } from "./ui/separator"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { School, Upload, Save, Phone, Mail, Globe, CreditCard } from "lucide-react"
+import { School, Upload, Save, Phone, Mail, Globe, CreditCard, Trash2, AlertTriangle } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
@@ -94,6 +95,28 @@ export function SchoolSettings() {
     confirmDialog.confirm(() => {
       handleSave()
     })
+  }
+
+  const handleResetAllData = () => {
+    // Keys to preserve (user management + auth + language)
+    const KEEP_KEYS = new Set([
+      "authUser", "users", "needsRoleSelection",
+      "app-language", "currentUser", "username", "mockIp"
+    ])
+
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && !KEEP_KEYS.has(key)) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+
+    toast.success(`System data cleared (${keysToRemove.length} items removed)`, {
+      description: "User accounts have been preserved. Reloading..."
+    })
+    setTimeout(() => window.location.reload(), 1500)
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -342,6 +365,73 @@ export function SchoolSettings() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-red-300">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-700 mb-1">Danger Zone</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Clear all system data and start fresh. User accounts will be preserved.
+                <br />
+                <span className="text-red-600 font-medium">This action cannot be undone.</span>
+              </p>
+              <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50/50">
+                <div>
+                  <p className="text-sm font-medium">Reset All System Data</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Clears invoices, students, reminders, items, receipts, and all other records
+                  </p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={!userCanEdit} className="gap-2 flex-shrink-0 ml-4">
+                      <Trash2 className="w-4 h-4" />
+                      Reset System
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                        <AlertTriangle className="w-5 h-5" />
+                        Reset All System Data?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <p>This will permanently delete all data including:</p>
+                        <ul className="list-disc list-inside text-sm space-y-1 mt-2 text-foreground">
+                          <li>All invoices and receipts</li>
+                          <li>All students and family records</li>
+                          <li>All items and templates</li>
+                          <li>All reminders and email history</li>
+                          <li>All settings (school, terms, discounts)</li>
+                          <li>All activity logs and reports</li>
+                        </ul>
+                        <p className="mt-3 font-medium text-foreground">
+                          Only user accounts will be preserved.
+                        </p>
+                        <p className="text-red-600 font-semibold">This action cannot be undone.</p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleResetAllData}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Yes, Reset Everything
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           </div>
