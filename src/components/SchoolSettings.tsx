@@ -104,12 +104,13 @@ export function SchoolSettings() {
       "app-language", "currentUser", "username", "mockIp"
     ])
 
-    // Item storage keys — write [] so loadItemsFromStorage knows they're explicitly cleared
+    // Keys that need [] written (so components know they're explicitly cleared, not first-run)
     const ITEM_KEYS = [
       "invoiceItems", "afterschoolItems", "ecaItems", "tripItems",
       "examItems", "busItems", "eventItems", "summerItems", "externalItems",
       "invoiceTemplates", "afterschoolTemplates", "ecaTemplates", "tripTemplates",
-      "examTemplates", "busTemplates", "eventTemplates", "summerTemplates", "externalTemplates"
+      "examTemplates", "busTemplates", "eventTemplates", "summerTemplates", "externalTemplates",
+      "students_v3", "families_v4"
     ]
 
     const keysToRemove: string[] = []

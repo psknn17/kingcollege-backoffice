@@ -152,8 +152,9 @@ const toDateOrNull = (value: any): Date | null => {
 const loadStudentsFromStorage = (): Student[] | null => {
   try {
     const stored = localStorage.getItem(STUDENTS_STORAGE_KEY)
-    if (stored) {
+    if (stored !== null) {
       const parsed = JSON.parse(stored)
+      if (parsed.length === 0) return [] // explicitly cleared
       return parsed.map((s: any) => ({
         ...s,
         dateOfBirth: toDateOrNull(s.dateOfBirth),
@@ -196,8 +197,9 @@ const generateFamilyCodeFromName = (familyName: string, existingCodes: string[])
 const loadFamiliesFromStorage = (): Family[] | null => {
   try {
     const stored = localStorage.getItem(FAMILIES_STORAGE_KEY)
-    if (stored) {
+    if (stored !== null) {
       const parsed = JSON.parse(stored)
+      if (parsed.length === 0) return [] // explicitly cleared
       const existingCodes: string[] = []
 
       // Auto-generate familyCode for families that don't have one
@@ -356,11 +358,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
   // ไม่ reset ข้อมูลเมื่อ version เปลี่ยน - เก็บข้อมูลที่มีอยู่
 
   const [students, setStudentsState] = useState<Student[]>(() => {
-    return loadStudentsFromStorage() || sampleData.students
+    const stored = loadStudentsFromStorage()
+    return stored !== null ? stored : sampleData.students
   })
 
   const [families, setFamiliesState] = useState<Family[]>(() => {
-    return loadFamiliesFromStorage() || sampleData.families
+    const stored = loadFamiliesFromStorage()
+    return stored !== null ? stored : sampleData.families
   })
 
   // อัปเดต version marker เท่านั้น ไม่ reset ข้อมูล
