@@ -429,16 +429,16 @@ export function SchoolSettings() {
 
       {/* Reset Confirmation Dialog */}
       <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="mb-2">
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
               Reset All System Data?
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2 px-1">
+          <div className="space-y-3">
             <p className="text-sm text-muted-foreground">This will permanently delete all data including:</p>
-            <ul className="list-disc text-sm space-y-1 text-foreground pl-5">
+            <ul className="list-disc text-sm space-y-1.5 text-foreground pl-5">
               <li>All invoices and receipts</li>
               <li>All students and family records</li>
               <li>All items and templates</li>
@@ -447,10 +447,10 @@ export function SchoolSettings() {
               <li>All settings (school, terms, discounts)</li>
               <li>All activity logs and reports</li>
             </ul>
-            <p className="text-sm font-medium">Only user accounts will be preserved.</p>
+            <p className="text-sm font-medium pt-1">Only user accounts will be preserved.</p>
             <p className="text-sm text-red-600 font-semibold">This action cannot be undone.</p>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
               Cancel
             </Button>
