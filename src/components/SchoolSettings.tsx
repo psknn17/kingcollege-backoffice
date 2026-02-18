@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { School, Upload, Save, Phone, Mail, Globe, CreditCard, Trash2, AlertTriangle } from "lucide-react"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
@@ -76,6 +76,7 @@ export function SchoolSettings() {
   const confirmDialog = useConfirmDialog()
   const [formData, setFormData] = useState<SchoolInfo>(loadSettings())
   const [isSaving, setIsSaving] = useState(false)
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
 
   const handleSave = () => {
     setIsSaving(true)
@@ -117,7 +118,7 @@ export function SchoolSettings() {
       "studentGroups", "studentGroups_tuition", "studentGroups_bus",
       "studentGroups_eca", "studentGroups_trip", "studentGroups_exam",
       "studentGroups_event", "studentGroups_summer", "studentGroups_external",
-      "summerDiscountGroups", "discountOptions"
+      "summerDiscountGroups"
     ]
 
     const keysToRemove: string[] = []
@@ -411,52 +412,60 @@ export function SchoolSettings() {
                     Clears invoices, students, reminders, items, receipts, and all other records
                   </p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={!userCanEdit} className="gap-2 flex-shrink-0 ml-4">
-                      <Trash2 className="w-4 h-4" />
-                      Reset System
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-                        <AlertTriangle className="w-5 h-5" />
-                        Reset All System Data?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription className="space-y-2">
-                        <p>This will permanently delete all data including:</p>
-                        <ul className="list-disc list-inside text-sm space-y-1 mt-2 text-foreground">
-                          <li>All invoices and receipts</li>
-                          <li>All students and family records</li>
-                          <li>All items and templates</li>
-                          <li>All discount groups (Tuition, ECA, Bus, Trip, Exam, Summer, Event, External)</li>
-                          <li>All reminders and email history</li>
-                          <li>All settings (school, terms, discounts)</li>
-                          <li>All activity logs and reports</li>
-                        </ul>
-                        <p className="mt-3 font-medium text-foreground">
-                          Only user accounts will be preserved.
-                        </p>
-                        <p className="text-red-600 font-semibold">This action cannot be undone.</p>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleResetAllData}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        Yes, Reset Everything
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                  variant="destructive"
+                  disabled={!userCanEdit}
+                  className="gap-2 flex-shrink-0 ml-4"
+                  onClick={() => setIsResetDialogOpen(true)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Reset System
+                </Button>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Reset All System Data?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">This will permanently delete all data including:</p>
+            <ul className="list-disc list-inside text-sm space-y-1 text-foreground">
+              <li>All invoices and receipts</li>
+              <li>All students and family records</li>
+              <li>All items and templates</li>
+              <li>All discount groups (all menus)</li>
+              <li>All reminders and email history</li>
+              <li>All settings (school, terms, discounts)</li>
+              <li>All activity logs and reports</li>
+            </ul>
+            <p className="text-sm font-medium">Only user accounts will be preserved.</p>
+            <p className="text-sm text-red-600 font-semibold">This action cannot be undone.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setIsResetDialogOpen(false)
+                handleResetAllData()
+              }}
+            >
+              Yes, Reset Everything
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={confirmDialog.isOpen}
