@@ -106,11 +106,18 @@ export function SchoolSettings() {
 
     // Keys that need [] written (so components know they're explicitly cleared, not first-run)
     const ITEM_KEYS = [
+      // Items & Templates
       "invoiceItems", "afterschoolItems", "ecaItems", "tripItems",
       "examItems", "busItems", "eventItems", "summerItems", "externalItems",
       "invoiceTemplates", "afterschoolTemplates", "ecaTemplates", "tripTemplates",
       "examTemplates", "busTemplates", "eventTemplates", "summerTemplates", "externalTemplates",
-      "students_v3", "families_v4"
+      // Students & Families
+      "students_v3", "families_v4",
+      // Discount Groups (all menus)
+      "studentGroups", "studentGroups_tuition", "studentGroups_bus",
+      "studentGroups_eca", "studentGroups_trip", "studentGroups_exam",
+      "studentGroups_event", "studentGroups_summer", "studentGroups_external",
+      "summerDiscountGroups", "discountOptions"
     ]
 
     const keysToRemove: string[] = []
@@ -423,6 +430,7 @@ export function SchoolSettings() {
                           <li>All invoices and receipts</li>
                           <li>All students and family records</li>
                           <li>All items and templates</li>
+                          <li>All discount groups (Tuition, ECA, Bus, Trip, Exam, Summer, Event, External)</li>
                           <li>All reminders and email history</li>
                           <li>All settings (school, terms, discounts)</li>
                           <li>All activity logs and reports</li>
