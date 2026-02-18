@@ -436,9 +436,9 @@ export function SchoolSettings() {
               Reset All System Data?
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="space-y-3 py-2 px-1">
             <p className="text-sm text-muted-foreground">This will permanently delete all data including:</p>
-            <ul className="list-disc list-inside text-sm space-y-1 text-foreground">
+            <ul className="list-disc text-sm space-y-1 text-foreground pl-5">
               <li>All invoices and receipts</li>
               <li>All students and family records</li>
               <li>All items and templates</li>
