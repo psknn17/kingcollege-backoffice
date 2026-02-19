@@ -1609,6 +1609,12 @@ const updateVersionMarker = () => {
     // Just update the version marker - DO NOT delete user data
     localStorage.setItem("itemManagementDataVersion", DATA_VERSION)
 
+  }
+}
+
+// Run version update on module load
+updateVersionMarker()
+
 // Generate item code based on category
 const generateItemCode = (category: string, index: number): string => {
   const prefix = category === "Tuition" ? "TUI" :
@@ -1821,6 +1827,7 @@ const loadTemplatesFromStorage = (invoiceCategory: string = "student", currentIt
 
       // If validation fails, clear localStorage and return null to use mock templates
       if (!isValid) {
+        console.warn("Stored templates reference non-existent items. Clearing and using mock templates.")
         localStorage.removeItem(getTemplatesStorageKey(invoiceCategory))
         return null
       }
@@ -1977,6 +1984,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         if (filtered.length < allItems.length) {
           localStorage.setItem(storageKey, JSON.stringify(filtered))
           setItems(filtered)
+
+        }
+      }
+    } catch (e) {
+      console.error("[Cleanup] Failed:", e)
     }
     localStorage.setItem(cleanupKey, "true")
   }, [])
@@ -2255,6 +2267,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       }
 
       const parsed = rows.map((row, index) => ({ ...row, _rowIndex: index + 2 }))
+
+      setImportPreview(parsed)
       setImportError("")
     } catch {
       setImportError("Failed to parse file. Please use the provided template.")
@@ -2422,6 +2436,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       // Only show toast if items were created or updated
       if (created > 0 || updated > 0) {
+
+        toast.success(`Synced tuition fees: ${created} new, ${updated} updated from ${latestYear}`)
       }
     } catch (error) {
       console.error("Failed to sync tuition fees:", error)
