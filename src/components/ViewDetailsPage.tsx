@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { 
   User, 
   Mail, 
@@ -419,7 +420,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
           <CardContent className="space-y-3">
             <div>
               <label className="text-sm text-muted-foreground">Issue Date</label>
-              <p className="font-medium">{formatDate(data.issueDate || data.createdAt || new Date().toISOString())}</p>
+              <p className="font-medium">{data.approvalStatus === "approved" && data.issueDate ? formatDate(data.issueDate) : "Pending Approval"}</p>
             </div>
             <div>
               <label className="text-sm text-muted-foreground">Due Date</label>
@@ -438,7 +439,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
               <p className="font-medium">
                 {data.invoiceType === "external" || data.studentId === "EXTERNAL"
                   ? (data.eventName || "-")
-                  : (data.academicYear || "2024-2025")}
+                  : (formatAcademicYear(data.academicYear) || "2024/2025")}
               </p>
             </div>
           </CardContent>

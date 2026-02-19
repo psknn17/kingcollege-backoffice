@@ -7,6 +7,7 @@ import { DollarSign, Users, TrendingUp, AlertCircle, RotateCcw, GraduationCap, B
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
@@ -259,7 +260,7 @@ export function ReportOverview() {
                 <SelectContent>
                   <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
                   {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                    <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

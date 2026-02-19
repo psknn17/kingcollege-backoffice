@@ -4502,3 +4502,8 @@ html {
   animation-delay: 2s;
 }
 
+/* Fix: Radix popper wrapper ต้องมี z-index explicit ไม่งั้นแพ้ Dialog (z-300) */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+

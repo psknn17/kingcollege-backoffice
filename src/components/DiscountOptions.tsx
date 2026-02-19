@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 // Storage key for discount options
@@ -293,7 +294,7 @@ export function DiscountOptions() {
               <SelectContent>
                 {availableYears.map(year => (
                   <SelectItem key={year} value={year}>
-                    {year}
+                    {formatAcademicYear(year)}
                   </SelectItem>
                 ))}
               </SelectContent>

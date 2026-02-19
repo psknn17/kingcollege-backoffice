@@ -531,14 +531,9 @@ export function SummerDiscountGroups() {
                                 File Processing Errors ({fileParseErrors.length}):
                               </h4>
                               <div className="max-h-24 overflow-y-auto text-xs text-destructive space-y-1">
-                                {fileParseErrors.slice(0, 10).map((error, index) => (
+                                {fileParseErrors.map((error, index) => (
                                   <div key={index}>{error}</div>
                                 ))}
-                                {fileParseErrors.length > 10 && (
-                                  <div className="font-medium">
-                                    ...and {fileParseErrors.length - 10} more errors
-                                  </div>
-                                )}
                               </div>
                             </div>
                           )}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -775,7 +775,7 @@ export function DiscountReports() {
           s.studentId,
           s.studentName,
           s.yearGroup,
-          s.academicYear,
+          formatAcademicYear(s.academicYear),
           s.term,
           getDiscountTypeLabel(d.type),
           d.name,
@@ -889,7 +889,7 @@ export function DiscountReports() {
                 <SelectContent>
                   <SelectItem value="all">{t("discountReports.allAcademicYears") || "All Academic Years"}</SelectItem>
                   {academicYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                    <SelectItem key={year} value={year}>{formatAcademicYear(year)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1044,7 +1044,7 @@ export function DiscountReports() {
                       {/* Year Group/Grade - CENTER aligned (matches header) */}
                       <TableCell align="center">{student.yearGroup}</TableCell>
                       {/* Academic Year - LEFT aligned (matches header) */}
-                      <TableCell align="left">{student.academicYear}</TableCell>
+                      <TableCell align="left">{formatAcademicYear(student.academicYear)}</TableCell>
                       {/* Term - LEFT aligned (matches header) */}
                       <TableCell align="left">{student.term}</TableCell>
                       {/* Discount Types - LEFT aligned (matches header) */}
@@ -1165,7 +1165,7 @@ export function DiscountReports() {
                   return (
                     <div key={year} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                       <div>
-                        <span className="font-medium">{year}</span>
+                        <span className="font-medium">{formatAcademicYear(year)}</span>
                         <p className="text-xs text-muted-foreground">
                           {studentsInYear.length} {t("discountReports.students")}
                         </p>
@@ -1183,7 +1183,7 @@ export function DiscountReports() {
                   return (
                     <div key={year} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                       <div>
-                        <span className="font-medium">{year}</span>
+                        <span className="font-medium">{formatAcademicYear(year)}</span>
                         <p className="text-xs text-muted-foreground">
                           {studentsInYear.length} {t("discountReports.students")}
                         </p>

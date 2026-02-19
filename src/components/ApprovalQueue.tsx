@@ -16,6 +16,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { normalizeAcademicYear, formatAcademicYear } from "@/utils/xlsxUtils"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
@@ -281,7 +282,7 @@ export function ApprovalQueue() {
     if (academicYearFilter !== "all") {
       const selectedYear = academicYears.find(y => y.id === academicYearFilter)
       if (selectedYear) {
-        filtered = filtered.filter(inv => inv.academicYear === selectedYear.name)
+        filtered = filtered.filter(inv => normalizeAcademicYear(inv.academicYear) === normalizeAcademicYear(selectedYear.name))
       }
     }
 
@@ -787,7 +788,7 @@ export function ApprovalQueue() {
                 <SelectContent>
                   <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
                   {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                    <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -954,7 +955,7 @@ export function ApprovalQueue() {
                     </div>
                   </TableCell>
                   {/* Academic Year - left aligned */}
-                  <TableCell align="left">{invoice.academicYear || "-"}</TableCell>
+                  <TableCell align="left">{formatAcademicYear(invoice.academicYear) || "-"}</TableCell>
                   {/* Term - left aligned */}
                   <TableCell align="left">{invoice.term || "-"}</TableCell>
                   {/* Year Group - center aligned */}
@@ -999,7 +1000,7 @@ export function ApprovalQueue() {
                     })()}
                   </TableCell>
                   {/* Issue Date - left aligned */}
-                  <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                  <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                   {/* Due Date - left aligned */}
                   <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                   {/* Actions - center aligned */}
@@ -1164,7 +1165,7 @@ export function ApprovalQueue() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">Invoice Date</span>
                           <span className="text-sm font-medium text-gray-800">
-                            {selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}
+                            {getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">

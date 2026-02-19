@@ -17,6 +17,7 @@ import { useAcademicYears, Term, AcademicYear } from "@/contexts/AcademicYearCon
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -151,7 +152,7 @@ export function TuitionTermSettings() {
       saveAcademicYears()
     }, 100)
 
-    toast.success(`${t("termSettings.academicYear")} ${yearId} ${t("termSettings.yearCreated")}`)
+    toast.success(`${t("termSettings.academicYear")} ${formatAcademicYear(yearId)} ${t("termSettings.yearCreated")}`)
   }
 
   const deleteAcademicYear = (yearId: string) => {
@@ -352,7 +353,7 @@ export function TuitionTermSettings() {
                           <GraduationCap className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg text-black">{t("termSettings.academicYear")} {year.name}</CardTitle>
+                          <CardTitle className="text-lg text-black">{t("termSettings.academicYear")} {formatAcademicYear(year.name)}</CardTitle>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-sm text-gray-500">{termCount} {t("termSettings.terms")}</span>
                             <Badge variant={allComplete ? "default" : "secondary"} className={cn(

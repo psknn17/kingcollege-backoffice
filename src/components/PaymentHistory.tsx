@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { triggerDownload } from "@/utils/downloadUtils"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -316,9 +316,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       payment.paymentChannel,
       payment.payerName,
       payment.status.charAt(0).toUpperCase() + payment.status.slice(1),
-      format(payment.transactionDate, 'yyyy-MM-dd HH:mm:ss'),
+      format(payment.transactionDate, 'dd/MM/yyyy HH:mm:ss'),
       payment.referenceNumber || '',
-      payment.dueDate ? format(payment.dueDate, 'yyyy-MM-dd') : '',
+      payment.dueDate ? format(payment.dueDate, 'dd/MM/yyyy') : '',
       payment.notes || ''
     ])
 
@@ -415,7 +415,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 <SelectContent>
                   <SelectItem value="all">{t("common.allYears")}</SelectItem>
                   {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                    <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

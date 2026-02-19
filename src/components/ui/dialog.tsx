@@ -35,7 +35,21 @@ DialogOverlay.displayName = "DialogOverlay";
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, style: userStyle, ...props }, ref) => {
+>(({ className, children, style: userStyle, onPointerDownOutside, ...props }, ref) => {
+  // Prevent dialog from closing when clicking inside Radix portal-based components
+  // (Select, Popover, etc.) — their portal content renders outside the Dialog DOM
+  // so Radix Dialog's DismissableLayer treats it as an "outside click" by default.
+  const handlePointerDownOutside: React.ComponentPropsWithoutRef<
+    typeof DialogPrimitive.Content
+  >["onPointerDownOutside"] = (e) => {
+    const target = e.target as HTMLElement
+    if (target.closest("[data-radix-popper-content-wrapper]")) {
+      e.preventDefault()
+      return
+    }
+    onPointerDownOutside?.(e)
+  }
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -43,6 +57,7 @@ const DialogContent = React.forwardRef<
         ref={ref}
         data-slot="dialog-content"
         style={{ backgroundColor: '#FFFFFF', opacity: 1, zIndex: 300, ...userStyle }}
+        onPointerDownOutside={handlePointerDownOutside}
         className={cn(
           "bg-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-lg duration-200 overflow-x-hidden",
           className,

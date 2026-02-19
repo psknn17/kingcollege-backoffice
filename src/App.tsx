@@ -576,20 +576,20 @@ export default function App() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* Tuition Management */}
-            {canAccessMenuSection("tuition") && (
-              <Collapsible open={openGroups["tuition"]} onOpenChange={() => toggleGroup("tuition")}>
+            {/* Debt Reminder & Email History */}
+            {canAccessMenuSection("debtReminder") && (
+              <Collapsible open={openGroups["debtReminder"]} onOpenChange={() => toggleGroup("debtReminder")}>
                 <SidebarGroup>
                   <CollapsibleTrigger className="w-full">
                     <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                      Tuition
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["tuition"] ? "rotate-180" : ""}`} />
+                      Payment Reminders
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["debtReminder"] ? "rotate-180" : ""}`} />
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarGroupContent>
                       <SidebarMenu>
-                        {getFilteredMenuItems("tuition").map((item) => (
+                        {getFilteredMenuItems("debtReminder").map((item) => (
                           <SidebarMenuItem key={item.id}>
                             <SidebarMenuButton
                               onClick={() => handleMenuItemClick(item.id)}
@@ -607,20 +607,20 @@ export default function App() {
               </Collapsible>
             )}
 
-            {/* Debt Reminder & Email History */}
-            {canAccessMenuSection("debtReminder") && (
-              <Collapsible open={openGroups["debtReminder"]} onOpenChange={() => toggleGroup("debtReminder")}>
+            {/* Tuition Management */}
+            {canAccessMenuSection("tuition") && (
+              <Collapsible open={openGroups["tuition"]} onOpenChange={() => toggleGroup("tuition")}>
                 <SidebarGroup>
                   <CollapsibleTrigger className="w-full">
                     <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                      Payment Reminders
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["debtReminder"] ? "rotate-180" : ""}`} />
+                      Tuition
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["tuition"] ? "rotate-180" : ""}`} />
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarGroupContent>
                       <SidebarMenu>
-                        {getFilteredMenuItems("debtReminder").map((item) => (
+                        {getFilteredMenuItems("tuition").map((item) => (
                           <SidebarMenuItem key={item.id}>
                             <SidebarMenuButton
                               onClick={() => handleMenuItemClick(item.id)}

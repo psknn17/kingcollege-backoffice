@@ -1303,14 +1303,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                     File Processing Errors ({fileParseErrors.length}):
                                   </h4>
                                   <div className="max-h-24 overflow-y-auto text-xs text-destructive space-y-1">
-                                    {fileParseErrors.slice(0, 10).map((error, index) => (
+                                    {fileParseErrors.map((error, index) => (
                                       <div key={index}>{error}</div>
                                     ))}
-                                    {fileParseErrors.length > 10 && (
-                                      <div className="font-medium">
-                                        ...and {fileParseErrors.length - 10} more errors
-                                      </div>
-                                    )}
                                   </div>
                                 </div>
                               )}
@@ -2060,7 +2055,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                 <div className="max-h-60 overflow-y-auto border rounded-lg">
                   <div className="grid gap-2 p-4">
-                    {csvPreviewData.slice(0, 10).map((student, index) => (
+                    {csvPreviewData.map((student, index) => (
                       <div key={index} className="p-2 bg-muted/50 rounded">
                         <div className="font-medium text-sm">{student.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -2068,11 +2063,6 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         </div>
                       </div>
                     ))}
-                    {csvPreviewData.length > 10 && (
-                      <div className="text-center text-sm text-muted-foreground py-2">
-                        ...and {csvPreviewData.length - 10} more students
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

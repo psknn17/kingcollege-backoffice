@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface GradeLevelTuition {
@@ -310,7 +311,7 @@ export function TuitionByYear() {
               <SelectContent>
                 {availableYears.map(year => (
                   <SelectItem key={year} value={year}>
-                    {year}
+                    {formatAcademicYear(year)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -328,7 +329,7 @@ export function TuitionByYear() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GraduationCap className="w-5 h-5" />
-            {t("tuition.feesAcademicYear")} {selectedYear}
+            {t("tuition.feesAcademicYear")} {formatAcademicYear(selectedYear)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -426,7 +427,7 @@ export function TuitionByYear() {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              {t("tuition.confirmSaveMessage")} {selectedYear}?
+              {t("tuition.confirmSaveMessage")} {formatAcademicYear(selectedYear)}?
             </p>
             <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
               <p className="text-sm">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import * as XLSX from "xlsx"
+import { downloadAsXlsx, normalizeAcademicYear, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -10,7 +11,7 @@ import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
 import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer } from "lucide-react"
 import { PaymentChannel } from "./StatusFilter"
@@ -225,6 +226,25 @@ for (let i = 4; i <= 50; i++) {
   })
 }
 
+const CREDIT_NOTES_STORAGE_KEY = "creditNotesRecords"
+
+const loadCreditNotesFromStorage = (): CreditNote[] => {
+  try {
+    const stored = localStorage.getItem(CREDIT_NOTES_STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return parsed.map((cn: any) => ({ ...cn, issueDate: new Date(cn.issueDate) }))
+    }
+  } catch {}
+  return mockCreditNotes
+}
+
+const saveCreditNotesToStorage = (notes: CreditNote[]) => {
+  try {
+    localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(notes))
+  } catch {}
+}
+
 interface ReceiptPageProps {
   onNavigateToSubPage?: (page: string, params?: any) => void
   category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external" // Filter receipts by category/menu type
@@ -265,8 +285,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   }, [category])
 
   // Credit Note states
-  const [creditNotes, setCreditNotes] = useState<CreditNote[]>(mockCreditNotes)
-  const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>(mockCreditNotes)
+  const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
+  const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
 
   // Filter states
   const [searchTerm, setSearchTerm] = usePersistedState("receipt-page:search", "")
@@ -293,6 +313,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
   // Create Credit Note Dialog state
   const [isCreateCreditNoteOpen, setIsCreateCreditNoteOpen] = useState(false)
+
+  // Import states
+  const [importPreview, setImportPreview] = useState<CreditNote[]>([])
+  const [importErrors, setImportErrors] = useState<string[]>([])
+  const [importFileName, setImportFileName] = useState("")
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [creditNoteForm, setCreditNoteForm] = useState({
     creditNoteNumber: `CN-${new Date().getFullYear()}-${String(mockCreditNotes.length + 1).padStart(6, '0')}`,
     invoiceNumber: "",
@@ -360,7 +386,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     if (academicYearFilter !== "all") {
       const selectedYear = academicYears.find(y => y.id === academicYearFilter)
       if (selectedYear) {
-        filtered = filtered.filter(receipt => receipt.academicYear === selectedYear.name)
+        filtered = filtered.filter(receipt => normalizeAcademicYear(receipt.academicYear) === normalizeAcademicYear(selectedYear.name))
       }
     }
 
@@ -467,23 +493,41 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   }
 
   const exportToExcel = () => {
-    // Export all receipts as Excel file
-    const headers = ['Receipt Number', 'Invoice Number', 'Student Name', 'Student ID', 'Grade', 'Amount', 'Payment Method', 'Date', 'Academic Year', 'Term']
-    const rows = filteredReceipts.map(r => [
-      r.receiptNumber,
-      r.invoiceNumber,
-      r.studentName,
-      r.studentId,
-      r.studentGrade,
-      r.amount,
-      r.paymentMethod,
-      format(r.transactionDate, 'yyyy-MM-dd'),
-      r.academicYear,
-      r.term
-    ])
-
-    downloadAsXlsx(headers, rows, `receipts-export-${format(new Date(), 'yyyy-MM-dd')}`)
-    toast.success("Receipts exported to Excel successfully")
+    const isCreditNoteMode = activeTab === "credit-notes" || viewMode === "credit-notes"
+    if (isCreditNoteMode) {
+      const headers = ['Credit Note No.', 'Invoice Number', 'Student Name', 'Student ID', 'Year Group', 'Amount (THB)', 'Reason', 'Issue Date', 'Academic Year', 'Term', 'Status']
+      const rows = filteredCreditNotes.map(cn => [
+        cn.creditNoteNumber,
+        cn.invoiceNumber,
+        cn.studentName,
+        cn.studentId,
+        cn.studentGrade,
+        cn.amount,
+        cn.reason,
+        format(cn.issueDate, 'dd/MM/yyyy'),
+        formatAcademicYear(cn.academicYear),
+        cn.term,
+        cn.status
+      ])
+      downloadAsXlsx(headers, rows, `credit-notes-export-${format(new Date(), 'dd-MM-yyyy')}`)
+      toast.success("Credit notes exported to Excel successfully")
+    } else {
+      const headers = ['Receipt Number', 'Invoice Number', 'Student Name', 'Student ID', 'Grade', 'Amount', 'Payment Method', 'Date', 'Academic Year', 'Term']
+      const rows = filteredReceipts.map(r => [
+        r.receiptNumber,
+        r.invoiceNumber,
+        r.studentName,
+        r.studentId,
+        r.studentGrade,
+        r.amount,
+        r.paymentMethod,
+        format(r.transactionDate, 'dd/MM/yyyy'),
+        formatAcademicYear(r.academicYear),
+        r.term
+      ])
+      downloadAsXlsx(headers, rows, `receipts-export-${format(new Date(), 'dd-MM-yyyy')}`)
+      toast.success("Receipts exported to Excel successfully")
+    }
   }
 
   const toggleReceiptSelection = (receiptId: string) => {
@@ -575,7 +619,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     if (academicYearFilter !== "all") {
       const selectedYear = academicYears.find(y => y.id === academicYearFilter)
       if (selectedYear) {
-        filtered = filtered.filter(cn => cn.academicYear === selectedYear.name)
+        filtered = filtered.filter(cn => normalizeAcademicYear(cn.academicYear) === normalizeAcademicYear(selectedYear.name))
       }
     }
 
@@ -752,6 +796,128 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     toast.success("Credit note created successfully")
   }
 
+  // --- Import helpers ---
+  const parseImportDate = (value: any): Date => {
+    if (!value) return new Date()
+    const num = Number(value)
+    if (!isNaN(num) && num > 40000 && num < 100000) return new Date((num - 25569) * 86400 * 1000)
+    const str = String(value).trim()
+    if (!str) return new Date()
+    const parts = str.split("/")
+    if (parts.length === 3) {
+      let [a, b, c] = parts.map(Number)
+      if (c < 100) c = c + 2000
+      if (a > 12) return new Date(c, b - 1, a)
+      return new Date(c, a - 1, b)
+    }
+    return new Date(str)
+  }
+
+  const normalizeYearGroup = (val: string): string => {
+    if (!val) return ""
+    return val.replace(/^YEAR\s+/i, "Year ").replace(/^PRE[- ]?NURSERY$/i, "Pre-Nursery").replace(/^NURSERY$/i, "Nursery").replace(/^RECEPTION$/i, "Reception")
+  }
+
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith(".xlsx") && !file.name.toLowerCase().endsWith(".xls")) {
+      toast.error("Please select an Excel file (.xlsx or .xls)")
+      return
+    }
+    setImportFileName(file.name)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const workbook = XLSX.read(e.target?.result, { type: "binary", cellDates: false })
+        const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes("credit")) || workbook.SheetNames[0]
+        const rows: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false, defval: "" })
+
+        const errors: string[] = []
+        const preview: CreditNote[] = []
+
+        rows.forEach((row, index) => {
+          const no = row["No."]
+          if (!no || String(no).toLowerCase().includes("student") || String(no).toLowerCase() === "no.") return
+
+          const creditNoteNumber = String(no).trim()
+          const studentId = String(row["Sell-to Customer No."] || "").trim()
+          const studentName = String(row["Customer Name"] || "").trim()
+          const yearGroup = normalizeYearGroup(String(row["Year Group Code"] || "").trim())
+          const amount = parseFloat(String(row["Amount"] || "0").replace(/,/g, ""))
+          const cancelled = row["Cancelled"]
+          const description = String(row["Description"] || "").trim()
+          const postingDate = row["Posting Date"]
+
+          if (!creditNoteNumber) { errors.push(`Row ${index + 2}: Missing Credit Note Number`); return }
+          if (!studentId && !studentName) { errors.push(`Row ${index + 2}: Missing Student ID/Name`); return }
+          if (isNaN(amount) || amount <= 0) { errors.push(`Row ${index + 2}: Invalid amount for ${creditNoteNumber}`); return }
+
+          const status: CreditNote["status"] = (cancelled === "TRUE" || cancelled === true) ? "cancelled" : "issued"
+
+          preview.push({
+            id: `import-${Date.now()}-${index}`,
+            creditNoteNumber,
+            invoiceNumber: "",
+            studentName,
+            studentId,
+            studentGrade: yearGroup,
+            amount,
+            reason: description || "Imported Credit Note",
+            issueDate: parseImportDate(postingDate),
+            academicYear: "",
+            term: "",
+            status,
+          })
+        })
+
+        setImportPreview(preview)
+        setImportErrors(errors)
+      } catch (err) {
+        console.error("Import error:", err)
+        toast.error("Failed to read Excel file")
+      }
+    }
+    reader.readAsBinaryString(file)
+    event.target.value = ""
+  }
+
+  const performImport = () => {
+    if (importPreview.length === 0) return
+    const existingNumbers = new Set(creditNotes.map(cn => cn.creditNoteNumber))
+    const newNotes = importPreview.filter(cn => !existingNumbers.has(cn.creditNoteNumber))
+    const duplicates = importPreview.length - newNotes.length
+    const updated = [...newNotes, ...creditNotes]
+    setCreditNotes(updated)
+    setFilteredCreditNotes(updated)
+    saveCreditNotesToStorage(updated)
+    setIsImportDialogOpen(false)
+    setImportPreview([])
+    setImportErrors([])
+    setImportFileName("")
+    toast.success(duplicates > 0
+      ? `Imported ${newNotes.length} credit notes (${duplicates} duplicates skipped)`
+      : `Successfully imported ${newNotes.length} credit notes`)
+  }
+
+  const downloadTemplate = () => {
+    const headers = [
+      "No.", "Sell-to Customer No.", "Customer Name", "Year Group Code",
+      "Posting Date", "Due Date", "Amount", "Amount Including VAT",
+      "Remaining Amount", "Paid", "Currency Code", "Bill-to Customer No.",
+      "Cancelled", "Corrective", "Location Code", "No. Printed", "Description"
+    ]
+    const exampleRow = [
+      "CN-2025-000001", "KC2024001", "James Smith", "YEAR 4",
+      "20/08/2025", "20/08/2025", "5000", "5000",
+      "0", "TRUE", "THB", "KC2024001",
+      "FALSE", "TRUE", "", "1", "Course cancellation"
+    ]
+    downloadAsXlsx(headers, [exampleRow], "credit_note_import_template")
+    toast.success("Template downloaded")
+  }
+
   const getSortedCreditNotes = (creditNotesToSort: CreditNote[]) => {
     if (!sortColumn) return creditNotesToSort
     return [...creditNotesToSort].sort((a, b) => {
@@ -820,28 +986,17 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           )}
 
           <div className="flex gap-2 shrink-0 ml-auto items-center">
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={!userCanEdit}
-              onClick={() => {
-                // Create hidden file input
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.csv,.xlsx,.xls'
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) {
-                    toast.success(`Importing ${file.name}...`)
-                    // Here you would handle the file upload
-                  }
-                }
-                input.click()
-              }}
-            >
-              <Upload className="w-4 h-4" />
-              Import
-            </Button>
+            {(activeTab === "credit-notes" || viewMode === "credit-notes") && (
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                disabled={!userCanEdit}
+                onClick={() => setIsImportDialogOpen(true)}
+              >
+                <Upload className="w-4 h-4" />
+                Import
+              </Button>
+            )}
             <Button
               variant="outline"
               className="flex items-center gap-2"
@@ -923,7 +1078,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <SelectItem value="all">{t("common.allYears")}</SelectItem>
                       {academicYears.map((year) => (
                         <SelectItem key={year.id} value={year.id}>
-                          {year.name}
+                          {formatAcademicYear(year.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -998,7 +1153,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <Calendar
                           mode="single"
                           selected={dateFrom || undefined}
-                          onSelect={setDateFrom}
+                          onSelect={(date) => setDateFrom(date ?? null)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -1015,7 +1170,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <Calendar
                           mode="single"
                           selected={dateTo || undefined}
-                          onSelect={setDateTo}
+                          onSelect={(date) => setDateTo(date ?? null)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -1218,7 +1373,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                             <Badge variant="secondary">{receipt.studentGrade}</Badge>
                           </TableCell>
                           {/* Academic Year - left aligned */}
-                          <TableCell align="left">{receipt.academicYear}</TableCell>
+                          <TableCell align="left">{formatAcademicYear(receipt.academicYear)}</TableCell>
                           {/* Term - left aligned */}
                           <TableCell align="left">{receipt.term}</TableCell>
                         </>
@@ -1393,7 +1548,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           </div>
                           <div className="flex justify-end">
                             <span className="w-24 text-left">School year</span>
-                            <span className="w-28 text-right">{viewingReceipt.academicYear}</span>
+                            <span className="w-28 text-right">{formatAcademicYear(viewingReceipt.academicYear)}</span>
                           </div>
                         </div>
                       </div>
@@ -1652,7 +1807,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <SelectItem value="all">All Academic Years</SelectItem>
                         {academicYears && academicYears.length > 0 ? (
                           academicYears.map(year => (
-                            <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                            <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                           ))
                         ) : null}
                       </SelectContent>
@@ -1673,7 +1828,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           <Calendar
                             mode="single"
                             selected={dateFrom || undefined}
-                            onSelect={setDateFrom}
+                            onSelect={(date) => setDateFrom(date ?? null)}
                             initialFocus
                           />
                         </PopoverContent>
@@ -1694,7 +1849,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <Calendar
                           mode="single"
                           selected={dateTo || undefined}
-                          onSelect={setDateTo}
+                          onSelect={(date) => setDateTo(date ?? null)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -2039,7 +2194,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground mb-2">Academic Year</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.academicYear}</p>
+                          <p className="text-base font-semibold">{formatAcademicYear(viewingCreditNote.academicYear)}</p>
                         </div>
                       </div>
                     </div>
@@ -2195,7 +2350,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     </SelectTrigger>
                     <SelectContent>
                       {academicYears.map(year => (
-                        <SelectItem key={year.id} value={year.name}>{year.name}</SelectItem>
+                        <SelectItem key={year.id} value={year.name}>{formatAcademicYear(year.name)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -2275,6 +2430,112 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           </DialogContent>
         </Dialog>
       }
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
+        setIsImportDialogOpen(open)
+        if (!open) { setImportPreview([]); setImportErrors([]); setImportFileName("") }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogHeader>
+            <DialogTitle>Import Credit Notes</DialogTitle>
+            <DialogDescription>
+              Upload an Excel file to import credit notes. Download the template for the correct format.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Template Download */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Excel Template</p>
+                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+              </div>
+              <Button variant="outline" onClick={downloadTemplate}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Download Template
+              </Button>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="creditNoteFile">Upload File</Label>
+              <Input
+                id="creditNoteFile"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFile}
+                className="cursor-pointer"
+                disabled={!userCanEdit}
+              />
+            </div>
+
+            {/* Error Display */}
+            {importErrors.length > 0 && (
+              <div className="p-3 border border-red-200 bg-red-50 rounded-lg text-red-700 text-sm">
+                {importErrors[0]}{importErrors.length > 1 ? ` (+${importErrors.length - 1} more)` : ""}
+              </div>
+            )}
+
+            {/* Preview Table */}
+            {importPreview.length > 0 && (
+              <div className="space-y-2">
+                <Label>Preview ({importPreview.length} records)</Label>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="max-h-[300px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead align="left">Credit Note No.</TableHead>
+                          <TableHead align="left">Student</TableHead>
+                          <TableHead align="left">Year Group</TableHead>
+                          <TableHead align="right">Amount</TableHead>
+                          <TableHead align="left">Date</TableHead>
+                          <TableHead align="left">Reason</TableHead>
+                          <TableHead align="center">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importPreview.map((cn, i) => (
+                          <TableRow key={i}>
+                            <TableCell align="left" className="font-mono text-sm">{cn.creditNoteNumber}</TableCell>
+                            <TableCell align="left">
+                              <div className="font-medium text-sm">{cn.studentName}</div>
+                              <div className="text-xs text-muted-foreground">{cn.studentId}</div>
+                            </TableCell>
+                            <TableCell align="left"><Badge variant="outline" className="text-xs">{cn.studentGrade}</Badge></TableCell>
+                            <TableCell align="right" className="font-medium">฿{cn.amount.toLocaleString()}</TableCell>
+                            <TableCell align="left" className="text-sm">{format(cn.issueDate, "dd/MM/yyyy")}</TableCell>
+                            <TableCell align="left" className="text-sm max-w-[160px] truncate">{cn.reason}</TableCell>
+                            <TableCell align="center">
+                              <Badge className={cn.status === "issued" ? "bg-blue-100 text-blue-800" : cn.status === "cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}>
+                                {cn.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={performImport}
+              disabled={!userCanEdit || importPreview.length === 0 || importErrors.length > 0}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import {importPreview.length > 0 ? `${importPreview.length} Records` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div >
   )
 }

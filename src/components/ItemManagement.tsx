@@ -55,93 +55,7 @@ const afterSchoolCategories = ["Field Trip", "Camp", "Sports Event", "Cultural E
 const eventCategories = ["International Exam", "English Proficiency", "Competition", "School Exam", "Certification"]
 const summerCategories = ["Annual Service", "Term Service", "Monthly Service", "Special Service"]
 
-const mockItems: Item[] = [
-  // Tuition items
-  {
-    id: "item-001",
-    itemCode: "TUI-001",
-    name: "Application Fee",
-    description: "Non-refundable application fee for new students",
-    amount: 5000,
-    category: "Tuition",
-    nominalCode: "4110001",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  },
-  {
-    id: "item-002",
-    itemCode: "TUI-002",
-    name: "Registration Fee",
-    description: "Non-refundable registration fee for enrolled students",
-    amount: 225000,
-    category: "Tuition",
-    nominalCode: "4110002",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  },
-  {
-    id: "item-030",
-    itemCode: "TUI-006",
-    name: "Security Deposit",
-    description: "Refundable security deposit upon graduation or withdrawal",
-    amount: 200000,
-    category: "Tuition",
-    nominalCode: "2130006",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  },
-  {
-    id: "item-003",
-    itemCode: "TUI-003",
-    name: "Term 1 Tuition Fee",
-    description: "First term tuition payment for academic year",
-    amount: 150000,
-    category: "Tuition",
-    nominalCode: "4110003",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  },
-  {
-    id: "item-004",
-    itemCode: "TUI-004",
-    name: "Term 2 Tuition Fee",
-    description: "Second term tuition payment for academic year",
-    amount: 150000,
-    category: "Tuition",
-    nominalCode: "4110004",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  },
-  {
-    id: "item-031",
-    itemCode: "TUI-007",
-    name: "Term 3 Tuition Fee",
-    description: "Third term tuition payment for academic year",
-    amount: 150000,
-    category: "Tuition",
-    nominalCode: "4110007",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  },
-  {
-    id: "item-029",
-    itemCode: "TUI-005",
-    name: "Uniform & Textbooks",
-    description: "School uniform and required textbooks",
-    amount: 15000,
-    category: "Tuition",
-    nominalCode: "4110005",
-    documentType: "SI",
-    isActive: true,
-    applicableGrades: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
-  }
-]
+const mockItems: Item[] = []
 
 // ECA items - Music Programs
 const mockECAItems: Item[] = [
@@ -2313,7 +2227,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       "Category",
       "Nominal Code",
       "Document Type",
-      "Applicable Grades",
       "Status"
     ]
 
@@ -2325,7 +2238,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       categories[0],
       "4110001",
       "SI",
-      "Year 1,Year 2,Year 3",
       "active"
     ]
 
@@ -2381,13 +2293,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         return
       }
 
-      // Parse applicable grades
-      const gradesString = row["Applicable Grades"] || ""
-      const applicableGrades = gradesString
-        .split(",")
-        .map((g: string) => g.trim())
-        .filter((g: string) => g && grades.includes(g))
-
       const newItem: Item = {
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         itemCode: row["Item Code"],
@@ -2398,7 +2303,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         nominalCode: row["Nominal Code"] || "",
         documentType: (row["Document Type"] === "CI" ? "CI" : "SI") as "SI" | "CI",
         isActive: (row["Status"] || "active").toLowerCase() === "active",
-        applicableGrades: applicableGrades,
+        applicableGrades: grades, // Apply to all grades by default
         invoiceType: invoiceType as "student" | "external" | "eca"
       }
 
@@ -3491,56 +3396,65 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             )}
 
             {/* Preview Table */}
-            {importPreview.length > 0 && (
-              <div className="space-y-2">
-                <Label>Preview ({importPreview.length} items)</Label>
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="max-h-[300px] overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {/* Item Code - left aligned */}
-                          <TableHead align="left">Item Code</TableHead>
-                          {/* Name - left aligned */}
-                          <TableHead align="left">Name</TableHead>
-                          {/* Amount - right aligned (currency) */}
-                          <TableHead align="right">Amount</TableHead>
-                          {/* Category - left aligned */}
-                          <TableHead align="left">Category</TableHead>
-                          {/* Status - center aligned (badge) */}
-                          <TableHead align="center">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {importPreview.slice(0, 10).map((row, index) => (
-                          <TableRow key={index}>
-                            {/* Item Code - left aligned */}
-                            <TableCell align="left" className="font-mono text-sm">{row["Item Code"]}</TableCell>
-                            {/* Name - left aligned */}
-                            <TableCell align="left">{row["Name"]}</TableCell>
-                            {/* Amount - right aligned (currency) */}
-                            <TableCell align="right">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
-                            {/* Category - left aligned */}
-                            <TableCell align="left">
-                              <Badge variant="outline">{row["Category"] || "-"}</Badge>
-                            </TableCell>
-                            {/* Status - center aligned (badge) */}
-                            <TableCell align="center">
-                              <Badge variant="outline">{row["Status"] || "active"}</Badge>
-                            </TableCell>
-                          </TableRow>
+            {importPreview.length > 0 && (() => {
+              const duplicateRows = importPreview.filter(row => items.some(item => item.itemCode === row["Item Code"]))
+              return (
+                <div className="space-y-2">
+                  <Label>Preview ({importPreview.length} items)</Label>
+
+                  {/* Duplicate warning */}
+                  {duplicateRows.length > 0 && (
+                    <div className="p-3 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-800 text-sm space-y-1">
+                      <p className="font-semibold">⚠ พบ {duplicateRows.length} รายการซ้ำ — จะถูกข้ามการ import</p>
+                      <ul className="list-disc list-inside space-y-0.5 text-xs">
+                        {duplicateRows.map((row, i) => (
+                          <li key={i}>
+                            <span className="font-mono">{row["Item Code"]}</span> — {row["Name"]}
+                          </li>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {importPreview.length > 10 && (
-                    <div className="p-2 text-center text-sm text-muted-foreground border-t">
-                      ... and {importPreview.length - 10} more items
+                      </ul>
                     </div>
                   )}
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-[300px] overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead align="left">Item Code</TableHead>
+                            <TableHead align="left">Name</TableHead>
+                            <TableHead align="right">Amount</TableHead>
+                            <TableHead align="left">Category</TableHead>
+                            <TableHead align="center">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {importPreview.map((row, index) => {
+                            const isDuplicate = items.some(item => item.itemCode === row["Item Code"])
+                            return (
+                              <TableRow key={index} className={isDuplicate ? "bg-yellow-50" : ""}>
+                                <TableCell align="left" className="font-mono text-sm">
+                                  {row["Item Code"]}
+                                  {isDuplicate && <span className="ml-2 text-xs text-yellow-700 font-normal">(ซ้ำ)</span>}
+                                </TableCell>
+                                <TableCell align="left" className={isDuplicate ? "text-yellow-700" : ""}>{row["Name"]}</TableCell>
+                                <TableCell align="right">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
+                                <TableCell align="left">
+                                  <Badge variant="outline">{row["Category"] || "-"}</Badge>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Badge variant="outline">{row["Status"] || "active"}</Badge>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
 
           <DialogFooter>

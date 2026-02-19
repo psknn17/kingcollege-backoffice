@@ -24,6 +24,7 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 
 interface FamilyDetail {
   familyCode: string
@@ -279,9 +280,9 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-2">{t("waiveFee.waiverDetails")} - {academicYear}</h2>
+          <h2 className="mb-2">{t("waiveFee.waiverDetails")} - {formatAcademicYear(academicYear)}</h2>
           <p className="text-muted-foreground">
-            {t("waiveFee.waiverDetailsDescription").replace("{year}", academicYear)}
+            {t("waiveFee.waiverDetailsDescription").replace("{year}", formatAcademicYear(academicYear))}
           </p>
         </div>
         <Button onClick={onBack} variant="outline">
@@ -392,7 +393,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
             {t("waiveFee.familyWaiverDetails")}
           </CardTitle>
           <CardDescription>
-            {t("waiveFee.familyWaiverDetailsDescription").replace("{year}", academicYear)}
+            {t("waiveFee.familyWaiverDetailsDescription").replace("{year}", formatAcademicYear(academicYear))}
           </CardDescription>
         </CardHeader>
         <CardContent>

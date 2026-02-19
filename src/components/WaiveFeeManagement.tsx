@@ -37,6 +37,7 @@ import {
 import { toast } from "@/components/ui/sonner"
 import { Switch } from "./ui/switch"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { useStudents } from "@/contexts/StudentContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 
@@ -333,7 +334,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                 </SelectTrigger>
                 <SelectContent>
                   {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                    <SelectItem key={year} value={year}>{formatAcademicYear(year)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -531,7 +532,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                 </div>
                 {availableYears.map(year => (
                   <div key={year} className="font-medium text-sm text-center p-2 bg-muted rounded-lg flex flex-col items-center gap-2">
-                    <span>{year}</span>
+                    <span>{formatAcademicYear(year)}</span>
                     <Button
                       variant="outline"
                       size="sm"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -388,7 +388,7 @@ export function EmailHistory() {
                         <span>{item.subject}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-muted-foreground">{item.academicYear}</td>
+                    <td className="p-4 text-muted-foreground">{formatAcademicYear(item.academicYear)}</td>
                     <td className="p-4 text-muted-foreground">{item.term}</td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -468,7 +468,7 @@ export function EmailHistory() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Academic Year</Label>
-                  <p className="text-base font-medium mt-1">{detailsDialog.academicYear}</p>
+                  <p className="text-base font-medium mt-1">{formatAcademicYear(detailsDialog.academicYear)}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Term</Label>
@@ -501,7 +501,7 @@ export function EmailHistory() {
                     Please ensure that your payment is completed on time to avoid any inconvenience.
                   </p>
                   <p className="mt-3">
-                    Academic Year: {detailsDialog.academicYear}<br />
+                    Academic Year: {formatAcademicYear(detailsDialog.academicYear)}<br />
                     Term: {detailsDialog.term}
                   </p>
                   <p className="mt-3">
@@ -612,7 +612,7 @@ export function EmailHistory() {
               <div className="p-4 bg-muted rounded-lg">
                 <p className="font-semibold">{resendDialog.subject}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {resendDialog.academicYear} • {resendDialog.term}
+                  {formatAcademicYear(resendDialog.academicYear)} • {resendDialog.term}
                 </p>
               </div>
 

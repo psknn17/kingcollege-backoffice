@@ -8,7 +8,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { ColumnPresets } from "@/utils/tableAlignment"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
+import * as XLSX from "xlsx"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -482,7 +483,9 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): PreCreatedIt
         amount: item.amount,
         category: item.category,
         isActive: item.isActive,
-        applicableGrades: item.applicableGrades || []
+        applicableGrades: item.applicableGrades || [],
+        itemCode: item.itemCode || "",
+        nominalCode: item.nominalCode || ""
       }))
 
       // Migration: Fix summer items with empty applicableGrades
@@ -1498,11 +1501,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         // Find the updated version from availableStudents
         const updated = availableStudents.find(a => a.id === selected.id)
         if (updated) {
-          // Update feeWaiver and discounts from the recalculated availableStudents
+          // Update feeWaiver and all discounts from the recalculated availableStudents
           return {
             ...selected,
             feeWaiver: updated.feeWaiver,
-            discounts: { ...selected.discounts, siblingDiscount: updated.discounts.siblingDiscount }
+            discounts: updated.discounts
           }
         }
         return selected
@@ -1510,7 +1513,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       // Only update if there are actual changes
       const hasChanges = updatedStudents.some((s, i) =>
         s.feeWaiver?.eligible !== selectedStudents[i]?.feeWaiver?.eligible ||
-        s.discounts.siblingDiscount !== selectedStudents[i]?.discounts.siblingDiscount
+        (s.discounts?.siblingDiscount ?? 0) !== (selectedStudents[i]?.discounts?.siblingDiscount ?? 0) ||
+        (s.discounts?.studentGroupDiscounts?.length ?? 0) !== (selectedStudents[i]?.discounts?.studentGroupDiscounts?.length ?? 0)
       )
       if (hasChanges) {
         setSelectedStudents(updatedStudents)
@@ -1624,6 +1628,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       if (termMatch) {
         setSelectedAcademicYear(termMatch[1].trim())
         setSelectedTerm(termMatch[2].trim())
+      } else {
+        // Fallback for imported invoices where term and academicYear are stored separately
+        // Normalize "2024/2025" (Excel format) → "2024-2025" (Select ID format)
+        if (editInvoice.academicYear) setSelectedAcademicYear(editInvoice.academicYear.replace('/', '-'))
+        // Normalize "Term 1" → "term1" to match term IDs
+        if (editInvoice.term) setSelectedTerm(editInvoice.term.toLowerCase().replace(/\s+/g, ''))
       }
 
       // Set grade and room
@@ -1651,6 +1661,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
       // Set selected student
       if (editInvoice.studentId) {
+        // Load student group discounts directly from localStorage so they show immediately in edit mode
+        const groupDiscounts = getStudentGroupDiscounts(editInvoice.studentId, category)
         const student: InvoiceStudent = {
           id: editInvoice.studentId,
           name: editInvoice.studentName || '',
@@ -1661,10 +1673,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           isNewStudent: editInvoice.isNewStudent || false,
           discounts: {
             siblingDiscount: 0,
-            studentGroupDiscounts: [],
-            staffChild: false,
-            scholarship: false,
-            earlyBird: false
+            studentGroupDiscounts: groupDiscounts.map(g => ({
+              name: g.name,
+              type: g.discountType,
+              percentage: g.discountPercentage,
+              fixedAmount: g.fixedAmount
+            })),
+            staffChild: isStaffChildStudent(editInvoice.studentId),
+            scholarship: hasScholarshipDiscount(editInvoice.studentId),
+            earlyBird: hasEarlyBirdDiscount(editInvoice.studentId)
           },
           feeWaiver: editInvoice.feeWaiver
         }
@@ -1921,6 +1938,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 console.error("Failed to look up item:", e)
               }
 
+              // If no matching item found in Item Master, do not add any tuition item
+              if (!itemCode) {
+                return
+              }
+
               const tuitionItem = {
                 id: `tuition-${gradeId}-${selectedTerm}`,
                 name: `${termName} Tuition Fee - ${selectedGrade}`,
@@ -2105,6 +2127,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   console.error("Failed to look up item:", e)
                 }
 
+                // If no matching item found in Item Master, do not add any tuition item
+                if (!itemCode) {
+                  setSelectedItems([])
+                  return
+                }
+
                 setSelectedItems([{
                   id: `tuition-${gradeId}-${term}`,
                   name: `${termName} Tuition Fee - ${selectedGrade}`,
@@ -2280,7 +2308,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     }
 
     // Student Group Discounts
-    discounts.studentGroupDiscounts.forEach(group => {
+    (discounts.studentGroupDiscounts || []).forEach(group => {
       if (group.type === "percentage" && group.percentage > 0) {
         const amount = Math.round(subtotal * group.percentage / 100)
         discountItems.push({
@@ -2329,8 +2357,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
   // Check if student has any discounts
   const hasDiscounts = (student: InvoiceStudent) => {
+    if (!student.discounts) return false
     return student.discounts.siblingDiscount > 0 ||
-      student.discounts.studentGroupDiscounts.length > 0 ||
+      (student.discounts.studentGroupDiscounts?.length ?? 0) > 0 ||
       student.discounts.staffChild ||
       student.discounts.scholarship ||
       student.discounts.earlyBird
@@ -2558,18 +2587,59 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      setCsvFile(file)
-      // Simulate CSV parsing
-      const mockCsvData = [
-        { id: "ST001301", name: "CSV Student 1", grade: selectedGrade, room: selectedRoom || "Unknown", parentName: "Parent 1", email: "parent1@email.com" },
-        { id: "ST001302", name: "CSV Student 2", grade: selectedGrade, room: selectedRoom || "Unknown", parentName: "Parent 2", email: "parent2@email.com" },
-        { id: "ST001303", name: "CSV Student 3", grade: selectedGrade, room: selectedRoom || "Unknown", parentName: "Parent 3", email: "parent3@email.com" },
-      ]
-      setCsvStudents(mockCsvData)
-      setSelectedStudents(mockCsvData)
-      toast.success(`Loaded ${mockCsvData.length} students from CSV`)
+    if (!file) return
+
+    setCsvFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result
+        const workbook = XLSX.read(data, { type: "binary" })
+        const sheet = workbook.Sheets[workbook.SheetNames[0]]
+        const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as string[][]
+
+        // Skip header row (index 0), read Student ID from column 0
+        const studentIds = rows
+          .slice(1)
+          .map(row => String(row[0] || "").trim())
+          .filter(id => id !== "" && id.toLowerCase() !== "student id")
+
+        // Match IDs against availableStudents (which have discounts populated)
+        const matched: InvoiceStudent[] = []
+        const notFound: string[] = []
+
+        studentIds.forEach(id => {
+          const found = availableStudents.find(s => s.id === id)
+          if (found) {
+            matched.push(found)
+          } else {
+            notFound.push(id)
+          }
+        })
+
+        // Add to existing selected students (avoid duplicates)
+        const newStudents = matched.filter(s => !selectedStudents.find(existing => existing.id === s.id))
+        setCsvStudents(matched)
+        setSelectedStudents(prev => [...prev, ...newStudents])
+
+        const added = newStudents.length
+        const skipped = matched.length - newStudents.length
+        if (added > 0 && notFound.length === 0 && skipped === 0) {
+          toast.success(`Added ${added} student${added > 1 ? 's' : ''} from file`)
+        } else if (added > 0) {
+          const parts = []
+          if (notFound.length > 0) parts.push(`${notFound.length} ID${notFound.length > 1 ? 's' : ''} not found`)
+          if (skipped > 0) parts.push(`${skipped} already selected`)
+          toast.success(`Added ${added} student${added > 1 ? 's' : ''}${parts.length ? ` (${parts.join(', ')})` : ''}`)
+        } else {
+          toast.error("No matching students found. Please check the Student IDs in the file.")
+        }
+      } catch (err) {
+        console.error("Failed to parse student list file:", err)
+        toast.error("Failed to read file. Please use the downloaded template format.")
+      }
     }
+    reader.readAsBinaryString(file)
   }
 
   const handleItemSelect = (item: PreCreatedItem) => {
@@ -2812,10 +2882,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         totalDiscount: discountCalc.totalDiscountAmount,
         netAmount: discountCalc.netAmount,
         dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
-        issueDate: format(now, 'yyyy-MM-dd'),
+        issueDate: null,
         status: "sent",
         term: `${selectedAcademicYear} - ${selectedTerm}`,
-        academicYear: selectedAcademicYear || effectiveAcademicYear,
         paymentType: "termly",
         createdAt: now.toISOString(),
         invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
@@ -2944,8 +3013,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         const invoiceStudent = student as InvoiceStudent
         const subtotal = getTotalAmount()
         const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
-        // Use existing invoice number if editing, otherwise create draft number
-        const invoiceNumber = isEditMode && editInvoice?.invoiceNumber
+        // Only the original student (same ID as editInvoice) keeps the existing invoice number/id.
+        // Additional students added during edit get brand new invoices.
+        const isOriginalStudent = isEditMode && editInvoice?.studentId === student.id
+        const invoiceNumber = isOriginalStudent && editInvoice?.invoiceNumber
           ? editInvoice.invoiceNumber
           : `DRAFT-${Date.now()}-${student.id.slice(-4)}`
 
@@ -2988,7 +3059,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         const invoiceAccountCode = selectedItems.length > 0 ? getAccountCode(selectedItems[0]) : '2130001'
 
         const savedInvoice: SavedInvoice = {
-          id: isEditMode && editInvoice?.id ? editInvoice.id : `inv-${student.id}-${Date.now()}`,
+          id: isOriginalStudent && editInvoice?.id ? editInvoice.id : `inv-${student.id}-${Date.now()}`,
           invoiceNumber: invoiceNumber,
           studentName: student.name || '',
           studentId: student.id || '',
@@ -3002,9 +3073,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           totalDiscount: discountCalc.totalDiscountAmount,
           netAmount: discountCalc.netAmount,
           dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
-          issueDate: isEditMode && editInvoice?.issueDate ? editInvoice.issueDate : null,
-          status: "pending_approval", // Pending approval status
-          approvalStatus: editInvoice?.approvalStatus || "wait",
+          issueDate: isOriginalStudent && editInvoice?.issueDate ? editInvoice.issueDate : null,
+          status: "pending_approval",
+          approvalStatus: isOriginalStudent ? (editInvoice?.approvalStatus || "wait") : "wait",
           term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
           paymentType: "termly",
           createdAt: now.toISOString(),
@@ -3031,16 +3102,19 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       })
 
       console.log("All invoices saved successfully")
+      const newStudentCount = isEditMode ? selectedStudents.filter(s => s.id !== editInvoice?.studentId).length : 0
       toast.success(isEditMode
-        ? `Invoice ${editInvoice?.invoiceNumber} updated successfully`
+        ? newStudentCount > 0
+          ? `Updated invoice ${editInvoice?.invoiceNumber} and created ${newStudentCount} new invoice(s)`
+          : `Invoice ${editInvoice?.invoiceNumber} updated successfully`
         : `Submitted ${selectedStudents.length} invoice(s) for approval`)
       logActivity({
-        action: isEditMode
-          ? `Updated invoice ${editInvoice?.invoiceNumber || ""}`
-          : "Created invoices",
+        action: isEditMode ? `Updated invoice ${editInvoice?.invoiceNumber || ""}` : "Created invoices",
         module: "Invoices",
         detail: isEditMode
-          ? `Updated invoice ${editInvoice?.invoiceNumber || "-"}`
+          ? newStudentCount > 0
+            ? `Updated ${editInvoice?.invoiceNumber || "-"} and created ${newStudentCount} new invoice(s)`
+            : `Updated invoice ${editInvoice?.invoiceNumber || "-"}`
           : `Submitted ${selectedStudents.length} invoice(s) for approval`
       })
       setIsPreviewDialogOpen(false)
@@ -3161,7 +3235,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </SelectTrigger>
                   <SelectContent>
                     {academicYears.map(year => (
-                      <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                      <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -3986,6 +4060,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           </Button>
                           <Button
                             variant="outline"
+                            disabled={!userCanEdit}
                             onClick={() => setIsAddNewStudentOpen(true)}
                             className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
                           >
@@ -4191,7 +4266,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                       Sibling {invoiceStudent.discounts.siblingDiscount}%
                                     </Badge>
                                   )}
-                                  {invoiceStudent.discounts.studentGroupDiscounts.map((g, i) => (
+                                  {(invoiceStudent.discounts.studentGroupDiscounts || []).map((g, i) => (
                                     <Badge key={i} variant="outline" className="text-xs bg-cyan-100 text-cyan-700 border-cyan-300">
                                       {g.name}
                                     </Badge>
@@ -4432,7 +4507,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>{t('common.gender')}</Label>
-                  <Select disabled={!userCanEdit} value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>
+                  <Select value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -4487,7 +4562,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               {newStudentFamilyType === "existing" ? (
                 <div className="space-y-2">
                   <Label>{t('invoiceCreation.selectFamily')}</Label>
-                  <Select disabled={!userCanEdit} value={newStudentFamilyId} onValueChange={setNewStudentFamilyId}>
+                  <Select value={newStudentFamilyId} onValueChange={setNewStudentFamilyId}>
                     <SelectTrigger>
                       <SelectValue placeholder={t('invoiceCreation.selectFamily')} />
                     </SelectTrigger>
@@ -4508,7 +4583,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               ) : (
                 <div className="space-y-2">
                   <Label>{t('invoiceCreation.childOrderInFamily')}</Label>
-                  <Select disabled={!userCanEdit} value={String(newStudentChildOrder)} onValueChange={(v) => setNewStudentChildOrder(Number(v))}>
+                  <Select value={String(newStudentChildOrder)} onValueChange={(v) => setNewStudentChildOrder(Number(v))}>
                     <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
@@ -4538,7 +4613,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </div>
                   <div className="space-y-2">
                     <Label>{t('common.relationship')}</Label>
-                    <Select disabled={!userCanEdit} value={newStudentParentRelation} onValueChange={(v: "father" | "mother" | "guardian" | "other") => setNewStudentParentRelation(v)}>
+                    <Select value={newStudentParentRelation} onValueChange={(v: "father" | "mother" | "guardian" | "other") => setNewStudentParentRelation(v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -5012,7 +5087,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>School year</span>
-                                <span className="flex-1 text-right">{selectedAcademicYear || getAcademicYear(issueDate)}</span>
+                                <span className="flex-1 text-right">{selectedAcademicYear || (issueDate ? getAcademicYear(issueDate) : '')}</span>
                               </div>
                               <div className="flex py-1">
                                 <span style={{ width: '90px' }}>Term</span>

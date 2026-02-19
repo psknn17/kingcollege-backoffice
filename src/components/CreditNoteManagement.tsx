@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
+import * as XLSX from "xlsx"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -122,6 +123,13 @@ export function CreditNoteManagement() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreateReceiptModalOpen, setIsCreateReceiptModalOpen] = useState(false)
   const [activeTab, setActiveTab] = usePersistedState<"receipts" | "credit-notes">("credit-note:activeTab", "receipts")
+
+  // Import states
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [importPreview, setImportPreview] = useState<CreditNote[]>([])
+  const [importErrors, setImportErrors] = useState<string[]>([])
+  const [importFileName, setImportFileName] = useState("")
+  const importFileInputRef = useRef<HTMLInputElement>(null)
 
   // Mock receipts data - using translation keys where applicable
   const receipts = [
@@ -452,6 +460,157 @@ export function CreditNoteManagement() {
     setCurrentPage(1)
   }, [searchTerm, statusFilter, typeFilter, dateFrom, dateTo, sortColumn, sortDirection])
 
+  // --- Import helpers ---
+  const parseImportDate = (value: any): Date => {
+    if (!value) return new Date()
+    const num = Number(value)
+    if (!isNaN(num) && num > 40000 && num < 100000) {
+      return new Date((num - 25569) * 86400 * 1000)
+    }
+    const str = String(value).trim()
+    if (!str) return new Date()
+    const parts = str.split("/")
+    if (parts.length === 3) {
+      let [a, b, c] = parts.map(Number)
+      if (c < 100) c = c + 2000
+      if (a > 12) return new Date(c, b - 1, a)
+      return new Date(c, a - 1, b)
+    }
+    return new Date(str)
+  }
+
+  const parseTypeFromDescription = (description: string): CreditNote["type"] => {
+    const lower = (description || "").toLowerCase()
+    if (lower.includes("refund")) return "refund"
+    if (lower.includes("cancel")) return "cancellation"
+    if (lower.includes("discount")) return "discount"
+    return "adjustment"
+  }
+
+  const normalizeYearGroup = (yearGroup: string): string => {
+    if (!yearGroup) return ""
+    return yearGroup
+      .replace(/^YEAR\s+/i, "Year ")
+      .replace(/^PRE[- ]?NURSERY$/i, "Pre-Nursery")
+      .replace(/^NURSERY$/i, "Nursery")
+      .replace(/^RECEPTION$/i, "Reception")
+  }
+
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const ext = file.name.toLowerCase()
+    if (!ext.endsWith(".xlsx") && !ext.endsWith(".xls")) {
+      toast.error("Please select an Excel file (.xlsx or .xls)")
+      return
+    }
+
+    setImportFileName(file.name)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result
+        const workbook = XLSX.read(data, { type: "binary", cellDates: false })
+
+        const sheetName =
+          workbook.SheetNames.find((name) => name.toLowerCase().includes("credit")) ||
+          workbook.SheetNames[0]
+
+        const worksheet = workbook.Sheets[sheetName]
+        const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" })
+
+        const errors: string[] = []
+        const preview: CreditNote[] = []
+
+        rows.forEach((row, index) => {
+          const rowNum = index + 2
+          const no = row["No."]
+
+          // Skip annotation/empty rows
+          if (!no || String(no).toLowerCase().includes("student") || String(no).toLowerCase() === "no.") return
+
+          const creditNoteNumber = String(no).trim()
+          const studentId = String(row["Sell-to Customer No."] || "").trim()
+          const studentName = String(row["Customer Name"] || "").trim()
+          const yearGroup = String(row["Year Group Code"] || "").trim()
+          const postingDate = row["Posting Date"]
+          const dueDateRaw = row["Due Date"]
+          const amount = parseFloat(String(row["Amount"] || "0").replace(/,/g, ""))
+          const cancelled = row["Cancelled"]
+          const description = String(row["Description"] || "").trim()
+          const familyCode = String(row["Bill-to Customer No."] || "").trim()
+
+          if (!creditNoteNumber) {
+            errors.push(`Row ${rowNum}: Missing Credit Note Number`)
+            return
+          }
+          if (!studentId && !studentName) {
+            errors.push(`Row ${rowNum}: Missing Student ID and Name`)
+            return
+          }
+          if (isNaN(amount) || amount <= 0) {
+            errors.push(`Row ${rowNum}: Invalid amount for ${creditNoteNumber}`)
+            return
+          }
+
+          let status: CreditNote["status"] = "issued"
+          if (cancelled === "TRUE" || cancelled === true) status = "cancelled"
+
+          preview.push({
+            id: `import-${Date.now()}-${index}`,
+            creditNoteNumber,
+            invoiceNumber: "",
+            studentName,
+            studentId,
+            studentGrade: normalizeYearGroup(yearGroup),
+            parentName: familyCode,
+            originalAmount: amount,
+            creditAmount: amount,
+            reason: description || "Imported Credit Note",
+            type: parseTypeFromDescription(description),
+            status,
+            issueDate: parseImportDate(postingDate),
+            dueDate: dueDateRaw ? parseImportDate(dueDateRaw) : undefined,
+            issuedBy: user?.name || "Import",
+            notes: `Imported from ${file.name}`,
+          })
+        })
+
+        setImportPreview(preview)
+        setImportErrors(errors)
+        setIsImportModalOpen(true)
+      } catch (error) {
+        console.error("Import error:", error)
+        toast.error("Failed to read Excel file")
+      }
+    }
+    reader.readAsBinaryString(file)
+    event.target.value = ""
+  }
+
+  const performImport = () => {
+    if (importPreview.length === 0) return
+    const existingNumbers = new Set(creditNotes.map((cn) => cn.creditNoteNumber))
+    const newNotes = importPreview.filter((cn) => !existingNumbers.has(cn.creditNoteNumber))
+    const duplicates = importPreview.length - newNotes.length
+
+    const updated = [...newNotes, ...creditNotes]
+    setCreditNotes(updated)
+    saveCreditNotesToStorage(updated)
+
+    setIsImportModalOpen(false)
+    setImportPreview([])
+    setImportErrors([])
+
+    if (duplicates > 0) {
+      toast.success(`Imported ${newNotes.length} credit notes (${duplicates} duplicates skipped)`)
+    } else {
+      toast.success(`Successfully imported ${newNotes.length} credit notes`)
+    }
+  }
+
   const summaryStats = {
     total: creditNotes.length,
     draft: creditNotes.filter(cn => cn.status === "draft").length,
@@ -461,6 +620,7 @@ export function CreditNoteManagement() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
@@ -494,7 +654,19 @@ export function CreditNoteManagement() {
               <Download className="w-4 h-4" />
               {t("invoice.exportReport")}
             </Button>
-            <Button variant="outline" className="flex items-center gap-2" disabled={!userCanEdit}>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={!userCanEdit}
+              onClick={() => importFileInputRef.current?.click()}
+            >
               <Upload className="w-4 h-4" />
               Import
             </Button>
@@ -744,7 +916,7 @@ export function CreditNoteManagement() {
                     <Calendar
                       mode="single"
                       selected={dateFrom || undefined}
-                      onSelect={setDateFrom}
+                      onSelect={(date) => setDateFrom(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -761,7 +933,7 @@ export function CreditNoteManagement() {
                     <Calendar
                       mode="single"
                       selected={dateTo || undefined}
-                      onSelect={setDateTo}
+                      onSelect={(date) => setDateTo(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -973,7 +1145,7 @@ export function CreditNoteManagement() {
       </Tabs>
     </div>
 
-      {/* Credit Note Detail Modal */}
+    {/* Credit Note Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
@@ -1373,6 +1545,92 @@ export function CreditNoteManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* Import Preview Dialog */}
+      <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Import Credit Notes — Preview
+            </DialogTitle>
+            <DialogDescription>
+              {importFileName} · {importPreview.length} records found
+              {importErrors.length > 0 && ` · ${importErrors.length} errors`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Errors */}
+          {importErrors.length > 0 && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-1">
+              <p className="text-sm font-medium text-red-700 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                Rows with errors (will be skipped):
+              </p>
+              {importErrors.map((err, i) => (
+                <p key={i} className="text-xs text-red-600 ml-5">{err}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Preview Table */}
+          {importPreview.length > 0 ? (
+            <div className="border rounded-lg overflow-auto max-h-[50vh]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead align="left">Credit Note No.</TableHead>
+                    <TableHead align="left">Student</TableHead>
+                    <TableHead align="left">Year Group</TableHead>
+                    <TableHead align="left">Family Code</TableHead>
+                    <TableHead align="right">Amount</TableHead>
+                    <TableHead align="left">Posting Date</TableHead>
+                    <TableHead align="left">Reason</TableHead>
+                    <TableHead align="center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {importPreview.map((cn, i) => (
+                    <TableRow key={i}>
+                      <TableCell align="left" className="font-mono text-sm">{cn.creditNoteNumber}</TableCell>
+                      <TableCell align="left">
+                        <div className="font-medium text-sm">{cn.studentName}</div>
+                        <div className="text-xs text-muted-foreground">{cn.studentId}</div>
+                      </TableCell>
+                      <TableCell align="left">
+                        <Badge variant="outline" className="text-xs">{cn.studentGrade}</Badge>
+                      </TableCell>
+                      <TableCell align="left" className="text-sm">{cn.parentName}</TableCell>
+                      <TableCell align="right" className="font-medium">฿{cn.creditAmount.toLocaleString()}</TableCell>
+                      <TableCell align="left" className="text-sm">{format(cn.issueDate, "dd/MM/yyyy")}</TableCell>
+                      <TableCell align="left" className="text-sm max-w-[180px] truncate">{cn.reason}</TableCell>
+                      <TableCell align="center">{getStatusBadge(cn.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No valid records found in the file.
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              className="flex-1"
+              disabled={importPreview.length === 0}
+              onClick={performImport}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import {importPreview.length} Records
+            </Button>
+            <Button variant="outline" onClick={() => setIsImportModalOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Confirm Dialog */}
       <ConfirmDialog
         open={createDialog.isOpen}
@@ -1382,6 +1640,6 @@ export function CreditNoteManagement() {
         descriptionKey="confirmDialog.createDescription"
         confirmTextKey="common.create"
       />
-    </div>
+    </>
   )
 }

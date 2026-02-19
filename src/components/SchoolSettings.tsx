@@ -100,9 +100,14 @@ export function SchoolSettings() {
 
   const handleResetAllData = () => {
     // Keys to preserve (user management + auth + language)
+    // User Management menu: users, activityLogs — Approval Queue resets with invoices
     const KEEP_KEYS = new Set([
-      "authUser", "users", "needsRoleSelection",
-      "app-language", "currentUser", "username", "mockIp"
+      // Auth / session
+      "authUser", "needsRoleSelection", "currentUser", "username", "mockIp",
+      // User Management menu data
+      "users", "activityLogs",
+      // UI preference
+      "app-language",
     ])
 
     // Keys that need [] written (so components know they're explicitly cleared, not first-run)
@@ -120,7 +125,9 @@ export function SchoolSettings() {
       "studentGroups_event", "studentGroups_summer", "studentGroups_external",
       "summerDiscountGroups",
       // Tuition fees
-      "tuitionByYearData"
+      "tuitionByYearData",
+      // Credit Notes
+      "creditNotes"
     ]
 
     const keysToRemove: string[] = []

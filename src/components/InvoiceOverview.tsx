@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -242,8 +242,8 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
         ["Student ID", invoice.studentId],
         ["Year Group", invoice.studentGrade],
         ["Amount", invoice.amount],
-        ["Due Date", format(invoice.dueDate, "yyyy-MM-dd")],
-        ["Issue Date", invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending"],
+        ["Due Date", format(invoice.dueDate, "dd/MM/yyyy")],
+        ["Issue Date", invoice.issueDate ? format(invoice.issueDate, "dd/MM/yyyy") : "Pending"],
         ["Status", invoice.status],
         ["Term", invoice.term],
         ["Payment Type", invoice.paymentType],
@@ -499,7 +499,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 <SelectContent>
                   <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
                   {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                    <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

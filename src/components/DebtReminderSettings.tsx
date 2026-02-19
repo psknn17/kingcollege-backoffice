@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy } from "lucide-react"
 import { format } from "date-fns"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { toast } from "@/components/ui/sonner"
@@ -711,7 +712,7 @@ export function DebtReminderSettings() {
                         <SelectContent>
                           {academicYears.map(year => (
                             <SelectItem key={year.id} value={year.id}>
-                              {year.name}
+                              {formatAcademicYear(year.name)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -878,7 +879,7 @@ export function DebtReminderSettings() {
                   <div className="p-4 bg-muted rounded-lg">
                     <h4 className="font-medium mb-2">Reminder Preview</h4>
                     <div className="text-sm space-y-1">
-                      <p><strong>Academic Year:</strong> {reminder.academicYear || "Not selected"}</p>
+                      <p><strong>Academic Year:</strong> {formatAcademicYear(reminder.academicYear) || "Not selected"}</p>
                       <p><strong>Term:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term || "Not selected"}</p>
                       <p><strong>Send Date:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
                       <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
@@ -1035,7 +1036,7 @@ export function DebtReminderSettings() {
                                 <SelectContent>
                                   {academicYears.map(year => (
                                     <SelectItem key={year.id} value={year.id}>
-                                      {year.name}
+                                      {formatAcademicYear(year.name)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1202,7 +1203,7 @@ export function DebtReminderSettings() {
                           <div className="p-4 bg-muted rounded-lg">
                             <h4 className="font-medium mb-2">{t("debt.reminderPreview")}</h4>
                             <div className="text-sm space-y-1">
-                              <p><strong>{t("common.academicYear")}:</strong> {reminder.academicYear}</p>
+                              <p><strong>{t("common.academicYear")}:</strong> {formatAcademicYear(reminder.academicYear)}</p>
                               <p><strong>{t("common.term")}:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term}</p>
                               <p><strong>{t("debt.sendDate")}:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
                               <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
@@ -1272,7 +1273,7 @@ export function DebtReminderSettings() {
                     </div>
                   </div>
                   <div className="mt-3 text-xs text-blue-600 space-y-1">
-                    <p>• Academic Year: {previewReminder.academicYear}</p>
+                    <p>• Academic Year: {formatAcademicYear(previewReminder.academicYear)}</p>
                     <p>• Term: {academicYears.find(y => y.id === previewReminder.academicYear)?.terms.find(t => t.id === previewReminder.term)?.name || previewReminder.term}</p>
                     <p>• Invoice Status Filter: {previewReminder.invoiceStatuses?.join(", ")}</p>
                   </div>
@@ -1409,7 +1410,7 @@ export function DebtReminderSettings() {
                         {entry.sentDate ? formatDisplayDate(entry.sentDate) : "-"}
                       </td>
                       <td className="py-3.5 px-5 font-medium text-sm">{entry.subject}</td>
-                      <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.academicYear || "-"}</td>
+                      <td className="py-3.5 px-5 text-muted-foreground text-sm">{formatAcademicYear(entry.academicYear) || "-"}</td>
                       <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.term || "-"}</td>
                       <td className="py-3.5 px-5 text-right">
                         <span className="font-semibold text-sm">{entry.recipients?.toLocaleString() ?? "-"}</span>

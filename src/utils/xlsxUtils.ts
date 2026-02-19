@@ -75,3 +75,21 @@ export function parseXlsxOrCsvFile(file: File): Promise<Record<string, string>[]
  * Get accept string for file input (xlsx + csv)
  */
 export const XLSX_ACCEPT = ".xlsx,.xls,.csv"
+
+/**
+ * Format academic year for display: "2025-2026" → "2025/2026"
+ * Accepts either format as input.
+ */
+export const formatAcademicYear = (year: string | undefined | null): string => {
+  if (!year) return ""
+  return year.replace(/-/g, "/")
+}
+
+/**
+ * Normalize academic year for comparison: always returns "2025-2026" format
+ * Used internally for filter comparisons to handle both formats.
+ */
+export const normalizeAcademicYear = (year: string | undefined | null): string => {
+  if (!year) return ""
+  return year.replace(/\//g, "-")
+}

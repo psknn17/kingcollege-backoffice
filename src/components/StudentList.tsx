@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { usePersistedState } from "@/hooks/usePersistedState"
-import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -265,6 +265,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const [formData, setFormData] = useState<Omit<Student, "id">>(emptyStudent)
   const [newParent, setNewParent] = useState<Omit<Parent, "id">>(emptyParent)
   const [activeTab, setActiveTab] = useState("basic")
+
+  // Date of Birth picker states (lifted from IIFE to avoid hooks rule violation)
+  const [showDobYearPicker, setShowDobYearPicker] = useState(true)
+  const [selectedDobYear, setSelectedDobYear] = useState<number | null>(null)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importData, setImportData] = useState<string>("")
   const [importPreview, setImportPreview] = useState<any[]>([])
@@ -461,6 +465,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       academicYear: availableYears[0] || ""
     })
     setActiveTab("basic")
+    setShowDobYearPicker(true)
+    setSelectedDobYear(null)
     setIsAddDialogOpen(true)
   }
 
@@ -469,6 +475,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     const { id, ...studentData } = student
     setFormData(studentData)
     setActiveTab("basic")
+    setShowDobYearPicker(!studentData.dateOfBirth)
+    setSelectedDobYear(studentData.dateOfBirth ? studentData.dateOfBirth.getFullYear() : null)
     setIsEditDialogOpen(true)
   }
 
@@ -628,14 +636,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         student.firstName,
         student.lastName,
         student.nickname,
-        student.dateOfBirth ? format(student.dateOfBirth, "yyyy-MM-dd") : "",
+        student.dateOfBirth ? format(student.dateOfBirth, "dd/MM/yyyy") : "",
         student.gender,
         student.gradeLevel,
-        student.academicYear,
+        formatAcademicYear(student.academicYear),
         student.status,
         family?.familyName || "",
         student.childOrder,
-        student.enrollmentDate ? format(student.enrollmentDate, "yyyy-MM-dd") : "",
+        student.enrollmentDate ? format(student.enrollmentDate, "dd/MM/yyyy") : "",
         parent1?.name || "",
         parent1?.relationship || "",
         parent1?.phone || "",
@@ -646,9 +654,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         parent2?.email || "",
         student.notes,
         student.createdBy,
-        student.createdAt ? format(student.createdAt, "yyyy-MM-dd HH:mm") : "",
+        student.createdAt ? format(student.createdAt, "dd/MM/yyyy HH:mm") : "",
         student.updatedBy,
-        student.updatedAt ? format(student.updatedAt, "yyyy-MM-dd HH:mm") : ""
+        student.updatedAt ? format(student.updatedAt, "dd/MM/yyyy HH:mm") : ""
       ]
     })
 
@@ -676,30 +684,27 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       }
 
       const fileHeaders = Object.keys(rows[0])
-      console.log("Parsed headers:", fileHeaders)
-      console.log("Total columns:", fileHeaders.length)
 
-      const requiredHeaders = ["Student ID", "First Name", "Last Name", "Year Group", "Academic Year"]
-      const missingHeaders = requiredHeaders.filter(h => !fileHeaders.includes(h))
+      // Accept alternative column names:
+      // "Name" → covers "First Name" + "Last Name" (will split on first space)
+      // "Year" → covers "Academic Year"
+      const hasName = fileHeaders.includes("First Name") || fileHeaders.includes("Name")
+      const hasYear = fileHeaders.includes("Academic Year") || fileHeaders.includes("Year")
+      const hasStudentId = fileHeaders.includes("Student ID")
+      const hasYearGroup = fileHeaders.includes("Year Group")
 
-      if (missingHeaders.length > 0) {
-        setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${fileHeaders.join(", ")}`)
+      const missing: string[] = []
+      if (!hasStudentId) missing.push("Student ID")
+      if (!hasYearGroup) missing.push("Year Group")
+      if (!hasName) missing.push("First Name (or Name)")
+      if (!hasYear) missing.push("Academic Year (or Year)")
+
+      if (missing.length > 0) {
+        setImportError(`Missing required columns: ${missing.join(", ")}. Found: ${fileHeaders.join(", ")}`)
         return
       }
 
       const parsed = rows.map((row, index) => ({ ...row, _rowIndex: index + 2 }))
-
-      // Debug logging
-      console.log("First row sample:", parsed[0])
-      console.log("Academic Year values (first 5):", parsed.slice(0, 5).map(r => r["Academic Year"]))
-
-      // Check for empty Academic Year values
-      const emptyAcademicYears = parsed.filter(row => !row["Academic Year"] || row["Academic Year"].trim() === "")
-      if (emptyAcademicYears.length > 0) {
-        console.warn(`Warning: ${emptyAcademicYears.length} rows have empty Academic Year values`)
-        setImportError(`Warning: ${emptyAcademicYears.length} student(s) are missing Academic Year values. Please fill in the Academic Year column in your file.`)
-        return
-      }
 
       setImportPreview(parsed)
       setImportError("")
@@ -728,10 +733,19 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         return
       }
 
+      // Support both "First Name"/"Last Name" and combined "Name" column
+      const combinedName = row["Name"] || ""
+      const nameParts = combinedName.trim().split(/\s+/)
+      const firstName = row["First Name"] || (nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : nameParts[0]) || ""
+      const lastName = row["Last Name"] || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : "") || ""
+
+      // Support both "Academic Year" and "Year" column
+      const academicYear = row["Academic Year"] || row["Year"] || availableYears[0] || ""
+
       const parentEmail = row["Parent 1 Email"] || ""
       const parentPhone = row["Parent 1 Phone"] || ""
       const familyCode = row["Family Code"] || ""
-      const familyName = row["Last Name"] || familyCode
+      const familyName = lastName || familyCode
 
       // สร้าง ID ล่วงหน้าเพื่อส่งให้ family
       const studentId = `STU-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -749,13 +763,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       const newStudent: Student = {
         id: studentId,
         studentId: row["Student ID"],
-        firstName: row["First Name"],
-        lastName: row["Last Name"],
+        firstName,
+        lastName,
         nickname: row["Nickname"] || "",
         dateOfBirth: row["Date of Birth"] ? new Date(row["Date of Birth"]) : null,
         gender: (row["Gender"]?.toLowerCase() || "other") as "male" | "female" | "other",
         gradeLevel: row["Year Group"]?.toLowerCase().replace(" ", "") || "",
-        academicYear: row["Academic Year"] || availableYears[0] || "",
+        academicYear,
         status: (row["Status"]?.toLowerCase() || "active") as "active" | "graduated" | "withdrawn" | "on_leave",
         familyId: familyId,
         familyCode: familyCode,
@@ -1200,30 +1214,26 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Label>Date of Birth</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!userCanEdit}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.dateOfBirth ? format(formData.dateOfBirth, "PPP") : "Pick a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 {(() => {
-                  const [showYearPicker, setShowYearPicker] = useState(true)
-                  const [selectedYear, setSelectedYear] = useState<number | null>(
-                    formData.dateOfBirth ? formData.dateOfBirth.getFullYear() : null
-                  )
                   const currentYear = new Date().getFullYear()
                   const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => currentYear - i)
 
-                  if (showYearPicker) {
+                  if (showDobYearPicker) {
                     return (
                       <div className="p-4 w-80">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-semibold text-sm">Select Year</h4>
-                          {selectedYear && (
+                          {selectedDobYear && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setShowYearPicker(false)}
+                              onClick={() => setShowDobYearPicker(false)}
                             >
                               Cancel
                             </Button>
@@ -1233,12 +1243,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                           {years.map(year => (
                             <Button
                               key={year}
-                              variant={selectedYear === year ? "default" : "outline"}
+                              variant={selectedDobYear === year ? "default" : "outline"}
                               size="sm"
                               className="h-10"
                               onClick={() => {
-                                setSelectedYear(year)
-                                setShowYearPicker(false)
+                                setSelectedDobYear(year)
+                                setShowDobYearPicker(false)
                               }}
                             >
                               {year}
@@ -1255,17 +1265,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setShowYearPicker(true)}
+                          onClick={() => setShowDobYearPicker(true)}
                           className="text-sm font-medium"
                         >
-                          {selectedYear || 'Select Year'} <ChevronDown className="ml-1 h-4 w-4" />
+                          {selectedDobYear || 'Select Year'} <ChevronDown className="ml-1 h-4 w-4" />
                         </Button>
                       </div>
                       <Calendar
                         mode="single"
                         selected={formData.dateOfBirth || undefined}
                         onSelect={(date) => setFormData(prev => ({ ...prev, dateOfBirth: date || null }))}
-                        defaultMonth={selectedYear ? new Date(selectedYear, 0) : new Date()}
+                        defaultMonth={selectedDobYear ? new Date(selectedDobYear, 0) : new Date()}
                         fromYear={1950}
                         toYear={currentYear}
                       />
@@ -1298,10 +1308,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               onValueChange={(value) => setFormData(prev => ({ ...prev, gradeLevel: value }))}
               disabled={!userCanEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
                 <SelectValue placeholder="Select grade" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {gradeLevels.map(grade => (
                   <SelectItem key={grade.id} value={grade.id}>
                     {grade.label}
@@ -1317,10 +1327,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
               disabled={!userCanEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
                 <SelectValue placeholder="Select year" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {availableYears.map(year => (
                   <SelectItem key={year} value={year}>
                     {year}
@@ -1339,10 +1349,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               onValueChange={(value: "term1" | "term2" | "term3") => setFormData(prev => ({ ...prev, enrollmentTerm: value }))}
               disabled={!userCanEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
                 <SelectValue placeholder="Select term" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {getTermOptions(t).map(term => (
                   <SelectItem key={term.id} value={term.id}>
                     {term.label}
@@ -1358,10 +1368,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               onValueChange={(value: "active" | "graduated" | "withdrawn" | "on_leave") => setFormData(prev => ({ ...prev, status: value }))}
               disabled={!userCanEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {getStatusOptions(t).map(status => (
                   <SelectItem key={status.id} value={status.id}>
                     {status.label}
@@ -1869,7 +1879,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     {/* Year Group - Left */}
                     <TableCell align="left">{getGradeLabel(student.gradeLevel)}</TableCell>
                     {/* Academic Year - Left */}
-                    <TableCell align="left">{student.academicYear}</TableCell>
+                    <TableCell align="left">{formatAcademicYear(student.academicYear)}</TableCell>
                     {/* Term - Center (Badge) */}
                     <TableCell align="center">
                       <Badge variant="outline">{getTermLabel(student.enrollmentTerm)}</Badge>
@@ -2060,12 +2070,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       </Card>
 
       {/* Add Student Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} modal={true}>
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle>Add New Student</DialogTitle>
           </DialogHeader>
-          {studentFormContent}
+          <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+            {studentFormContent}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
@@ -2078,12 +2090,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       </Dialog>
 
       {/* Edit Student Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} modal={true}>
+        <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
             <DialogTitle>Edit Student</DialogTitle>
           </DialogHeader>
-          {studentFormContent}
+          <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+            {studentFormContent}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
@@ -2130,7 +2144,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t("common.academicYear")}</p>
-                  <p className="font-medium">{selectedStudent.academicYear}</p>
+                  <p className="font-medium">{formatAcademicYear(selectedStudent.academicYear)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t("student.enrollmentTerm")}</p>
@@ -2331,7 +2345,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <DialogContent style={{ maxWidth: "702px" }} className="max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Import Students</DialogTitle>
             <DialogDescription>
@@ -2377,50 +2391,49 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               <div className="space-y-2">
                 <Label>Preview ({importPreview.length} students)</Label>
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="max-h-[300px] overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {/* Preview Table - All Left (Simple Data Display) */}
-                          <TableHead align="left">{t("table.studentId")}</TableHead>
-                          <TableHead align="left">{t("table.name")}</TableHead>
-                          <TableHead align="left">{t("table.yearGroup")}</TableHead>
-                          <TableHead align="left">{t("table.year")}</TableHead>
-                          <TableHead align="left">Family Code</TableHead>
-                          <TableHead align="left">{t("table.status")}</TableHead>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead align="left">{t("table.studentId")}</TableHead>
+                        <TableHead align="left">{t("table.name")}</TableHead>
+                        <TableHead align="left">{t("table.yearGroup")}</TableHead>
+                        <TableHead align="left">{t("table.year")}</TableHead>
+                        <TableHead align="left">Family Code</TableHead>
+                        <TableHead align="left">{t("table.status")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(showAllPreview ? importPreview : importPreview.slice(0, 10)).map((row, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-mono text-sm" align="left">{row["Student ID"]}</TableCell>
+                          <TableCell align="left">
+                            {row["Name"] || `${row["First Name"] || ""} ${row["Last Name"] || ""}`.trim()}
+                          </TableCell>
+                          <TableCell align="left">{row["Year Group"]}</TableCell>
+                          <TableCell align="left">{row["Academic Year"] || row["Year"]}</TableCell>
+                          <TableCell align="left" className="font-mono text-xs text-muted-foreground">
+                            {row["Family Code"] || <span className="text-orange-400 text-xs">— no family</span>}
+                          </TableCell>
+                          <TableCell align="left">
+                            <Badge variant="outline">{row["Status"] || "active"}</Badge>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(showAllPreview ? importPreview : importPreview.slice(0, 10)).map((row, index) => (
-                          <TableRow key={index}>
-                            {/* Preview Table - All Left */}
-                            <TableCell className="font-mono text-sm" align="left">{row["Student ID"]}</TableCell>
-                            <TableCell align="left">{row["First Name"]} {row["Last Name"]}</TableCell>
-                            <TableCell align="left">{row["Year Group"]}</TableCell>
-                            <TableCell align="left">{row["Academic Year"]}</TableCell>
-                            <TableCell align="left" className="font-mono text-xs text-muted-foreground">
-                              {row["Family Code"] || <span className="text-orange-400 text-xs">— no family</span>}
-                            </TableCell>
-                            <TableCell align="left">
-                              <Badge variant="outline">{row["Status"] || "active"}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {importPreview.length > 10 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllPreview(v => !v)}
-                      className="w-full p-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 border-t transition-colors"
-                    >
-                      {showAllPreview
-                        ? "▲ Show less"
-                        : `... and ${importPreview.length - 10} more students (click to show all)`}
-                    </button>
-                  )}
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
+                {importPreview.length > 10 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllPreview(!showAllPreview)}
+                  >
+                    {showAllPreview
+                      ? "▲ แสดงน้อยลง"
+                      : `▼ ดูเพิ่มเติม ${importPreview.length - 10} รายการ`}
+                  </Button>
+                )}
               </div>
             )}
           </div>

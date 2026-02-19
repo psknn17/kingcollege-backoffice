@@ -198,8 +198,13 @@ export function ViewModal({
   }
 
   const renderInvoiceView = () => {
-    const total = data.total || data.amount || data.items?.reduce((sum: number, item: any) => sum + (item.discountedAmount || item.amount || 0), 0) || 0
-    const issueDate = data.issueDate ? new Date(data.issueDate) : null
+    const itemsSubtotal = data.items?.reduce((sum: number, item: any) => sum + (item.discountedAmount || item.amount || 0), 0) || 0
+    const discounts: Array<{ name: string; amount: number; percentage?: number }> = data.discounts || []
+    const totalDiscountAmount = discounts.reduce((sum: number, d: any) => sum + (d.amount || 0), 0)
+    const total = totalDiscountAmount > 0
+      ? (data.total || data.amount || itemsSubtotal - totalDiscountAmount)
+      : (data.total || data.amount || itemsSubtotal)
+    const issueDate = data.approvalStatus === "approved" && data.issueDate ? new Date(data.issueDate) : null
     const dueDate = data.dueDate ? new Date(data.dueDate) : null
 
     return (
@@ -338,14 +343,21 @@ export function ViewModal({
             <tbody>
               {data.items && data.items.map((item: any, index: number) => (
                 <tr key={index} className="border-b border-gray-200">
-                  {/* Number cell: align="left" (matches header) */}
                   <td className="py-1.5 px-2 align-top">{index + 1}</td>
-                  {/* Description cell: align="left" (matches header) */}
                   <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
                     <div>{item.name || item.description}</div>
                   </td>
-                  {/* Amount cell: align="right" (matches header) */}
                   <td className="py-1.5 px-2 text-right align-top">{formatCurrencyUtil(item.discountedAmount || item.amount || 0)}</td>
+                </tr>
+              ))}
+              {/* Discount Rows */}
+              {discounts.length > 0 && discounts.map((discount: any, idx: number) => (
+                <tr key={`discount-${idx}`} className="border-b border-gray-200" style={{ color: '#059669' }}>
+                  <td className="py-1.5 px-2 align-top">{(data.items?.length || 0) + idx + 1}</td>
+                  <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                    {discount.name}{discount.percentage ? ` (${discount.percentage}%)` : ''}
+                  </td>
+                  <td className="py-1.5 px-2 text-right align-top">-{formatCurrencyUtil(discount.amount || 0)}</td>
                 </tr>
               ))}
               {/* Total Row */}
@@ -356,7 +368,6 @@ export function ViewModal({
                     <span className="font-bold ml-4">TOTAL</span>
                   </div>
                 </td>
-                {/* Total amount: align="right" (matches header) */}
                 <td className="py-2 px-2 text-right font-bold">{formatCurrencyUtil(total)}</td>
               </tr>
             </tbody>

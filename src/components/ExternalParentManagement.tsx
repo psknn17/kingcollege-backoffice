@@ -246,7 +246,7 @@ export function ExternalParentManagement() {
         ["Student Age", parent.studentAge],
         ["Student Grade", parent.studentGrade],
         ["Activities", parent.activities.join('; ')],
-        ["Application Date", format(parent.applicationDate, "yyyy-MM-dd")],
+        ["Application Date", format(parent.applicationDate, "dd/MM/yyyy")],
         ["Status", parent.status],
         ["Payment Status", parent.paymentStatus],
         ["Total Amount", parent.totalAmount],

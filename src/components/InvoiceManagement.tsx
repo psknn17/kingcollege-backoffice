@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { triggerDownload } from "@/utils/downloadUtils"
-import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useStudents } from "@/contexts/StudentContext"
@@ -87,6 +87,8 @@ interface Invoice {
   academicYear?: string
   // Import fields
   adultIdNo?: string
+  // Discount breakdown
+  discounts?: Array<{ name: string; amount: number; percentage?: number }>
 }
 
 interface InvoiceItem {
@@ -146,8 +148,13 @@ const getStudentGroupDiscounts = (studentId: string, category: string): { name: 
       return []
     }
 
-    // Get storage key based on category
-    const storageKey = `studentGroups_${category}`
+    // Get storage key based on category - must match the actual storage keys used by each discount group component
+    // TuitionDiscountGroups → "studentGroups", SummerDiscountGroups → "summerDiscountGroups", others → "studentGroups_${category}"
+    const storageKey = category === "tuition"
+      ? "studentGroups"
+      : category === "summer"
+        ? "summerDiscountGroups"
+        : `studentGroups_${category}`
     const stored = localStorage.getItem(storageKey)
     if (!stored) return []
 
@@ -212,7 +219,10 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
             description: item.name || item.description,
             amount: item.amount,
             discountPercent: 0,
-            discountedAmount: item.amount
+            discountedAmount: item.amount,
+            itemCode: item.itemCode || item.financeCode || "",
+            nominalCode: item.nominalCode || "",
+            notes: item.notes || ""
           })),
           notes: inv.notes || "",
           // External invoice fields
@@ -234,7 +244,9 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           // Rejection info
           rejectedAt: inv.rejectedAt,
           rejectedReason: inv.rejectedReason,
-          rejectedBy: inv.rejectedBy
+          rejectedBy: inv.rejectedBy,
+          // Discount breakdown
+          discounts: inv.discounts || []
         }
       })
     }
@@ -407,7 +419,7 @@ export function InvoiceManagement({
   // Discount Options context for late payment calculations
   const { getLatePaymentSettings, getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears = [] } = useAcademicYears()
-  const { students, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
+  const { students, families, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
 
   // Load invoices from localStorage
   const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
@@ -784,9 +796,12 @@ export function InvoiceManagement({
       studentName: invoice.studentName,
       studentId: invoice.studentId,
       grade: invoice.studentGrade,
+      parentName: invoice.parentName,
       parentEmail: invoice.parentEmail,
       amount: invoice.finalAmount,
       total: invoice.finalAmount,
+      subtotal: invoice.totalAmount,
+      discounts: invoice.discounts || [],
       status: invoice.status,
       approvalStatus: invoice.approvalStatus,
       cancelReason: invoice.cancelReason,
@@ -794,12 +809,13 @@ export function InvoiceManagement({
       cancelledAt: invoice.cancelledAt,
       issueDate: invoice.issueDate ? invoice.issueDate.toISOString() : null,
       dueDate: invoice.dueDate.toISOString(),
+      term: invoice.term,
       category: "Invoice",
       academicYear: "2024-2025",
       items: invoice.items.map(item => ({
         name: item.description,
         description: item.description,
-        amount: item.discountedAmount,
+        amount: item.amount,
         quantity: 1
       })),
       student: {
@@ -1484,11 +1500,11 @@ export function InvoiceManagement({
       ["Recipient Address", invoice.recipientAddress || ""],
       ["Event Name", invoice.eventName || ""],
       ["Category", resolvedCategory],
-      ["Academic Year", invoice.academicYear || ""],
+      ["Academic Year", formatAcademicYear(invoice.academicYear) || ""],
       ["Term", invoice.term || ""],
       ["Status", invoice.status],
-      ["Issue Date", invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending"],
-      ["Due Date", format(invoice.dueDate, "yyyy-MM-dd")],
+      ["Issue Date", invoice.issueDate ? format(invoice.issueDate, "dd/MM/yyyy") : "Pending"],
+      ["Due Date", format(invoice.dueDate, "dd/MM/yyyy")],
       ["Total Amount", invoice.totalAmount],
       ["Discount Amount", invoice.discountAmount],
       ["Final Amount", invoice.finalAmount],
@@ -1551,11 +1567,11 @@ export function InvoiceManagement({
       inv.parentName,
       inv.parentEmail,
       category ?? inv.category ?? "",
-      inv.academicYear || "",
+      formatAcademicYear(inv.academicYear) || "",
       inv.term || "",
       inv.status,
-      inv.issueDate ? format(inv.issueDate, "yyyy-MM-dd") : "Pending",
-      format(inv.dueDate, "yyyy-MM-dd"),
+      inv.issueDate ? format(inv.issueDate, "dd/MM/yyyy") : "Pending",
+      format(inv.dueDate, "dd/MM/yyyy"),
       inv.totalAmount,
       inv.discountAmount,
       inv.finalAmount
@@ -1792,12 +1808,53 @@ export function InvoiceManagement({
       grouped[docNo].push(row)
     })
 
+    // Load catalog items first — needed for item code resolution when FinanceCode is missing
+    const getItemStorageKey = (cat: string) => {
+      const keyMap: Record<string, string> = {
+        afterschool: "afterschoolItems", eca: "ecaItems", event: "eventItems",
+        summer: "summerItems", external: "externalItems", trip: "tripItems",
+        exam: "examItems", bus: "busItems", tuition: "invoiceItems"
+      }
+      return keyMap[cat] || "invoiceItems"
+    }
+    const itemsStorageKey = getItemStorageKey(category || "tuition")
+    let catalogItems: any[] = []
+    try {
+      const stored = localStorage.getItem(itemsStorageKey)
+      catalogItems = stored ? JSON.parse(stored) : []
+    } catch { catalogItems = [] }
+
+    // Resolve item code: use FinanceCode if present, otherwise look up by Description in catalog
+    const resolveItemCode = (row: Record<string, string>): string => {
+      if (row["FinanceCode"]) return row["FinanceCode"]
+      const desc = (row["Description"] || "").trim().toLowerCase()
+      if (!desc) return ""
+      return catalogItems.find((it: any) =>
+        (it.name || "").toLowerCase().trim() === desc ||
+        (it.description || "").toLowerCase().trim() === desc
+      )?.itemCode || ""
+    }
+
+    let skippedNoStudent = 0
+    let skippedNoItems = 0
+
     const newInvoices: Invoice[] = Object.entries(grouped).map(([docNo, rows]) => {
       const first = rows[0]
       const pupilId = first["PupilID"] || ""
-      const student = students.find(s => s.studentId === pupilId)
+      const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
 
-      const items: InvoiceItem[] = rows
+      // Skip invoice if student not found in system
+      if (!student) {
+        skippedNoStudent++
+        return null
+      }
+
+      const studentFamily = families.find(f => f.id === student?.familyId)
+
+      // Only include rows that have FinanceCode OR matching item in catalog (by Description)
+      const validRows = rows.filter(row => !!resolveItemCode(row))
+
+      const items: InvoiceItem[] = validRows
         .sort((a, b) => parseInt(a["InvoiceLineItem"] || "0") - parseInt(b["InvoiceLineItem"] || "0"))
         .map(row => {
           const rawAmt = row["Amount"]
@@ -1814,16 +1871,22 @@ export function InvoiceManagement({
             amount: amt,
             discountPercent: 0,
             discountedAmount: amt,
-            notes: row["FinanceCode"] || row["NominalCode"] || ""
+            notes: resolveItemCode(row)
           }
         })
+
+      // Skip invoice if no valid items after filtering
+      if (items.length === 0) {
+        skippedNoItems++
+        return null
+      }
 
       const totalAmount = items.reduce((sum, i) => sum + i.amount, 0)
 
       return {
         id: `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         invoiceNumber: docNo,
-        studentName: student ? `${student.firstName} ${student.lastName}` : pupilId,
+        studentName: `${student.firstName} ${student.lastName}`,
         studentId: pupilId,
         studentGrade: first["YearGroup"] || "",
         parentName: "",
@@ -1833,7 +1896,7 @@ export function InvoiceManagement({
         finalAmount: totalAmount,
         status: "pending_approval" as const,
         approvalStatus: "wait" as const,
-        issueDate: parseDate(first["InvoiceDate"]),
+        issueDate: null, // Will be set on approval
         dueDate: parseDate(first["DueDate"]),
         issuedBy: "Import",
         items,
@@ -1841,28 +1904,17 @@ export function InvoiceManagement({
         term: first["SchoolTerm"] || "",
         academicYear: first["SchoolYear"] || "",
         category: (category || "tuition") as "tuition" | "eca" | "trip" | "exam" | "bus" | "external",
-        adultIdNo: first["AdultIDNo"] || ""
+        adultIdNo: studentFamily?.familyCode || first["AdultIDNo"] || ""
       }
-    })
+    }).filter(Boolean) as Invoice[]
 
-    // Auto-create missing items in ItemManagement catalog (fallback)
-    const getItemStorageKey = (cat: string) => {
-      const keyMap: Record<string, string> = {
-        afterschool: "afterschoolItems", eca: "ecaItems", event: "eventItems",
-        summer: "summerItems", external: "externalItems", trip: "tripItems",
-        exam: "examItems", bus: "busItems", tuition: "invoiceItems"
-      }
-      return keyMap[cat] || "invoiceItems"
-    }
-    const itemsStorageKey = getItemStorageKey(category || "tuition")
-    let catalogItems: any[] = []
-    try {
-      const stored = localStorage.getItem(itemsStorageKey)
-      catalogItems = stored ? JSON.parse(stored) : []
-    } catch { catalogItems = [] }
-
+    // Auto-create missing items in ItemManagement catalog (only when FinanceCode present)
     let newItemsAdded = 0
     importInterfaceRows.forEach(row => {
+      const pupilId = row["PupilID"] || ""
+      const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
+      if (!student) return // Skip rows for unknown students
+      if (!row["FinanceCode"]) return // Skip rows without item code (FinanceCode)
       const desc = (row["Description"] || "").trim()
       if (!desc) return
       const alreadyExists = catalogItems.some((item: any) =>
@@ -1874,7 +1926,7 @@ export function InvoiceManagement({
         const amt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
         catalogItems.push({
           id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          itemCode: row["FinanceCode"] || row["NominalCode"] || `AUTO-${Date.now()}`,
+          itemCode: row["FinanceCode"] || `AUTO-${Date.now()}`,
           name: desc,
           description: desc,
           amount: amt,
@@ -1907,7 +1959,16 @@ export function InvoiceManagement({
     setIsImportInterfaceOpen(false)
     setImportInterfaceRows([])
     const itemNote = newItemsAdded > 0 ? ` (auto-created ${newItemsAdded} item${newItemsAdded > 1 ? "s" : ""})` : ""
-    toast.success(`Imported ${newInvoices.length} invoice${newInvoices.length > 1 ? "s" : ""} successfully${itemNote}`)
+    const skippedParts = [
+      skippedNoStudent > 0 ? `${skippedNoStudent} รายการไม่พบนักเรียน` : "",
+      skippedNoItems > 0 ? `${skippedNoItems} รายการไม่มี Item Code` : ""
+    ].filter(Boolean).join(", ")
+    const skippedNote = skippedParts ? ` — ข้ามไป: ${skippedParts}` : ""
+    if (newInvoices.length === 0) {
+      toast.error(`ไม่มี invoice ที่นำเข้าได้${skippedNote}`)
+    } else {
+      toast.success(`Imported ${newInvoices.length} invoice${newInvoices.length > 1 ? "s" : ""} successfully${itemNote}${skippedNote}`)
+    }
     logActivity({ action: `Imported ${newInvoices.length} invoices from interface file`, module: "Invoice Management", detail: `Invoice numbers: ${newInvoices.map(inv => inv.invoiceNumber).join(", ")}` })
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
@@ -1979,8 +2040,8 @@ export function InvoiceManagement({
               <td style="width:50%; vertical-align:top; padding-left:12px;">
                 <table style="width:100%; border-collapse:collapse;">
                   <tr><td style="padding:4px 0; width:120px;">Invoice No.</td><td style="padding:4px 0;">${escapeHtml(invoice.invoiceNumber)}</td></tr>
-                  <tr><td style="padding:4px 0;">Issue Date</td><td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, "yyyy-MM-dd") : "Pending")}</td></tr>
-                  <tr><td style="padding:4px 0;">Due Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.dueDate, "yyyy-MM-dd"))}</td></tr>
+                  <tr><td style="padding:4px 0;">Issue Date</td><td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, "dd/MM/yyyy") : "Pending")}</td></tr>
+                  <tr><td style="padding:4px 0;">Due Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.dueDate, "dd/MM/yyyy"))}</td></tr>
                   <tr><td style="padding:4px 0;">Status</td><td style="padding:4px 0;">${escapeHtml(invoice.status)}</td></tr>
                 </table>
               </td>
@@ -2111,9 +2172,9 @@ export function InvoiceManagement({
       "4110003",            // NominalCode
       "SI",                 // Type (Sales Invoice)
       "INV-001",            // DocumentNo
-      "2026-01-15",         // InvoiceDate
-      "2026-01-31",         // DueDate
-      "2024-2025",          // SchoolYear
+      "15/01/2026",         // InvoiceDate
+      "31/01/2026",         // DueDate
+      "2024/2025",          // SchoolYear
       "Year 1",             // YearGroup
       "Term 2",             // SchoolTerm
       "TUI-T2",             // FinanceCode
@@ -2149,34 +2210,71 @@ export function InvoiceManagement({
 
     const rows: string[][] = []
 
+    // Load ItemManagement catalog for itemCode lookup by description (fallback when itemCode not stored on item)
+    const loadCatalogForCategory = (cat: string) => {
+      try {
+        const key = cat === "afterschool" ? "afterschoolItems"
+          : cat === "event" ? "eventItems"
+          : cat === "summer" ? "summerItems"
+          : cat === "external" ? "externalItems"
+          : cat === "eca" ? "ecaItems"
+          : cat === "trip" ? "tripItems"
+          : cat === "exam" ? "examItems"
+          : cat === "bus" ? "busItems"
+          : "invoiceItems" // tuition / student / default
+        const stored = localStorage.getItem(key)
+        return stored ? JSON.parse(stored) : []
+      } catch { return [] }
+    }
+
     filteredInvoices.forEach(invoice => {
       // Get student data
-      const student = students.find(s => s.id === invoice.studentId)
+      const student = students.find(s => s.id === invoice.studentId || s.studentId === invoice.studentId)
+      const family = families.find(f => f.id === student?.familyId)
       const pupilID = invoice.studentId || ""
-      const adultIDNo = invoice.adultIdNo ?? student?.parentIdNumber ?? student?.parentEmail ?? ""
-      const schoolYear = (invoice.academicYear || getAcademicYear(invoice.issueDate || new Date())).replace(/\//g, "-")
+      const adultIDNo = family?.familyCode || invoice.adultIdNo || ""
+      const schoolYear = (invoice.academicYear || getAcademicYear(invoice.issueDate || new Date())).replace(/-/g, "/")
       const yearGroup = invoice.studentGrade || ""
-      const schoolTerm = invoice.term || ""
-      const invoiceDate = invoice.issueDate ? format(new Date(invoice.issueDate), "yyyy-MM-dd") : ""
-      const dueDate = format(new Date(invoice.dueDate), "yyyy-MM-dd")
+      const rawTerm = invoice.term || ""
+      // Extract only "Term X" part — strip academic year prefix (e.g. "2024/2025 - Term 1" → "Term 1")
+      const termMatch = rawTerm.match(/Term\s*\d+/i)
+      const schoolTerm = termMatch ? termMatch[0] : rawTerm
+      const invoiceDate = invoice.issueDate ? format(new Date(invoice.issueDate), "dd/MM/yyyy") : ""
+      const dueDate = format(new Date(invoice.dueDate), "dd/MM/yyyy")
+
+      // Load catalog for this invoice's category (for fallback itemCode lookup)
+      const catalog = loadCatalogForCategory(invoice.category || category || "tuition")
+
+      // DocumentNo is only filled if the invoice is approved
+      const isApproved = getApprovalStatus(invoice) === "approved"
+      const documentNo = isApproved ? invoice.invoiceNumber : ""
 
       // For each line item in the invoice, create a separate row
-      invoice.items.forEach((item, lineIdx) => {
+      let lineCounter = 0
+      invoice.items.forEach((item) => {
+        lineCounter++
         // Get item details - try to extract from item or use defaults
         const itemData = item as any // Cast to any to access potential itemCode/nominalCode fields
         const nominalCode = itemData.nominalCode || "4110000" // Default nominal code
-        const financeCode = item.notes || itemData.itemCode || ""
+        // Resolve FinanceCode:
+        // 1. Catalog lookup by description (primary - always use ItemManagement itemCode)
+        // 2. Stored itemCode/financeCode/notes (fallback for items not in catalog)
         const description = item.description || itemData.name || ""
-        const invoiceLineItem = (lineIdx + 1).toString() // Line item number (1, 2, 3...)
+        const catalogItem = catalog.find((ci: any) =>
+          (ci.name || "").toLowerCase() === description.toLowerCase() ||
+          (ci.description || "").toLowerCase() === description.toLowerCase()
+        )
+        const storedItemCode = itemData.itemCode || itemData.financeCode || item.notes || ""
+        const financeCode = catalogItem?.itemCode || storedItemCode || ""
         const amount = Math.round(item.discountedAmount ?? item.amount).toString()
         const documentType = itemData.documentType || "SI" // Default to Sales Invoice
 
-        const row = [
+        rows.push([
           pupilID,
           adultIDNo,
           nominalCode,
           documentType,
-          invoice.invoiceNumber,
+          documentNo,
           invoiceDate,
           dueDate,
           schoolYear,
@@ -2184,11 +2282,83 @@ export function InvoiceManagement({
           schoolTerm,
           financeCode,
           description,
-          invoiceLineItem,
+          lineCounter.toString(),
           amount
-        ]
+        ])
+      })
 
-        rows.push(row)
+      // Calculate discounts dynamically (same logic as invoice detail view)
+      const subtotalForDiscounts = invoice.totalAmount || invoice.items.reduce((sum, item) => sum + item.amount, 0)
+      const isNonDiscountableInvoice =
+        invoice.category === "eca" || invoice.category === "trip" || invoice.category === "exam"
+
+      const dynamicDiscounts: { name: string; amount: number; percentage?: number }[] = []
+
+      if (!isNonDiscountableInvoice && invoice.invoiceType !== "external" && invoice.studentId !== "EXTERNAL") {
+        // 1. Sibling discount
+        if (student && student.childOrder >= 2) {
+          const siblingPercent = getSiblingDiscount(student)
+          if (siblingPercent > 0) {
+            const siblingAmount = Math.round(subtotalForDiscounts * siblingPercent / 100)
+            if (siblingAmount > 0) dynamicDiscounts.push({ name: `Sibling Discount`, amount: siblingAmount, percentage: siblingPercent })
+          }
+        }
+
+        // 2. Student group discounts
+        const invoiceCategory = invoice.category || category
+        const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoiceCategory)
+        groupDiscounts.forEach((group: any) => {
+          const groupAmount = group.discountType === "percentage"
+            ? Math.round(subtotalForDiscounts * group.discountPercentage / 100)
+            : group.fixedAmount
+          if (groupAmount > 0) dynamicDiscounts.push({ name: group.name, amount: groupAmount, percentage: group.discountType === "percentage" ? group.discountPercentage : undefined })
+        })
+
+        // 3. Staff Child (50%)
+        if (student && student.notes?.toLowerCase().includes('staff')) {
+          const staffAmount = Math.round(subtotalForDiscounts * 50 / 100)
+          if (staffAmount > 0) dynamicDiscounts.push({ name: "Staff Child Discount", amount: staffAmount, percentage: 50 })
+        }
+
+        // 4. Scholarship
+        if (student && student.notes?.toLowerCase().includes('scholarship')) {
+          dynamicDiscounts.push({ name: "Scholarship", amount: subtotalForDiscounts, percentage: 100 })
+        }
+
+        // 5. Early Bird (5%)
+        if (student && student.notes?.toLowerCase().includes('early bird')) {
+          const earlyBirdAmount = Math.round(subtotalForDiscounts * 5 / 100)
+          if (earlyBirdAmount > 0) dynamicDiscounts.push({ name: "Early Bird Discount", amount: earlyBirdAmount, percentage: 5 })
+        }
+      }
+
+      // Add discount rows (negative amounts)
+      dynamicDiscounts.forEach((disc) => {
+        lineCounter++
+        const discCatalogItem = catalog.find((ci: any) =>
+          (ci.name || "").toLowerCase() === (disc.name || "").toLowerCase() ||
+          (ci.description || "").toLowerCase() === (disc.name || "").toLowerCase()
+        )
+        const discFinanceCode = discCatalogItem?.itemCode || ""
+        const discNominalCode = discCatalogItem?.nominalCode || "4110000"
+        const discAmount = (-Math.round(disc.amount)).toString()
+
+        rows.push([
+          pupilID,
+          adultIDNo,
+          discNominalCode,
+          "SI",
+          documentNo,
+          invoiceDate,
+          dueDate,
+          schoolYear,
+          yearGroup,
+          schoolTerm,
+          discFinanceCode,
+          disc.name || "Discount",
+          lineCounter.toString(),
+          discAmount
+        ])
       })
     })
 
@@ -3072,7 +3242,7 @@ export function InvoiceManagement({
                     <SelectContent>
                       <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
                       {academicYears.map(year => (
-                        <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                        <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -3353,7 +3523,7 @@ export function InvoiceManagement({
                         )}
                       </TableCell>
                       {/* Issue Date - LEFT */}
-                      <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                      <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                       {/* Due Date - LEFT */}
                       <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                       {/* Actions - CENTER */}
@@ -3787,7 +3957,7 @@ export function InvoiceManagement({
                         )}
                       </TableCell>
                         {/* Issue Date - LEFT */}
-                        <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                        <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                         {/* Due Date - LEFT */}
                         <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                         {/* Actions - CENTER */}
@@ -4024,7 +4194,7 @@ export function InvoiceManagement({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Invoice Date</span>
-                        <span className="text-sm font-medium text-gray-800">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}</span>
+                        <span className="text-sm font-medium text-gray-800">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Due Date</span>
@@ -5440,7 +5610,7 @@ export function InvoiceManagement({
                   <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Invoice Date</span>
-                      <span className="text-sm font-medium text-gray-900">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "-"}</span>
+                      <span className="text-sm font-medium text-gray-900">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "-"}</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Due Date</span>
@@ -5906,7 +6076,7 @@ export function InvoiceManagement({
                       </tr>
                       <tr>
                         <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice date</td>
-                        <td className="py-1">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, 'd MMMM yyyy') : 'Pending Approval'}</td>
+                        <td className="py-1">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, 'd MMMM yyyy') : 'Pending Approval'}</td>
                       </tr>
                       <tr>
                         <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>
@@ -6378,50 +6548,93 @@ export function InvoiceManagement({
               {importInterfaceError}
             </div>
           ) : importInterfaceRows.length > 0 ? (
+            (() => {
+              // Load catalog for preview validation (FinanceCode || catalog lookup by Description)
+              const previewKeyMap: Record<string, string> = {
+                afterschool: "afterschoolItems", eca: "ecaItems", event: "eventItems",
+                summer: "summerItems", external: "externalItems", trip: "tripItems",
+                exam: "examItems", bus: "busItems", tuition: "invoiceItems"
+              }
+              let previewCatalog: any[] = []
+              try { previewCatalog = JSON.parse(localStorage.getItem(previewKeyMap[category || "tuition"] || "invoiceItems") || "[]") } catch {}
+              const resolvePreviewItemCode = (row: Record<string, string>) => {
+                if (row["FinanceCode"]) return row["FinanceCode"]
+                const desc = (row["Description"] || "").trim().toLowerCase()
+                return desc ? previewCatalog.find((it: any) =>
+                  (it.name || "").toLowerCase().trim() === desc ||
+                  (it.description || "").toLowerCase().trim() === desc
+                )?.itemCode || "" : ""
+              }
+              return (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้างเป็น <strong>
-                  {new Set(importInterfaceRows.map(r => r["DocumentNo"])).size}
-                </strong> invoices
-              </p>
+              {(() => {
+                const validDocNos = new Set(importInterfaceRows.filter(r => {
+                  const s = students.find(st => st.studentId === r["PupilID"] || st.id === r["PupilID"])
+                  return !!s && !!resolvePreviewItemCode(r)
+                }).map(r => r["DocumentNo"]))
+                const totalDocNos = new Set(importInterfaceRows.map(r => r["DocumentNo"]))
+                const skippedCount = totalDocNos.size - validDocNos.size
+                return (
+                  <p className="text-sm text-muted-foreground">
+                    พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้าง <strong>{validDocNos.size}</strong> invoice
+                    {skippedCount > 0 && (
+                      <span className="text-red-600 ml-2">(ข้ามไป {skippedCount} รายการ — ข้อมูลไม่ครบ)</span>
+                    )}
+                  </p>
+                )
+              })()}
               <div className="border rounded-lg overflow-auto max-h-96">
-                <Table style={{ minWidth: "700px" }}>
+                <Table style={{ minWidth: "1050px" }}>
                   <TableHeader>
                     <TableRow>
                       <TableHead align="left" className="min-w-[110px]">Student ID</TableHead>
+                      <TableHead align="left" className="min-w-[150px]">Student Name</TableHead>
+                      <TableHead align="left" className="min-w-[110px]">Item Code</TableHead>
                       <TableHead align="left" className="min-w-[80px]">Year Group</TableHead>
-                      <TableHead align="left" className="min-w-[200px]">School Term</TableHead>
+                      <TableHead align="left" className="min-w-[100px]">School Term</TableHead>
                       <TableHead align="left" className="min-w-[90px]">Invoice Date</TableHead>
                       <TableHead align="left" className="min-w-[90px]">Due Date</TableHead>
-                      <TableHead align="left" className="min-w-[220px]">Description</TableHead>
+                      <TableHead align="left" className="min-w-[200px]">Description</TableHead>
                       <TableHead align="right" className="min-w-[100px]">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {importInterfaceRows.map((row, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell align="left">{row["PupilID"]}</TableCell>
-                        <TableCell align="left">{row["YearGroup"]}</TableCell>
-                        <TableCell align="left" className="text-xs">{row["SchoolTerm"]}</TableCell>
-                        <TableCell align="left">{row["InvoiceDate"]}</TableCell>
-                        <TableCell align="left">{row["DueDate"]}</TableCell>
-                        <TableCell align="left">{row["Description"]}</TableCell>
-                        <TableCell align="right">{(() => {
-                          const csvAmt = parseFloat(String(row["Amount"] ?? "").replace(/,/g, "")) || 0
-                          const desc = row["Description"] || ""
-                          const isTuition = /tuition/i.test(desc)
-                          const tuitionPrice = isTuition
-                            ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
-                            : null
-                          const displayAmt = tuitionPrice ?? csvAmt
-                          return displayAmt.toLocaleString("th-TH", { minimumFractionDigits: 2 })
-                        })()}</TableCell>
-                      </TableRow>
-                    ))}
+                    {importInterfaceRows.map((row, idx) => {
+                      const pupilId = row["PupilID"] || ""
+                      const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
+                      const itemCode = resolvePreviewItemCode(row)
+                      const rowValid = !!student && !!itemCode
+                      const csvAmt = parseFloat(String(row["Amount"] ?? "").replace(/,/g, "")) || 0
+                      const desc = row["Description"] || ""
+                      const isTuition = /tuition/i.test(desc)
+                      const tuitionPrice = isTuition
+                        ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
+                        : null
+                      const displayAmt = tuitionPrice ?? csvAmt
+                      return (
+                        <TableRow key={idx} className={!rowValid ? "bg-red-50" : ""}>
+                          <TableCell align="left">{row["PupilID"]}</TableCell>
+                          <TableCell align="left" className={!student ? "text-red-600 font-medium" : ""}>
+                            {student ? `${student.firstName} ${student.lastName}` : "ไม่พบนักเรียน"}
+                          </TableCell>
+                          <TableCell align="left" className={!itemCode ? "text-red-600 font-medium" : ""}>
+                            {itemCode || "ไม่มี Item Code"}
+                          </TableCell>
+                          <TableCell align="left">{row["YearGroup"]}</TableCell>
+                          <TableCell align="left" className="text-xs">{row["SchoolTerm"]}</TableCell>
+                          <TableCell align="left">{row["InvoiceDate"]}</TableCell>
+                          <TableCell align="left">{row["DueDate"]}</TableCell>
+                          <TableCell align="left">{row["Description"]}</TableCell>
+                          <TableCell align="right">{displayAmt.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
             </div>
+              )
+            })()
           ) : (
             <p className="text-sm text-muted-foreground">ไม่พบข้อมูล</p>
           )}
@@ -6430,12 +6643,29 @@ export function InvoiceManagement({
             <Button variant="outline" onClick={() => { setIsImportInterfaceOpen(false); setImportInterfaceRows([]) }}>
               Cancel
             </Button>
-            {!importInterfaceError && importInterfaceRows.length > 0 && (
-              <Button onClick={performImportInterface}>
-                <Upload className="w-4 h-4 mr-2" />
-                Import {new Set(importInterfaceRows.map(r => r["DocumentNo"])).size} Invoice{new Set(importInterfaceRows.map(r => r["DocumentNo"])).size > 1 ? "s" : ""}
-              </Button>
-            )}
+            {!importInterfaceError && importInterfaceRows.length > 0 && (() => {
+              const btnKeyMap: Record<string, string> = {
+                afterschool: "afterschoolItems", eca: "ecaItems", event: "eventItems",
+                summer: "summerItems", external: "externalItems", trip: "tripItems",
+                exam: "examItems", bus: "busItems", tuition: "invoiceItems"
+              }
+              let btnCatalog: any[] = []
+              try { btnCatalog = JSON.parse(localStorage.getItem(btnKeyMap[category || "tuition"] || "invoiceItems") || "[]") } catch {}
+              const validCount = new Set(importInterfaceRows.filter(r => {
+                const s = students.find(st => st.studentId === r["PupilID"] || st.id === r["PupilID"])
+                const ic = r["FinanceCode"] || btnCatalog.find((it: any) => {
+                  const desc = (r["Description"] || "").trim().toLowerCase()
+                  return desc && ((it.name || "").toLowerCase().trim() === desc || (it.description || "").toLowerCase().trim() === desc)
+                })?.itemCode
+                return !!s && !!ic
+              }).map(r => r["DocumentNo"])).size
+              return (
+                <Button onClick={performImportInterface} disabled={validCount === 0}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import {validCount} Invoice{validCount !== 1 ? "s" : ""}
+                </Button>
+              )
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>
