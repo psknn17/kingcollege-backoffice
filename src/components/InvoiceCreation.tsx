@@ -416,7 +416,14 @@ const generateReceiptForPaidInvoice = (invoice: SavedInvoice) => {
       clientName: invoice.parentName || invoice.studentName,
       contactName: invoice.studentName,
       yearGroup: invoice.studentGrade,
-      schoolYear: invoice.term || "",
+      schoolYear: (() => {
+        const ay = invoice.academicYear || ""
+        const tm = invoice.term || ""
+        if (ay && tm) return `${ay} - ${tm}`
+        return ay || tm
+      })(),
+      academicYear: invoice.academicYear || "",
+      term: invoice.term || "",
       totalAmount: invoice.netAmount,
       paymentMethod: "N/A",
       status: "generated",

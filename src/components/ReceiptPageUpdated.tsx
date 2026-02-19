@@ -110,15 +110,16 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
 
     const records = JSON.parse(stored)
     return records.map((r: any) => {
-      // Parse schoolYear to separate academicYear and term
-      // Format: "2025-2026 - Term 2 (January - March)" or just "2025-2026"
-      let academicYear = ""
-      let term = ""
+      // Read direct fields first, then fallback to parsing schoolYear
+      let academicYear = r.academicYear || ""
+      let term = r.term || ""
 
-      if (r.schoolYear) {
+      // Fallback: parse from schoolYear if direct fields are missing
+      // Format: "2025-2026 - Term 2 (January - March)" or just "2025-2026"
+      if ((!academicYear || !term) && r.schoolYear) {
         const parts = r.schoolYear.split(" - ")
-        academicYear = parts[0] || "" // "2025-2026"
-        term = parts.slice(1).join(" - ") || "" // "Term 2 (January - March)"
+        if (!academicYear) academicYear = parts[0] || ""
+        if (!term) term = parts.slice(1).join(" - ") || ""
       }
 
       // Find matching invoice to get parent info

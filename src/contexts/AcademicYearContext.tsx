@@ -100,21 +100,21 @@ const initialAcademicYears: AcademicYear[] = [
     terms: [
       {
         id: "1",
-        name: "Term 1 (August - December)",
+        name: "Term 1",
         startDate: new Date("2025-08-15"),
         endDate: new Date("2025-12-20"),
         paymentDeadline: new Date("2025-08-01")
       },
       {
         id: "2",
-        name: "Term 2 (January - March)",
+        name: "Term 2",
         startDate: new Date("2026-01-08"),
         endDate: new Date("2026-03-20"),
         paymentDeadline: new Date("2025-12-15")
       },
       {
         id: "3",
-        name: "Term 3 (April - June)",
+        name: "Term 3",
         startDate: new Date("2026-04-01"),
         endDate: new Date("2026-06-15"),
         paymentDeadline: new Date("2026-03-15")
@@ -127,21 +127,21 @@ const initialAcademicYears: AcademicYear[] = [
     terms: [
       {
         id: "1",
-        name: "Term 1 (August - December)",
+        name: "Term 1",
         startDate: new Date("2024-08-15"),
         endDate: new Date("2024-12-20"),
         paymentDeadline: new Date("2024-08-01")
       },
       {
         id: "2",
-        name: "Term 2 (January - March)",
+        name: "Term 2",
         startDate: new Date("2025-01-08"),
         endDate: new Date("2025-03-20"),
         paymentDeadline: new Date("2024-12-15")
       },
       {
         id: "3",
-        name: "Term 3 (April - June)",
+        name: "Term 3",
         startDate: new Date("2025-04-01"),
         endDate: new Date("2025-06-15"),
         paymentDeadline: new Date("2025-03-15")

@@ -1945,6 +1945,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [importError, setImportError] = useState<string>("")
+  const [showAllImportPreview, setShowAllImportPreview] = useState(false)
 
   // New item form state
   const [newItem, setNewItem] = useState({
@@ -2270,6 +2271,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       setImportPreview(parsed)
       setImportError("")
+      setShowAllImportPreview(false)
     } catch {
       setImportError("Failed to parse file. Please use the provided template.")
     }
@@ -3398,6 +3400,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {/* Preview Table */}
             {importPreview.length > 0 && (() => {
               const duplicateRows = importPreview.filter(row => items.some(item => item.itemCode === row["Item Code"]))
+              const PREVIEW_LIMIT = 5
+              const visibleRows = showAllImportPreview ? importPreview : importPreview.slice(0, PREVIEW_LIMIT)
+              const hiddenCount = importPreview.length - PREVIEW_LIMIT
               return (
                 <div className="space-y-2">
                   <Label>Preview ({importPreview.length} items)</Label>
@@ -3417,41 +3422,58 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   )}
 
                   <div className="border rounded-lg overflow-hidden">
-                    <div className="max-h-[300px] overflow-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead align="left">Item Code</TableHead>
-                            <TableHead align="left">Name</TableHead>
-                            <TableHead align="right">Amount</TableHead>
-                            <TableHead align="left">Category</TableHead>
-                            <TableHead align="center">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {importPreview.map((row, index) => {
-                            const isDuplicate = items.some(item => item.itemCode === row["Item Code"])
-                            return (
-                              <TableRow key={index} className={isDuplicate ? "bg-yellow-50" : ""}>
-                                <TableCell align="left" className="font-mono text-sm">
-                                  {row["Item Code"]}
-                                  {isDuplicate && <span className="ml-2 text-xs text-yellow-700 font-normal">(ซ้ำ)</span>}
-                                </TableCell>
-                                <TableCell align="left" className={isDuplicate ? "text-yellow-700" : ""}>{row["Name"]}</TableCell>
-                                <TableCell align="right">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
-                                <TableCell align="left">
-                                  <Badge variant="outline">{row["Category"] || "-"}</Badge>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Badge variant="outline">{row["Status"] || "active"}</Badge>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead align="left">Item Code</TableHead>
+                          <TableHead align="left">Name</TableHead>
+                          <TableHead align="right">Amount</TableHead>
+                          <TableHead align="left">Category</TableHead>
+                          <TableHead align="center">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {visibleRows.map((row, index) => {
+                          const isDuplicate = items.some(item => item.itemCode === row["Item Code"])
+                          return (
+                            <TableRow key={index} className={isDuplicate ? "bg-yellow-50" : ""}>
+                              <TableCell align="left" className="font-mono text-sm">
+                                {row["Item Code"]}
+                                {isDuplicate && <span className="ml-2 text-xs text-yellow-700 font-normal">(ซ้ำ)</span>}
+                              </TableCell>
+                              <TableCell align="left" className={isDuplicate ? "text-yellow-700" : ""}>{row["Name"]}</TableCell>
+                              <TableCell align="right">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
+                              <TableCell align="left">
+                                <Badge variant="outline">{row["Category"] || "-"}</Badge>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Badge variant="outline">{row["Status"] || "active"}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
+
+                  {!showAllImportPreview && hiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllImportPreview(true)}
+                      className="w-full text-sm text-muted-foreground hover:text-foreground py-2 border border-dashed rounded-lg hover:bg-accent transition-colors"
+                    >
+                      + ดูอีก {hiddenCount} รายการ (ทั้งหมด {importPreview.length} รายการ)
+                    </button>
+                  )}
+                  {showAllImportPreview && importPreview.length > PREVIEW_LIMIT && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllImportPreview(false)}
+                      className="w-full text-sm text-muted-foreground hover:text-foreground py-2 border border-dashed rounded-lg hover:bg-accent transition-colors"
+                    >
+                      ย่อรายการ
+                    </button>
+                  )}
                 </div>
               )
             })()}

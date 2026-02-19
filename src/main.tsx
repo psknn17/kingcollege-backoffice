@@ -1,5 +1,6 @@
 
   import { createRoot } from "react-dom/client";
+  import { BrowserRouter } from "react-router-dom";
   import App from "./App.tsx";
   import { LanguageProvider } from "./contexts/LanguageContext.tsx";
   import { AcademicYearProvider } from "./contexts/AcademicYearContext.tsx";
@@ -10,17 +11,19 @@
   import "./index.css";
 
   createRoot(document.getElementById("root")!).render(
-    <TooltipProvider>
-      <LanguageProvider>
-        <AuthProvider>
-          <AcademicYearProvider>
-            <DiscountOptionsProvider>
-              <StudentProvider>
-                <App />
-              </StudentProvider>
-            </DiscountOptionsProvider>
-          </AcademicYearProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </TooltipProvider>
+    <BrowserRouter>
+      <TooltipProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <AcademicYearProvider>
+              <DiscountOptionsProvider>
+                <StudentProvider>
+                  <App />
+                </StudentProvider>
+              </DiscountOptionsProvider>
+            </AcademicYearProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </TooltipProvider>
+    </BrowserRouter>
   );

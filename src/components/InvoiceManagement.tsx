@@ -19,7 +19,7 @@ import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { EmptySearchResults, EmptyDataState } from "./ui/states"
 import { Checkbox } from "./ui/checkbox"
-import { Search, Filter, Eye, Plus, Download, Mail, Calendar as CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap, Building, MoreVertical, History } from "lucide-react"
+import { Search, Filter, Eye, Plus, Download, Mail, Calendar as CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, GraduationCap, Building, MoreVertical, History } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
@@ -544,6 +544,9 @@ export function InvoiceManagement({
   const [editingNotes, setEditingNotes] = useState("")
   const [editingItems, setEditingItems] = useState<InvoiceItem[]>([])
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false)
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
+  const [cancelReasonInput, setCancelReasonInput] = useState("")
+  const [cancelTargetData, setCancelTargetData] = useState<any>(null)
 
   // External invoice preview dialog state
   const [isExternalPreviewOpen, setIsExternalPreviewOpen] = useState(false)
@@ -1935,7 +1938,14 @@ export function InvoiceManagement({
     try {
       const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
       const existing = stored ? JSON.parse(stored) : []
-      localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify([...existing, ...newInvoices]))
+      // Serialize dates as local "YYYY-MM-DD" strings to avoid UTC timezone offset shifting the date
+      const serializeDate = (d: Date | null | undefined) => d ? format(d, "yyyy-MM-dd") : null
+      const serializedInvoices = newInvoices.map(inv => ({
+        ...inv,
+        dueDate: serializeDate(inv.dueDate),
+        issueDate: serializeDate(inv.issueDate),
+      }))
+      localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify([...existing, ...serializedInvoices]))
     } catch (e) {
       console.error("Failed to save imported invoices:", e)
     }
@@ -2240,9 +2250,8 @@ export function InvoiceManagement({
         lineCounter++
         // Get item details - try to extract from item or use defaults
         const itemData = item as any // Cast to any to access potential itemCode/nominalCode fields
-        const nominalCode = itemData.nominalCode || "4110000" // Default nominal code
-        // Resolve FinanceCode:
-        // 1. Catalog lookup by description (primary - always use ItemManagement itemCode)
+        // Resolve FinanceCode and NominalCode:
+        // 1. Catalog lookup by description (primary - always use ItemManagement itemCode/nominalCode)
         // 2. Stored itemCode/financeCode/notes (fallback for items not in catalog)
         const description = item.description || itemData.name || ""
         const catalogItem = catalog.find((ci: any) =>
@@ -2251,6 +2260,7 @@ export function InvoiceManagement({
         )
         const storedItemCode = itemData.itemCode || itemData.financeCode || item.notes || ""
         const financeCode = catalogItem?.itemCode || storedItemCode || ""
+        const nominalCode = catalogItem?.nominalCode || itemData.nominalCode || "4110000"
         const amount = Math.round(item.discountedAmount ?? item.amount).toString()
         const documentType = itemData.documentType || "SI" // Default to Sales Invoice
 
@@ -2325,13 +2335,12 @@ export function InvoiceManagement({
           (ci.description || "").toLowerCase() === (disc.name || "").toLowerCase()
         )
         const discFinanceCode = discCatalogItem?.itemCode || ""
-        const discNominalCode = discCatalogItem?.nominalCode || "4110000"
         const discAmount = (-Math.round(disc.amount)).toString()
 
         rows.push([
           pupilID,
           adultIDNo,
-          discNominalCode,
+          "",
           "SI",
           documentNo,
           invoiceDate,
@@ -2836,7 +2845,14 @@ export function InvoiceManagement({
             clientName: markPaidInvoice.parentName || markPaidInvoice.studentName,
             contactName: markPaidInvoice.studentName,
             yearGroup: markPaidInvoice.studentGrade,
-            schoolYear: markPaidInvoice.term || "",
+            schoolYear: (() => {
+              const ay = markPaidInvoice.academicYear || ""
+              const tm = markPaidInvoice.term || ""
+              if (ay && tm) return `${ay} - ${tm}`
+              return ay || tm
+            })(),
+            academicYear: markPaidInvoice.academicYear || "",
+            term: markPaidInvoice.term || "",
             totalAmount: markPaidInvoice.finalAmount,
             paymentMethod: paymentMethodDetail,
             status: "generated",
@@ -3047,14 +3063,26 @@ export function InvoiceManagement({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={downloadInterfaceFile}
-          >
-            <Download className="w-4 h-4" />
-            Download Interface File
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Download Interface File
+                <ChevronDown className="w-3 h-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={downloadInterfaceFile}>
+                <Download className="w-4 h-4 mr-2" />
+                Download Interface File
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={downloadInterfaceTemplate}>
+                <FileText className="w-4 h-4 mr-2" />
+                Download Template
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="outline"
             className="flex items-center gap-2"
@@ -4593,11 +4621,9 @@ export function InvoiceManagement({
                           status: selectedInvoice.status
                         }
                         // Open cancel dialog
-                        const reason = prompt("Please specify the reason for cancellation:")
-                        if (reason && reason.trim()) {
-                          handleCancelInvoice(modalData, reason.trim())
-                          closeInvoiceModal()
-                        }
+                        setCancelTargetData(modalData)
+                        setCancelReasonInput("")
+                        setIsCancelDialogOpen(true)
                       }}
                     >
                       <X className="w-4 h-4 mr-2" />
@@ -5985,6 +6011,49 @@ export function InvoiceManagement({
             <Button onClick={handleSaveChanges}>
               <CheckCircle className="w-4 h-4 mr-2" />
               Confirm Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Invoice Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent style={{ maxWidth: "560px" }} className="bg-white p-8">
+          <DialogHeader className="mb-4">
+            <DialogTitle>Cancel Invoice</DialogTitle>
+            <DialogDescription>Please specify the reason for cancellation</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              value={cancelReasonInput}
+              onChange={(e) => setCancelReasonInput(e.target.value)}
+              placeholder="Enter reason..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && cancelReasonInput.trim()) {
+                  handleCancelInvoice(cancelTargetData, cancelReasonInput.trim())
+                  closeInvoiceModal()
+                  setIsCancelDialogOpen(false)
+                }
+              }}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!cancelReasonInput.trim()}
+              onClick={() => {
+                if (cancelReasonInput.trim()) {
+                  handleCancelInvoice(cancelTargetData, cancelReasonInput.trim())
+                  closeInvoiceModal()
+                  setIsCancelDialogOpen(false)
+                }
+              }}
+            >
+              Confirm Cancel
             </Button>
           </div>
         </DialogContent>

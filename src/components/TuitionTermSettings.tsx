@@ -429,12 +429,7 @@ export function TuitionTermSettings() {
                               <tr key={term.id} className="hover:bg-gray-50">
                                 {/* Term Name - text column */}
                                 <td className="text-left px-4 py-3">
-                                  <Input
-                                    value={term.name}
-                                    onChange={(e) => updateTerm(year.id, term.id, "name", e.target.value)}
-                                    className="border-0 p-0 h-auto text-sm font-medium text-black focus-visible:ring-0 bg-transparent"
-                                    disabled={!userCanEdit}
-                                  />
+                                  <span className="text-sm font-medium text-black">{term.name}</span>
                                 </td>
                                 {/* Start Date - date column */}
                                 <td className="text-left px-4 py-3">
