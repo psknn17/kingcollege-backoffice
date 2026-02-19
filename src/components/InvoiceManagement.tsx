@@ -781,14 +781,6 @@ export function InvoiceManagement({
   }
 
   const openViewModal = (invoice: Invoice) => {
-    console.log('[InvoiceManagement] Opening view modal for invoice:', {
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      status: invoice.status,
-      cancelReason: invoice.cancelReason,
-      cancelledBy: invoice.cancelledBy,
-      cancelledAt: invoice.cancelledAt
-    })
 
     const modalData = {
       id: invoice.id,
@@ -827,12 +819,6 @@ export function InvoiceManagement({
       }
     }
 
-    console.log('[InvoiceManagement] modalData being passed:', {
-      status: modalData.status,
-      cancelReason: modalData.cancelReason,
-      cancelledBy: modalData.cancelledBy,
-      cancelledAt: modalData.cancelledAt
-    })
 
     // Use new navigation instead of modal
     if (onNavigateToView) {
@@ -1086,13 +1072,6 @@ export function InvoiceManagement({
 
     const previousInvoice = selectedInvoice
     const emailSentAt = new Date().toISOString()
-    console.log('[saveAndSendInvoice] Sending email at:', emailSentAt, new Date(emailSentAt))
-
-    const updatedInvoices = invoices.map(inv =>
-      inv.id === selectedInvoice.id
-        ? { ...inv, dueDate: editingDueDate, notes: editingNotes, status: "sent" as const, emailSentAt }
-        : inv
-    )
     setInvoices(updatedInvoices)
 
     // Update localStorage
@@ -1421,10 +1400,6 @@ export function InvoiceManagement({
 
     // Update invoice status to "sent" and record email sent timestamp
     const emailSentAt = new Date().toISOString()
-    console.log('[sendInvoice] Sending email at:', emailSentAt, new Date(emailSentAt))
-    const updatedInvoices = invoices.map(inv =>
-      inv.id === invoiceToSend.id ? { ...inv, status: "sent" as const, emailSentAt } : inv
-    )
     setInvoices(updatedInvoices)
 
     // Update localStorage
@@ -2637,13 +2612,6 @@ export function InvoiceManagement({
     if (!invoice) return
 
     const cancelledDate = new Date()
-    console.log('[handleCancelInvoice] Cancelling invoice:', {
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      reason: reason,
-      cancelledAt: cancelledDate.toISOString(),
-      cancelledBy: "Admin"
-    })
 
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
@@ -2883,9 +2851,6 @@ export function InvoiceManagement({
           receipts.push(receiptRecord)
           localStorage.setItem(receiptStorageKey, JSON.stringify(receipts))
 
-          console.log(`Auto-generated receipt: ${receiptNo}`)
-        } catch (error) {
-          console.error("Failed to auto-generate receipt:", error)
           // Don't show error to user, receipt generation is secondary
         }
       }
@@ -4603,13 +4568,6 @@ export function InvoiceManagement({
                 {(() => {
                   const canCancelInvoice = user?.role !== "Approvalver"
                   const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
-                  console.log('[Cancel Button] Visibility check:', {
-                    userRole: user?.role,
-                    canCancelInvoice,
-                    approvalStatus: getApprovalStatus(selectedInvoice),
-                    invoiceStatus: selectedInvoice.status,
-                    shouldShow: shouldShowCancelButton
-                  })
                   return shouldShowCancelButton ? (
                     <Button
                       variant="destructive"
@@ -6260,97 +6218,6 @@ export function InvoiceManagement({
             // Get display date for email sent - ONLY use emailSentAt (actual send time)
             const emailStatus = getEmailStatus(selectedInvoiceForEmail)
             const displayEmailDate = selectedInvoiceForEmail.emailSentAt
-            console.log('[Email Status Modal] Invoice:', selectedInvoiceForEmail.invoiceNumber, 'emailSentAt:', selectedInvoiceForEmail.emailSentAt, 'Status:', emailStatus)
-
-            return (
-              <div className="px-8 pt-6 pb-6">
-                {/* Main Information - Flat Style */}
-                <div className="grid grid-cols-3 gap-8 mb-6 pb-4 border-b">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Invoice Number</p>
-                    <p className="text-base font-bold text-foreground">{displayInvoiceNumber(selectedInvoiceForEmail.invoiceNumber, getApprovalStatus(selectedInvoiceForEmail))}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Student Name</p>
-                    <p className="text-base font-bold text-foreground">{selectedInvoiceForEmail.studentName}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Email Status</p>
-                    <div className="mt-1">
-                      {getStatusBadge(emailStatus)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email Sent Success - Clean Card */}
-                {displayEmailDate && emailStatus === "sent" && (
-                  <div className="rounded-xl border-2 border-green-500 bg-white p-6">
-                    <div className="mb-4">
-                      <h4 className="font-bold text-foreground text-lg mb-1">Email Sent Successfully</h4>
-                      <p className="text-sm text-green-700">Invoice email has been delivered to the recipient</p>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-green-50">
-                          <CalendarIcon className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground font-medium">Date</p>
-                          <p className="text-sm font-bold text-foreground">
-                            {format(new Date(displayEmailDate), "EEEE, MMMM dd, yyyy")}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-green-50">
-                          <Clock className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground font-medium">Time</p>
-                          <p className="text-sm font-bold text-foreground">
-                            {format(new Date(displayEmailDate), "HH:mm")}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pending Approval - Info Card */}
-                {emailStatus === "wait" && (
-                  <div className="rounded-xl border-2 border-yellow-500 bg-white p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 rounded-lg bg-yellow-50">
-                        <Clock className="w-5 h-5 text-yellow-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-foreground text-base mb-1">Pending Approval</p>
-                        <p className="text-sm text-muted-foreground">
-                          Email will be sent after invoice approval.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Not Sent Yet - Neutral Card */}
-                {emailStatus === "unsent" && (
-                  <div className="rounded-xl border-2 border-slate-300 bg-white p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 rounded-lg bg-slate-50">
-                        <Mail className="w-5 h-5 text-slate-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-foreground text-base mb-1">Not Sent Yet</p>
-                        <p className="text-sm text-muted-foreground">
-                          Email has not been sent to the recipient.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
           })()}
 
           {/* Footer */}

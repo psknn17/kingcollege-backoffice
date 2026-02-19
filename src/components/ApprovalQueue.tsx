@@ -80,11 +80,6 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
     const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
     if (stored) {
       const savedInvoices = JSON.parse(stored)
-      console.log('[ApprovalQueue] Loading invoices from storage:', savedInvoices.length, 'invoices')
-      return savedInvoices.map((inv: any) => {
-        const parseStoredDate = (val: any): Date | null => {
-          if (!val) return null
-          // Handle Excel serial numbers (e.g. "46071" → 2026-02-17)
           const num = Number(val)
           if (!isNaN(num) && num > 40000 && num < 100000 && String(val).trim() === String(Math.floor(num))) {
             return new Date((num - 25569) * 86400 * 1000)
@@ -197,14 +192,8 @@ export function ApprovalQueue() {
   const schoolSettings = useSchoolSettings()
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
     const loaded = loadCreatedInvoicesFromStorage()
-    console.log('[ApprovalQueue] Initial invoices:', loaded.length)
-    return loaded
-  })
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => {
     const loaded = loadCreatedInvoicesFromStorage()
-    console.log('[ApprovalQueue] Initial filteredInvoices:', loaded.length)
-    return loaded
-  })
   const [searchTerm, setSearchTerm] = usePersistedState("approval-queue:search", "")
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
@@ -338,12 +327,6 @@ export function ApprovalQueue() {
   }
 
   const sortedInvoices = useMemo(() => {
-    console.log('[ApprovalQueue] Rendering with:', {
-      totalInvoices: invoices.length,
-      filteredInvoices: filteredInvoices.length,
-      academicYearFilter,
-      invoiceStatusFilter
-    })
     const sorted = [...filteredInvoices]
 
     // If no sortKey is set, default to sorting by timestamp descending (newest first)

@@ -1608,12 +1608,6 @@ const updateVersionMarker = () => {
   if (storedVersion !== DATA_VERSION) {
     // Just update the version marker - DO NOT delete user data
     localStorage.setItem("itemManagementDataVersion", DATA_VERSION)
-    console.log("ItemManagement: Version marker updated to", DATA_VERSION, "(data preserved)")
-  }
-}
-
-// Run version update on module load
-updateVersionMarker()
 
 // Generate item code based on category
 const generateItemCode = (category: string, index: number): string => {
@@ -1827,7 +1821,6 @@ const loadTemplatesFromStorage = (invoiceCategory: string = "student", currentIt
 
       // If validation fails, clear localStorage and return null to use mock templates
       if (!isValid) {
-        console.warn("Stored templates reference non-existent items. Clearing and using mock templates.")
         localStorage.removeItem(getTemplatesStorageKey(invoiceCategory))
         return null
       }
@@ -1984,11 +1977,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         if (filtered.length < allItems.length) {
           localStorage.setItem(storageKey, JSON.stringify(filtered))
           setItems(filtered)
-          console.log(`[Cleanup] Removed ${allItems.length - filtered.length} auto-generated tuition items`)
-        }
-      }
-    } catch (e) {
-      console.error("[Cleanup] Failed:", e)
     }
     localStorage.setItem(cleanupKey, "true")
   }, [])
@@ -2267,8 +2255,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       }
 
       const parsed = rows.map((row, index) => ({ ...row, _rowIndex: index + 2 }))
-      console.log("Parsed items (first 3):", parsed.slice(0, 3))
-      setImportPreview(parsed)
       setImportError("")
     } catch {
       setImportError("Failed to parse file. Please use the provided template.")
@@ -2436,8 +2422,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       // Only show toast if items were created or updated
       if (created > 0 || updated > 0) {
-        console.log(`[ItemManagement] Tuition fees synced: Created ${created}, Updated ${updated} from ${latestYear}`)
-        toast.success(`Synced tuition fees: ${created} new, ${updated} updated from ${latestYear}`)
       }
     } catch (error) {
       console.error("Failed to sync tuition fees:", error)
