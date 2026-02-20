@@ -1811,44 +1811,18 @@ const saveItemsToStorage = (items: Item[], invoiceCategory: string = "student") 
 }
 
 // Load templates from localStorage
-const loadTemplatesFromStorage = (invoiceCategory: string = "student", currentItems: Item[]): ItemTemplate[] | null => {
-  const categoryMockTemplates = getMockTemplates(invoiceCategory)
-
+const loadTemplatesFromStorage = (invoiceCategory: string = "student"): ItemTemplate[] | null => {
   try {
     const stored = localStorage.getItem(getTemplatesStorageKey(invoiceCategory))
-    if (stored) {
-      const storedTemplates = JSON.parse(stored)
-
-      // Validate: check if all template items exist in current items array
-      const itemIds = new Set(currentItems.map(item => item.id))
-      const isValid = storedTemplates.every((template: ItemTemplate) =>
-        template.items.every(itemId => itemIds.has(itemId))
-      )
-
-      // If validation fails, clear localStorage and return null to use mock templates
-      if (!isValid) {
-        console.warn("Stored templates reference non-existent items. Clearing and using mock templates.")
-        localStorage.removeItem(getTemplatesStorageKey(invoiceCategory))
-        return null
-      }
-
-      // For student category only: merge with mock templates
-      if (invoiceCategory === "student") {
-        const storedIds = new Set(storedTemplates.map((t: ItemTemplate) => t.id))
-        const newMockTemplates = categoryMockTemplates.filter(mockT => !storedIds.has(mockT.id))
-
-        if (newMockTemplates.length > 0) {
-          return [...storedTemplates, ...newMockTemplates]
-        }
-      }
-
-      return storedTemplates
+    if (stored !== null) {
+      // Trust stored data completely — including empty array (user deleted all templates)
+      return JSON.parse(stored)
     }
   } catch (error) {
     console.error("Failed to load templates from localStorage:", error)
   }
-  // Return category-specific mock templates or null
-  return categoryMockTemplates.length > 0 ? null : []
+  // null = nothing ever saved → caller should use mock templates and persist them
+  return null
 }
 
 // Save templates to localStorage
@@ -1890,8 +1864,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   // Load items and templates for this specific category
   const [items, setItems] = useState<Item[]>(() => loadItemsFromStorage(invoiceType))
   const [templates, setTemplates] = useState<ItemTemplate[]>(() => {
-    const loadedItems = loadItemsFromStorage(invoiceType)
-    return loadTemplatesFromStorage(invoiceType, loadedItems) || getMockTemplates(invoiceType)
+    const stored = loadTemplatesFromStorage(invoiceType)
+    if (stored !== null) return stored
+    // First time: initialize from mock templates and persist immediately
+    const initial = getMockTemplates(invoiceType)
+    saveTemplatesToStorage(initial, invoiceType)
+    return initial
   })
 
   // Manual save function
@@ -2512,7 +2490,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   }
 
   const handleDeleteTemplate = (templateId: string) => {
-    setTemplates(templates.filter(template => template.id !== templateId))
+    const updated = templates.filter(template => template.id !== templateId)
+    setTemplates(updated)
+    saveTemplatesToStorage(updated, invoiceType)
     toast.success("Template deleted successfully")
   }
 

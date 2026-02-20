@@ -29,6 +29,7 @@ export function TuitionTermSettings() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const confirmDialog = useConfirmDialog()
+  const deleteDialog = useConfirmDialog()
   const locale = language === "th" ? th : enUS
   const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
@@ -157,17 +158,19 @@ export function TuitionTermSettings() {
 
   const deleteAcademicYear = (yearId: string) => {
     if (academicYears.length <= 1) return
-    deleteYear(yearId)
+    deleteDialog.confirm(() => {
+      deleteYear(yearId)
 
-    // Also remove from editedYears
-    setEditedYears(prev => {
-      const newEdited = { ...prev }
-      delete newEdited[yearId]
-      return newEdited
+      // Also remove from editedYears
+      setEditedYears(prev => {
+        const newEdited = { ...prev }
+        delete newEdited[yearId]
+        return newEdited
+      })
+
+      setExpandedYears(prev => prev.filter(id => id !== yearId))
+      toast.success(t("termSettings.yearDeleted"))
     })
-
-    setExpandedYears(prev => prev.filter(id => id !== yearId))
-    toast.success(t("termSettings.yearDeleted"))
   }
 
   const updateTermsForYear = (yearId: string, newTerms: Term[]) => {
@@ -257,8 +260,10 @@ export function TuitionTermSettings() {
   const deleteTerm = (yearId: string, termId: string) => {
     const year = editedYears[yearId]
     if (!year) return
-    updateTermsForYear(yearId, year.terms.filter(term => term.id !== termId))
-    toast.success(t("termSettings.termDeleted"))
+    deleteDialog.confirm(() => {
+      updateTermsForYear(yearId, year.terms.filter(term => term.id !== termId))
+      toast.success(t("termSettings.termDeleted"))
+    })
   }
 
   const handleSaveYear = (yearId: string) => {
@@ -579,6 +584,13 @@ export function TuitionTermSettings() {
         onConfirm={confirmDialog.handleConfirm}
         titleKey="confirmDialog.saveTitle"
         descriptionKey="confirmDialog.saveDescription"
+      />
+      <ConfirmDialog
+        open={deleteDialog.isOpen}
+        onOpenChange={deleteDialog.setIsOpen}
+        onConfirm={deleteDialog.handleConfirm}
+        titleKey="confirmDialog.deleteTitle"
+        descriptionKey="confirmDialog.deleteDescription"
       />
     </div>
   )

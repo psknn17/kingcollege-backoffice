@@ -493,6 +493,72 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     setSelectedReceipts(new Set())
   }
 
+  const downloadInterfaceFile = () => {
+    if (filteredReceipts.length === 0) {
+      toast.error("No receipts to export")
+      return
+    }
+
+    const mapPaymentMethod = (method: string) => {
+      const m = (method || "").toLowerCase()
+      if (m.includes("bank") || m.includes("transfer") || m.includes("edc") || m.includes("tran")) return "Bank"
+      if (m.includes("credit") || m.includes("card") || m.includes("pos")) return "POS"
+      if (m.includes("qr") || m.includes("prompt")) return "POS"
+      if (m.includes("cash")) return "Cash"
+      if (m.includes("cheque") || m.includes("check")) return "Cheque"
+      return method || "Bank"
+    }
+
+    const mapPaymentOption = (method: string) => {
+      const m = (method || "").toLowerCase()
+      if (m.includes("transfer") || m.includes("bank") || m.includes("edc")) return "Transfer"
+      if (m.includes("credit") || m.includes("card")) return "Credit Card"
+      if (m.includes("qr") || m.includes("prompt")) return "QR"
+      if (m.includes("cash")) return "Cash"
+      if (m.includes("cheque") || m.includes("check")) return "Cheque"
+      return "Transfer"
+    }
+
+    const wb = XLSX.utils.book_new()
+
+    // Title row + header row + data rows
+    const titleRow = ["Interface File - Sales Receipt for school fees"]
+    const headerRow = [
+      "Receipt no.", "Customer no.", "Type", "RV no. series",
+      "Date", "Payment method", "Payment option", "Sell-to-customer No.",
+      "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
+    ]
+
+    const dataRows = filteredReceipts.map(r => [
+      r.receiptNumber,
+      r.studentId,
+      "CASHRCPT",
+      "AR-RV",
+      format(r.transactionDate, "dd/MM/yyyy"),
+      mapPaymentMethod(r.paymentMethod),
+      mapPaymentOption(r.paymentMethod),
+      r.studentId,
+      "",
+      r.studentGrade,
+      formatAcademicYear(r.academicYear),
+      r.invoiceNumber,
+      r.amount
+    ])
+
+    const ws = XLSX.utils.aoa_to_sheet([titleRow, [], headerRow, ...dataRows])
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
+      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 20 },
+      { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }
+    ]
+
+    XLSX.utils.book_append_sheet(wb, ws, "Receipts")
+    XLSX.writeFile(wb, `interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
+    toast.success("Interface file downloaded successfully")
+  }
+
   const exportToExcel = () => {
     const isCreditNoteMode = activeTab === "credit-notes" || viewMode === "credit-notes"
     if (isCreditNoteMode) {
@@ -1007,6 +1073,16 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               <FileDown className="w-4 h-4" />
               Export All
             </Button>
+            {(activeTab !== "credit-notes" && viewMode !== "credit-notes") && (
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={downloadInterfaceFile}
+              >
+                <Download className="w-4 h-4" />
+                Download Interface File
+              </Button>
+            )}
             <Button
               className="flex items-center gap-2"
               disabled={!userCanEdit}
