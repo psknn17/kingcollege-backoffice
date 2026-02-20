@@ -160,7 +160,14 @@ const getStudentGroupDiscounts = (studentId: string, category: string): { name: 
 
     const groups = JSON.parse(stored)
     return groups
-      .filter((group: any) => group.students?.some((s: any) => s.studentId === studentId || s.id === studentId))
+      .filter((group: any) => {
+        // Skip inactive groups
+        if (group.isActive === false) return false
+        // Student must be in group AND not inactive
+        return group.students?.some((s: any) =>
+          (s.studentId === studentId || s.id === studentId) && s.isActive !== false
+        )
+      })
       .map((group: any) => ({
         name: group.name,
         discountType: group.discountType || "percentage",
