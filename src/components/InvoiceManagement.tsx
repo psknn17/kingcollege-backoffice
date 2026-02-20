@@ -1878,6 +1878,17 @@ export function InvoiceManagement({
 
       const totalAmount = items.reduce((sum, i) => sum + i.amount, 0)
 
+      // Calculate and store student group discounts at import time (checks isActive)
+      const invoiceCategory = (category || "tuition") as string
+      const groupDiscountsAtImport = getStudentGroupDiscounts(pupilId, invoiceCategory)
+      const storedDiscounts = groupDiscountsAtImport.map(g => ({
+        name: g.name,
+        amount: g.discountType === "percentage"
+          ? Math.round(totalAmount * g.discountPercentage / 100)
+          : g.fixedAmount,
+        percentage: g.discountType === "percentage" ? g.discountPercentage : undefined
+      })).filter(d => d.amount > 0)
+
       return {
         id: `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         invoiceNumber: docNo,
@@ -1895,10 +1906,11 @@ export function InvoiceManagement({
         dueDate: parseDate(first["DueDate"]),
         issuedBy: "Import",
         items,
+        discounts: storedDiscounts,
         notes: "",
         term: first["SchoolTerm"] || "",
         academicYear: first["SchoolYear"] || "",
-        category: (category || "tuition") as "tuition" | "eca" | "trip" | "exam" | "bus" | "external",
+        category: invoiceCategory as "tuition" | "eca" | "trip" | "exam" | "bus" | "external",
         adultIdNo: studentFamily?.familyCode || first["AdultIDNo"] || ""
       }
     }).filter(Boolean) as Invoice[]
