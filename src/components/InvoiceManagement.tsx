@@ -2306,15 +2306,13 @@ export function InvoiceManagement({
           }
         }
 
-        // 2. Student group discounts
-        const invoiceCategory = invoice.category || category
-        const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoiceCategory)
-        groupDiscounts.forEach((group: any) => {
-          const groupAmount = group.discountType === "percentage"
-            ? Math.round(subtotalForDiscounts * group.discountPercentage / 100)
-            : group.fixedAmount
-          if (groupAmount > 0) dynamicDiscounts.push({ name: group.name, amount: groupAmount, percentage: group.discountType === "percentage" ? group.discountPercentage : undefined })
-        })
+        // 2. Student group discounts - use stored invoice.discounts (set at creation time)
+        // Never recalculate from current group state for existing invoices
+        ;(invoice.discounts || [])
+          .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+          .forEach(d => {
+            if (d.amount > 0) dynamicDiscounts.push({ name: d.name, amount: d.amount, percentage: d.percentage })
+          })
 
         // 3. Staff Child (50%)
         if (student && student.notes?.toLowerCase().includes('staff')) {
@@ -2410,21 +2408,13 @@ export function InvoiceManagement({
           }
         }
 
-        // 2. Student group discounts
-        const invoiceCategory = invoice.category || category
-        const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoiceCategory)
-        groupDiscounts.forEach(group => {
-          const groupAmount = group.discountType === "percentage"
-            ? Math.round(subtotal * group.discountPercentage / 100)
-            : group.fixedAmount
-          if (groupAmount > 0) {
-            discountLines.push({
-              name: group.name,
-              amount: groupAmount,
-              percent: group.discountType === "percentage" ? group.discountPercentage : undefined
-            })
-          }
-        })
+        // 2. Student group discounts - use stored invoice.discounts (set at creation time)
+        // Never recalculate from current group state for existing invoices
+        ;(invoice.discounts || [])
+          .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+          .forEach(d => {
+            discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
+          })
 
         // 3. Fee Waiver Program
         if (student) {
@@ -4401,20 +4391,14 @@ export function InvoiceManagement({
                       }
                     }
 
-                    // 3. Student group discounts
+                    // 3. Student group discounts - use stored invoice.discounts (set at creation time)
+                    // Never recalculate from current group state for existing invoices
                     if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                      const invoiceCategory = selectedInvoice.category || category
-                      const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId, invoiceCategory)
-                      groupDiscounts.forEach(group => {
-                        const groupAmount = group.discountType === "percentage"
-                          ? Math.round(subtotal * group.discountPercentage / 100)
-                          : group.fixedAmount
-                        discountLines.push({
-                          name: group.name,
-                          amount: groupAmount,
-                          percent: group.discountType === "percentage" ? group.discountPercentage : undefined
+                      ;(selectedInvoice.discounts || [])
+                        .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+                        .forEach(d => {
+                          discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
                         })
-                      })
                     }
 
                     // 4. Fee Waiver Program (75,000/term for eligible students)
@@ -5669,18 +5653,17 @@ export function InvoiceManagement({
                     }
                   }
 
-                  // Get student group discounts
-                  const invoiceCategory = selectedInvoice.category || category
-                  const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId, invoiceCategory)
-                  groupDiscounts.forEach(group => {
-                    discounts.push({
-                      name: group.name,
-                      value: group.discountType === "percentage"
-                        ? `${group.discountPercentage}%`
-                        : `${group.fixedAmount.toLocaleString()}`,
-                      color: "bg-purple-100 text-purple-800"
+                  // Get student group discounts - use stored invoice.discounts (set at creation time)
+                  // Never recalculate from current group state for existing invoices
+                  ;(selectedInvoice.discounts || [])
+                    .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+                    .forEach(d => {
+                      discounts.push({
+                        name: d.name,
+                        value: d.percentage ? `${d.percentage}%` : `${d.amount.toLocaleString()}`,
+                        color: "bg-purple-100 text-purple-800"
+                      })
                     })
-                  })
 
                   // Fee Waiver Program
                   if (student) {
