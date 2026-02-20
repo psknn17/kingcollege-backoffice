@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { Routes, Route, useNavigate } from "react-router-dom"
+import { Routes, Route, useNavigate, Navigate } from "react-router-dom"
 import { useAppNavigation } from "./hooks/useAppNavigation"
 import { PrivateRoute } from "./components/PrivateRoute"
 import { usePersistedState } from "./hooks/usePersistedState"
@@ -118,6 +118,7 @@ import { ReportOverview } from "./components/ReportOverview"
 import { UserProfile } from "./components/UserProfile"
 import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
+import { Login } from "./components/Login"
 
 import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
@@ -340,7 +341,9 @@ export default function App() {
   const handleViewDetailsPrint = (_data: any) => {}
 
   return (
-    <PrivateRoute>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="*" element={<PrivateRoute>
       <SidebarProvider>
         <div className="flex h-screen w-full">
           <Sidebar className="border-r">
@@ -1024,6 +1027,7 @@ export default function App() {
           onPrint={handleGlobalPrint}
         />
       </SidebarProvider>
-    </PrivateRoute>
+    </PrivateRoute>} />
+    </Routes>
   )
 }

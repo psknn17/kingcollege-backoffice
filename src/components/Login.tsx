@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { useAuth } from "@/contexts/AuthContext"
+import { useNavigate, useLocation } from "react-router-dom"
 import { Mail, Lock, ArrowRight, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import SchoolLogo from "@/assets/Logo.png"
@@ -12,6 +13,8 @@ type LoginStep = "email" | "otp"
 
 export function Login() {
   const { login } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -58,6 +61,8 @@ export function Login() {
       const success = await login(email, password)
       if (success) {
         toast.success("Login successful!")
+        const from = (location.state as any)?.from || "/tuition-dashboard"
+        navigate(from, { replace: true })
       } else {
         toast.error("Invalid credentials")
       }
@@ -135,7 +140,14 @@ export function Login() {
         >
           {/* Logo */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "32px" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "220px", width: "auto" }} />
+            <div className="rounded-xl ring-1 ring-white/20 backdrop-blur-sm bg-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-2">
+              <img
+                src={SchoolLogo}
+                alt="King's College"
+                style={{ height: "280px", width: "auto", display: "block" }}
+                className="rounded-lg"
+              />
+            </div>
           </div>
 
           {/* Header */}

@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext"
-import { Login } from "./Login"
+import { Navigate, useLocation } from "react-router-dom"
 import { RoleSelection } from "./RoleSelection"
 
 interface PrivateRouteProps {
@@ -8,9 +8,10 @@ interface PrivateRouteProps {
 
 export function PrivateRoute({ children }: PrivateRouteProps) {
   const { isAuthenticated, needsRoleSelection, selectRole } = useAuth()
+  const location = useLocation()
 
   if (!isAuthenticated && !needsRoleSelection) {
-    return <Login />
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
   if (needsRoleSelection) {
