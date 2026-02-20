@@ -128,7 +128,10 @@ const getStudentGroupDiscounts = (studentId: string, category: string): { name: 
     const studentGroups: { name: string, discountType: string, discountPercentage: number, fixedAmount: number }[] = []
 
     groups.forEach((group: any) => {
-      if (group.students && group.students.some((s: any) => s.id === studentId)) {
+      // Skip inactive groups
+      if (group.isActive === false) return
+      // Skip if student is not in group, or if student is inactive in this group
+      if (group.students && group.students.some((s: any) => s.id === studentId && s.isActive !== false)) {
         studentGroups.push({
           name: group.name,
           discountType: group.discountType || "percentage",
