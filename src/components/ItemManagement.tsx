@@ -2692,17 +2692,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   disabled={!userCanEdit}
                 />
               </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={!userCanEdit}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {currentCategories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Bulk Delete Bar */}
@@ -3336,15 +3325,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader>
-            <DialogTitle>Import Items</DialogTitle>
-            <DialogDescription>
-              Upload a CSV file to import items. Download the template for the correct format.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle>Import Items</DialogTitle>
+              <DialogDescription>
+                Upload a CSV file to import items. Download the template for the correct format.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
@@ -3401,15 +3392,15 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     </div>
                   )}
 
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
+                  <div className="border rounded-lg overflow-x-auto">
+                    <Table className="min-w-[600px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead align="left">Item Code</TableHead>
+                          <TableHead align="left" className="w-32">Item Code</TableHead>
                           <TableHead align="left">Name</TableHead>
-                          <TableHead align="right">Amount</TableHead>
-                          <TableHead align="left">Category</TableHead>
-                          <TableHead align="center">Status</TableHead>
+                          <TableHead align="right" className="w-32">Amount</TableHead>
+                          <TableHead align="left" className="w-32">Category</TableHead>
+                          <TableHead align="center" className="w-24">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3417,16 +3408,18 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           const isDuplicate = items.some(item => item.itemCode === row["Item Code"])
                           return (
                             <TableRow key={index} className={isDuplicate ? "bg-yellow-50" : ""}>
-                              <TableCell align="left" className="font-mono text-sm">
+                              <TableCell align="left" className="font-mono text-sm whitespace-nowrap">
                                 {row["Item Code"]}
-                                {isDuplicate && <span className="ml-2 text-xs text-yellow-700 font-normal">(ซ้ำ)</span>}
+                                {isDuplicate && <span className="ml-1 text-xs text-yellow-700">(ซ้ำ)</span>}
                               </TableCell>
-                              <TableCell align="left" className={isDuplicate ? "text-yellow-700" : ""}>{row["Name"]}</TableCell>
-                              <TableCell align="right">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
-                              <TableCell align="left">
+                              <TableCell align="left" className={`max-w-xs ${isDuplicate ? "text-yellow-700" : ""}`}>
+                                <span className="block truncate" title={row["Name"]}>{row["Name"]}</span>
+                              </TableCell>
+                              <TableCell align="right" className="whitespace-nowrap">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
+                              <TableCell align="left" className="whitespace-nowrap">
                                 <Badge variant="outline">{row["Category"] || "-"}</Badge>
                               </TableCell>
-                              <TableCell align="center">
+                              <TableCell align="center" className="whitespace-nowrap">
                                 <Badge variant="outline">{row["Status"] || "active"}</Badge>
                               </TableCell>
                             </TableRow>
@@ -3459,7 +3452,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             })()}
           </div>
 
-          <DialogFooter>
+          <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
               Cancel
             </Button>
@@ -3470,7 +3463,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               <Upload className="w-4 h-4 mr-2" />
               Import {importPreview.length > 0 ? `${importPreview.length} Items` : ""}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

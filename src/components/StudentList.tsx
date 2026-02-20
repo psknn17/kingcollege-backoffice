@@ -2345,15 +2345,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent style={{ maxWidth: "702px" }} className="max-h-[90vh] overflow-y-auto p-6">
+        <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
+          <div className="p-6 pb-0">
           <DialogHeader>
             <DialogTitle>Import Students</DialogTitle>
             <DialogDescription>
               Upload a CSV file to import students. Download the template for the correct format.
             </DialogDescription>
           </DialogHeader>
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
@@ -2390,31 +2392,33 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             {importPreview.length > 0 && (
               <div className="space-y-2">
                 <Label>Preview ({importPreview.length} students)</Label>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
+                <div className="border rounded-lg overflow-x-auto">
+                  <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead align="left">{t("table.studentId")}</TableHead>
+                        <TableHead align="left" className="w-28">{t("table.studentId")}</TableHead>
                         <TableHead align="left">{t("table.name")}</TableHead>
-                        <TableHead align="left">{t("table.yearGroup")}</TableHead>
-                        <TableHead align="left">{t("table.year")}</TableHead>
-                        <TableHead align="left">Family Code</TableHead>
-                        <TableHead align="left">{t("table.status")}</TableHead>
+                        <TableHead align="left" className="w-24">{t("table.yearGroup")}</TableHead>
+                        <TableHead align="left" className="w-28">{t("table.year")}</TableHead>
+                        <TableHead align="left" className="w-32">Family Code</TableHead>
+                        <TableHead align="center" className="w-20">{t("table.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(showAllPreview ? importPreview : importPreview.slice(0, 10)).map((row, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-mono text-sm" align="left">{row["Student ID"]}</TableCell>
-                          <TableCell align="left">
-                            {row["Name"] || `${row["First Name"] || ""} ${row["Last Name"] || ""}`.trim()}
+                          <TableCell className="font-mono text-sm whitespace-nowrap" align="left">{row["Student ID"]}</TableCell>
+                          <TableCell align="left" className="max-w-xs">
+                            <span className="block truncate" title={row["Name"] || `${row["First Name"] || ""} ${row["Last Name"] || ""}`.trim()}>
+                              {row["Name"] || `${row["First Name"] || ""} ${row["Last Name"] || ""}`.trim()}
+                            </span>
                           </TableCell>
-                          <TableCell align="left">{row["Year Group"]}</TableCell>
-                          <TableCell align="left">{row["Academic Year"] || row["Year"]}</TableCell>
-                          <TableCell align="left" className="font-mono text-xs text-muted-foreground">
+                          <TableCell align="left" className="whitespace-nowrap">{row["Year Group"]}</TableCell>
+                          <TableCell align="left" className="whitespace-nowrap">{row["Academic Year"] || row["Year"]}</TableCell>
+                          <TableCell align="left" className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                             {row["Family Code"] || <span className="text-orange-400 text-xs">— no family</span>}
                           </TableCell>
-                          <TableCell align="left">
+                          <TableCell align="center">
                             <Badge variant="outline">{row["Status"] || "active"}</Badge>
                           </TableCell>
                         </TableRow>
@@ -2438,7 +2442,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             )}
           </div>
 
-          <DialogFooter>
+          <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
               Cancel
             </Button>
@@ -2449,7 +2453,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               <Upload className="w-4 h-4 mr-2" />
               Import {importPreview.length > 0 ? `${importPreview.length} Students` : ""}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

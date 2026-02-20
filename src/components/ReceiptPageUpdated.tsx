@@ -2512,15 +2512,17 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         setIsImportDialogOpen(open)
         if (!open) { setImportPreview([]); setImportErrors([]); setImportFileName("") }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
+          <div className="p-6 pb-0">
           <DialogHeader>
             <DialogTitle>Import Credit Notes</DialogTitle>
             <DialogDescription>
               Upload an Excel file to import credit notes. Download the template for the correct format.
             </DialogDescription>
           </DialogHeader>
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
@@ -2557,48 +2559,46 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             {importPreview.length > 0 && (
               <div className="space-y-2">
                 <Label>Preview ({importPreview.length} records)</Label>
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="max-h-[300px] overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead align="left">Credit Note No.</TableHead>
-                          <TableHead align="left">Student</TableHead>
-                          <TableHead align="left">Year Group</TableHead>
-                          <TableHead align="right">Amount</TableHead>
-                          <TableHead align="left">Date</TableHead>
-                          <TableHead align="left">Reason</TableHead>
-                          <TableHead align="center">Status</TableHead>
+                <div className="border rounded-lg overflow-x-auto">
+                  <Table className="min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead align="left" className="w-32">Credit Note No.</TableHead>
+                        <TableHead align="left">Student</TableHead>
+                        <TableHead align="left" className="w-24">Year Group</TableHead>
+                        <TableHead align="right" className="w-28">Amount</TableHead>
+                        <TableHead align="left" className="w-24">Date</TableHead>
+                        <TableHead align="left">Reason</TableHead>
+                        <TableHead align="center" className="w-20">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importPreview.map((cn, i) => (
+                        <TableRow key={i}>
+                          <TableCell align="left" className="font-mono text-sm whitespace-nowrap">{cn.creditNoteNumber}</TableCell>
+                          <TableCell align="left" className="max-w-[160px]">
+                            <div className="font-medium text-sm truncate" title={cn.studentName}>{cn.studentName}</div>
+                            <div className="text-xs text-muted-foreground">{cn.studentId}</div>
+                          </TableCell>
+                          <TableCell align="left"><Badge variant="outline" className="text-xs">{cn.studentGrade}</Badge></TableCell>
+                          <TableCell align="right" className="font-medium whitespace-nowrap">฿{cn.amount.toLocaleString()}</TableCell>
+                          <TableCell align="left" className="text-sm whitespace-nowrap">{format(cn.issueDate, "dd/MM/yyyy")}</TableCell>
+                          <TableCell align="left" className="text-sm max-w-[160px]"><span className="block truncate" title={cn.reason}>{cn.reason}</span></TableCell>
+                          <TableCell align="center">
+                            <Badge className={cn.status === "issued" ? "bg-blue-100 text-blue-800" : cn.status === "cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}>
+                              {cn.status}
+                            </Badge>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {importPreview.map((cn, i) => (
-                          <TableRow key={i}>
-                            <TableCell align="left" className="font-mono text-sm">{cn.creditNoteNumber}</TableCell>
-                            <TableCell align="left">
-                              <div className="font-medium text-sm">{cn.studentName}</div>
-                              <div className="text-xs text-muted-foreground">{cn.studentId}</div>
-                            </TableCell>
-                            <TableCell align="left"><Badge variant="outline" className="text-xs">{cn.studentGrade}</Badge></TableCell>
-                            <TableCell align="right" className="font-medium">฿{cn.amount.toLocaleString()}</TableCell>
-                            <TableCell align="left" className="text-sm">{format(cn.issueDate, "dd/MM/yyyy")}</TableCell>
-                            <TableCell align="left" className="text-sm max-w-[160px] truncate">{cn.reason}</TableCell>
-                            <TableCell align="center">
-                              <Badge className={cn.status === "issued" ? "bg-blue-100 text-blue-800" : cn.status === "cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}>
-                                {cn.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
+          <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
               Cancel
             </Button>
@@ -2609,7 +2609,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               <Upload className="w-4 h-4 mr-2" />
               Import {importPreview.length > 0 ? `${importPreview.length} Records` : ""}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

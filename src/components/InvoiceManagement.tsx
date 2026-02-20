@@ -5257,7 +5257,8 @@ export function InvoiceManagement({
 
       {/* Import Excel Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent className="max-w-2xl p-6">
+        <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
+          <div className="p-6 pb-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5" />
@@ -5267,8 +5268,9 @@ export function InvoiceManagement({
               Upload an Excel file (.xlsx, .xls) or CSV file to import multiple invoices at once
             </DialogDescription>
           </DialogHeader>
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {!importFile ? (
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8">
                 <div className="text-center">
@@ -5329,27 +5331,23 @@ export function InvoiceManagement({
                 {importPreview.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium">Preview ({importPreview.length} invoices found)</h4>
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
+                    <div className="border rounded-lg overflow-x-auto">
+                      <Table className="min-w-[500px]">
                         <TableHeader>
                           <TableRow className="bg-muted/50">
-                            {/* Student ID - LEFT */}
-                            <TableHead align="left">Student ID</TableHead>
-                            {/* Student Name - LEFT */}
+                            <TableHead align="left" className="w-28">Student ID</TableHead>
                             <TableHead align="left">Student Name</TableHead>
-                            {/* Year Group - LEFT */}
-                            <TableHead align="left">Year Group</TableHead>
-                            {/* Amount - RIGHT */}
-                            <TableHead align="right">Amount</TableHead>
+                            <TableHead align="left" className="w-28">Year Group</TableHead>
+                            <TableHead align="right" className="w-32">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {importPreview.map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell align="left" className="font-mono">{row.studentId}</TableCell>
-                              <TableCell align="left">{row.studentName}</TableCell>
-                              <TableCell align="left">{row.grade}</TableCell>
-                              <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
+                              <TableCell align="left" className="font-mono whitespace-nowrap">{row.studentId}</TableCell>
+                              <TableCell align="left" className="max-w-xs"><span className="block truncate" title={row.studentName}>{row.studentName}</span></TableCell>
+                              <TableCell align="left" className="whitespace-nowrap">{row.grade}</TableCell>
+                              <TableCell align="right" className="whitespace-nowrap">{row.amount.toLocaleString()}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
