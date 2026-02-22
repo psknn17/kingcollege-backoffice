@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Routes, Route, useNavigate, Navigate } from "react-router-dom"
 import { useAppNavigation } from "./hooks/useAppNavigation"
 import { PrivateRoute } from "./components/PrivateRoute"
@@ -31,6 +31,7 @@ import {
 import { useLanguage } from "./contexts/LanguageContext"
 import { useAuth, getRoleDisplayName } from "./contexts/AuthContext"
 import { Button } from "./components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./components/ui/dialog"
 import { Globe } from "lucide-react"
 import {
   BarChart3,
@@ -188,6 +189,7 @@ const menuItems = {
 export default function App() {
   const { language, setLanguage, t } = useLanguage()
   const { isAuthenticated, user, logout, needsRoleSelection } = useAuth()
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const navigate = useNavigate()
 
   const {
@@ -748,7 +750,7 @@ export default function App() {
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem
-                      onClick={logout}
+                      onClick={() => setIsLogoutDialogOpen(true)}
                       className="flex items-center gap-2 px-3 py-2 cursor-pointer text-red-600"
                     >
                       <LogOut className="w-4 h-4" />
@@ -1015,6 +1017,29 @@ export default function App() {
           </main>
         </div>
         <Toaster position="top-right" richColors />
+
+        {/* Logout Confirmation Dialog */}
+        <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>ออกจากระบบ</DialogTitle>
+              <DialogDescription>
+                คุณต้องการออกจากระบบใช่หรือไม่?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setIsLogoutDialogOpen(false)}>
+                ยกเลิก
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => { setIsLogoutDialogOpen(false); logout() }}
+              >
+                ออกจากระบบ
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Global View Modal */}
         <ViewModal
