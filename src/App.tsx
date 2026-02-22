@@ -341,6 +341,7 @@ export default function App() {
   const handleViewDetailsPrint = (_data: any) => {}
 
   return (
+    <>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="*" element={<PrivateRoute>
@@ -1016,29 +1017,6 @@ export default function App() {
         </div>
         <Toaster position="top-right" richColors />
 
-        {/* Logout Confirmation Dialog */}
-        <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-          <DialogContent className="max-w-xs p-8">
-            <DialogHeader>
-              <DialogTitle>Log Out</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to log out?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setIsLogoutDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => { setIsLogoutDialogOpen(false); logout() }}
-              >
-                Log Out
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         {/* Global View Modal */}
         <ViewModal
           isOpen={isGlobalViewModalOpen}
@@ -1052,5 +1030,29 @@ export default function App() {
       </SidebarProvider>
     </PrivateRoute>} />
     </Routes>
+
+    {/* Logout Confirmation Dialog — outside SidebarProvider so overlay covers full screen */}
+    <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+      <DialogContent className="max-w-xs p-8">
+        <DialogHeader>
+          <DialogTitle>Log Out</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to log out?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setIsLogoutDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => { setIsLogoutDialogOpen(false); logout() }}
+          >
+            Log Out
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
