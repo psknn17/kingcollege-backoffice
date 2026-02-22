@@ -1018,7 +1018,7 @@ export default function App() {
 
         {/* Logout Confirmation Dialog */}
         <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-          <DialogContent className="max-w-xs">
+          <DialogContent className="max-w-xs p-8">
             <DialogHeader>
               <DialogTitle>ออกจากระบบ</DialogTitle>
               <DialogDescription>
