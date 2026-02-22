@@ -124,8 +124,6 @@ import { Login } from "./components/Login"
 import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
 import { canAccessSection, getAccessibleMenuItems, canAccessMenuItem } from "./utils/rolePermissions"
-import { useState } from "react"
-
 const menuItems = {
   tuition: [
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
