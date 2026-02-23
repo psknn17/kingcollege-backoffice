@@ -4,7 +4,7 @@ export const rolePermissions = {
   super_admin: {
     name: "Admin",
     sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement", "report"],
-    menuItems: [] // Empty means ALL items within allowed sections
+    menuItems: [] as string[] // Empty means ALL items within allowed sections
   },
   admin_accountant: {
     name: "AdminAccountant",
@@ -18,11 +18,18 @@ export const rolePermissions = {
   },
   approver: {
     name: "Approvalver",
-    sections: ["userManagement"],
-    menuItems: [
-      // Only approval queue
-      "approval-queue"
-    ]
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report", "userManagement"],
+    menuItems: ["approval-queue"]
+  },
+  manager: {
+    name: "Manager",
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report", "userManagement"],
+    menuItems: []
+  },
+  finance_head: {
+    name: "FinanceHead",
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report", "userManagement", "settings"],
+    menuItems: [] as string[]
   }
 }
 
@@ -70,7 +77,9 @@ function normalizeRoleName(role: string): string {
     "Admin": "super_admin",
     "AdminAccountant": "admin_accountant",
     "Viewver": "viewer",
-    "Approvalver": "approver"
+    "Approvalver": "approver",
+    "Manager": "manager",
+    "FinanceHead": "finance_head"
   }
 
   return roleMap[role] || role.toLowerCase().replace(/[\/\s]/g, '_')

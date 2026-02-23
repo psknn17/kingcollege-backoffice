@@ -48,7 +48,7 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent style={{ maxWidth: "420px" }} className="p-8">
         <AlertDialogHeader>
           <AlertDialogTitle>{getText(titleKey)}</AlertDialogTitle>
           <AlertDialogDescription>{getText(descriptionKey)}</AlertDialogDescription>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { triggerDownload } from "@/utils/downloadUtils"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
+import { cn } from "./ui/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { useStudents } from "@/contexts/StudentContext"
@@ -17,7 +18,7 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
-import { EmptySearchResults, EmptyDataState } from "./ui/states"
+import { EmptySearchResults, EmptyDataState, EmptyState } from "./ui/states"
 import { Checkbox } from "./ui/checkbox"
 import { Search, Filter, Eye, Plus, Download, Mail, Calendar as CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, Edit, X, Upload, Users, User, FileSpreadsheet, RotateCcw, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, GraduationCap, Building, MoreVertical, History } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
@@ -25,10 +26,11 @@ import { ViewModal } from "./ViewModal"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { BANKS, PAYMENT_SOURCES } from "@/constants/paymentConstants"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
-import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear, generateNextInvoiceNumber } from "@/lib/invoiceUtils"
 import { parseTuitionItemName } from "@/utils/itemAutoCreate"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -71,10 +73,10 @@ interface Invoice {
   approvedBy?: string
   approvedAt?: Date
   rejectedReason?: string
-  rejectedAt?: string
+  rejectedAt?: Date
   rejectedBy?: string
   // Cancellation fields
-  cancelledAt?: string
+  cancelledAt?: Date
   cancelReason?: string
   cancelledBy?: string
   // Payment fields
@@ -423,8 +425,8 @@ export function InvoiceManagement({
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const schoolSettings = useSchoolSettings()
-  // Discount Options context for late payment calculations
-  const { getLatePaymentSettings, getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
+  // Discount Options context for calculations
+  const { getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears = [] } = useAcademicYears()
   const { students, families, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
 
@@ -432,6 +434,7 @@ export function InvoiceManagement({
   const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(mockTemplates)
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([])
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = usePersistedState("invoice-management:search", "")
   const [academicYearFilter, setAcademicYearFilter] = usePersistedState("invoice-management:academicYear", "all")
@@ -601,6 +604,7 @@ export function InvoiceManagement({
   const [isSavingPayment, setIsSavingPayment] = useState(false)
   const [edcBank, setEdcBank] = useState("")
   const [edcAccountNumber, setEdcAccountNumber] = useState("")
+  const [bankAccounts] = usePersistedState<any[]>("bankAccounts", [])
   const [isSendEmailConfirmOpen, setIsSendEmailConfirmOpen] = useState(false)
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
 
@@ -612,6 +616,50 @@ export function InvoiceManagement({
   // Add Items dialog state
   const [isAddItemsDialogOpen, setIsAddItemsDialogOpen] = useState(false)
   const [itemSearchQuery, setItemSearchQuery] = useState("")
+
+  // Bulk Change Due Date state
+  const [isBulkChangeDueDateOpen, setIsBulkChangeDueDateOpen] = useState(false)
+  const [bulkNewDueDate, setBulkNewDueDate] = useState<Date | undefined>(undefined)
+
+  const handleBulkChangeDueDate = () => {
+    if (!bulkNewDueDate) {
+      toast.error("Please select a new due date")
+      return
+    }
+
+    const updatedInvoices = invoices.map(inv => {
+      if (selectedInvoiceIds.has(inv.id)) {
+        if (inv.status !== "paid" && inv.status !== "cancelled") {
+          return { ...inv, dueDate: bulkNewDueDate }
+        }
+      }
+      return inv
+    })
+
+    const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+    if (stored) {
+      try {
+        const savedInvoices = JSON.parse(stored)
+        const newSaved = savedInvoices.map((inv: any) => {
+          if (selectedInvoiceIds.has(inv.id)) {
+            if (inv.status !== "paid" && inv.status !== "cancelled") {
+              return { ...inv, dueDate: bulkNewDueDate.toISOString() }
+            }
+          }
+          return inv
+        })
+        localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(newSaved))
+      } catch (e) {
+        console.error("Failed to update bulk due dates in storage", e)
+      }
+    }
+
+    setInvoices(updatedInvoices)
+    toast.success(`Updated due date for selected invoices`)
+    setIsBulkChangeDueDateOpen(false)
+    setBulkNewDueDate(undefined)
+    setSelectedInvoiceIds(new Set())
+  }
 
   const applyFilters = (tabType?: "student" | "external") => {
     const currentTab = tabType || invoiceTypeTab
@@ -643,7 +691,7 @@ export function InvoiceManagement({
         const emailStatus = getEmailStatus(inv)
         if (statusFilter === "wait") return emailStatus === "wait"
         if (statusFilter === "sent") return emailStatus === "sent"
-        if (statusFilter === "unsent") return emailStatus === "unsent"
+        if (statusFilter === "unsent") return emailStatus === "wait"
         return true
       })
     }
@@ -1085,7 +1133,7 @@ export function InvoiceManagement({
 
     const updatedInvoices = invoices.map(inv =>
       inv.id === selectedInvoice.id
-        ? { ...inv, dueDate: editingDueDate, notes: editingNotes, status: "sent" as const, emailSentAt }
+        ? { ...inv, dueDate: editingDueDate, notes: editingNotes, status: "sent" as const, emailSentAt: new Date() }
         : inv
     )
     setInvoices(updatedInvoices)
@@ -1245,6 +1293,7 @@ export function InvoiceManagement({
       detail: `Invoices: ${deletedNumbers.join(", ")}`
     })
   }
+
 
   const resetCreateForm = () => {
     setSelectedGrade("")
@@ -1418,7 +1467,7 @@ export function InvoiceManagement({
     const emailSentAt = new Date().toISOString()
 
     const updatedInvoices = invoices.map(inv =>
-      inv.id === invoiceToSend.id ? { ...inv, status: "sent" as const, emailSentAt } : inv
+      inv.id === invoiceToSend.id ? { ...inv, status: "sent" as const, emailSentAt: new Date() } : inv
     )
     setInvoices(updatedInvoices)
 
@@ -1752,6 +1801,19 @@ export function InvoiceManagement({
           }
           row["DocumentNo"] = generatedDocNos[row["PupilID"]]
         }
+
+        // SYNC: If this is a tuition item (or in tuition category), check if Master Tuition Price exists and override the row amount
+        // This ensures the preview table shows what will ACTUALLY be used (Master price takes precedence)
+        const masterPrice = getTuitionPriceFromYearData(
+          row["Description"] || "",
+          row["YearGroup"] || "",
+          row["SchoolTerm"] || "",
+          row["SchoolYear"] || ""
+        )
+        if (masterPrice !== null) {
+          row["Amount"] = masterPrice.toString()
+        }
+
         return row
       })
 
@@ -1832,6 +1894,7 @@ export function InvoiceManagement({
 
     let skippedNoStudent = 0
     let skippedNoItems = 0
+    let newItemsAdded = 0
 
     const newInvoices: Invoice[] = Object.entries(grouped).map(([docNo, rows]) => {
       const first = rows[0]
@@ -1855,10 +1918,7 @@ export function InvoiceManagement({
           const rawAmt = row["Amount"]
           const csvAmt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
           const desc = row["Description"] || ""
-          const isTuitionDesc = /tuition/i.test(desc)
-          const tuitionPrice = isTuitionDesc
-            ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
-            : null
+          const tuitionPrice = getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
           const amt = tuitionPrice ?? csvAmt
           return {
             id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -1889,8 +1949,12 @@ export function InvoiceManagement({
         percentage: g.discountType === "percentage" ? g.discountPercentage : undefined
       })).filter(d => d.amount > 0)
 
+      const issueDateRaw = first["DocumentDate"] || first["Date"] || first["InvoiceDate"]
+      const issueDate = issueDateRaw ? parseDate(issueDateRaw) : null
+      const dueDate = first["DueDate"] ? parseDate(first["DueDate"]) : (issueDate ? new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+
       return {
-        id: `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${getAcademicYear(new Date()).split('/')[0]}DRAFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         invoiceNumber: docNo,
         studentName: `${student.firstName} ${student.lastName}`,
         studentId: pupilId,
@@ -1902,8 +1966,8 @@ export function InvoiceManagement({
         finalAmount: totalAmount,
         status: "pending_approval" as const,
         approvalStatus: "wait" as const,
-        issueDate: null, // Will be set on approval
-        dueDate: parseDate(first["DueDate"]),
+        issueDate,
+        dueDate,
         issuedBy: "Import",
         items,
         discounts: storedDiscounts,
@@ -1915,22 +1979,33 @@ export function InvoiceManagement({
       }
     }).filter(Boolean) as Invoice[]
 
-    // Auto-create missing items in ItemManagement catalog (only when FinanceCode present)
-    let newItemsAdded = 0
+    // Auto-create or update items in ItemManagement catalog (only when FinanceCode present)
+    let catalogChanged = false
+
     importInterfaceRows.forEach(row => {
       const pupilId = row["PupilID"] || ""
       const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
       if (!student) return // Skip rows for unknown students
       if (!row["FinanceCode"]) return // Skip rows without item code (FinanceCode)
+
       const desc = (row["Description"] || "").trim()
       if (!desc) return
-      const alreadyExists = catalogItems.some((item: any) =>
+
+      const rawAmt = row["Amount"]
+      const amt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
+
+      // 1. Update/Sync Item Management Catalog
+      const existingItemIndex = catalogItems.findIndex((item: any) =>
         (item.name || "").toLowerCase().trim() === desc.toLowerCase() ||
         (item.description || "").toLowerCase().trim() === desc.toLowerCase()
       )
-      if (!alreadyExists) {
-        const rawAmt = row["Amount"]
-        const amt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
+
+      if (existingItemIndex !== -1) {
+        if (catalogItems[existingItemIndex].amount !== amt) {
+          catalogItems[existingItemIndex].amount = amt
+          catalogChanged = true
+        }
+      } else {
         catalogItems.push({
           id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           itemCode: row["FinanceCode"] || `AUTO-${Date.now()}`,
@@ -1943,14 +2018,16 @@ export function InvoiceManagement({
           applicableGrades: [],
           category: category || "tuition"
         })
+        catalogChanged = true
         newItemsAdded++
       }
     })
-    if (newItemsAdded > 0) {
+
+    if (catalogChanged) {
       try {
         localStorage.setItem(itemsStorageKey, JSON.stringify(catalogItems))
       } catch (e) {
-        console.error("Failed to auto-create items:", e)
+        console.error("Failed to update item catalog:", e)
       }
     }
 
@@ -1972,18 +2049,25 @@ export function InvoiceManagement({
     reloadInvoices()
     setIsImportInterfaceOpen(false)
     setImportInterfaceRows([])
+
     const itemNote = newItemsAdded > 0 ? ` (auto-created ${newItemsAdded} item${newItemsAdded > 1 ? "s" : ""})` : ""
     const skippedParts = [
       skippedNoStudent > 0 ? `${skippedNoStudent} รายการไม่พบนักเรียน` : "",
       skippedNoItems > 0 ? `${skippedNoItems} รายการไม่มี Item Code` : ""
     ].filter(Boolean).join(", ")
     const skippedNote = skippedParts ? ` — ข้ามไป: ${skippedParts}` : ""
+
     if (newInvoices.length === 0) {
       toast.error(`ไม่มี invoice ที่นำเข้าได้${skippedNote}`)
     } else {
       toast.success(`Imported ${newInvoices.length} invoice${newInvoices.length > 1 ? "s" : ""} successfully${itemNote}${skippedNote}`)
     }
-    logActivity({ action: `Imported ${newInvoices.length} invoices from interface file`, module: "Invoice Management", detail: `Invoice numbers: ${newInvoices.map(inv => inv.invoiceNumber).join(", ")}` })
+
+    logActivity({
+      action: `Imported ${newInvoices.length} invoices from interface file`,
+      module: "Invoice Management",
+      detail: `Invoice numbers: ${newInvoices.map(inv => inv.invoiceNumber).join(", ")}${itemNote}`
+    })
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
 
@@ -2185,7 +2269,7 @@ export function InvoiceManagement({
       "A001",               // AdultIDNo
       "4110003",            // NominalCode
       "SI",                 // Type (Sales Invoice)
-      "INV-001",            // DocumentNo
+      "20250000001",            // DocumentNo
       "15/01/2026",         // InvoiceDate
       "31/01/2026",         // DueDate
       "2024/2025",          // SchoolYear
@@ -2229,13 +2313,13 @@ export function InvoiceManagement({
       try {
         const key = cat === "afterschool" ? "afterschoolItems"
           : cat === "event" ? "eventItems"
-          : cat === "summer" ? "summerItems"
-          : cat === "external" ? "externalItems"
-          : cat === "eca" ? "ecaItems"
-          : cat === "trip" ? "tripItems"
-          : cat === "exam" ? "examItems"
-          : cat === "bus" ? "busItems"
-          : "invoiceItems" // tuition / student / default
+            : cat === "summer" ? "summerItems"
+              : cat === "external" ? "externalItems"
+                : cat === "eca" ? "ecaItems"
+                  : cat === "trip" ? "tripItems"
+                    : cat === "exam" ? "examItems"
+                      : cat === "bus" ? "busItems"
+                        : "invoiceItems" // tuition / student / default
         const stored = localStorage.getItem(key)
         return stored ? JSON.parse(stored) : []
       } catch { return [] }
@@ -2320,7 +2404,7 @@ export function InvoiceManagement({
 
         // 2. Student group discounts - use stored invoice.discounts (set at creation time)
         // Never recalculate from current group state for existing invoices
-        ;(invoice.discounts || [])
+        ; (invoice.discounts || [])
           .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
           .forEach(d => {
             if (d.amount > 0) dynamicDiscounts.push({ name: d.name, amount: d.amount, percentage: d.percentage })
@@ -2405,7 +2489,7 @@ export function InvoiceManagement({
       if (!isNonDiscountableInvoice && invoice.invoiceType !== "external" && invoice.studentId !== "EXTERNAL") {
         // 1. Sibling discount
         const siblingCount = students.filter(s =>
-          s.parentEmail?.toLowerCase() === student?.parentEmail?.toLowerCase() &&
+          s.familyId === student?.familyId &&
           s.id !== invoice.studentId
         ).length
         if (siblingCount > 0) {
@@ -2422,7 +2506,7 @@ export function InvoiceManagement({
 
         // 2. Student group discounts - use stored invoice.discounts (set at creation time)
         // Never recalculate from current group state for existing invoices
-        ;(invoice.discounts || [])
+        ; (invoice.discounts || [])
           .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
           .forEach(d => {
             discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
@@ -2432,7 +2516,7 @@ export function InvoiceManagement({
         if (student) {
           const feeWaiverEligibility = checkFeePrivilegeEligibility(
             student,
-            student.academicYear || invoice.academicYear,
+            student.academicYear || invoice.academicYear || "",
             student.enrollmentTerm || "term1"
           )
           if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
@@ -2481,8 +2565,8 @@ export function InvoiceManagement({
       const today = new Date()
       const dueDate = new Date(invoice.dueDate)
       const isOverdue = today > dueDate && invoice.status !== "paid"
-      const lateFeePercent = 1.5
-      const lateFeeAmount = isOverdue ? Math.round(subtotal * lateFeePercent / 100) : 0
+      const lateFeeAmount = 0
+      const lateFeePercent = 0
 
       // ID Charges removed - no longer applicable
       const totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
@@ -2494,7 +2578,7 @@ export function InvoiceManagement({
         discounts: discountLines.length > 0 ? discountLines : undefined,
         registrationFees: (invoice as any).registrationFees || undefined,
         securityDepositWaiver: (invoice as any).securityDepositWaiver || undefined,
-        lateFee: lateFeeAmount > 0 ? { amount: lateFeeAmount, percent: lateFeePercent } : undefined
+        lateFee: undefined
       }
 
       await downloadInvoicePDF(invoiceWithDetails)
@@ -2507,18 +2591,13 @@ export function InvoiceManagement({
     }
   }
 
-  // Generate proper invoice number (INV-YYYYMM-XXXX format)
-  const generateInvoiceNumber = (studentId: string) => {
-    const date = new Date()
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    // Use last 4 characters of student ID
-    const idSuffix = studentId.slice(-4)
-    return `INV-${year}${month}-${idSuffix}`
+  // Generate proper invoice number based on academic year and running number
+  const generateInvoiceNumber = (academicYear: string | undefined) => {
+    return generateNextInvoiceNumber(academicYear)
   }
 
   const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?: ApprovalStatus) => {
-    if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-") || invoiceNumber.startsWith("IMP-")) {
+    if (!invoiceNumber || invoiceNumber.includes("DRAFT-") || invoiceNumber.startsWith("IMP-")) {
       return ""
     }
     if (approvalStatus === "rejected") {
@@ -2543,7 +2622,7 @@ export function InvoiceManagement({
         ? {
           ...inv,
           invoiceNumber: finalInvoiceNumber,
-          approvalStatus: "approved",
+          approvalStatus: "approved" as ApprovalStatus,
           approvedBy: "Admin",
           approvedAt: approvalDate,
           issueDate: approvalDate,
@@ -2564,7 +2643,7 @@ export function InvoiceManagement({
             ? {
               ...inv,
               invoiceNumber: finalInvoiceNumber,
-              approvalStatus: "approved",
+              approvalStatus: "approved" as ApprovalStatus,
               approvedBy: "Admin",
               approvedAt: emailSentAt,
               issueDate: approvalDate.toISOString().split('T')[0],
@@ -2596,7 +2675,7 @@ export function InvoiceManagement({
       inv.id === invoice.id
         ? {
           ...inv,
-          approvalStatus: "rejected",
+          approvalStatus: "rejected" as ApprovalStatus,
           rejectedReason: reason
         }
         : inv
@@ -2612,7 +2691,7 @@ export function InvoiceManagement({
           inv.id === invoice.id
             ? {
               ...inv,
-              approvalStatus: "rejected",
+              approvalStatus: "rejected" as ApprovalStatus,
               rejectedReason: reason
             }
             : inv
@@ -2644,12 +2723,12 @@ export function InvoiceManagement({
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
         ? {
-            ...inv,
-            status: "cancelled" as const,
-            cancelReason: reason,
-            cancelledAt: cancelledDate,
-            cancelledBy: "Admin"
-          }
+          ...inv,
+          status: "cancelled" as const,
+          cancelReason: reason,
+          cancelledAt: cancelledDate,
+          cancelledBy: "Admin"
+        }
         : inv
     )
     setInvoices(updatedInvoices)
@@ -2662,12 +2741,12 @@ export function InvoiceManagement({
         const updatedSavedInvoices = savedInvoices.map((inv: any) =>
           inv.id === invoice.id
             ? {
-                ...inv,
-                status: "cancelled",
-                cancelReason: reason,
-                cancelledAt: new Date().toISOString(),
-                cancelledBy: "Admin"
-              }
+              ...inv,
+              status: "cancelled",
+              cancelReason: reason,
+              cancelledAt: new Date().toISOString(),
+              cancelledBy: "Admin"
+            }
             : inv
         )
         localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
@@ -2731,21 +2810,21 @@ export function InvoiceManagement({
     try {
       const proofs = await Promise.all(paymentFiles.map(readFileAsDataUrl))
       const paidAt = new Date()
-      const isPartial = paymentMethod === "partial"
+      const isPartial = paymentMethod === "Partial"
 
-      const paymentMethodDetail = paymentMethod === "edc"
+      const paymentMethodDetail = paymentMethod === "EDC"
         ? `EDC - ${edcBank} (${edcAccountNumber})`
         : paymentMethod
 
       const updatedInvoices = invoices.map(inv =>
         inv.id === markPaidInvoice.id
           ? {
-              ...inv,
-              status: isPartial ? inv.status : ("paid" as const),
-              paidDate: isPartial ? inv.paidDate : paidAt,
-              paymentMethod: paymentMethodDetail,
-              paymentProofs: proofs
-            }
+            ...inv,
+            status: isPartial ? inv.status : ("paid" as const),
+            paidDate: isPartial ? inv.paidDate : paidAt,
+            paymentMethod: paymentMethodDetail,
+            paymentProofs: proofs
+          }
           : inv
       )
       setInvoices(updatedInvoices)
@@ -2758,12 +2837,12 @@ export function InvoiceManagement({
           const updatedSavedInvoices = savedInvoices.map((inv: any) =>
             inv.id === markPaidInvoice.id
               ? {
-                  ...inv,
-                  status: isPartial ? inv.status : "paid",
-                  paidDate: isPartial ? inv.paidDate : paidAt.toISOString(),
-                  paymentMethod: paymentMethodDetail,
-                  paymentProofs: proofs
-                }
+                ...inv,
+                status: isPartial ? inv.status : "paid",
+                paidDate: isPartial ? inv.paidDate : paidAt.toISOString(),
+                paymentMethod: paymentMethodDetail,
+                paymentProofs: proofs
+              }
               : inv
           )
           localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
@@ -2929,25 +3008,29 @@ export function InvoiceManagement({
         return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
       case "cancelled":
         return <span className="text-muted-foreground text-sm">—</span>
-      default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" => {
-    // If invoice is cancelled, return special status
+  const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" | "unsent" => {
+    // If invoice is cancelled, email status is cancelled
     if (invoice.status === "cancelled") return "cancelled"
-    // If invoice is paid, check if email was actually sent
-    if (invoice.status === "paid") {
-      // If email was never sent, show "-" (use cancelled status to display dash)
-      if (!invoice.emailSentAt) return "cancelled"
-      // If email was sent before payment, show "sent"
+
+    // If invoice is not approved, email status is wait
+    if (getApprovalStatus(invoice) === "wait") {
+      return "wait"
+    }
+
+    // If emailSentAt exists, it has been sent
+    if (invoice.emailSentAt) {
       return "sent"
     }
+
     // If status is sent, email has been sent
     if (invoice.status === "sent") return "sent"
-    // Otherwise, email hasn't been sent yet, show "wait"
-    return "wait"
+
+    // If approved but not sent, return unsent
+    return "unsent"
   }
 
   const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
@@ -2986,7 +3069,7 @@ export function InvoiceManagement({
     // Check if past due date and not paid
     const now = new Date()
     const dueDate = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
-    if (dueDate < now && invoice.status !== "paid" && getApprovalStatus(invoice) !== "wait") {
+    if (dueDate < now && getApprovalStatus(invoice) !== "wait") {
       return "overdue"
     }
 
@@ -3225,7 +3308,7 @@ export function InvoiceManagement({
                   {t("invoice.searchFilter")}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+                  <Button onClick={() => applyFilters()} className="h-9">{t("invoice.apply")}</Button>
                   <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                 </div>
               </div>
@@ -3294,7 +3377,7 @@ export function InvoiceManagement({
                         <Calendar
                           mode="single"
                           selected={dateFrom || undefined}
-                          onSelect={setDateFrom}
+                          onSelect={(date) => setDateFrom(date || null)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -3311,7 +3394,7 @@ export function InvoiceManagement({
                         <Calendar
                           mode="single"
                           selected={dateTo || undefined}
-                          onSelect={setDateTo}
+                          onSelect={(date) => setDateTo(date || null)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -3411,29 +3494,42 @@ export function InvoiceManagement({
             </p>
           </div>
 
-          {/* Bulk Delete Bar */}
+          {/* Bulk Action Bar */}
           {selectedInvoiceIds.size > 0 && (
-            <div className="flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <span className="text-sm font-medium text-red-800">
+            <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm font-medium text-blue-800">
                 {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
               </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={!userCanEdit}
-                onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
-                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete Selected
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedInvoiceIds(new Set())}
-              >
-                Cancel
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!userCanEdit}
+                  onClick={() => setIsBulkChangeDueDateOpen(true)}
+                  className="bg-white"
+                >
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  Change Due Date
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!userCanEdit}
+                  onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                  style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete Selected
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedInvoiceIds(new Set())}
+                  className="text-blue-800 hover:bg-blue-100"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
 
@@ -3848,29 +3944,42 @@ export function InvoiceManagement({
             </CardContent>
           </Card>
 
-          {/* Bulk Delete Bar (External) */}
+          {/* Bulk Action Bar (External) */}
           {selectedInvoiceIds.size > 0 && (
-            <div className="flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <span className="text-sm font-medium text-red-800">
+            <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm font-medium text-blue-800">
                 {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
               </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={!userCanEdit}
-                onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
-                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete Selected
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedInvoiceIds(new Set())}
-              >
-                Cancel
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!userCanEdit}
+                  onClick={() => setIsBulkChangeDueDateOpen(true)}
+                  className="bg-white"
+                >
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  Change Due Date
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!userCanEdit}
+                  onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                  style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete Selected
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedInvoiceIds(new Set())}
+                  className="text-blue-800 hover:bg-blue-100"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
 
@@ -3878,7 +3987,8 @@ export function InvoiceManagement({
           <Card>
             <CardContent className="pt-6">
               {filteredInvoices.length === 0 ? (
-                <EmptyDataState
+                <EmptyState
+                  icon={<FileText className="h-8 w-8 text-muted-foreground" />}
                   title={t("invoice.noExternalInvoices")}
                   description={t("invoice.createExternalDesc")}
                 />
@@ -3965,12 +4075,12 @@ export function InvoiceManagement({
                         </TableCell>
                         {/* Payment - CENTER */}
                         <TableCell align="center">
-                        {invoice.status === "cancelled" ? (
-                          <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
-                        ) : (
-                          getPaymentStatusBadge(getPaymentStatus(invoice))
-                        )}
-                      </TableCell>
+                          {invoice.status === "cancelled" ? (
+                            <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
+                          ) : (
+                            getPaymentStatusBadge(getPaymentStatus(invoice))
+                          )}
+                        </TableCell>
                         {/* Issue Date - LEFT */}
                         <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                         {/* Due Date - LEFT */}
@@ -4124,107 +4234,107 @@ export function InvoiceManagement({
             <div className="flex flex-col h-full">
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-6 bg-white">
-              {/* School Header */}
-              <div className="text-center pt-6 pb-4 border-b">
-                <img
-                  src={schoolSettings.logoUrl || SchoolLogo}
-                  alt={schoolSettings.schoolName}
-                  style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
-                />
-                <h2 className="text-sm font-semibold tracking-wide text-gray-800">{schoolSettings.schoolName.toUpperCase()}</h2>
-                <p className="text-xs text-gray-500 mt-1">{schoolSettings.address}</p>
-                <p className="text-xs text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
-              </div>
+                {/* School Header */}
+                <div className="text-center pt-6 pb-4 border-b">
+                  <img
+                    src={schoolSettings.logoUrl || SchoolLogo}
+                    alt={schoolSettings.schoolName}
+                    style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
+                  />
+                  <h2 className="text-sm font-semibold tracking-wide text-gray-800">{schoolSettings.schoolName.toUpperCase()}</h2>
+                  <p className="text-xs text-gray-500 mt-1">{schoolSettings.address}</p>
+                  <p className="text-xs text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
+                </div>
 
-              {/* Invoice Title */}
-              <div className="text-center py-4">
-                <h1 className="text-7xl font-bold tracking-wider">INVOICE</h1>
-                <Badge variant="outline" className="mt-2">
-                  <Eye className="w-3 h-3 mr-1" />
-                  View Only
-                </Badge>
-              </div>
+                {/* Invoice Title */}
+                <div className="text-center py-4">
+                  <h1 className="text-7xl font-bold tracking-wider">INVOICE</h1>
+                  <Badge variant="outline" className="mt-2">
+                    <Eye className="w-3 h-3 mr-1" />
+                    View Only
+                  </Badge>
+                </div>
 
-              {/* Student & Invoice Info */}
-              <div className="px-8 py-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
-                  {/* Left - Student/Recipient Info */}
-                  <div className="p-6 pr-8">
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                      {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
-                        ? "Recipient Information"
-                        : "Student Information"}
-                    </h3>
-                    <div className="space-y-3">
-                      {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL" ? (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Recipient Name</span>
-                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.recipientName || selectedInvoice.studentName}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Email</span>
-                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentEmail}</span>
-                          </div>
-                          {selectedInvoice.recipientAddress && (
+                {/* Student & Invoice Info */}
+                <div className="px-8 py-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+                    {/* Left - Student/Recipient Info */}
+                    <div className="p-6 pr-8">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                        {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
+                          ? "Recipient Information"
+                          : "Student Information"}
+                      </h3>
+                      <div className="space-y-3">
+                        {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL" ? (
+                          <>
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-500">Address</span>
-                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.recipientAddress}</span>
+                              <span className="text-sm text-gray-500">Recipient Name</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.recipientName || selectedInvoice.studentName}</span>
                             </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Student ID</span>
-                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentId}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Student Name</span>
-                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentName}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Year Group</span>
-                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Contact Name</span>
-                            <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
-                          </div>
-                        </>
-                      )}
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Email</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentEmail}</span>
+                            </div>
+                            {selectedInvoice.recipientAddress && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Address</span>
+                                <span className="text-sm font-medium text-gray-800">{selectedInvoice.recipientAddress}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Student ID</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentId}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Student Name</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentName}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Year Group</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Contact Name</span>
+                              <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {/* Right - Invoice Info */}
-                  <div className="p-6 pl-8">
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Invoice No.</span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                            ? selectedInvoice.invoiceNumber
-                            : 'Pending Approval'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Invoice Date</span>
-                        <span className="text-sm font-medium text-gray-800">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Due Date</span>
-                        <span className="text-sm font-medium text-red-600">{selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">
-                          {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
-                            ? "Event"
-                            : "School Year"}
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
-                            ? (selectedInvoice.eventName || "-")
-                            : (() => {
+                    {/* Right - Invoice Info */}
+                    <div className="p-6 pl-8">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Invoice No.</span>
+                          <span className="text-sm font-medium text-gray-800">
+                            {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
+                              ? selectedInvoice.invoiceNumber
+                              : 'Pending Approval'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Invoice Date</span>
+                          <span className="text-sm font-medium text-gray-800">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Due Date</span>
+                          <span className="text-sm font-medium text-red-600">{selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">
+                            {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
+                              ? "Event"
+                              : "School Year"}
+                          </span>
+                          <span className="text-sm font-medium text-gray-800">
+                            {selectedInvoice.invoiceType === "external" || selectedInvoice.studentId === "EXTERNAL"
+                              ? (selectedInvoice.eventName || "-")
+                              : (() => {
                                 if (selectedInvoice.academicYear) return selectedInvoice.academicYear
                                 if (selectedInvoice.issueDate) return getAcademicYear(selectedInvoice.issueDate)
                                 // Extract year from term field e.g. "2025-2026 - Term 2 ..."
@@ -4233,410 +4343,395 @@ export function InvoiceManagement({
                                 if (selectedInvoice.dueDate) return getAcademicYear(selectedInvoice.dueDate)
                                 return "-"
                               })()}
-                        </span>
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Cancellation Information - Full Width */}
+                  {selectedInvoice.status === "cancelled" && (
+                    <div className="my-6 bg-red-50 border border-red-200 rounded-md p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-800 mb-1">Invoice Cancelled</p>
+                          <p className="text-sm text-red-700">
+                            <span className="font-medium">Reason:</span> {selectedInvoice.cancelReason || "No reason recorded"}
+                          </p>
+                          <p className="text-xs text-red-600 mt-1">
+                            {selectedInvoice.cancelledBy && <>Cancelled by {selectedInvoice.cancelledBy}</>}
+                            {selectedInvoice.cancelledAt ? (
+                              <>
+                                {selectedInvoice.cancelledBy && <> on </>}
+                                {new Date(selectedInvoice.cancelledAt).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: false
+                                })}
+                              </>
+                            ) : (
+                              "Date and time not recorded"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rejection Information - Full Width */}
+                  {selectedInvoice.approvalStatus === "rejected" && (
+                    <div className="my-6 bg-orange-50 border border-orange-200 rounded-md p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-orange-800 mb-1">Invoice Rejected</p>
+                          <p className="text-sm text-orange-700">
+                            <span className="font-medium">Reason:</span> {selectedInvoice.rejectedReason || "No reason recorded"}
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            {selectedInvoice.rejectedBy && <>Rejected by {selectedInvoice.rejectedBy}</>}
+                            {selectedInvoice.rejectedAt ? (
+                              <>
+                                {selectedInvoice.rejectedBy && <> on </>}
+                                {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: false
+                                })}
+                              </>
+                            ) : (
+                              "Date and time not recorded"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Invoice Items Table */}
+                <div className="px-8 pb-6">
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
+                          <th className="py-3 px-4 text-left font-semibold">Description</th>
+                          <th className="py-3 px-4 text-right font-semibold w-28">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedInvoice.items.map((item, index) => {
+                          const isRegistrationFee =
+                            item.description.toLowerCase().includes('application') ||
+                            item.description.toLowerCase().includes('registration fee') ||
+                            item.description.toLowerCase().includes('security deposit')
+                          return (
+                            <tr key={item.id} className={`border-b last:border-b-0 ${isRegistrationFee ? 'bg-amber-50' : ''}`}>
+                              <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
+                              <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{item.description}</span>
+                                </div>
+                                {item.discountPercent > 0 && (
+                                  <span className="text-gray-400 text-xs">(-{item.discountPercent}%)</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
+                                {formatCurrency(item.discountedAmount)}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                    {/* Subtotal, Discounts, Late Fee, Total */}
+                    {(() => {
+                      // Calculate subtotal (sum of all items before discounts)
+                      const subtotal = selectedInvoice.items.reduce((sum, item) => sum + item.amount, 0)
+
+                      // Find student from context
+                      const student = students.find(s =>
+                        s.studentId === selectedInvoice.studentId ||
+                        s.id === selectedInvoice.studentId ||
+                        `${s.firstName} ${s.lastName}` === selectedInvoice.studentName
+                      )
+
+                      const discountLines: { name: string; amount: number; percent?: number }[] = []
+
+                      // Skip all discounts for ECA, Trip & Activity, Exam, and Bus invoices
+                      const isNonDiscountableInvoice = selectedInvoice.category === "eca" ||
+                        selectedInvoice.category === "trip" ||
+                        selectedInvoice.category === "exam" ||
+                        selectedInvoice.category === "bus" ||
+                        selectedInvoice.category === "external"
+
+                      // 1. Sibling discount
+                      if (!isNonDiscountableInvoice && student && student.childOrder >= 2 && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                        const siblingPercent = getSiblingDiscount(student)
+                        if (siblingPercent > 0) {
+                          const siblingAmount = Math.round(subtotal * siblingPercent / 100)
+                          discountLines.push({
+                            name: `Sibling Discount (Child #${student.childOrder})`,
+                            amount: siblingAmount,
+                            percent: siblingPercent
+                          })
+                        }
+                      }
+
+                      // 2. Registration Fee Waiver - check if any item has waiver
+                      if (!isNonDiscountableInvoice) {
+                        const registrationFeeWaiver = selectedInvoice.items
+                          .filter(item => item.description.toLowerCase().includes('registration') && item.discountPercent > 0)
+                          .reduce((sum, item) => sum + (item.amount - item.discountedAmount), 0)
+                        if (registrationFeeWaiver > 0) {
+                          discountLines.push({
+                            name: "Registration Fee Waiver",
+                            amount: registrationFeeWaiver
+                          })
+                        }
+                      }
+
+                      // 3. Student group discounts - use stored invoice.discounts (set at creation time)
+                      // Never recalculate from current group state for existing invoices
+                      if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                        ; (selectedInvoice.discounts || [])
+                          .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+                          .forEach(d => {
+                            discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
+                          })
+                      }
+
+                      // 4. Fee Waiver Program (75,000/term for eligible students)
+                      if (!isNonDiscountableInvoice && student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
+                        const feeWaiverEligibility = checkFeePrivilegeEligibility(
+                          student,
+                          student.academicYear || selectedInvoice.academicYear,
+                          student.enrollmentTerm || "term1"
+                        )
+                        if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
+                          discountLines.push({
+                            name: `Fee Waiver Program`,
+                            amount: feeWaiverEligibility.creditPerTerm
+                          })
+                        }
+                      }
+
+                      // 5. Staff Child (50%)
+                      if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('staff')) {
+                        const staffAmount = Math.round(subtotal * 50 / 100)
+                        discountLines.push({
+                          name: "Staff Child Discount",
+                          amount: staffAmount,
+                          percent: 50
+                        })
+                      }
+
+                      // 6. Scholarship
+                      if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('scholarship')) {
+                        const scholarshipAmount = subtotal // 100% scholarship
+                        discountLines.push({
+                          name: "Scholarship",
+                          amount: scholarshipAmount,
+                          percent: 100
+                        })
+                      }
+
+                      // 7. Early Bird (5%)
+                      if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('early bird')) {
+                        const earlyBirdAmount = Math.round(subtotal * 5 / 100)
+                        discountLines.push({
+                          name: "Early Bird Discount",
+                          amount: earlyBirdAmount,
+                          percent: 5
+                        })
+                      }
+
+                      // Get registration fees from saved invoice data (new students)
+                      const savedRegistrationFees = (selectedInvoice as any).registrationFees || []
+                      const isNewStudent = (selectedInvoice as any).isNewStudent || savedRegistrationFees.length > 0
+                      const registrationFeesTotal = savedRegistrationFees.reduce((sum: number, fee: any) => sum + fee.amount, 0)
+
+                      // Calculate late fee (1.5% if overdue)
+                      const today = new Date()
+                      const dueDate = new Date(selectedInvoice.dueDate)
+                      const isOverdue = today > dueDate && selectedInvoice.status !== "paid"
+                      const lateFeeAmount = 0
+                      const lateFeePercent = 0
+
+                      // Calculate total discounts
+                      let totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
+
+                      // Cap total discounts at subtotal to prevent negative amounts
+                      if (totalDiscounts > subtotal) {
+                        totalDiscounts = subtotal
+                      }
+
+                      // Final total (ID Charges removed)
+                      const finalTotal = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
+
+                      // Separate discounts: Fee Waiver Program vs others
+                      const feeWaiverDiscount = discountLines.find(d => d.name.includes('Fee Waiver Program'))
+                      const otherDiscounts = discountLines.filter(d => !d.name.includes('Fee Waiver Program'))
+
+                      // Find specific registration fees
+                      const applicationFee = savedRegistrationFees.find((f: any) => f.name.includes('Application Fee'))
+                      const registrationFee = savedRegistrationFees.find((f: any) => f.name.includes('Registration Fee') && !f.name.includes('Application'))
+                      const securityDeposit = savedRegistrationFees.find((f: any) => f.name.includes('Security Deposit'))
+
+                      // Check for Security Deposit Fee Waiver (stored separately or calculate)
+                      const savedSecurityDepositWaiver = (selectedInvoice as any).securityDepositWaiver || 0
+
+                      return (
+                        <div className="border-t">
+                          {/* 1. Other Discounts (NOT Fee Waiver Program) - Green */}
+                          {otherDiscounts.map((discount, idx) => (
+                            <div key={idx} className="flex justify-between items-center px-4 py-2 border-t">
+                              <span className="text-sm text-green-600">
+                                {discount.name} {discount.percent ? `(${discount.percent}%)` : ''}
+                              </span>
+                              <span className="text-sm font-medium text-green-600">
+                                -{formatCurrency(discount.amount)}
+                              </span>
+                            </div>
+                          ))}
+
+                          {/* 2. Application Fee - Orange */}
+                          {applicationFee && (
+                            <div className="flex justify-between items-center px-4 py-2 border-t">
+                              <span className="text-sm text-orange-600">{applicationFee.name}</span>
+                              <span className="text-sm font-medium text-orange-600">+{formatCurrency(applicationFee.amount)}</span>
+                            </div>
+                          )}
+
+                          {/* 3. Registration Fee - Orange */}
+                          {registrationFee && (
+                            <div className="flex justify-between items-center px-4 py-2 border-t">
+                              <span className="text-sm text-orange-600">{registrationFee.name}</span>
+                              <span className="text-sm font-medium text-orange-600">+{formatCurrency(registrationFee.amount)}</span>
+                            </div>
+                          )}
+
+                          {/* 4. Registration Fee Waiver (Fee Waiver Program) - Green */}
+                          {feeWaiverDiscount && (
+                            <div className="flex justify-between items-center px-4 py-2 border-t">
+                              <span className="text-sm text-green-600">
+                                Registration Fee Waiver ({feeWaiverDiscount.amount.toLocaleString()}/term)
+                              </span>
+                              <span className="text-sm font-medium text-green-600">
+                                -{formatCurrency(feeWaiverDiscount.amount)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* 5. Security Deposit - Orange */}
+                          {securityDeposit && (
+                            <div className="flex justify-between items-center px-4 py-2 border-t">
+                              <span className="text-sm text-orange-600">{securityDeposit.name}</span>
+                              <span className="text-sm font-medium text-orange-600">+{formatCurrency(securityDeposit.amount)}</span>
+                            </div>
+                          )}
+
+                          {/* 6. Security Deposit Fee Waiver - Green */}
+                          {savedSecurityDepositWaiver > 0 && (
+                            <div className="flex justify-between items-center px-4 py-2 border-t">
+                              <span className="text-sm text-green-600">Security Deposit Fee Waiver</span>
+                              <span className="text-sm font-medium text-green-600">-{formatCurrency(savedSecurityDepositWaiver)}</span>
+                            </div>
+                          )}
+
+
+                          {/* Amount in Words + Total */}
+                          <div className="border-t bg-gray-50 p-4">
+                            <div className="text-xs text-gray-500 mb-2">{numberToWords(finalTotal)}</div>
+                            <div className="flex justify-between items-center font-bold text-base">
+                              <span>TOTAL</span>
+                              <span>{formatCurrency(finalTotal)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
 
-                {/* Cancellation Information - Full Width */}
-                {selectedInvoice.status === "cancelled" && (
-                  <div className="my-6 bg-red-50 border border-red-200 rounded-md p-4">
-                    <div className="flex items-start gap-2">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-red-800 mb-1">Invoice Cancelled</p>
-                        <p className="text-sm text-red-700">
-                          <span className="font-medium">Reason:</span> {selectedInvoice.cancelReason || "No reason recorded"}
-                        </p>
-                        <p className="text-xs text-red-600 mt-1">
-                          {selectedInvoice.cancelledBy && <>Cancelled by {selectedInvoice.cancelledBy}</>}
-                          {selectedInvoice.cancelledAt ? (
-                            <>
-                              {selectedInvoice.cancelledBy && <> on </>}
-                              {new Date(selectedInvoice.cancelledAt).toLocaleDateString('en-GB', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false
-                              })}
-                            </>
-                          ) : (
-                            "Date and time not recorded"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Rejection Information - Full Width */}
-                {selectedInvoice.approvalStatus === "rejected" && (
-                  <div className="my-6 bg-orange-50 border border-orange-200 rounded-md p-4">
-                    <div className="flex items-start gap-2">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-orange-800 mb-1">Invoice Rejected</p>
-                        <p className="text-sm text-orange-700">
-                          <span className="font-medium">Reason:</span> {selectedInvoice.rejectedReason || "No reason recorded"}
-                        </p>
-                        <p className="text-xs text-orange-600 mt-1">
-                          {selectedInvoice.rejectedBy && <>Rejected by {selectedInvoice.rejectedBy}</>}
-                          {selectedInvoice.rejectedAt ? (
-                            <>
-                              {selectedInvoice.rejectedBy && <> on </>}
-                              {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false
-                              })}
-                            </>
-                          ) : (
-                            "Date and time not recorded"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Payment Methods Preview */}
+                <div className="px-8 pb-6">
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Payment methods: </span>
+                    <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
+                  </p>
+                </div>
               </div>
 
-              {/* Invoice Items Table */}
-              <div className="px-8 pb-6">
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 border-b">
-                        <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
-                        <th className="py-3 px-4 text-left font-semibold">Description</th>
-                        <th className="py-3 px-4 text-right font-semibold w-28">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedInvoice.items.map((item, index) => {
-                        const isRegistrationFee =
-                          item.description.toLowerCase().includes('application') ||
-                          item.description.toLowerCase().includes('registration fee') ||
-                          item.description.toLowerCase().includes('security deposit')
-                        return (
-                          <tr key={item.id} className={`border-b last:border-b-0 ${isRegistrationFee ? 'bg-amber-50' : ''}`}>
-                            <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
-                            <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span>{item.description}</span>
-                              </div>
-                              {item.discountPercent > 0 && (
-                                <span className="text-gray-400 text-xs">(-{item.discountPercent}%)</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
-                              {formatCurrency(item.discountedAmount)}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                  {/* Subtotal, Discounts, Late Fee, Total */}
+              {/* Action Buttons - Sticky Footer */}
+              <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={closeInvoiceModal}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
+                    disabled={isDownloadingPDF}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isDownloadingPDF ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Generating PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF
+                      </>
+                    )}
+                  </Button>
                   {(() => {
-                    // Calculate subtotal (sum of all items before discounts)
-                    const subtotal = selectedInvoice.items.reduce((sum, item) => sum + item.amount, 0)
+                    const canCancelInvoice = user?.role !== "Approvalver"
+                    const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
 
-                    // Find student from context
-                    const student = students.find(s =>
-                      s.studentId === selectedInvoice.studentId ||
-                      s.id === selectedInvoice.studentId ||
-                      `${s.firstName} ${s.lastName}` === selectedInvoice.studentName
-                    )
-
-                    const discountLines: { name: string; amount: number; percent?: number }[] = []
-
-                    // Skip all discounts for ECA, Trip & Activity, Exam, and Bus invoices
-                    const isNonDiscountableInvoice = selectedInvoice.invoiceType === "eca" ||
-                                                      selectedInvoice.invoiceType === "afterschool" ||
-                                                      selectedInvoice.invoiceType === "trip" ||
-                                                      selectedInvoice.invoiceType === "exam" ||
-                                                      selectedInvoice.invoiceType === "bus" ||
-                                                      selectedInvoice.category === "eca" ||
-                                                      selectedInvoice.category === "trip" ||
-                                                      selectedInvoice.category === "exam" ||
-                                                      selectedInvoice.category === "bus"
-
-                    // 1. Sibling discount
-                    if (!isNonDiscountableInvoice && student && student.childOrder >= 2 && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                      const siblingPercent = getSiblingDiscount(student)
-                      if (siblingPercent > 0) {
-                        const siblingAmount = Math.round(subtotal * siblingPercent / 100)
-                        discountLines.push({
-                          name: `Sibling Discount (Child #${student.childOrder})`,
-                          amount: siblingAmount,
-                          percent: siblingPercent
-                        })
-                      }
-                    }
-
-                    // 2. Registration Fee Waiver - check if any item has waiver
-                    if (!isNonDiscountableInvoice) {
-                      const registrationFeeWaiver = selectedInvoice.items
-                        .filter(item => item.description.toLowerCase().includes('registration') && item.discountPercent > 0)
-                        .reduce((sum, item) => sum + (item.amount - item.discountedAmount), 0)
-                      if (registrationFeeWaiver > 0) {
-                        discountLines.push({
-                          name: "Registration Fee Waiver",
-                          amount: registrationFeeWaiver
-                        })
-                      }
-                    }
-
-                    // 3. Student group discounts - use stored invoice.discounts (set at creation time)
-                    // Never recalculate from current group state for existing invoices
-                    if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                      ;(selectedInvoice.discounts || [])
-                        .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
-                        .forEach(d => {
-                          discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
-                        })
-                    }
-
-                    // 4. Fee Waiver Program (75,000/term for eligible students)
-                    if (!isNonDiscountableInvoice && student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                      const feeWaiverEligibility = checkFeePrivilegeEligibility(
-                        student,
-                        student.academicYear || selectedInvoice.academicYear,
-                        student.enrollmentTerm || "term1"
-                      )
-                      if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
-                        discountLines.push({
-                          name: `Fee Waiver Program`,
-                          amount: feeWaiverEligibility.creditPerTerm
-                        })
-                      }
-                    }
-
-                    // 5. Staff Child (50%)
-                    if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('staff')) {
-                      const staffAmount = Math.round(subtotal * 50 / 100)
-                      discountLines.push({
-                        name: "Staff Child Discount",
-                        amount: staffAmount,
-                        percent: 50
-                      })
-                    }
-
-                    // 6. Scholarship
-                    if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('scholarship')) {
-                      const scholarshipAmount = subtotal // 100% scholarship
-                      discountLines.push({
-                        name: "Scholarship",
-                        amount: scholarshipAmount,
-                        percent: 100
-                      })
-                    }
-
-                    // 7. Early Bird (5%)
-                    if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('early bird')) {
-                      const earlyBirdAmount = Math.round(subtotal * 5 / 100)
-                      discountLines.push({
-                        name: "Early Bird Discount",
-                        amount: earlyBirdAmount,
-                        percent: 5
-                      })
-                    }
-
-                    // Get registration fees from saved invoice data (new students)
-                    const savedRegistrationFees = (selectedInvoice as any).registrationFees || []
-                    const isNewStudent = (selectedInvoice as any).isNewStudent || savedRegistrationFees.length > 0
-                    const registrationFeesTotal = savedRegistrationFees.reduce((sum: number, fee: any) => sum + fee.amount, 0)
-
-                    // Calculate late fee (1.5% if overdue)
-                    const today = new Date()
-                    const dueDate = new Date(selectedInvoice.dueDate)
-                    const isOverdue = today > dueDate && selectedInvoice.status !== "paid"
-                    const lateFeePercent = 1.5
-                    const lateFeeAmount = isOverdue ? Math.round(subtotal * lateFeePercent / 100) : 0
-
-                    // Calculate total discounts
-                    let totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
-
-                    // Cap total discounts at subtotal to prevent negative amounts
-                    if (totalDiscounts > subtotal) {
-                      totalDiscounts = subtotal
-                    }
-
-                    // Final total (ID Charges removed)
-                    const finalTotal = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
-
-                    // Separate discounts: Fee Waiver Program vs others
-                    const feeWaiverDiscount = discountLines.find(d => d.name.includes('Fee Waiver Program'))
-                    const otherDiscounts = discountLines.filter(d => !d.name.includes('Fee Waiver Program'))
-
-                    // Find specific registration fees
-                    const applicationFee = savedRegistrationFees.find((f: any) => f.name.includes('Application Fee'))
-                    const registrationFee = savedRegistrationFees.find((f: any) => f.name.includes('Registration Fee') && !f.name.includes('Application'))
-                    const securityDeposit = savedRegistrationFees.find((f: any) => f.name.includes('Security Deposit'))
-
-                    // Check for Security Deposit Fee Waiver (stored separately or calculate)
-                    const savedSecurityDepositWaiver = (selectedInvoice as any).securityDepositWaiver || 0
-
-                    return (
-                      <div className="border-t">
-                        {/* 1. Other Discounts (NOT Fee Waiver Program) - Green */}
-                        {otherDiscounts.map((discount, idx) => (
-                          <div key={idx} className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-green-600">
-                              {discount.name} {discount.percent ? `(${discount.percent}%)` : ''}
-                            </span>
-                            <span className="text-sm font-medium text-green-600">
-                              -{formatCurrency(discount.amount)}
-                            </span>
-                          </div>
-                        ))}
-
-                        {/* 2. Application Fee - Orange */}
-                        {applicationFee && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-orange-600">{applicationFee.name}</span>
-                            <span className="text-sm font-medium text-orange-600">+{formatCurrency(applicationFee.amount)}</span>
-                          </div>
-                        )}
-
-                        {/* 3. Registration Fee - Orange */}
-                        {registrationFee && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-orange-600">{registrationFee.name}</span>
-                            <span className="text-sm font-medium text-orange-600">+{formatCurrency(registrationFee.amount)}</span>
-                          </div>
-                        )}
-
-                        {/* 4. Registration Fee Waiver (Fee Waiver Program) - Green */}
-                        {feeWaiverDiscount && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-green-600">
-                              Registration Fee Waiver ({feeWaiverDiscount.amount.toLocaleString()}/term)
-                            </span>
-                            <span className="text-sm font-medium text-green-600">
-                              -{formatCurrency(feeWaiverDiscount.amount)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* 5. Security Deposit - Orange */}
-                        {securityDeposit && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-orange-600">{securityDeposit.name}</span>
-                            <span className="text-sm font-medium text-orange-600">+{formatCurrency(securityDeposit.amount)}</span>
-                          </div>
-                        )}
-
-                        {/* 6. Security Deposit Fee Waiver - Green */}
-                        {savedSecurityDepositWaiver > 0 && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-green-600">Security Deposit Fee Waiver</span>
-                            <span className="text-sm font-medium text-green-600">-{formatCurrency(savedSecurityDepositWaiver)}</span>
-                          </div>
-                        )}
-
-                        {/* 7. Late Fee (Red) */}
-                        {lateFeeAmount > 0 && (
-                          <div className="flex justify-between items-center px-4 py-2 border-t">
-                            <span className="text-sm text-red-600">
-                              Late Payment Fee ({lateFeePercent}%)
-                            </span>
-                            <span className="text-sm font-medium text-red-600">
-                              +{formatCurrency(lateFeeAmount)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Amount in Words + Total */}
-                        <div className="border-t bg-gray-50 p-4">
-                          <div className="text-xs text-gray-500 mb-2">{numberToWords(finalTotal)}</div>
-                          <div className="flex justify-between items-center font-bold text-base">
-                            <span>TOTAL</span>
-                            <span>{formatCurrency(finalTotal)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )
+                    return shouldShowCancelButton ? (
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          const modalData = {
+                            id: selectedInvoice.id,
+                            invoiceNumber: selectedInvoice.invoiceNumber,
+                            studentName: selectedInvoice.studentName,
+                            status: selectedInvoice.status
+                          }
+                          // Open cancel dialog
+                          setCancelTargetData(modalData)
+                          setCancelReasonInput("")
+                          setIsCancelDialogOpen(true)
+                        }}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel Invoice
+                      </Button>
+                    ) : null
                   })()}
                 </div>
               </div>
-
-              {/* Payment Methods Preview */}
-              <div className="px-8 pb-6">
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Payment methods: </span>
-                  <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
-                </p>
-              </div>
             </div>
-
-            {/* Action Buttons - Sticky Footer */}
-            <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={closeInvoiceModal}>
-                  Close
-                </Button>
-                <Button
-                  onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
-                  disabled={isDownloadingPDF}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isDownloadingPDF ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Generating PDF...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download PDF
-                    </>
-                  )}
-                </Button>
-                {(() => {
-                  const canCancelInvoice = user?.role !== "Approvalver"
-                  const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
-
-                  return shouldShowCancelButton ? (
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        const modalData = {
-                          id: selectedInvoice.id,
-                          invoiceNumber: selectedInvoice.invoiceNumber,
-                          studentName: selectedInvoice.studentName,
-                          status: selectedInvoice.status
-                        }
-                        // Open cancel dialog
-                        setCancelTargetData(modalData)
-                        setCancelReasonInput("")
-                        setIsCancelDialogOpen(true)
-                      }}
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel Invoice
-                    </Button>
-                  ) : null
-                })()}
-              </div>
-            </div>
-          </div>
           )}
         </DialogContent>
       </Dialog>
@@ -4696,9 +4791,8 @@ export function InvoiceManagement({
                       return (
                         <div
                           key={item.id}
-                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                            index !== 0 ? 'border-t' : ''
-                          } ${isSelected ? 'bg-primary/5' : ''}`}
+                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${index !== 0 ? 'border-t' : ''
+                            } ${isSelected ? 'bg-primary/5' : ''}`}
                           onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
                         >
                           <div className="flex-1 min-w-0">
@@ -4706,13 +4800,12 @@ export function InvoiceManagement({
                               <span className="font-medium">{item.name}</span>
                               <Badge
                                 variant="outline"
-                                className={`text-xs ${
-                                  item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                                className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                                   item.category === "ECA" ? "border-green-300 text-green-700" :
-                                  item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
-                                  item.category === "School Bus" ? "border-purple-300 text-purple-700" :
-                                  "border-gray-300 text-gray-700"
-                                }`}
+                                    item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                                      item.category === "School Bus" ? "border-purple-300 text-purple-700" :
+                                        "border-gray-300 text-gray-700"
+                                  }`}
                               >
                                 {item.category}
                               </Badge>
@@ -5192,9 +5285,8 @@ export function InvoiceManagement({
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                        index !== 0 ? 'border-t' : ''
-                      } ${isSelected ? 'bg-primary/5' : ''}`}
+                      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors ${index !== 0 ? 'border-t' : ''
+                        } ${isSelected ? 'bg-primary/5' : ''}`}
                       onClick={() => isSelected ? handleItemRemove(item.id) : handleItemSelect(item)}
                     >
                       <div className="flex-1 min-w-0">
@@ -5202,13 +5294,12 @@ export function InvoiceManagement({
                           <span className="font-medium text-sm">{item.name}</span>
                           <Badge
                             variant="outline"
-                            className={`text-xs ${
-                              item.category === "Tuition" ? "border-blue-300 text-blue-700" :
+                            className={`text-xs ${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
                               item.category === "ECA" ? "border-green-300 text-green-700" :
-                              item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
-                              item.category === "School Bus" ? "border-purple-300 text-purple-700" :
-                              "border-gray-300 text-gray-700"
-                            }`}
+                                item.category === "Trip & Other Activity" ? "border-orange-300 text-orange-700" :
+                                  item.category === "School Bus" ? "border-purple-300 text-purple-700" :
+                                    "border-gray-300 text-gray-700"
+                              }`}
                           >
                             {item.category}
                           </Badge>
@@ -5230,11 +5321,11 @@ export function InvoiceManagement({
                 item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
                 item.description.toLowerCase().includes(itemSearchQuery.toLowerCase())
               ).length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No items found</p>
-                </div>
-              )}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No items found</p>
+                  </div>
+                )}
             </div>
           </div>
 
@@ -5262,15 +5353,15 @@ export function InvoiceManagement({
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
         <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
           <div className="p-6 pb-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5" />
-              Import Invoices from Excel
-            </DialogTitle>
-            <DialogDescription>
-              Upload an Excel file (.xlsx, .xls) or CSV file to import multiple invoices at once
-            </DialogDescription>
-          </DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5" />
+                Import Invoices from Excel
+              </DialogTitle>
+              <DialogDescription>
+                Upload an Excel file (.xlsx, .xls) or CSV file to import multiple invoices at once
+              </DialogDescription>
+            </DialogHeader>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -5424,59 +5515,69 @@ export function InvoiceManagement({
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cashier-check">Cashier&apos;s cheque</SelectItem>
-                  <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="partial">Partial</SelectItem>
-                  <SelectItem value="edc">EDC</SelectItem>
+                  {PAYMENT_SOURCES.map(source => (
+                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* EDC Details - Show only when EDC is selected */}
-            {paymentMethod === "edc" && (
-              <>
+            {/* Bank Account Selection - Show for methods that have accounts configured */}
+            {PAYMENT_SOURCES.some(s => s.value === paymentMethod) && (
+              <div className="space-y-4 pt-2 border-t mt-2">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Bank</label>
-                  <Select value={edcBank} onValueChange={setEdcBank}>
+                  <label className="text-sm font-medium">Select Bank Account</label>
+                  <Select
+                    onValueChange={(accountId) => {
+                      const account = bankAccounts.find(a => a.id === accountId);
+                      if (account) {
+                        setEdcBank(account.bankName);
+                        setEdcAccountNumber(account.accountNumber);
+                      }
+                    }}
+                  >
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Select bank" />
+                      <SelectValue placeholder="Choose an account" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Bangkok Bank">Bangkok Bank</SelectItem>
-                      <SelectItem value="Kasikorn Bank">Kasikorn Bank</SelectItem>
-                      <SelectItem value="Siam Commercial Bank">Siam Commercial Bank</SelectItem>
-                      <SelectItem value="Krung Thai Bank">Krung Thai Bank</SelectItem>
-                      <SelectItem value="Bank of Ayudhya (Krungsri)">Bank of Ayudhya (Krungsri)</SelectItem>
-                      <SelectItem value="TMBThanachart Bank">TMBThanachart Bank</SelectItem>
-                      <SelectItem value="Government Savings Bank">Government Savings Bank</SelectItem>
-                      <SelectItem value="CIMB Thai Bank">CIMB Thai Bank</SelectItem>
-                      <SelectItem value="United Overseas Bank (UOB)">United Overseas Bank (UOB)</SelectItem>
-                      <SelectItem value="Standard Chartered Thailand">Standard Chartered Thailand</SelectItem>
-                      <SelectItem value="Kiatnakin Phatra Bank">Kiatnakin Phatra Bank</SelectItem>
-                      <SelectItem value="TISCO Bank">TISCO Bank</SelectItem>
-                      <SelectItem value="Land and Houses Bank">Land and Houses Bank</SelectItem>
-                      <SelectItem value="ICBC (Thai)">ICBC (Thai)</SelectItem>
-                      <SelectItem value="Bank for Agriculture and Agricultural Cooperatives">Bank for Agriculture and Agricultural Cooperatives</SelectItem>
-                      <SelectItem value="Islamic Bank of Thailand">Islamic Bank of Thailand</SelectItem>
-                      <SelectItem value="Government Housing Bank">Government Housing Bank</SelectItem>
-                      <SelectItem value="SME Development Bank">SME Development Bank</SelectItem>
-                      <SelectItem value="Export-Import Bank of Thailand">Export-Import Bank of Thailand</SelectItem>
-                      <SelectItem value="Mizuho Bank">Mizuho Bank</SelectItem>
+                      {bankAccounts
+                        .filter(acc => acc.paymentSource === paymentMethod && acc.isActive)
+                        .map(acc => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.bankName} - {acc.accountNumber}
+                          </SelectItem>
+                        ))
+                      }
+                      {bankAccounts.filter(acc => acc.paymentSource === paymentMethod && acc.isActive).length === 0 && (
+                        <div className="p-2 text-xs text-muted-foreground italic">
+                          No bank accounts configured for this method.
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Account Number</label>
-                  <input
-                    type="text"
-                    value={edcAccountNumber}
-                    onChange={(e) => setEdcAccountNumber(e.target.value)}
-                    placeholder="Enter account number"
-                    className="w-full h-9 px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Bank Name</label>
+                    <Input
+                      value={edcBank}
+                      onChange={(e) => setEdcBank(e.target.value)}
+                      placeholder="Bank name"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Account Number</label>
+                    <Input
+                      value={edcAccountNumber}
+                      onChange={(e) => setEdcAccountNumber(e.target.value)}
+                      placeholder="Account number"
+                      className="h-9"
+                    />
+                  </div>
                 </div>
-              </>
+              </div>
             )}
 
             <div className="space-y-2">
@@ -5667,7 +5768,7 @@ export function InvoiceManagement({
 
                   // Get student group discounts - use stored invoice.discounts (set at creation time)
                   // Never recalculate from current group state for existing invoices
-                  ;(selectedInvoice.discounts || [])
+                  ; (selectedInvoice.discounts || [])
                     .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
                     .forEach(d => {
                       discounts.push({
@@ -5977,6 +6078,50 @@ export function InvoiceManagement({
         </DialogContent>
       </Dialog>
 
+      {/* Bulk Change Due Date Dialog */}
+      <Dialog open={isBulkChangeDueDateOpen} onOpenChange={setIsBulkChangeDueDateOpen}>
+        <DialogContent style={{ maxWidth: "420px" }} className="p-6">
+          <DialogHeader className="mb-3">
+            <DialogTitle>Change Due Date for {selectedInvoiceIds.size} Invoice{selectedInvoiceIds.size > 1 ? "s" : ""}</DialogTitle>
+            <DialogDescription>
+              Select a new due date for all selected invoices. This action cannot be undone. Only invoices that are not paid or cancelled will be updated.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">New Due Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !bulkNewDueDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {bulkNewDueDate ? format(bulkNewDueDate, "PPP") : "Select a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={bulkNewDueDate}
+                    onSelect={setBulkNewDueDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => {
+              setIsBulkChangeDueDateOpen(false)
+              setBulkNewDueDate(undefined)
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkChangeDueDate} disabled={!bulkNewDueDate}>
+              Update Due Date
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Save Confirmation Dialog */}
       <Dialog open={isConfirmSaveOpen} onOpenChange={setIsConfirmSaveOpen}>
         <DialogContent className="sm:max-w-[450px] p-6">
@@ -6133,7 +6278,7 @@ export function InvoiceManagement({
                 <thead>
                   <tr className="border-b border-black">
                     <th className="py-2 px-4 text-center font-bold border-r border-black">Description</th>
-                    <th className="py-2 px-4 text-center font-bold" style={{ width: '100px' }}>Amount<br/>(THB)</th>
+                    <th className="py-2 px-4 text-center font-bold" style={{ width: '100px' }}>Amount<br />(THB)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -6533,6 +6678,7 @@ export function InvoiceManagement({
         variant="destructive"
       />
 
+
       {/* Import Interface File — Upload Dialog */}
       <Dialog open={isImportInterfaceUploadOpen} onOpenChange={setIsImportInterfaceUploadOpen}>
         <DialogContent className="p-6 bg-white" style={{ maxWidth: "480px" }}>
@@ -6597,7 +6743,7 @@ export function InvoiceManagement({
                 exam: "examItems", bus: "busItems", tuition: "invoiceItems"
               }
               let previewCatalog: any[] = []
-              try { previewCatalog = JSON.parse(localStorage.getItem(previewKeyMap[category || "tuition"] || "invoiceItems") || "[]") } catch {}
+              try { previewCatalog = JSON.parse(localStorage.getItem(previewKeyMap[category || "tuition"] || "invoiceItems") || "[]") } catch { }
               const resolvePreviewItemCode = (row: Record<string, string>) => {
                 if (row["FinanceCode"]) return row["FinanceCode"]
                 const desc = (row["Description"] || "").trim().toLowerCase()
@@ -6607,73 +6753,73 @@ export function InvoiceManagement({
                 )?.itemCode || "" : ""
               }
               return (
-            <div className="space-y-3">
-              {(() => {
-                const validDocNos = new Set(importInterfaceRows.filter(r => {
-                  const s = students.find(st => st.studentId === r["PupilID"] || st.id === r["PupilID"])
-                  return !!s && !!resolvePreviewItemCode(r)
-                }).map(r => r["DocumentNo"]))
-                const totalDocNos = new Set(importInterfaceRows.map(r => r["DocumentNo"]))
-                const skippedCount = totalDocNos.size - validDocNos.size
-                return (
-                  <p className="text-sm text-muted-foreground">
-                    พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้าง <strong>{validDocNos.size}</strong> invoice
-                    {skippedCount > 0 && (
-                      <span className="text-red-600 ml-2">(ข้ามไป {skippedCount} รายการ — ข้อมูลไม่ครบ)</span>
-                    )}
-                  </p>
-                )
-              })()}
-              <div className="border rounded-lg overflow-auto max-h-96">
-                <Table style={{ minWidth: "1050px" }}>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead align="left" className="min-w-[110px]">Student ID</TableHead>
-                      <TableHead align="left" className="min-w-[150px]">Student Name</TableHead>
-                      <TableHead align="left" className="min-w-[110px]">Item Code</TableHead>
-                      <TableHead align="left" className="min-w-[80px]">Year Group</TableHead>
-                      <TableHead align="left" className="min-w-[100px]">School Term</TableHead>
-                      <TableHead align="left" className="min-w-[90px]">Invoice Date</TableHead>
-                      <TableHead align="left" className="min-w-[90px]">Due Date</TableHead>
-                      <TableHead align="left" className="min-w-[200px]">Description</TableHead>
-                      <TableHead align="right" className="min-w-[100px]">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {importInterfaceRows.map((row, idx) => {
-                      const pupilId = row["PupilID"] || ""
-                      const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
-                      const itemCode = resolvePreviewItemCode(row)
-                      const rowValid = !!student && !!itemCode
-                      const csvAmt = parseFloat(String(row["Amount"] ?? "").replace(/,/g, "")) || 0
-                      const desc = row["Description"] || ""
-                      const isTuition = /tuition/i.test(desc)
-                      const tuitionPrice = isTuition
-                        ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
-                        : null
-                      const displayAmt = tuitionPrice ?? csvAmt
-                      return (
-                        <TableRow key={idx} className={!rowValid ? "bg-red-50" : ""}>
-                          <TableCell align="left">{row["PupilID"]}</TableCell>
-                          <TableCell align="left" className={!student ? "text-red-600 font-medium" : ""}>
-                            {student ? `${student.firstName} ${student.lastName}` : "ไม่พบนักเรียน"}
-                          </TableCell>
-                          <TableCell align="left" className={!itemCode ? "text-red-600 font-medium" : ""}>
-                            {itemCode || "ไม่มี Item Code"}
-                          </TableCell>
-                          <TableCell align="left">{row["YearGroup"]}</TableCell>
-                          <TableCell align="left" className="text-xs">{row["SchoolTerm"]}</TableCell>
-                          <TableCell align="left">{row["InvoiceDate"]}</TableCell>
-                          <TableCell align="left">{row["DueDate"]}</TableCell>
-                          <TableCell align="left">{row["Description"]}</TableCell>
-                          <TableCell align="right">{displayAmt.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</TableCell>
+                <div className="space-y-3">
+                  {(() => {
+                    const validDocNos = new Set(importInterfaceRows.filter(r => {
+                      const s = students.find(st => st.studentId === r["PupilID"] || st.id === r["PupilID"])
+                      return !!s && !!resolvePreviewItemCode(r)
+                    }).map(r => r["DocumentNo"]))
+                    const totalDocNos = new Set(importInterfaceRows.map(r => r["DocumentNo"]))
+                    const skippedCount = totalDocNos.size - validDocNos.size
+                    return (
+                      <p className="text-sm text-muted-foreground">
+                        พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้าง <strong>{validDocNos.size}</strong> invoice
+                        {skippedCount > 0 && (
+                          <span className="text-red-600 ml-2">(ข้ามไป {skippedCount} รายการ — ข้อมูลไม่ครบ)</span>
+                        )}
+                      </p>
+                    )
+                  })()}
+                  <div className="border rounded-lg overflow-auto max-h-96">
+                    <Table style={{ minWidth: "1050px" }}>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead align="left" className="min-w-[110px]">Student ID</TableHead>
+                          <TableHead align="left" className="min-w-[150px]">Student Name</TableHead>
+                          <TableHead align="left" className="min-w-[110px]">Item Code</TableHead>
+                          <TableHead align="left" className="min-w-[80px]">Year Group</TableHead>
+                          <TableHead align="left" className="min-w-[100px]">School Term</TableHead>
+                          <TableHead align="left" className="min-w-[90px]">Invoice Date</TableHead>
+                          <TableHead align="left" className="min-w-[90px]">Due Date</TableHead>
+                          <TableHead align="left" className="min-w-[200px]">Description</TableHead>
+                          <TableHead align="right" className="min-w-[100px]">Amount</TableHead>
                         </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                      </TableHeader>
+                      <TableBody>
+                        {importInterfaceRows.map((row, idx) => {
+                          const pupilId = row["PupilID"] || ""
+                          const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
+                          const itemCode = resolvePreviewItemCode(row)
+                          const rowValid = !!student && !!itemCode
+                          const csvAmt = parseFloat(String(row["Amount"] ?? "").replace(/,/g, "")) || 0
+                          const desc = row["Description"] || ""
+                          const isTuition = /tuition/i.test(desc)
+                          const tuitionPrice = isTuition
+                            ? getTuitionPriceFromYearData(desc, row["YearGroup"] || "", row["SchoolTerm"] || "", row["SchoolYear"] || "")
+                            : null
+                          const displayAmt = tuitionPrice ?? csvAmt
+                          return (
+                            <TableRow key={idx} className={!rowValid ? "bg-red-50" : ""}>
+                              <TableCell align="left">{row["PupilID"]}</TableCell>
+                              <TableCell align="left" className={!student ? "text-red-600 font-medium" : ""}>
+                                {student ? `${student.firstName} ${student.lastName}` : "ไม่พบนักเรียน"}
+                              </TableCell>
+                              <TableCell align="left" className={!itemCode ? "text-red-600 font-medium" : ""}>
+                                {itemCode || "ไม่มี Item Code"}
+                              </TableCell>
+                              <TableCell align="left">{row["YearGroup"]}</TableCell>
+                              <TableCell align="left" className="text-xs">{row["SchoolTerm"]}</TableCell>
+                              <TableCell align="left">{row["InvoiceDate"]}</TableCell>
+                              <TableCell align="left">{row["DueDate"]}</TableCell>
+                              <TableCell align="left">{row["Description"]}</TableCell>
+                              <TableCell align="right">{displayAmt.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               )
             })()
           ) : (
@@ -6691,7 +6837,7 @@ export function InvoiceManagement({
                 exam: "examItems", bus: "busItems", tuition: "invoiceItems"
               }
               let btnCatalog: any[] = []
-              try { btnCatalog = JSON.parse(localStorage.getItem(btnKeyMap[category || "tuition"] || "invoiceItems") || "[]") } catch {}
+              try { btnCatalog = JSON.parse(localStorage.getItem(btnKeyMap[category || "tuition"] || "invoiceItems") || "[]") } catch { }
               const validCount = new Set(importInterfaceRows.filter(r => {
                 const s = students.find(st => st.studentId === r["PupilID"] || st.id === r["PupilID"])
                 const ic = r["FinanceCode"] || btnCatalog.find((it: any) => {

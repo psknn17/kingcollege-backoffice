@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
 
-type UserRole = "admin" | "approver" | "accounting" | "viewer"
+type UserRole = "admin" | "admin_accountant" | "viewer" | "approver"
 type UserStatus = "active" | "inactive" | "suspended"
 
 interface Permission {
@@ -35,7 +35,7 @@ interface User {
   email: string
   firstName: string
   lastName: string
-  role: UserRole
+  roles: UserRole[]
   status: UserStatus
   permissions: string[]
   createdAt: Date
@@ -103,21 +103,22 @@ const allPermissions: Permission[] = permissionDefs.map(def => ({
 
 const roleDefaultPermissions: Record<UserRole, string[]> = {
   admin: allPermissions.map(p => p.id),
-  approver: [
+  admin_accountant: [
     "tuition_view", "tuition_edit",
+    "afterschool_view", "afterschool_approve",
+    "event_view", "event_edit", "event_import",
+    "summer_view", "summer_edit",
+    "discount_view", "discount_edit", "discount_approve",
+    "invoice_view", "invoice_create", "invoice_edit", "invoice_approve",
+    "user_view",
+  ],
+  approver: [
+    "tuition_view",
     "afterschool_view", "afterschool_approve",
     "event_view",
     "summer_view",
     "discount_view", "discount_approve",
     "invoice_view", "invoice_approve",
-  ],
-  accounting: [
-    "tuition_view", "tuition_edit",
-    "afterschool_view",
-    "event_view",
-    "summer_view",
-    "discount_view", "discount_edit",
-    "invoice_view", "invoice_create", "invoice_edit",
   ],
   viewer: [
     "tuition_view",
@@ -136,7 +137,7 @@ const mockUsers: User[] = [
     email: "admin@school.com",
     firstName: "System",
     lastName: "Administrator",
-    role: "admin",
+    roles: ["admin"],
     status: "active",
     permissions: roleDefaultPermissions.admin,
     createdAt: new Date("2024-01-01"),
@@ -148,7 +149,7 @@ const mockUsers: User[] = [
     email: "john.smith@school.com",
     firstName: "John",
     lastName: "Smith",
-    role: "approver",
+    roles: ["approver"],
     status: "active",
     permissions: roleDefaultPermissions.approver,
     createdAt: new Date("2024-03-15"),
@@ -160,9 +161,9 @@ const mockUsers: User[] = [
     email: "sarah@school.com",
     firstName: "Sarah",
     lastName: "Johnson",
-    role: "accounting",
+    roles: ["admin_accountant"],
     status: "active",
-    permissions: roleDefaultPermissions.accounting,
+    permissions: roleDefaultPermissions.admin_accountant,
     createdAt: new Date("2024-06-01"),
     lastLogin: new Date("2025-12-08"),
   },
@@ -172,7 +173,7 @@ const mockUsers: User[] = [
     email: "mike@school.com",
     firstName: "Mike",
     lastName: "Wilson",
-    role: "viewer",
+    roles: ["viewer"],
     status: "inactive",
     permissions: roleDefaultPermissions.viewer,
     createdAt: new Date("2024-09-01"),
@@ -224,8 +225,8 @@ export function UserManagement() {
           bVal = b.username
           break
         case "role":
-          aVal = a.role
-          bVal = b.role
+          aVal = a.roles.join(", ")
+          bVal = b.roles.join(", ")
           break
         case "status":
           aVal = a.status
@@ -287,7 +288,7 @@ export function UserManagement() {
     firstName: "",
     lastName: "",
     password: "",
-    role: "viewer" as UserRole,
+    roles: ["viewer"] as UserRole[],
     status: "active" as UserStatus,
   })
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
@@ -305,7 +306,7 @@ export function UserManagement() {
     }
 
     if (roleFilter !== "all") {
-      filtered = filtered.filter(user => user.role === roleFilter)
+      filtered = filtered.filter(user => user.roles.includes(roleFilter as UserRole))
     }
 
     if (statusFilter !== "all") {
@@ -329,8 +330,8 @@ export function UserManagement() {
       firstName: "",
       lastName: "",
       password: "",
-      role: "viewer",
-      status: "active",
+      roles: ["viewer"] as UserRole[],
+      status: "active" as UserStatus,
     })
     setSelectedPermissions([])
     setShowPassword(false)
@@ -342,15 +343,19 @@ export function UserManagement() {
       return
     }
 
+    const mergedDefaultPermissions = Array.from(new Set(
+      formData.roles.flatMap(r => roleDefaultPermissions[r] || [])
+    ))
+
     const newUser: User = {
       id: String(Date.now()),
       username: formData.username,
       email: formData.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
-      role: formData.role,
+      roles: formData.roles,
       status: formData.status,
-      permissions: selectedPermissions.length > 0 ? selectedPermissions : roleDefaultPermissions[formData.role],
+      permissions: selectedPermissions.length > 0 ? selectedPermissions : mergedDefaultPermissions,
       createdAt: new Date(),
       lastLogin: null,
     }
@@ -379,7 +384,7 @@ export function UserManagement() {
           email: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          role: formData.role,
+          roles: formData.roles,
           status: formData.status,
         }
       }
@@ -438,7 +443,7 @@ export function UserManagement() {
       firstName: user.firstName,
       lastName: user.lastName,
       password: "",
-      role: user.role,
+      roles: user.roles,
       status: user.status,
     })
     setIsEditDialogOpen(true)
@@ -469,7 +474,8 @@ export function UserManagement() {
   }
 
   const handleRoleChange = (role: UserRole) => {
-    setFormData({ ...formData, role })
+    const newRoles = [role]
+    setFormData({ ...formData, roles: newRoles })
     setSelectedPermissions(roleDefaultPermissions[role])
   }
 
@@ -481,19 +487,25 @@ export function UserManagement() {
     }
   }
 
-  const getRoleBadge = (role: UserRole) => {
-    switch (role) {
-      case "admin":
-        return <Badge className="bg-purple-100 text-purple-800">{t("role.admin")}</Badge>
-      case "approver":
-        return <Badge className="bg-blue-100 text-blue-800">{t("role.approver")}</Badge>
-      case "accounting":
-        return <Badge className="bg-green-100 text-green-800">{t("role.accounting")}</Badge>
-      case "viewer":
-        return <Badge className="bg-gray-100 text-gray-800">{t("role.viewer")}</Badge>
-      default:
-        return <Badge variant="secondary">{role}</Badge>
-    }
+  const getRoleBadge = (roles: UserRole[]) => {
+    return (
+      <div className="flex flex-wrap gap-1 justify-center">
+        {roles.map(role => {
+          switch (role) {
+            case "admin":
+              return <Badge key={role} className="bg-purple-100 text-purple-800">SuperAdmin</Badge>
+            case "admin_accountant":
+              return <Badge key={role} className="bg-green-100 text-green-800">AdminAccountant</Badge>
+            case "approver":
+              return <Badge key={role} className="bg-blue-100 text-blue-800">Approval</Badge>
+            case "viewer":
+              return <Badge key={role} className="bg-gray-100 text-gray-800">View</Badge>
+            default:
+              return <Badge key={role} variant="secondary">{role}</Badge>
+          }
+        })}
+      </div>
+    )
   }
 
   const getStatusBadge = (status: UserStatus) => {
@@ -521,10 +533,10 @@ export function UserManagement() {
   const summaryStats = {
     total: users.length,
     active: users.filter(u => u.status === "active").length,
-    admin: users.filter(u => u.role === "admin").length,
-    approver: users.filter(u => u.role === "approver").length,
-    accounting: users.filter(u => u.role === "accounting").length,
-    viewer: users.filter(u => u.role === "viewer").length,
+    admin: users.filter(u => u.roles.includes("admin")).length,
+    admin_accountant: users.filter(u => u.roles.includes("admin_accountant")).length,
+    approver: users.filter(u => u.roles.includes("approver")).length,
+    viewer: users.filter(u => u.roles.includes("viewer")).length,
   }
 
   return (
@@ -560,7 +572,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+            <CardTitle className="text-sm font-medium">SuperAdmin</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{summaryStats.admin}</div>
@@ -569,7 +581,16 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approvers</CardTitle>
+            <CardTitle className="text-sm font-medium">AdminAccountant</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{summaryStats.admin_accountant}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Approval</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.approver}</div>
@@ -578,16 +599,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Accounting</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.accounting}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Viewer</CardTitle>
+            <CardTitle className="text-sm font-medium">View</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-600">{summaryStats.viewer}</div>
@@ -687,18 +699,32 @@ export function UserManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value: UserRole) => handleRoleChange(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">{t("role.admin")}</SelectItem>
-                      <SelectItem value="approver">{t("role.approver")}</SelectItem>
-                      <SelectItem value="accounting">{t("role.accounting")}</SelectItem>
-                      <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Roles *</Label>
+                  <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
+                    {([
+                      { id: "admin", label: "SuperAdmin" },
+                      { id: "admin_accountant", label: "AdminAccountant" },
+                      { id: "approver", label: "Approval" },
+                      { id: "viewer", label: "View" },
+                    ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
+                      <div key={role} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`role-${role}`}
+                          checked={formData.roles.includes(role)}
+                          onCheckedChange={(checked) => {
+                            const newRoles = checked
+                              ? [...formData.roles, role]
+                              : formData.roles.filter(r => r !== role)
+                            if (newRoles.length === 0) return
+                            setFormData({ ...formData, roles: newRoles })
+                          }}
+                        />
+                        <Label htmlFor={`role-${role}`} className="text-sm cursor-pointer whitespace-nowrap">
+                          {label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
@@ -760,10 +786,10 @@ export function UserManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">{t("role.admin")}</SelectItem>
-                  <SelectItem value="approver">{t("role.approver")}</SelectItem>
-                  <SelectItem value="accounting">{t("role.accounting")}</SelectItem>
-                  <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
+                  <SelectItem value="admin">SuperAdmin</SelectItem>
+                  <SelectItem value="admin_accountant">AdminAccountant</SelectItem>
+                  <SelectItem value="approver">Approval</SelectItem>
+                  <SelectItem value="viewer">View</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -858,7 +884,7 @@ export function UserManagement() {
                   {/* Username - LEFT aligned */}
                   <TableCell align="left">{user.username}</TableCell>
                   {/* Role Badge - CENTER aligned */}
-                  <TableCell align="center">{getRoleBadge(user.role)}</TableCell>
+                  <TableCell align="center">{getRoleBadge(user.roles)}</TableCell>
                   {/* Status Badge - CENTER aligned */}
                   <TableCell align="center">{getStatusBadge(user.status)}</TableCell>
                   {/* Created Date - LEFT aligned */}
@@ -893,7 +919,7 @@ export function UserManagement() {
                           <UserCheck className="w-4 h-4 text-green-600" />
                         )}
                       </Button>
-                      {user.role !== "admin" && (
+                      {!user.roles.includes("admin") && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1033,19 +1059,33 @@ export function UserManagement() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Role</Label>
-                <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="approver">Approver</SelectItem>
-                    <SelectItem value="accounting">Accounting</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2 col-span-2">
+                <Label>Roles *</Label>
+                <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
+                  {([
+                    { id: "admin", label: "SuperAdmin" },
+                    { id: "admin_accountant", label: "AdminAccountant" },
+                    { id: "approver", label: "Approval" },
+                    { id: "viewer", label: "View" },
+                  ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
+                    <div key={role} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-role-${role}`}
+                        checked={formData.roles.includes(role)}
+                        onCheckedChange={(checked) => {
+                          const newRoles = checked
+                            ? [...formData.roles, role]
+                            : formData.roles.filter(r => r !== role)
+                          if (newRoles.length === 0) return
+                          setFormData({ ...formData, roles: newRoles })
+                        }}
+                      />
+                      <Label htmlFor={`edit-role-${role}`} className="text-sm cursor-pointer whitespace-nowrap">
+                        {label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
@@ -1061,6 +1101,7 @@ export function UserManagement() {
                 </Select>
               </div>
             </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>{t("common.cancel")}</Button>
@@ -1098,7 +1139,7 @@ export function UserManagement() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSelectedPermissions(roleDefaultPermissions[selectedUser.role])}
+                  onClick={() => setSelectedPermissions(Array.from(new Set(selectedUser.roles.flatMap(r => roleDefaultPermissions[r] || []))))}
                 >
                   <RotateCcw className="w-4 h-4 mr-1" />
                   Reset to Role Default

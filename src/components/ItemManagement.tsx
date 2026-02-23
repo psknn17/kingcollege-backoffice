@@ -1919,6 +1919,31 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [viewModalData, setViewModalData] = useState<any>(null)
   const [viewModalType, setViewModalType] = useState<"item" | "template">("item")
 
+  // Usage detail popup state
+  const [usageDialogItem, setUsageDialogItem] = useState<Item | null>(null)
+  const [usageDialogFilter, setUsageDialogFilter] = useState<"all" | "paid">("all")
+
+  // Load invoices from localStorage and compute usage stats for an item
+  const getItemUsageData = (item: Item) => {
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      if (!stored) return []
+      const invoices: any[] = JSON.parse(stored)
+      return invoices.filter(inv => {
+        if (!inv.items || !Array.isArray(inv.items)) return false
+        return inv.items.some((li: any) =>
+          (li.itemCode && li.itemCode === item.itemCode) ||
+          (li.description && li.description === item.name)
+        )
+      })
+    } catch {
+      return []
+    }
+  }
+
+  const getUsageCount = (item: Item) => getItemUsageData(item).length
+  const getPaidCount = (item: Item) => getItemUsageData(item).filter(inv => inv.status === "paid").length
+
   // Import state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importPreview, setImportPreview] = useState<any[]>([])
@@ -2835,8 +2860,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openItemViewModal(item)}
-                            title="View Details"
+                            onClick={() => { setUsageDialogItem(item); setUsageDialogFilter("all") }}
+                            title="View Usage"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -3487,6 +3512,108 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         confirmTextKey="common.delete"
         variant="destructive"
       />
+
+      {/* Usage Detail Popup */}
+      <Dialog open={!!usageDialogItem} onOpenChange={(open) => { if (!open) setUsageDialogItem(null) }}>
+        <DialogContent style={{ maxWidth: "540px" }} className="p-6">
+          <DialogHeader>
+            <DialogTitle>Item Usage Detail</DialogTitle>
+          </DialogHeader>
+
+          {/* Item info summary */}
+          {usageDialogItem && (
+            <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Code</span>
+                <span className="font-mono font-medium">{usageDialogItem.itemCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Name</span>
+                <span className="font-medium">{usageDialogItem.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount</span>
+                <span className="font-medium">{usageDialogItem.amount.toLocaleString()} THB</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Enrolled / Paid</span>
+                <span>
+                  <span className="text-blue-600 font-semibold">{getUsageCount(usageDialogItem)}</span>
+                  {" / "}
+                  <span className="text-green-600 font-semibold">{getPaidCount(usageDialogItem)}</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+
+          {/* Filter tabs */}
+          <div className="flex gap-2 border-b pb-2">
+            <button
+              onClick={() => setUsageDialogFilter("all")}
+              className={`text-sm px-3 py-1 rounded-md font-medium transition-colors ${usageDialogFilter === "all" ? "bg-blue-100 text-blue-700" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setUsageDialogFilter("paid")}
+              className={`text-sm px-3 py-1 rounded-md font-medium transition-colors ${usageDialogFilter === "paid" ? "bg-green-100 text-green-700" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Paid only
+            </button>
+          </div>
+
+          <div className="max-h-80 overflow-y-auto">
+            {usageDialogItem && (() => {
+              const invoices = getItemUsageData(usageDialogItem)
+              const filtered = usageDialogFilter === "paid" ? invoices.filter(inv => inv.status === "paid") : invoices
+              if (filtered.length === 0) {
+                return (
+                  <div className="py-8 text-center text-muted-foreground text-sm">
+                    No records found
+                  </div>
+                )
+              }
+              return (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 font-medium text-muted-foreground">#</th>
+                      <th className="text-left py-2 font-medium text-muted-foreground">Student</th>
+                      <th className="text-left py-2 font-medium text-muted-foreground">Invoice No.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((inv: any, idx: number) => (
+                      <tr key={inv.id || idx} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="py-2 text-muted-foreground">{idx + 1}</td>
+                        <td className="py-2">
+                          <div className="font-medium">{inv.studentName || "-"}</div>
+                          <div className="text-xs text-muted-foreground">{inv.studentId || ""}</div>
+                        </td>
+                        <td className="py-2 font-mono text-xs">{inv.invoiceNumber || "-"}</td>
+                        <td className="py-2 text-center">
+                          {inv.status === "paid"
+                            ? <span className="inline-flex items-center gap-1 text-green-700 font-medium"><span>✓</span> Paid</span>
+                            : inv.status === "cancelled"
+                            ? <span className="text-gray-400">Cancelled</span>
+                            : <span className="text-orange-600">Unpaid</span>
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            })()}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUsageDialogItem(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
