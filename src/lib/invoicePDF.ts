@@ -36,7 +36,7 @@ interface Invoice {
   idCharges?: number
   securityDepositWaiver?: number
   discounts?: Array<{ name: string; amount: number; percent?: number }>
-  lateFee?: { amount: number; percent: number }
+
 }
 
 const escapeHtml = (value: unknown) => {
@@ -305,12 +305,12 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
           ${itemsRows}
 
           ${(() => {
-            let additionalRows = ''
+        let additionalRows = ''
 
-            // Show discounts if any
-            if (invoice.discounts && invoice.discounts.length > 0) {
-              invoice.discounts.forEach(discount => {
-                additionalRows += `
+        // Show discounts if any
+        if (invoice.discounts && invoice.discounts.length > 0) {
+          invoice.discounts.forEach(discount => {
+            additionalRows += `
                   <tr>
                     <td colspan="2" style="padding:10px 18px; color:#059669;">
                       ${escapeHtml(discount.name)}${discount.percent ? ` (${discount.percent}%)` : ''}
@@ -318,13 +318,13 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
                     <td style="padding:10px 18px; text-align:right; color:#059669;">-${discount.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 `
-              })
-            }
+          })
+        }
 
-            // Show registration fees if any
-            if (invoice.registrationFees && invoice.registrationFees.length > 0) {
-              invoice.registrationFees.forEach((fee: any) => {
-                additionalRows += `
+        // Show registration fees if any
+        if (invoice.registrationFees && invoice.registrationFees.length > 0) {
+          invoice.registrationFees.forEach((fee: any) => {
+            additionalRows += `
                   <tr>
                     <td colspan="2" style="padding:10px 18px; color:#ea580c;">
                       ${escapeHtml(fee.name)}
@@ -332,12 +332,12 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
                     <td style="padding:10px 18px; text-align:right; color:#ea580c;">+${fee.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 `
-              })
-            }
+          })
+        }
 
-            // Show security deposit waiver if any
-            if (invoice.securityDepositWaiver && invoice.securityDepositWaiver > 0) {
-              additionalRows += `
+        // Show security deposit waiver if any
+        if (invoice.securityDepositWaiver && invoice.securityDepositWaiver > 0) {
+          additionalRows += `
                 <tr>
                   <td colspan="2" style="padding:10px 18px; color:#059669;">
                     Security Deposit Fee Waiver
@@ -345,11 +345,11 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
                   <td style="padding:10px 18px; text-align:right; color:#059669;">-${invoice.securityDepositWaiver.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               `
-            }
+        }
 
-            // Show ID charges if any
-            if (invoice.idCharges && invoice.idCharges > 0) {
-              additionalRows += `
+        // Show ID charges if any
+        if (invoice.idCharges && invoice.idCharges > 0) {
+          additionalRows += `
                 <tr>
                   <td colspan="2" style="padding:10px 18px; color:#9333ea;">
                     ID Charges (3%)
@@ -357,22 +357,11 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
                   <td style="padding:10px 18px; text-align:right; color:#9333ea;">+${invoice.idCharges.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               `
-            }
+        }
 
-            // Show late fee if any
-            if (invoice.lateFee && invoice.lateFee.amount > 0) {
-              additionalRows += `
-                <tr>
-                  <td colspan="2" style="padding:10px 18px; color:#dc2626;">
-                    Late Payment Fee (${invoice.lateFee.percent}%)
-                  </td>
-                  <td style="padding:10px 18px; text-align:right; color:#dc2626;">+${invoice.lateFee.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                </tr>
-              `
-            }
 
-            return additionalRows
-          })()}
+        return additionalRows
+      })()}
 
           <tr style="border-top:1px solid #000;">
             <td colspan="2" style="padding:12px 14px; font-weight:600;">
@@ -388,7 +377,6 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
 
       <div style="page-break-inside:avoid; break-inside:avoid; min-height:200px; padding-bottom:20px;">
         <div style="font-size:10px; line-height:1.6; margin-bottom:14px;">
-          <p style="font-style:italic; margin-bottom:10px;">Late payment charge of 730 per month on your deposit will be applied to payments made after the invoice due date.</p>
           <p style="margin-bottom:10px;">Should you need any help or advice regarding a subject to the terms and conditions of King's College International School Bangkok.</p>
 
           <p style="font-weight:700; margin-top:14px; margin-bottom:8px;">Payment methods</p>

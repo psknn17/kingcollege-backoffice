@@ -34,7 +34,6 @@ export const BILL_PAYMENT = {
 // Invoice Notes
 // ============================================
 export const INVOICE_NOTES = {
-  latePayment: "Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.",
   refundCondition: "The condition for refund of the security deposit is subject to the terms and conditions of King's College International School Bangkok.",
   chequeInstruction: "Cheque: Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.",
   bankTransferInstruction: "Bank Transfer: Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to finance@kingsbangkok.ac.th with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.",
@@ -158,4 +157,51 @@ export function getAcademicYear(date: Date): string {
   } else {
     return `${year - 1}/${year}`
   }
+}
+// ============================================
+// Invoice Number Generation
+// ============================================
+
+/**
+ * Extract the start year from academic year string (e.g., "2025/2026" or "2025-2026" -> "2025")
+ */
+export function getFormattedAcademicYear(academicYear: string | undefined): string {
+  if (!academicYear) return new Date().getFullYear().toString()
+  const match = academicYear.match(/(\d{4})/)
+  return match ? match[1] : new Date().getFullYear().toString()
+}
+
+/**
+ * Generate the next invoice number based on academic year and running number in localStorage
+ */
+export function generateNextInvoiceNumber(academicYear: string | undefined): string {
+  const year = getFormattedAcademicYear(academicYear)
+  const storageKey = `invoice_running_no_${year}`
+
+  // Get current running number from localStorage
+  const currentNoStr = localStorage.getItem(storageKey)
+  let nextNo = 1
+
+  if (currentNoStr) {
+    nextNo = parseInt(currentNoStr, 10) + 1
+  }
+
+  // Update localStorage with the new running number
+  localStorage.setItem(storageKey, nextNo.toString())
+
+  // Return formatted number: [Year][7-digit running number]
+  return `${year}${String(nextNo).padStart(7, '0')}`
+}
+
+/**
+ * Peek at the next invoice number without incrementing
+ */
+export function peekNextInvoiceNumber(academicYear: string | undefined): string {
+  const year = getFormattedAcademicYear(academicYear)
+  const storageKey = `invoice_running_no_${year}`
+
+  const currentNoStr = localStorage.getItem(storageKey)
+  const nextNo = currentNoStr ? parseInt(currentNoStr, 10) + 1 : 1
+
+  return `${year}${String(nextNo).padStart(7, '0')}`
 }
