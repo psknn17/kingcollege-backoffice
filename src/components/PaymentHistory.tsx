@@ -87,7 +87,7 @@ const generateMockPayments = (t?: any): PaymentRecord[] => {
 
     payments.push({
       id: i.toString(),
-      invoiceNumber: `INV-2025-${String(i).padStart(6, '0')}`,
+      invoiceNumber: `2025${String(i).padStart(7, '0')}`,
       studentName: student.name,
       studentId: student.id,
       studentGrade: student.grade,
@@ -103,10 +103,10 @@ const generateMockPayments = (t?: any): PaymentRecord[] => {
       paymentDescription: `Term ${term} tuition fee payment for academic year 2025-2026`,
       dueDate: new Date(date.getTime() + 15 * 24 * 60 * 60 * 1000),
       notes: status === "cancelled" ? "Payment cancelled by parent request" :
-             status === "overdue" ? "Payment overdue - reminder sent" :
-             status === "unpaid" ? "Payment not yet received" :
-             status === "partial" ? "Partial payment received, balance pending" :
-             "Payment completed successfully"
+        status === "overdue" ? "Payment overdue - reminder sent" :
+          status === "unpaid" ? "Payment not yet received" :
+            status === "partial" ? "Partial payment received, balance pending" :
+              "Payment completed successfully"
     })
   }
 
@@ -731,8 +731,8 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                   <TableCell align="center">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => setSelectedPayment(payment)}
                         >
@@ -749,7 +749,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                             {t("payment.completeInfoFor", { invoice: payment.invoiceNumber })}
                           </DialogDescription>
                         </DialogHeader>
-                        
+
                         <div className="space-y-6">
                           {/* Payment Summary */}
                           <div className="flex justify-between items-start">
@@ -875,16 +875,16 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious 
+              <PaginationPrevious
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
               />
             </PaginationItem>
-            
+
             {/* Show first few pages */}
             {Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + 1).map(page => (
               <PaginationItem key={page}>
-                <PaginationLink 
+                <PaginationLink
                   onClick={() => setCurrentPage(page)}
                   isActive={currentPage === page}
                   className="cursor-pointer"
@@ -893,18 +893,18 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 </PaginationLink>
               </PaginationItem>
             ))}
-            
+
             {/* Show ellipsis if there are many pages */}
             {totalPages > 6 && currentPage < totalPages - 2 && (
               <PaginationItem>
                 <PaginationEllipsis />
               </PaginationItem>
             )}
-            
+
             {/* Show current page area if it's in the middle */}
             {currentPage > 3 && currentPage < totalPages - 2 && (
               <PaginationItem>
-                <PaginationLink 
+                <PaginationLink
                   onClick={() => setCurrentPage(currentPage)}
                   isActive={true}
                   className="cursor-pointer"
@@ -913,7 +913,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 </PaginationLink>
               </PaginationItem>
             )}
-            
+
             {/* Show last few pages */}
             {totalPages > 3 && (
               <>
@@ -924,7 +924,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 )}
                 {Array.from({ length: Math.min(3, totalPages) }, (_, i) => totalPages - 2 + i).filter(page => page > 3).map(page => (
                   <PaginationItem key={page}>
-                    <PaginationLink 
+                    <PaginationLink
                       onClick={() => setCurrentPage(page)}
                       isActive={currentPage === page}
                       className="cursor-pointer"
@@ -935,9 +935,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 ))}
               </>
             )}
-            
+
             <PaginationItem>
-              <PaginationNext 
+              <PaginationNext
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
               />

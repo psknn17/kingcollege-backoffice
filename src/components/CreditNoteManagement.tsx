@@ -133,11 +133,11 @@ export function CreditNoteManagement() {
 
   // Mock receipts data - using translation keys where applicable
   const receipts = [
-    { id: "RCP-2025-000001", invoiceNumber: "INV-2025-000123", studentName: "Oliver Brown", studentId: "KC2025001", amount: 450000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-05"), status: "issued" },
-    { id: "RCP-2025-000002", invoiceNumber: "INV-2025-000124", studentName: "Emma Wilson", studentId: "KC2025002", amount: 380000, paymentMethod: t("paymentMethod.creditCard"), issueDate: new Date("2025-01-06"), status: "issued" },
-    { id: "RCP-2025-000003", invoiceNumber: "INV-2025-000125", studentName: "James Chen", studentId: "KC2025003", amount: 520000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-07"), status: "issued" },
-    { id: "RCP-2025-000004", invoiceNumber: "INV-2025-000126", studentName: "Sophia Lee", studentId: "KC2025004", amount: 295000, paymentMethod: "Cheque", issueDate: new Date("2025-01-08"), status: "issued" },
-    { id: "RCP-2025-000005", invoiceNumber: "INV-2025-000127", studentName: "Liam Taylor", studentId: "KC2025005", amount: 410000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-09"), status: "issued" },
+    { id: "RCP-2025-000001", invoiceNumber: "20250000123", studentName: "Oliver Brown", studentId: "KC2025001", amount: 450000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-05"), status: "issued" },
+    { id: "RCP-2025-000002", invoiceNumber: "20250000124", studentName: "Emma Wilson", studentId: "KC2025002", amount: 380000, paymentMethod: t("paymentMethod.creditCard"), issueDate: new Date("2025-01-06"), status: "issued" },
+    { id: "RCP-2025-000003", invoiceNumber: "20250000125", studentName: "James Chen", studentId: "KC2025003", amount: 520000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-07"), status: "issued" },
+    { id: "RCP-2025-000004", invoiceNumber: "20250000126", studentName: "Sophia Lee", studentId: "KC2025004", amount: 295000, paymentMethod: "Cheque", issueDate: new Date("2025-01-08"), status: "issued" },
+    { id: "RCP-2025-000005", invoiceNumber: "20250000127", studentName: "Liam Taylor", studentId: "KC2025005", amount: 410000, paymentMethod: t("paymentMethod.bankTransfer"), issueDate: new Date("2025-01-09"), status: "issued" },
   ]
 
   // Sorting states
@@ -218,7 +218,7 @@ export function CreditNoteManagement() {
     let filtered = creditNotes
 
     if (searchTerm) {
-      filtered = filtered.filter(cn => 
+      filtered = filtered.filter(cn =>
         cn.creditNoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cn.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cn.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -621,531 +621,531 @@ export function CreditNoteManagement() {
 
   return (
     <>
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Credit Notes</CardTitle>
-            <p className="text-sm text-muted-foreground">View and manage credit notes</p>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Tabs for Receipts and Credit Notes */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "receipts" | "credit-notes")}>
-        <div className="flex items-center justify-between mb-4">
-          <TabsList>
-            <TabsTrigger value="receipts" className="flex items-center gap-2">
-              <Receipt className="w-4 h-4" />
-              Receipts
-            </TabsTrigger>
-            <TabsTrigger value="credit-notes" className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              Credit Notes
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
-              <Save className="w-4 h-4" />
-              Save Changes
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              {t("invoice.exportReport")}
-            </Button>
-            <input
-              ref={importFileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={handleImportFile}
-            />
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={!userCanEdit}
-              onClick={() => importFileInputRef.current?.click()}
-            >
-              <Upload className="w-4 h-4" />
-              Import
-            </Button>
-            {activeTab === "receipts" ? (
-              <Button onClick={() => setIsCreateReceiptModalOpen(true)} className="flex items-center gap-2" disabled={!userCanEdit}>
-                <Plus className="w-4 h-4" />
-                Create Receipt
-              </Button>
-            ) : (
-              <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!userCanEdit}>
-                <Plus className="w-4 h-4" />
-                {t("creditNote.createCreditNote")}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Receipts Tab Content */}
-        <TabsContent value="receipts" className="space-y-6 mt-0">
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="w-4 h-4" />
-                  Search & Filter
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Input placeholder="Search by receipt number, student name..." />
-                </div>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={t("paymentMethod.label")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Methods</SelectItem>
-                    <SelectItem value="bank_transfer">{t("paymentMethod.bankTransfer")}</SelectItem>
-                    <SelectItem value="credit_card">{t("paymentMethod.creditCard")}</SelectItem>
-                    <SelectItem value="cash">{t("paymentMethod.cash")}</SelectItem>
-                    <SelectItem value="cheque">Cheque</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Receipts Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Receipt List</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Receipts Table - Standard Alignment */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {/* Receipt # - text/left */}
-                    <TableHead align="left">{t("table.receiptNo")}</TableHead>
-                    {/* Invoice # - text/left */}
-                    <TableHead align="left">{t("table.invoiceNo")}</TableHead>
-                    {/* Student - text/left */}
-                    <TableHead align="left">{t("table.student")}</TableHead>
-                    {/* Amount - currency/right */}
-                    <TableHead align="right">{t("table.amount")}</TableHead>
-                    {/* Payment Method - badge/center */}
-                    <TableHead align="center">{t("table.paymentMethod")}</TableHead>
-                    {/* Issue Date - date/left */}
-                    <TableHead align="left">{t("table.issueDate")}</TableHead>
-                    {/* Status - badge/center */}
-                    <TableHead align="center">{t("table.status")}</TableHead>
-                    {/* Actions - actions/center */}
-                    <TableHead align="center">{t("table.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {receipts.map((receipt) => (
-                    <TableRow key={receipt.id}>
-                      {/* Receipt # - text/left */}
-                      <TableCell align="left" className="font-medium">{receipt.id}</TableCell>
-                      {/* Invoice # - text/left */}
-                      <TableCell align="left">{receipt.invoiceNumber}</TableCell>
-                      {/* Student - text/left */}
-                      <TableCell align="left">
-                        <div>
-                          <div className="font-medium">{receipt.studentName}</div>
-                          <div className="text-xs text-muted-foreground">{receipt.studentId}</div>
-                        </div>
-                      </TableCell>
-                      {/* Amount - currency/right */}
-                      <TableCell align="right" className="font-medium">฿{receipt.amount.toLocaleString()}</TableCell>
-                      {/* Payment Method - badge/center */}
-                      <TableCell align="center">
-                        <Badge variant="outline">{receipt.paymentMethod}</Badge>
-                      </TableCell>
-                      {/* Issue Date - date/left */}
-                      <TableCell align="left">{format(receipt.issueDate, "dd/MM/yyyy")}</TableCell>
-                      {/* Status - badge/center */}
-                      <TableCell align="center">
-                        <Badge className="bg-green-100 text-green-800">{t("creditNote.issued")}</Badge>
-                      </TableCell>
-                      {/* Actions - actions/center */}
-                      <TableCell align="center">
-                        <div className="flex justify-center gap-1">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Printer className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Credit Notes Tab Content */}
-        <TabsContent value="credit-notes" className="space-y-6 mt-0">
-
-        {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="space-y-6">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("creditNote.totalCreditNotes")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("creditNote.draft")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{summaryStats.draft}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("creditNote.issued")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{summaryStats.issued}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("creditNote.applied")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.applied}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("creditNote.totalCreditAmount")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₿{summaryStats.totalAmount.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="w-4 h-4" />
-              {t("invoiceOverview.searchFilter")}
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle>Credit Notes</CardTitle>
+              <p className="text-sm text-muted-foreground">View and manage credit notes</p>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-              <Input
-                placeholder={t("creditNote.searchPlaceholder")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9"
-                disabled={!userCanEdit}
+          </CardHeader>
+        </Card>
+
+        {/* Tabs for Receipts and Credit Notes */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "receipts" | "credit-notes")}>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="receipts" className="flex items-center gap-2">
+                <Receipt className="w-4 h-4" />
+                Receipts
+              </TabsTrigger>
+              <TabsTrigger value="credit-notes" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Credit Notes
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
+                <Save className="w-4 h-4" />
+                Save Changes
+              </Button>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                {t("invoice.exportReport")}
+              </Button>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleImportFile}
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                  <SelectItem value="draft">{t("creditNote.draft")}</SelectItem>
-                  <SelectItem value="issued">{t("creditNote.issued")}</SelectItem>
-                  <SelectItem value="applied">{t("creditNote.applied")}</SelectItem>
-                  <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("invoiceOverview.type")}</label>
-              <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("creditNote.allTypes")}</SelectItem>
-                  <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
-                  <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
-                  <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
-                  <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5 lg:col-span-2">
-              <label className="text-sm font-medium text-muted-foreground">Date Range</label>
-              <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom || undefined}
-                      onSelect={(date) => setDateFrom(date ?? null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <span className="text-muted-foreground">→</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo || undefined}
-                      onSelect={(date) => setDateTo(date ?? null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                disabled={!userCanEdit}
+                onClick={() => importFileInputRef.current?.click()}
+              >
+                <Upload className="w-4 h-4" />
+                Import
+              </Button>
+              {activeTab === "receipts" ? (
+                <Button onClick={() => setIsCreateReceiptModalOpen(true)} className="flex items-center gap-2" disabled={!userCanEdit}>
+                  <Plus className="w-4 h-4" />
+                  Create Receipt
+                </Button>
+              ) : (
+                <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!userCanEdit}>
+                  <Plus className="w-4 h-4" />
+                  {t("creditNote.createCreditNote")}
+                </Button>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredCreditNotes.length} of {creditNotes.length} credit notes
-        </p>
+          {/* Receipts Tab Content */}
+          <TabsContent value="receipts" className="space-y-6 mt-0">
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Filter className="w-4 h-4" />
+                    Search & Filter
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Input placeholder="Search by receipt number, student name..." />
+                  </div>
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder={t("paymentMethod.label")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Methods</SelectItem>
+                      <SelectItem value="bank_transfer">{t("paymentMethod.bankTransfer")}</SelectItem>
+                      <SelectItem value="credit_card">{t("paymentMethod.creditCard")}</SelectItem>
+                      <SelectItem value="cash">{t("paymentMethod.cash")}</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Receipts Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Receipt List</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Receipts Table - Standard Alignment */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {/* Receipt # - text/left */}
+                      <TableHead align="left">{t("table.receiptNo")}</TableHead>
+                      {/* Invoice # - text/left */}
+                      <TableHead align="left">{t("table.invoiceNo")}</TableHead>
+                      {/* Student - text/left */}
+                      <TableHead align="left">{t("table.student")}</TableHead>
+                      {/* Amount - currency/right */}
+                      <TableHead align="right">{t("table.amount")}</TableHead>
+                      {/* Payment Method - badge/center */}
+                      <TableHead align="center">{t("table.paymentMethod")}</TableHead>
+                      {/* Issue Date - date/left */}
+                      <TableHead align="left">{t("table.issueDate")}</TableHead>
+                      {/* Status - badge/center */}
+                      <TableHead align="center">{t("table.status")}</TableHead>
+                      {/* Actions - actions/center */}
+                      <TableHead align="center">{t("table.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receipts.map((receipt) => (
+                      <TableRow key={receipt.id}>
+                        {/* Receipt # - text/left */}
+                        <TableCell align="left" className="font-medium">{receipt.id}</TableCell>
+                        {/* Invoice # - text/left */}
+                        <TableCell align="left">{receipt.invoiceNumber}</TableCell>
+                        {/* Student - text/left */}
+                        <TableCell align="left">
+                          <div>
+                            <div className="font-medium">{receipt.studentName}</div>
+                            <div className="text-xs text-muted-foreground">{receipt.studentId}</div>
+                          </div>
+                        </TableCell>
+                        {/* Amount - currency/right */}
+                        <TableCell align="right" className="font-medium">฿{receipt.amount.toLocaleString()}</TableCell>
+                        {/* Payment Method - badge/center */}
+                        <TableCell align="center">
+                          <Badge variant="outline">{receipt.paymentMethod}</Badge>
+                        </TableCell>
+                        {/* Issue Date - date/left */}
+                        <TableCell align="left">{format(receipt.issueDate, "dd/MM/yyyy")}</TableCell>
+                        {/* Status - badge/center */}
+                        <TableCell align="center">
+                          <Badge className="bg-green-100 text-green-800">{t("creditNote.issued")}</Badge>
+                        </TableCell>
+                        {/* Actions - actions/center */}
+                        <TableCell align="center">
+                          <div className="flex justify-center gap-1">
+                            <Button variant="ghost" size="sm">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Printer className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Credit Notes Tab Content */}
+          <TabsContent value="credit-notes" className="space-y-6 mt-0">
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">{t("creditNote.totalCreditNotes")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summaryStats.total}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">{t("creditNote.draft")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gray-600">{summaryStats.draft}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">{t("creditNote.issued")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{summaryStats.issued}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">{t("creditNote.applied")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{summaryStats.applied}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">{t("creditNote.totalCreditAmount")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">₿{summaryStats.totalAmount.toLocaleString()}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Filter className="w-4 h-4" />
+                    {t("invoiceOverview.searchFilter")}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
+                    <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
+                    <Input
+                      placeholder={t("creditNote.searchPlaceholder")}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="h-9"
+                      disabled={!userCanEdit}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                        <SelectItem value="draft">{t("creditNote.draft")}</SelectItem>
+                        <SelectItem value="issued">{t("creditNote.issued")}</SelectItem>
+                        <SelectItem value="applied">{t("creditNote.applied")}</SelectItem>
+                        <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoiceOverview.type")}</label>
+                    <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("creditNote.allTypes")}</SelectItem>
+                        <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
+                        <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
+                        <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
+                        <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 lg:col-span-2">
+                    <label className="text-sm font-medium text-muted-foreground">Date Range</label>
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={dateFrom || undefined}
+                            onSelect={(date) => setDateFrom(date ?? null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <span className="text-muted-foreground">→</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={dateTo || undefined}
+                            onSelect={(date) => setDateTo(date ?? null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Results Summary */}
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredCreditNotes.length} of {creditNotes.length} credit notes
+              </p>
+            </div>
+
+            {/* Credit Notes Table - Standard Alignment */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {/* Credit Note # - text/left */}
+                      <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
+                        <div className="flex items-center gap-1">
+                          Credit Note Number
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Date - date/left */}
+                      <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
+                        <div className="flex items-center gap-1">
+                          Date
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Student - text/left */}
+                      <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                        <div className="flex items-center gap-1">
+                          Student
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Original Invoice - text/left */}
+                      <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
+                        <div className="flex items-center gap-1">
+                          Original Invoice
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Amount - currency/right */}
+                      <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditAmount")}>
+                        <div className="flex items-center gap-1 justify-end">
+                          Amount
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Reason - text/left */}
+                      <TableHead align="left">Reason</TableHead>
+                      {/* Status - badge/center */}
+                      <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                        <div className="flex items-center gap-1 justify-center">
+                          Status
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Actions - actions/center */}
+                      <TableHead align="center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedCreditNotes.map((creditNote) => (
+                      <TableRow key={creditNote.id}>
+                        {/* Credit Note # - text/left */}
+                        <TableCell align="left" className="font-mono text-sm">
+                          {creditNote.creditNoteNumber}
+                        </TableCell>
+                        {/* Date - date/left */}
+                        <TableCell align="left">{format(creditNote.issueDate, "dd MMM yyyy")}</TableCell>
+                        {/* Student - text/left */}
+                        <TableCell align="left">
+                          <div>
+                            <div className="font-medium">{creditNote.studentName}</div>
+                            <div className="text-sm text-muted-foreground">{creditNote.studentId}</div>
+                          </div>
+                        </TableCell>
+                        {/* Original Invoice - text/left */}
+                        <TableCell align="left" className="font-mono text-sm">
+                          {creditNote.invoiceNumber}
+                        </TableCell>
+                        {/* Amount - currency/right */}
+                        <TableCell align="right">
+                          <div className="font-medium text-red-600">
+                            -₿{creditNote.creditAmount.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            of ₿{creditNote.originalAmount.toLocaleString()}
+                          </div>
+                        </TableCell>
+                        {/* Reason - text/left */}
+                        <TableCell align="left">{creditNote.reason}</TableCell>
+                        {/* Status - badge/center */}
+                        <TableCell align="center">{getStatusBadge(creditNote.status)}</TableCell>
+                        {/* Actions - actions/center */}
+                        <TableCell align="center">
+                          <div className="flex gap-1 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openCreditNoteDetail(creditNote)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => downloadCreditNote(creditNote.id)}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => sendCreditNote(creditNote.id)}
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination Controls */}
+                {sortedCreditNotes.length > 0 && (
+                  <div className="flex items-center justify-between border-t p-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Show</span>
+                      <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                        <SelectTrigger className="w-[70px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span>entries</span>
+                    </div>
+
+                    <div className="text-sm text-muted-foreground">
+                      Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedCreditNotes.length)} of {sortedCreditNotes.length} credit notes
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1 mx-2">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum: number
+                          if (totalPages <= 5) {
+                            pageNum = i + 1
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i
+                          } else {
+                            pageNum = currentPage - 2 + i
+                          }
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              className="w-8 h-8 p-0"
+                              onClick={() => setCurrentPage(pageNum)}
+                            >
+                              {pageNum}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Credit Notes Table - Standard Alignment */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {/* Credit Note # - text/left */}
-                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
-                  <div className="flex items-center gap-1">
-                    Credit Note Number
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Date - date/left */}
-                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
-                  <div className="flex items-center gap-1">
-                    Date
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Student - text/left */}
-                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
-                  <div className="flex items-center gap-1">
-                    Student
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Original Invoice - text/left */}
-                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
-                  <div className="flex items-center gap-1">
-                    Original Invoice
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Amount - currency/right */}
-                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditAmount")}>
-                  <div className="flex items-center gap-1 justify-end">
-                    Amount
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Reason - text/left */}
-                <TableHead align="left">Reason</TableHead>
-                {/* Status - badge/center */}
-                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                  <div className="flex items-center gap-1 justify-center">
-                    Status
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Actions - actions/center */}
-                <TableHead align="center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedCreditNotes.map((creditNote) => (
-                <TableRow key={creditNote.id}>
-                  {/* Credit Note # - text/left */}
-                  <TableCell align="left" className="font-mono text-sm">
-                    {creditNote.creditNoteNumber}
-                  </TableCell>
-                  {/* Date - date/left */}
-                  <TableCell align="left">{format(creditNote.issueDate, "dd MMM yyyy")}</TableCell>
-                  {/* Student - text/left */}
-                  <TableCell align="left">
-                    <div>
-                      <div className="font-medium">{creditNote.studentName}</div>
-                      <div className="text-sm text-muted-foreground">{creditNote.studentId}</div>
-                    </div>
-                  </TableCell>
-                  {/* Original Invoice - text/left */}
-                  <TableCell align="left" className="font-mono text-sm">
-                    {creditNote.invoiceNumber}
-                  </TableCell>
-                  {/* Amount - currency/right */}
-                  <TableCell align="right">
-                    <div className="font-medium text-red-600">
-                      -₿{creditNote.creditAmount.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      of ₿{creditNote.originalAmount.toLocaleString()}
-                    </div>
-                  </TableCell>
-                  {/* Reason - text/left */}
-                  <TableCell align="left">{creditNote.reason}</TableCell>
-                  {/* Status - badge/center */}
-                  <TableCell align="center">{getStatusBadge(creditNote.status)}</TableCell>
-                  {/* Actions - actions/center */}
-                  <TableCell align="center">
-                    <div className="flex gap-1 justify-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openCreditNoteDetail(creditNote)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => downloadCreditNote(creditNote.id)}
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => sendCreditNote(creditNote.id)}
-                      >
-                        <Mail className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          {sortedCreditNotes.length > 0 && (
-            <div className="flex items-center justify-between border-t p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Show</span>
-                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span>entries</span>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedCreditNotes.length)} of {sortedCreditNotes.length} credit notes
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1 mx-2">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum: number
-                    if (totalPages <= 5) {
-                      pageNum = i + 1
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i
-                    } else {
-                      pageNum = currentPage - 2 + i
-                    }
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        className="w-8 h-8 p-0"
-                        onClick={() => setCurrentPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-
-    {/* Credit Note Detail Modal */}
+      {/* Credit Note Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
@@ -1157,7 +1157,7 @@ export function CreditNoteManagement() {
               View and manage credit note information and processing details
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedCreditNote && (
             <div className="space-y-6">
               {/* Credit Note Header */}
@@ -1279,7 +1279,7 @@ export function CreditNoteManagement() {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
-                <Button 
+                <Button
                   className="flex-1"
                   onClick={() => {
                     downloadCreditNote(selectedCreditNote.id)
@@ -1289,9 +1289,9 @@ export function CreditNoteManagement() {
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="flex-1"
                   onClick={() => {
                     sendCreditNote(selectedCreditNote.id)
@@ -1301,7 +1301,7 @@ export function CreditNoteManagement() {
                   <Mail className="w-4 h-4 mr-2" />
                   Send to Parent
                 </Button>
-                
+
                 <Button variant="ghost" onClick={closeCreditNoteModal}>
                   Close
                 </Button>
@@ -1391,7 +1391,7 @@ export function CreditNoteManagement() {
                   type="number"
                   placeholder="0.00"
                   value={newCreditNote.creditAmount}
-                  onChange={(e) => setNewCreditNote({...newCreditNote, creditAmount: e.target.value})}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, creditAmount: e.target.value })}
                   max={newCreditNote.originalAmount}
                 />
                 {newCreditNote.originalAmount > 0 && (
@@ -1405,7 +1405,7 @@ export function CreditNoteManagement() {
                 <label className="text-sm font-medium">Credit Type *</label>
                 <Select
                   value={newCreditNote.type}
-                  onValueChange={(value: CreditNote["type"]) => setNewCreditNote({...newCreditNote, type: value})}
+                  onValueChange={(value: CreditNote["type"]) => setNewCreditNote({ ...newCreditNote, type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1425,7 +1425,7 @@ export function CreditNoteManagement() {
               <Input
                 placeholder="Enter reason for credit note"
                 value={newCreditNote.reason}
-                onChange={(e) => setNewCreditNote({...newCreditNote, reason: e.target.value})}
+                onChange={(e) => setNewCreditNote({ ...newCreditNote, reason: e.target.value })}
               />
             </div>
 
@@ -1434,7 +1434,7 @@ export function CreditNoteManagement() {
               <Textarea
                 placeholder="Enter any additional notes or comments"
                 value={newCreditNote.notes}
-                onChange={(e) => setNewCreditNote({...newCreditNote, notes: e.target.value})}
+                onChange={(e) => setNewCreditNote({ ...newCreditNote, notes: e.target.value })}
                 className="min-h-20"
               />
             </div>

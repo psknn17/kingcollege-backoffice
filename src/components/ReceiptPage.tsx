@@ -55,7 +55,7 @@ const mockReceipts: Receipt[] = [
   {
     id: "1",
     receiptNumber: "RCP-2025-001234",
-    invoiceNumber: "INV-2025-001234",
+    invoiceNumber: "20250000001",
     studentName: "James Smith",
     studentId: "KC2024001",
     studentGrade: "Year 4",
@@ -70,7 +70,7 @@ const mockReceipts: Receipt[] = [
   {
     id: "2",
     receiptNumber: "RCP-2025-001235",
-    invoiceNumber: "INV-2025-001235",
+    invoiceNumber: "20250000001",
     studentName: "Emily Smith",
     studentId: "KC2024002",
     studentGrade: "Reception",
@@ -85,7 +85,7 @@ const mockReceipts: Receipt[] = [
   {
     id: "3",
     receiptNumber: "RCP-2025-001236",
-    invoiceNumber: "INV-2025-001236",
+    invoiceNumber: "20250000001",
     studentName: "Michael Johnson",
     studentId: "KC2024003",
     studentGrade: "Year 7",
@@ -100,7 +100,7 @@ const mockReceipts: Receipt[] = [
   {
     id: "4",
     receiptNumber: "RCP-2025-001237",
-    invoiceNumber: "INV-2025-001237",
+    invoiceNumber: "20250000001",
     studentName: "Sophia Williams",
     studentId: "KC2024004",
     studentGrade: "Year 9",
@@ -115,7 +115,7 @@ const mockReceipts: Receipt[] = [
   {
     id: "5",
     receiptNumber: "RCP-2025-001238",
-    invoiceNumber: "INV-2025-001238",
+    invoiceNumber: "20250000001",
     studentName: "Oliver Williams",
     studentId: "KC2024005",
     studentGrade: "Year 6",
@@ -139,7 +139,7 @@ for (let i = 6; i <= 120; i++) {
   mockReceipts.push({
     id: i.toString(),
     receiptNumber: `RCP-2025-${String(1234 + i).padStart(6, '0')}`,
-    invoiceNumber: `INV-2025-${String(1234 + i).padStart(6, '0')}`,
+    invoiceNumber: `20250000001${String(1234 + i).padStart(6, '0')}`,
     studentName: student.name,
     studentId: student.id,
     studentGrade: student.grade,

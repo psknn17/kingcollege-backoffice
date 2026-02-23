@@ -371,10 +371,10 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
     try {
       setIsDownloadingPDF(true)
 
-      // Convert local state to Invoice object format
+      const currentYear = new Date().getFullYear().toString()
       const invoice = {
-        id: editInvoice?.id || `DRAFT-${Date.now()}`,
-        invoiceNumber: editInvoice?.invoiceNumber || `DRAFT-${Date.now()}`,
+        id: editInvoice?.id || `${currentYear}DRAFT-${Date.now()}`,
+        invoiceNumber: editInvoice?.invoiceNumber || `${currentYear}DRAFT-${Date.now()}`,
         studentName: clientName,
         studentId: "EXTERNAL",
         studentGrade: "-",
@@ -473,7 +473,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
         <thead>
           <tr className="border-b border-black">
             <th className="py-2 px-4 text-center font-semibold">Description</th>
-            <th className="py-2 px-4 text-center font-semibold" style={{ width: '150px' }}>Amount<br/>(THB)</th>
+            <th className="py-2 px-4 text-center font-semibold" style={{ width: '150px' }}>Amount<br />(THB)</th>
           </tr>
         </thead>
         <tbody>
@@ -578,95 +578,95 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       </h1>
 
       <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="w-5 h-5" />
-              External Invoice
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-16">
-              {/* Step 1: Client Information */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-lg">1</span>
-                  <h3 className="font-semibold">Client Information</h3>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FileText className="w-5 h-5" />
+            External Invoice
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-16">
+            {/* Step 1: Client Information */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-lg">1</span>
+                <h3 className="font-semibold">Client Information</h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-9">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">
+                    Client name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Company or individual name"
+                    className="h-9"
+                  />
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-9">
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">
-                      Client name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                      placeholder="Company or individual name"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">Contact name</Label>
-                    <Input
-                      value={contactName}
-                      onChange={(e) => setContactName(e.target.value)}
-                      placeholder="Mr./Mrs. Contact Person"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">Address</Label>
-                    <Input
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Full address"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">Invoice date</Label>
-                    <Button
-                      variant="outline"
-                      className="w-full h-9 justify-start font-normal cursor-not-allowed opacity-70"
-                      disabled
-                    >
-                      <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                      {format(invoiceDate, 'dd/MM/yyyy')}
-                    </Button>
-                  </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Contact name</Label>
+                  <Input
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="Mr./Mrs. Contact Person"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Address</Label>
+                  <Input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Full address"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Invoice date</Label>
+                  <Button
+                    variant="outline"
+                    className="w-full h-9 justify-start font-normal cursor-not-allowed opacity-70"
+                    disabled
+                  >
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    {format(invoiceDate, 'dd/MM/yyyy')}
+                  </Button>
                 </div>
               </div>
+            </div>
 
-              {/* Step 2: Select Items */}
-              <div className="space-y-3 mt-6">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-lg">2</span>
-                  <h3 className="font-semibold">Select Items</h3>
+            {/* Step 2: Select Items */}
+            <div className="space-y-3 mt-6">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-lg">2</span>
+                <h3 className="font-semibold">Select Items</h3>
+              </div>
+              <div className="ml-9 space-y-3">
+                {/* Available Items */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Available Items ({filteredItems.length})</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddItemsDialogOpen(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add More Items
+                  </Button>
                 </div>
-                <div className="ml-9 space-y-3">
-                  {/* Available Items */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Available Items ({filteredItems.length})</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsAddItemsDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add More Items
-                    </Button>
-                  </div>
 
-                  {filteredItems.length === 0 ? (
-                    <div className="p-6 text-center text-muted-foreground border rounded-lg border-dashed">
-                      <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No items found</p>
-                      <p className="text-xs">Add items from External Invoice &gt; Items & Templates</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 gap-3">
-                        {filteredItems.slice(0, 5).map(item => {
+                {filteredItems.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground border rounded-lg border-dashed">
+                    <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No items found</p>
+                    <p className="text-xs">Add items from External Invoice &gt; Items & Templates</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredItems.slice(0, 5).map(item => {
                         const isAdded = lineItems.some(li => li.itemId === item.id)
                         return (
                           <Card
@@ -703,179 +703,179 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                           </Card>
                         )
                       })}
-                      </div>
-                      {filteredItems.length > 5 && (
-                        <p className="text-sm text-muted-foreground text-center">
-                          Showing 5 of {filteredItems.length} items. Click "+ Add More Items" to see all.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Add Custom Line Item button - shown when no items selected */}
-              {lineItems.length === 0 && (
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addCustomItem}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Custom Line Item
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 3: Selected Items */}
-              {lineItems.length > 0 && (
-                <div className="space-y-3 mt-8">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <label className="font-medium">Selected Items ({lineItems.length})</label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Total: {formatCurrency(total)}
+                    </div>
+                    {filteredItems.length > 5 && (
+                      <p className="text-sm text-muted-foreground text-center">
+                        Showing 5 of {filteredItems.length} items. Click "+ Add More Items" to see all.
                       </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={addCustomItem}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Custom Line Item
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setLineItems([])}
-                      >
-                        Clear All Items
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {/* Item Name - text */}
-                          <TableHead align="left">Item</TableHead>
-                          {/* Category - badge */}
-                          <TableHead align="center">Category</TableHead>
-                          {/* Amount - currency */}
-                          <TableHead align="right">Amount</TableHead>
-                          {/* Actions - buttons */}
-                          <TableHead align="center">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {lineItems.map((item) => {
-                          // Get item name from master if it exists
-                          const masterItem = item.itemId ? availableItems.find(ai => ai.id === item.itemId) : null
-                          const itemName = masterItem ? masterItem.name : item.description
-                          const itemDescription = item.details || (masterItem ? item.description : "")
-
-                          return (
-                            <TableRow key={item.id}>
-                              {/* Item Name - text */}
-                              <TableCell align="left">
-                                <div>
-                                  <p className="font-medium">{itemName}</p>
-                                  {itemDescription && (
-                                    <p className="text-sm text-muted-foreground">{itemDescription}</p>
-                                  )}
-                                </div>
-                              </TableCell>
-                              {/* Category - badge */}
-                              <TableCell align="center">
-                                <Badge
-                                  variant="outline"
-                                  className="border-orange-300 text-orange-700"
-                                >
-                                  External
-                                </Badge>
-                              </TableCell>
-                              {/* Amount - currency */}
-                              <TableCell align="right" className="font-medium">
-                                {item.amount.toLocaleString()}
-                              </TableCell>
-                              {/* Actions - buttons */}
-                              <TableCell align="center">
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditItem(item)}
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeLineItem(item.id)}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Due Date */}
-              {lineItems.length > 0 && (
-                <div className="space-y-3 mt-8">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-lg">4</span>
-                    <h3 className="font-semibold">Payment Due Date</h3>
-                  </div>
-                  <div className="ml-9">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">Due date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-[200px] h-9 justify-start font-normal">
-                            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                            {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Select date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={dueDate}
-                            onSelect={(date) => date && setDueDate(date)}
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <Separator className="my-4" />
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsPreviewDialogOpen(true)} disabled={lineItems.length === 0} className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5" />
-                  Preview
-                </Button>
-                <Button size="sm" onClick={() => handleSave("draft")} className="flex items-center gap-1.5">
-                  <Save className="w-3.5 h-3.5" />
-                  {isEditMode ? "Save" : "Draft"}
-                </Button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Add Custom Line Item button - shown when no items selected */}
+            {lineItems.length === 0 && (
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addCustomItem}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Custom Line Item
+                </Button>
+              </div>
+            )}
+
+            {/* Step 3: Selected Items */}
+            {lineItems.length > 0 && (
+              <div className="space-y-3 mt-8">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <label className="font-medium">Selected Items ({lineItems.length})</label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Total: {formatCurrency(total)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addCustomItem}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Custom Line Item
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLineItems([])}
+                    >
+                      Clear All Items
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {/* Item Name - text */}
+                        <TableHead align="left">Item</TableHead>
+                        {/* Category - badge */}
+                        <TableHead align="center">Category</TableHead>
+                        {/* Amount - currency */}
+                        <TableHead align="right">Amount</TableHead>
+                        {/* Actions - buttons */}
+                        <TableHead align="center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lineItems.map((item) => {
+                        // Get item name from master if it exists
+                        const masterItem = item.itemId ? availableItems.find(ai => ai.id === item.itemId) : null
+                        const itemName = masterItem ? masterItem.name : item.description
+                        const itemDescription = item.details || (masterItem ? item.description : "")
+
+                        return (
+                          <TableRow key={item.id}>
+                            {/* Item Name - text */}
+                            <TableCell align="left">
+                              <div>
+                                <p className="font-medium">{itemName}</p>
+                                {itemDescription && (
+                                  <p className="text-sm text-muted-foreground">{itemDescription}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            {/* Category - badge */}
+                            <TableCell align="center">
+                              <Badge
+                                variant="outline"
+                                className="border-orange-300 text-orange-700"
+                              >
+                                External
+                              </Badge>
+                            </TableCell>
+                            {/* Amount - currency */}
+                            <TableCell align="right" className="font-medium">
+                              {item.amount.toLocaleString()}
+                            </TableCell>
+                            {/* Actions - buttons */}
+                            <TableCell align="center">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditItem(item)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeLineItem(item.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Due Date */}
+            {lineItems.length > 0 && (
+              <div className="space-y-3 mt-8">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-lg">4</span>
+                  <h3 className="font-semibold">Payment Due Date</h3>
+                </div>
+                <div className="ml-9">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Due date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-[200px] h-9 justify-start font-normal">
+                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                          {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Select date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={dueDate}
+                          onSelect={(date) => date && setDueDate(date)}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <Separator className="my-4" />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsPreviewDialogOpen(true)} disabled={lineItems.length === 0} className="flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                Preview
+              </Button>
+              <Button size="sm" onClick={() => handleSave("draft")} className="flex items-center gap-1.5">
+                <Save className="w-3.5 h-3.5" />
+                {isEditMode ? "Save" : "Draft"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Invoice Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
@@ -1083,11 +1083,11 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
                 (item.description && item.description.toLowerCase().includes(itemSearchQuery.toLowerCase()))
               ).length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No items found</p>
-                </div>
-              )}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No items found</p>
+                  </div>
+                )}
             </div>
           </div>
 

@@ -22,7 +22,7 @@ import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
-import { formatCurrency, numberToWords, getAcademicYear } from "@/lib/invoiceUtils"
+import { formatCurrency, numberToWords, getAcademicYear, generateNextInvoiceNumber } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
@@ -55,6 +55,7 @@ interface Invoice {
     description: string
     amount: number
     discountedAmount: number
+    discountPercent?: number
   }[]
   status: InvoiceStatus
   approvalStatus?: ApprovalStatus
@@ -67,6 +68,8 @@ interface Invoice {
   approvedBy?: string
   approvedAt?: Date
   rejectedReason?: string
+  rejectedAt?: Date
+  rejectedBy?: string
   category?: string
 }
 
@@ -98,7 +101,7 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
         }
 
         const issueDate = parseStoredDate(inv.issueDate)
-        const dueDate = parseStoredDate(inv.dueDate) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        const dueDate = parseStoredDate(inv.dueDate) || (issueDate ? new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
 
         const approvalStatus: ApprovalStatus = inv.approvalStatus
           ?? (inv.status === "approved"
@@ -151,16 +154,12 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
   return []
 }
 
-const generateInvoiceNumber = (studentId: string) => {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const idSuffix = studentId.slice(-4)
-  return `INV-${year}${month}-${idSuffix}`
+const generateInvoiceNumber = (academicYear: string | undefined) => {
+  return generateNextInvoiceNumber(academicYear)
 }
 
 const displayInvoiceNumber = (invoiceNumber: string | undefined, approvalStatus?: ApprovalStatus) => {
-  if (!invoiceNumber || invoiceNumber.startsWith("DRAFT-")) {
+  if (!invoiceNumber || invoiceNumber.includes("DRAFT-") || invoiceNumber.includes("Draft-")) {
     return ""
   }
   if (approvalStatus === "wait" || approvalStatus === "rejected") {
@@ -185,7 +184,7 @@ const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
   const now = new Date()
   const due = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
   const approval: ApprovalStatus = invoice.approvalStatus ?? (invoice.status === "approved" ? "approved" : invoice.status === "rejected" ? "rejected" : "wait")
-  if (due < now && invoice.status !== "paid" && approval !== "wait") return "overdue"
+  if (due < now && (invoice.status as string) !== "paid" && approval !== "wait") return "overdue"
   return "unpaid"
 }
 
@@ -421,14 +420,23 @@ export function ApprovalQueue() {
   }
 
   const matchesStoredInvoice = (stored: any, target: Invoice, overrideNumber?: string) => {
-    const idMatch = target.id && stored.id === target.id
+    // 1. Priority 1: Match by unique ID
+    if (target.id && stored.id) {
+      return stored.id === target.id
+    }
+
+    // 2. Priority 2: Match by Invoice Number
     const numberToMatch = overrideNumber ?? target.invoiceNumber
-    const numberMatch = numberToMatch && stored.invoiceNumber === numberToMatch
+    if (numberToMatch && stored.invoiceNumber && !numberToMatch.includes("DRAFT-")) {
+      return stored.invoiceNumber === numberToMatch
+    }
+
+    // 3. Final Fallback: Match by student and date (for legacy data or drafts without unique IDs)
     const studentMatch = target.studentId && stored.studentId === target.studentId
-    const issueDateMatch = target.issueDate && stored.issueDate
-      ? new Date(stored.issueDate).toDateString() === target.issueDate.toDateString()
-      : target.issueDate === null && !stored.issueDate
-    return idMatch || numberMatch || (studentMatch && issueDateMatch)
+    const targetDate = target.issueDate ? new Date(target.issueDate).toDateString() : null
+    const storedDate = stored.issueDate ? new Date(stored.issueDate).toDateString() : null
+
+    return !!(studentMatch && targetDate === storedDate)
   }
 
   const updateLocalStorage = (target: Invoice, patch: Record<string, unknown>, overrideNumber?: string) => {
@@ -447,26 +455,26 @@ export function ApprovalQueue() {
   }
 
   const approveInvoice = (invoice: Invoice) => {
-    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.startsWith("DRAFT-") || invoice.invoiceNumber.startsWith("IMP-")
+    const needsNewInvoiceNumber = !invoice.invoiceNumber || invoice.invoiceNumber.includes("DRAFT-") || invoice.invoiceNumber.includes("Draft-") || invoice.invoiceNumber.startsWith("IMP-")
     const finalInvoiceNumber = needsNewInvoiceNumber
-      ? generateInvoiceNumber(invoice.studentId)
+      ? generateInvoiceNumber(invoice.academicYear)
       : invoice.invoiceNumber
 
     const approvalDate = new Date()
     const emailSentAt = approvalDate.toISOString()
 
-    const updatedInvoices = invoices.map(inv =>
+    const updatedInvoices: Invoice[] = invoices.map(inv =>
       inv.id === invoice.id
-        ? {
-            ...inv,
-            invoiceNumber: finalInvoiceNumber,
-            approvalStatus: "approved",
-            approvedBy: "Admin",
-            approvedAt: approvalDate,
-            issueDate: approvalDate,
-            status: "sent" as const,
-            emailSentAt,
-          }
+        ? ({
+          ...inv,
+          invoiceNumber: finalInvoiceNumber,
+          approvalStatus: "approved" as ApprovalStatus,
+          approvedBy: "Admin",
+          approvedAt: approvalDate,
+          issueDate: inv.issueDate || approvalDate,
+          status: "sent" as const,
+          emailSentAt: approvalDate,
+        } as Invoice)
         : inv
     )
     setInvoices(updatedInvoices)
@@ -475,13 +483,13 @@ export function ApprovalQueue() {
     updateLocalStorage(
       invoice,
       {
-      invoiceNumber: finalInvoiceNumber,
-      approvalStatus: "approved",
-      approvedBy: "Admin",
-      approvedAt: approvalDate.toISOString(),
-      issueDate: approvalDate.toISOString().split('T')[0],
-      status: "sent",
-      emailSentAt,
+        invoiceNumber: finalInvoiceNumber,
+        approvalStatus: "approved",
+        approvedBy: "Admin",
+        approvedAt: approvalDate.toISOString(),
+        issueDate: (invoice.issueDate || approvalDate).toISOString().split('T')[0],
+        status: "sent",
+        emailSentAt,
       },
       invoice.invoiceNumber
     )
@@ -531,9 +539,9 @@ export function ApprovalQueue() {
     const updatedInvoices = invoices.map(inv => {
       if (!selectedInvoiceIds.has(inv.id) || !isSelectable(inv)) return inv
 
-      const needsNewInvoiceNumber = !inv.invoiceNumber || inv.invoiceNumber.startsWith("DRAFT-") || inv.invoiceNumber.startsWith("IMP-")
+      const needsNewInvoiceNumber = !inv.invoiceNumber || inv.invoiceNumber.includes("DRAFT-") || inv.invoiceNumber.includes("Draft-") || inv.invoiceNumber.startsWith("IMP-")
       const finalInvoiceNumber = needsNewInvoiceNumber
-        ? generateInvoiceNumber(inv.studentId)
+        ? generateInvoiceNumber(inv.academicYear)
         : inv.invoiceNumber
 
       approvalMap.set(inv.id, finalInvoiceNumber)
@@ -541,10 +549,10 @@ export function ApprovalQueue() {
         target: inv,
         patch: {
           invoiceNumber: finalInvoiceNumber,
-          approvalStatus: "approved",
+          approvalStatus: "approved" as ApprovalStatus,
           approvedBy: "Admin",
           approvedAt: now.toISOString(),
-          issueDate: now.toISOString().split('T')[0],
+          issueDate: (inv.issueDate || now).toISOString().split('T')[0],
         },
         overrideNumber: inv.invoiceNumber
       })
@@ -552,15 +560,17 @@ export function ApprovalQueue() {
       return {
         ...inv,
         invoiceNumber: finalInvoiceNumber,
-        approvalStatus: "approved",
+        approvalStatus: "approved" as ApprovalStatus,
         approvedBy: "Admin",
         approvedAt: now,
-        issueDate: now,
-      }
+        issueDate: inv.issueDate || now,
+        status: "sent" as const,
+        emailSentAt: now,
+      } as Invoice
     })
 
-    setInvoices(updatedInvoices)
-    applyFilters(updatedInvoices)
+    setInvoices(updatedInvoices as Invoice[])
+    applyFilters(updatedInvoices as Invoice[])
 
     try {
       const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
@@ -615,24 +625,24 @@ export function ApprovalQueue() {
 
     const rejectedAt = new Date()
 
-    const updatedInvoices = invoices.map(inv =>
+    const rejectedInvoices: Invoice[] = invoices.map(inv =>
       inv.id === selectedInvoice.id
-        ? {
-            ...inv,
-            approvalStatus: "rejected",
-            rejectedReason: rejectReason.trim(),
-            rejectedAt: rejectedAt,
-            rejectedBy: "Admin",
-          }
+        ? ({
+          ...inv,
+          approvalStatus: "rejected" as ApprovalStatus,
+          rejectedReason: rejectReason.trim(),
+          rejectedAt: rejectedAt,
+          rejectedBy: "Admin",
+        } as Invoice)
         : inv
     )
-    setInvoices(updatedInvoices)
-    applyFilters(updatedInvoices)
+    setInvoices(rejectedInvoices)
+    applyFilters(rejectedInvoices)
 
     updateLocalStorage(
       selectedInvoice,
       {
-        approvalStatus: "rejected",
+        approvalStatus: "rejected" as ApprovalStatus,
         rejectedReason: rejectReason.trim(),
         rejectedAt: rejectedAt.toISOString(),
         rejectedBy: "Admin",
@@ -747,7 +757,7 @@ export function ApprovalQueue() {
               {t("invoice.searchFilter")}
             </CardTitle>
             <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
+              <Button onClick={() => applyFilters()} className="h-9">{t("common.apply")}</Button>
               <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
           </div>
@@ -857,7 +867,7 @@ export function ApprovalQueue() {
                     <Calendar
                       mode="single"
                       selected={dateFrom || undefined}
-                      onSelect={setDateFrom}
+                      onSelect={(day) => setDateFrom(day || null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -874,7 +884,7 @@ export function ApprovalQueue() {
                     <Calendar
                       mode="single"
                       selected={dateTo || undefined}
-                      onSelect={setDateTo}
+                      onSelect={(day) => setDateTo(day || null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -991,7 +1001,7 @@ export function ApprovalQueue() {
                     })()}
                   </TableCell>
                   {/* Issue Date - left aligned */}
-                  <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                  <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
                   {/* Due Date - left aligned */}
                   <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
                   {/* Actions - center aligned */}
@@ -1156,7 +1166,7 @@ export function ApprovalQueue() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">Invoice Date</span>
                           <span className="text-sm font-medium text-gray-800">
-                            {getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}
+                            {selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -1231,7 +1241,7 @@ export function ApprovalQueue() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span>{item.description}</span>
                               </div>
-                              {item.discountPercent > 0 && (
+                              {item.discountPercent !== undefined && item.discountPercent > 0 && (
                                 <span className="text-gray-400 text-xs">(-{item.discountPercent}%)</span>
                               )}
                             </td>

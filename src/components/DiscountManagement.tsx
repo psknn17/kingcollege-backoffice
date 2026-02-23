@@ -177,7 +177,7 @@ const mockDiscountCodes: DiscountCode[] = [
 
 interface DiscountManagementProps {
   activeTab: string
-  category?: "tuition" | "bus" // Category determines which item type the discount applies to
+  category?: "tuition" | "bus" | "eca" | "trip" | "exam" | "event" | "summer" | "external" // Category determines which item type the discount applies to
   onNavigateToSubPage?: (subPage: string, params?: any) => void
   onTabChange?: (tabId: string) => void
 }

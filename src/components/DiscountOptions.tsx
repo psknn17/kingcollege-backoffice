@@ -21,12 +21,6 @@ import { useLanguage } from "@/contexts/LanguageContext"
 // Storage key for discount options
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 
-interface LatePaymentSettings {
-  chargePercentage: number
-  chargeFrequency: "monthly" | "weekly"
-  gracePeriodDays: number
-  enabled: boolean
-}
 
 interface RegistrationFeeSettings {
   applicationFee: number
@@ -46,7 +40,6 @@ interface RegistrationPrivilege {
 
 interface DiscountOptionsData {
   academicYear: string
-  latePayment: LatePaymentSettings
   registrationFees: RegistrationFeeSettings
   registrationPrivileges: RegistrationPrivilege[]
   waiverAfter3rdYear: {
@@ -65,12 +58,6 @@ interface DiscountOptionsData {
   }
 }
 
-const defaultLatePayment: LatePaymentSettings = {
-  chargePercentage: 1.5,
-  chargeFrequency: "monthly",
-  gracePeriodDays: 0,
-  enabled: true,
-}
 
 const defaultRegistrationFees: RegistrationFeeSettings = {
   applicationFee: 5000,
@@ -104,7 +91,6 @@ const defaultRegistrationPrivileges: RegistrationPrivilege[] = [
 
 const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   academicYear,
-  latePayment: defaultLatePayment,
   registrationFees: defaultRegistrationFees,
   registrationPrivileges: defaultRegistrationPrivileges,
   waiverAfter3rdYear: {
@@ -251,9 +237,6 @@ export function DiscountOptions() {
     }))
   }
 
-  const updateLatePayment = (updates: Partial<LatePaymentSettings>) => {
-    updateCurrentData({ latePayment: { ...currentData.latePayment, ...updates } })
-  }
 
   const updateRegistrationFees = (updates: Partial<RegistrationFeeSettings>) => {
     updateCurrentData({ registrationFees: { ...currentData.registrationFees, ...updates } })

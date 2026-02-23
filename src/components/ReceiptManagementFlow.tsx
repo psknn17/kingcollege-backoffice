@@ -38,6 +38,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import SchoolLogo from "@/assets/Logo.png"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { BANKS, PAYMENT_SOURCES } from "@/constants/paymentConstants"
 
 // ========================
 // TYPE DEFINITIONS
@@ -109,12 +110,8 @@ interface ReceiptManagementFlowProps {
 // ========================
 
 // Payment methods - converted to function to use translations
-const getPaymentMethods = (t: any) => [
-  { value: "cash", label: t("paymentMethod.cash") },
-  { value: "bank_transfer", label: t("paymentMethod.bankTransfer") },
-  { value: "credit_card", label: t("paymentMethod.creditCard") },
-  { value: "qr_payment", label: t("paymentMethod.qrPayment") }
-]
+// Payment methods - moved to shared constants
+const getPaymentMethods = (_t: any) => PAYMENT_SOURCES
 
 const YEAR_GROUPS = [
   "Pre-Nursery", "Nursery", "Reception",
@@ -123,29 +120,6 @@ const YEAR_GROUPS = [
 ]
 
 const SCHOOL_YEARS = ["2024-2025", "2025-2026", "2026-2027"]
-
-const BANKS = [
-  "Bangkok Bank",
-  "Kasikorn Bank",
-  "Siam Commercial Bank",
-  "Krung Thai Bank",
-  "Bank of Ayudhya (Krungsri)",
-  "TMBThanachart Bank",
-  "Government Savings Bank",
-  "CIMB Thai Bank",
-  "United Overseas Bank (UOB)",
-  "Standard Chartered Thailand",
-  "Kiatnakin Phatra Bank",
-  "TISCO Bank",
-  "Land and Houses Bank",
-  "ICBC (Thai)",
-  "Bank for Agriculture and Agricultural Cooperatives",
-  "Islamic Bank of Thailand",
-  "Government Housing Bank",
-  "SME Development Bank",
-  "Export-Import Bank of Thailand",
-  "Mizuho Bank"
-]
 
 // ========================
 // HELPER FUNCTIONS
@@ -240,6 +214,8 @@ export function ReceiptManagementFlow({
       return []
     }
   })
+
+  const [bankAccounts] = usePersistedState<any[]>("bankAccounts", [])
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = usePersistedState(`eca-receipts:search`, "")
@@ -414,7 +390,7 @@ export function ReceiptManagementFlow({
       return false
     }
 
-    if (formData.paymentMethod === "cheque") {
+    if (formData.paymentMethod === "Cashier's cheque") {
       if (!formData.chequeNo.trim()) {
         toast.error("Cheque No. is required for cheque payment")
         return false
@@ -425,7 +401,7 @@ export function ReceiptManagementFlow({
       }
     }
 
-    if (["bank_transfer", "cheque"].includes(formData.paymentMethod)) {
+    if (["Bank Transfer", "Cashier's cheque", "Partial", "EDC"].includes(formData.paymentMethod)) {
       if (!formData.bankName) {
         toast.error("Bank Name is required")
         return false
@@ -721,9 +697,9 @@ export function ReceiptManagementFlow({
               <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal', width: forPrint ? '35px' : '50px' }}>No.</th>
               <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'left', fontWeight: 'normal' }}>Invoice no.</th>
               <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Invoice date</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Invoice amount<br/>(THB)</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Received amount<br/>(THB)</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Outstanding amount<br/>(THB)</th>
+              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Invoice amount<br />(THB)</th>
+              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Received amount<br />(THB)</th>
+              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Outstanding amount<br />(THB)</th>
             </tr>
           </thead>
           <tbody>
@@ -844,141 +820,141 @@ export function ReceiptManagementFlow({
 
           {/* Filters */}
           <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by receipt no., client name, or client no."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("receiptStatus.allStatus")}</SelectItem>
-                <SelectItem value="generated">{t("receiptStatus.generated")}</SelectItem>
-                <SelectItem value="sent">{t("receiptStatus.sent")}</SelectItem>
-                <SelectItem value="downloaded">{t("receiptStatus.downloaded")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by receipt no., client name, or client no."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[180px]">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("receiptStatus.allStatus")}</SelectItem>
+                    <SelectItem value="generated">{t("receiptStatus.generated")}</SelectItem>
+                    <SelectItem value="sent">{t("receiptStatus.sent")}</SelectItem>
+                    <SelectItem value="downloaded">{t("receiptStatus.downloaded")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Receipt List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Receipts ({filteredReceipts.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredReceipts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No receipts found</p>
-              <p className="text-sm mt-1">Create a new receipt to get started</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {/* Receipt Number - text/ID */}
-                  <TableHead align="left">{t("table.receiptNo")}</TableHead>
-                  {/* Date - date */}
-                  <TableHead align="left">{t("table.date")}</TableHead>
-                  {/* Client Name - text */}
-                  <TableHead align="left">{t("table.client")}</TableHead>
-                  {/* Year Group - badge */}
-                  <TableHead align="center">{t("table.yearGroup")}</TableHead>
-                  {/* Amount - currency */}
-                  <TableHead align="right">{t("table.amount")}</TableHead>
-                  {/* Payment Method - badge */}
-                  <TableHead align="center">{t("table.payment")}</TableHead>
-                  {/* Status - badge */}
-                  <TableHead align="center">{t("table.status")}</TableHead>
-                  {/* Actions - buttons */}
-                  <TableHead align="center">{t("table.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReceipts.map((receipt) => (
-                  <TableRow key={receipt.id}>
-                    {/* Receipt Number - text/ID */}
-                    <TableCell align="left" className="font-medium">{receipt.receiptNo}</TableCell>
-                    {/* Date - date */}
-                    <TableCell align="left">{format(new Date(receipt.receiptDate), "dd/MM/yyyy")}</TableCell>
-                    {/* Client Name - text */}
-                    <TableCell align="left">
-                      <div>
-                        <p className="font-medium">{receipt.clientName}</p>
-                        <p className="text-sm text-muted-foreground">{receipt.clientNo}</p>
-                      </div>
-                    </TableCell>
-                    {/* Year Group - badge */}
-                    <TableCell align="center">{receipt.yearGroup || "-"}</TableCell>
-                    {/* Amount - currency */}
-                    <TableCell align="right" className="font-medium">
-                      {formatCurrency(receipt.totalAmount)} THB
-                    </TableCell>
-                    {/* Payment Method - badge */}
-                    <TableCell align="center">
-                      <Badge variant="outline">
-                        {PAYMENT_METHODS.find(p => p.value === receipt.paymentMethod)?.label}
-                      </Badge>
-                    </TableCell>
-                    {/* Status - badge */}
-                    <TableCell align="center">
-                      <Badge
-                        variant={
-                          receipt.status === "generated" ? "secondary" :
-                          receipt.status === "sent" ? "default" : "outline"
-                        }
-                      >
-                        {t(`receiptStatus.${receipt.status}`)}
-                      </Badge>
-                    </TableCell>
-                    {/* Actions - buttons */}
-                    <TableCell align="center">
-                      <div className="flex justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewReceipt(receipt)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleResendReceipt(receipt)}
-                          disabled={!userCanEdit}
-                        >
-                          <Mail className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadReceipt(receipt)}
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          {/* Receipt List */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Receipts ({filteredReceipts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredReceipts.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No receipts found</p>
+                  <p className="text-sm mt-1">Create a new receipt to get started</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {/* Receipt Number - text/ID */}
+                      <TableHead align="left">{t("table.receiptNo")}</TableHead>
+                      {/* Date - date */}
+                      <TableHead align="left">{t("table.date")}</TableHead>
+                      {/* Client Name - text */}
+                      <TableHead align="left">{t("table.client")}</TableHead>
+                      {/* Year Group - badge */}
+                      <TableHead align="center">{t("table.yearGroup")}</TableHead>
+                      {/* Amount - currency */}
+                      <TableHead align="right">{t("table.amount")}</TableHead>
+                      {/* Payment Method - badge */}
+                      <TableHead align="center">{t("table.payment")}</TableHead>
+                      {/* Status - badge */}
+                      <TableHead align="center">{t("table.status")}</TableHead>
+                      {/* Actions - buttons */}
+                      <TableHead align="center">{t("table.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReceipts.map((receipt) => (
+                      <TableRow key={receipt.id}>
+                        {/* Receipt Number - text/ID */}
+                        <TableCell align="left" className="font-medium">{receipt.receiptNo}</TableCell>
+                        {/* Date - date */}
+                        <TableCell align="left">{format(new Date(receipt.receiptDate), "dd/MM/yyyy")}</TableCell>
+                        {/* Client Name - text */}
+                        <TableCell align="left">
+                          <div>
+                            <p className="font-medium">{receipt.clientName}</p>
+                            <p className="text-sm text-muted-foreground">{receipt.clientNo}</p>
+                          </div>
+                        </TableCell>
+                        {/* Year Group - badge */}
+                        <TableCell align="center">{receipt.yearGroup || "-"}</TableCell>
+                        {/* Amount - currency */}
+                        <TableCell align="right" className="font-medium">
+                          {formatCurrency(receipt.totalAmount)} THB
+                        </TableCell>
+                        {/* Payment Method - badge */}
+                        <TableCell align="center">
+                          <Badge variant="outline">
+                            {PAYMENT_METHODS.find(p => p.value === receipt.paymentMethod)?.label}
+                          </Badge>
+                        </TableCell>
+                        {/* Status - badge */}
+                        <TableCell align="center">
+                          <Badge
+                            variant={
+                              receipt.status === "generated" ? "secondary" :
+                                receipt.status === "sent" ? "default" : "outline"
+                            }
+                          >
+                            {t(`receiptStatus.${receipt.status}`)}
+                          </Badge>
+                        </TableCell>
+                        {/* Actions - buttons */}
+                        <TableCell align="center">
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewReceipt(receipt)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResendReceipt(receipt)}
+                              disabled={!userCanEdit}
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadReceipt(receipt)}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
@@ -1223,7 +1199,7 @@ export function ReceiptManagementFlow({
                         {/* Invoice No - text/ID */}
                         <TableCell align="left" className="py-2.5">
                           <Input
-                            placeholder="INV-XXXX"
+                            placeholder="2025XXXXXXX"
                             value={invoice.invoiceNo}
                             onChange={(e) => updateInvoiceRow(invoice.id, "invoiceNo", e.target.value)}
                             className="h-9 font-mono text-sm border-gray-300 focus:ring-2 focus:ring-primary"
@@ -1346,8 +1322,43 @@ export function ReceiptManagementFlow({
                   </Select>
                 </div>
 
+                {/* Bank Account Selection - Show for methods that have accounts configured */}
+                {PAYMENT_SOURCES.some(s => s.value === formData.paymentMethod) && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <Label className="text-sm font-medium text-gray-900">Select Bank Account</Label>
+                    <Select
+                      onValueChange={(accountId) => {
+                        const account = bankAccounts.find(a => a.id === accountId);
+                        if (account) {
+                          updateFormField("bankName", account.bankName);
+                          // ReceiptForm has bankName and bankBranch, potentially we should add accountNumber too if needed by user
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9 px-3 focus:ring-2 focus:ring-primary">
+                        <SelectValue placeholder="Choose an account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts
+                          .filter(acc => acc.paymentSource === formData.paymentMethod && acc.isActive)
+                          .map(acc => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                              {acc.bankName} - {acc.accountNumber}
+                            </SelectItem>
+                          ))
+                        }
+                        {bankAccounts.filter(acc => acc.paymentSource === formData.paymentMethod && acc.isActive).length === 0 && (
+                          <div className="p-2 text-xs text-muted-foreground italic">
+                            No bank accounts configured for this method.
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Conditional Bank Fields */}
-                {["bank_transfer", "cheque"].includes(formData.paymentMethod) && (
+                {["Bank Transfer", "Cashier's cheque", "Partial", "EDC"].includes(formData.paymentMethod) && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <Label className="text-sm font-medium text-gray-900">
@@ -1384,7 +1395,7 @@ export function ReceiptManagementFlow({
                 )}
 
                 {/* Conditional Cheque Fields */}
-                {formData.paymentMethod === "cheque" && (
+                {formData.paymentMethod === "Cashier's cheque" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <Label className="text-sm font-medium text-gray-900">

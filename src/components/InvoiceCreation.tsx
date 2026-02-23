@@ -12,6 +12,7 @@ import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import * as XLSX from "xlsx"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { cn } from "./ui/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
@@ -24,7 +25,7 @@ import { Calendar as CalendarComponent } from "./ui/calendar"
 import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, CreditCard, AlertCircle, Pencil, ArrowLeft, RefreshCw, Download } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
-import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear } from "@/lib/invoiceUtils"
+import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear, peekNextInvoiceNumber } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
@@ -1342,7 +1343,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const CardIcon = getCardIcon(invoiceType)
 
   // Discount Options context
-  const { getRegistrationFees, getLatePaymentSettings, getSiblingDiscountPercentage } = useDiscountOptions()
+  const { getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
 
   // Student context
   const { students, addStudent, families, addFamily, checkFeePrivilegeEligibility } = useStudents()
@@ -1404,10 +1405,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         } as InvoiceStudent
       }
 
-      // For regular tuition invoices, calculate all discounts
-      // Get sibling discount - available from 1st child onwards (no Year 3+ requirement)
-      const childOrder = student.childOrder || 1
-      const siblingDiscount = getSiblingDiscountPercentage(childOrder, student.academicYear || effectiveAcademicYear, effectiveTerm)
+      // Automatic sibling discount disabled - use manual Discount Groups instead
+      const siblingDiscount = 0
 
       // Get student group discounts (only for tuition and bus categories)
       const groupDiscounts = getStudentGroupDiscounts(student.studentId, category)
@@ -1718,6 +1717,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const [newStudentNickname, setNewStudentNickname] = useState("")
   const [newStudentGender, setNewStudentGender] = useState<"male" | "female" | "other">("other")
   const [newStudentDob, setNewStudentDob] = useState("")
+  const [dobCalendarOpen, setDobCalendarOpen] = useState(false)
   // Family selection
   const [newStudentFamilyType, setNewStudentFamilyType] = useState<"new" | "existing">("new")
   const [newStudentFamilyId, setNewStudentFamilyId] = useState("")
@@ -2548,10 +2548,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     // Save to Student List
     addStudent(studentForContext)
 
-    // Calculate sibling discount if joining existing family
-    const siblingDiscount = newStudentFamilyType === "existing" && childOrder >= 2
-      ? getSiblingDiscountPercentage(childOrder, selectedAcademicYear, selectedTerm)
-      : 0
+    const siblingDiscount = 0 // Manual only via Discount Groups
 
     // Create InvoiceStudent object for invoice creation
     const newStudent: InvoiceStudent = {
@@ -2769,11 +2766,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     toast.success("Invoice preview confirmed")
   }
 
-  const generateInvoiceNumber = (studentId: string) => {
-    const date = new Date()
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    return `INV-${year}${month}-${studentId.slice(-4)}`
+  const generateInvoiceNumber = (academicYear: string | undefined) => {
+    return generateNextInvoiceNumber(academicYear)
   }
 
   const displayInvoiceNumber = (invoiceNumber: string | undefined) => {
@@ -2836,8 +2830,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const invoiceStudent = student as InvoiceStudent
       const subtotal = getTotalAmount()
       const discountCalc = calculateStudentDiscounts(invoiceStudent, subtotal, invoiceType)
-      // Use DRAFT number - real invoice number will be generated when approved
-      const invoiceNumber = `DRAFT-${Date.now()}-${student.id.slice(-4)}`
+      // Use DRAFT number with academic year - real invoice number will be generated when approved
+      const academicYearPrefix = selectedAcademicYear ? selectedAcademicYear.match(/(\d{4})/)?.[1] : new Date().getFullYear().toString()
+      const invoiceNumber = `${academicYearPrefix}DRAFT-${Date.now()}-${student.id.slice(-4)}`
 
       // Calculate registration fees for new students
       const registrationFeesList: { name: string, amount: number }[] = []
@@ -2892,8 +2887,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         totalDiscount: discountCalc.totalDiscountAmount,
         netAmount: discountCalc.netAmount,
         dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
-        issueDate: null,
-        status: "sent",
+        issueDate: format(now, 'yyyy-MM-dd'),
+        status: category === "tuition" ? "pending_approval" : "sent",
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
@@ -2919,7 +2914,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
     // Create invoice data for email sending
     const invoiceData = {
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceNumber: peekNextInvoiceNumber(selectedAcademicYear),
       grade: selectedGrade,
       room: selectedRoom,
       students: selectedStudents,
@@ -3083,7 +3078,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           totalDiscount: discountCalc.totalDiscountAmount,
           netAmount: discountCalc.netAmount,
           dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
-          issueDate: isOriginalStudent && editInvoice?.issueDate ? editInvoice.issueDate : null,
+          issueDate: isOriginalStudent && editInvoice?.issueDate ? editInvoice.issueDate : format(now, 'yyyy-MM-dd'),
           status: "pending_approval",
           approvalStatus: isOriginalStudent ? (editInvoice?.approvalStatus || "wait") : "wait",
           term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
@@ -4386,10 +4381,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   )
                 })()}
 
-                {/* Late Payment Charges Info */}
-                <p className="mt-4 text-xs text-gray-400">
-                  Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
-                </p>
               </div>
             )}
 
@@ -4530,11 +4521,30 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 </div>
                 <div className="space-y-2">
                   <Label>{t('common.dateOfBirth')}</Label>
-                  <Input
-                    type="date"
-                    value={newStudentDob}
-                    onChange={(e) => setNewStudentDob(e.target.value)}
-                  />
+                  <Popover open={dobCalendarOpen} onOpenChange={setDobCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal", !newStudentDob && "text-muted-foreground")}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {newStudentDob ? format(new Date(newStudentDob), "dd/MM/yyyy") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={newStudentDob ? new Date(newStudentDob) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setNewStudentDob(format(date, "yyyy-MM-dd"))
+                            setDobCalendarOpen(false)
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label>{t('common.grade')}</Label>
@@ -4745,7 +4755,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 (() => {
                   const subtotal = getTotalAmount()
                   const finalTotal = subtotal
-                  const invoiceNumber = `DRAFT-${Date.now()}-MANUAL`
+                  const academicYearPrefix = selectedAcademicYear ? selectedAcademicYear.match(/(\d{4})/)?.[1] : new Date().getFullYear().toString()
+                  const invoiceNumber = `${academicYearPrefix}DRAFT-${Date.now()}-MANUAL`
                   const issueDate = null // Will be set on approval
                   const dueDate = paymentDeadline || null
 
@@ -4911,12 +4922,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </table>
                       </div>
 
-                      {/* Notes Section */}
-                      <div className="px-4 py-2">
-                        <p className="text-gray-400 text-xs">
-                          Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
-                        </p>
-                      </div>
 
                       {/* Payment Methods */}
                       <div className="px-4 py-2" style={{ fontSize: '11px', lineHeight: '1.5' }}>
@@ -5022,7 +5027,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const registrationFeesTotal = registrationFeeItems.reduce((sum, item) => sum + item.amount, 0)
                   const subtotal = getTotalAmount() + registrationFeesTotal
                   const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount(), invoiceType) // Discounts apply only to regular items
-                  const invoiceNumber = `DRAFT-${Date.now()}-${currentStudent.id.slice(-4)}`
+                  const academicYearPrefix = selectedAcademicYear ? selectedAcademicYear.match(/(\d{4})/)?.[1] : new Date().getFullYear().toString()
+                  const invoiceNumber = `${academicYearPrefix}DRAFT-${Date.now()}-${currentStudent.id.slice(-4)}`
                   const issueDate = null // Will be set on approval
                   const dueDate = paymentDeadline || null
 
@@ -5174,12 +5180,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </table>
                       </div>
 
-                      {/* Notes Section */}
-                      <div className="px-4 py-2">
-                        <p className="text-gray-400 text-xs">
-                          Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
-                        </p>
-                      </div>
 
                       {/* Payment Methods */}
                       <div className="px-4 py-2" style={{ fontSize: '11px', lineHeight: '1.5' }}>

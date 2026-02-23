@@ -107,15 +107,6 @@ export const OTHER_DISCOUNTS = {
 }
 
 // ===========================================
-// 6. Late Payment (ค่าปรับล่าช้า)
-// ===========================================
-export const LATE_PAYMENT_RULES = {
-  chargePercentage: 1.5,  // 1.5% ต่อเดือน
-  chargeFrequency: "monthly",
-  gracePeriodDays: 0,     // Grace Period: 0 วัน
-}
-
-// ===========================================
 // 7. Registration Fees (ค่าธรรมเนียมแรกเข้า) - เด็กใหม่เท่านั้น
 // ===========================================
 export const REGISTRATION_FEES = {

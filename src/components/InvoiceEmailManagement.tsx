@@ -205,7 +205,7 @@ const mockEmailJobs: EmailJob[] = [
   {
     id: "3",
     type: "individual_send",
-    name: "Late Payment Reminder - Smith Family",
+    name: "Invoice Reminder - Smith Family",
     targetCount: 1,
     sentCount: 1,
     failedCount: 0,
@@ -286,23 +286,23 @@ export function InvoiceEmailManagement() {
   }
 
   const handleGradeToggle = (grade: string) => {
-    setSelectedGrades(prev => 
-      prev.includes(grade) 
+    setSelectedGrades(prev =>
+      prev.includes(grade)
         ? prev.filter(g => g !== grade)
         : [...prev, grade]
     )
   }
 
   const handleStatusToggle = (status: string) => {
-    setSelectedStatuses(prev => 
-      prev.includes(status) 
+    setSelectedStatuses(prev =>
+      prev.includes(status)
         ? prev.filter(s => s !== status)
         : [...prev, status]
     )
   }
 
   const searchStudents = () => {
-    return allStudents.filter(student => 
+    return allStudents.filter(student =>
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.familyCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -361,7 +361,7 @@ export function InvoiceEmailManagement() {
 
   const handleSendEmails = async () => {
     const targetCount = getTargetCount()
-    
+
     if (targetCount === 0) {
       toast.error(t("invoiceEmail.selectRecipients"))
       return
@@ -393,7 +393,7 @@ export function InvoiceEmailManagement() {
     for (let i = 0; i <= targetCount; i++) {
       await new Promise(resolve => setTimeout(resolve, 50))
       setSendingProgress((i / targetCount) * 100)
-      
+
       if (newJob) {
         newJob.sentCount = Math.floor(i * 0.95) // 95% success rate
         newJob.failedCount = i - newJob.sentCount

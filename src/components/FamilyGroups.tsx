@@ -89,7 +89,6 @@ export function FamilyGroups() {
     updateFamily,
     deleteFamily,
     getStudentsByFamily,
-    getSiblingDiscount,
     checkFeePrivilegeEligibility,
     updateStudent
   } = useStudents()
@@ -115,12 +114,40 @@ export function FamilyGroups() {
   const [formData, setFormData] = useState<Omit<Family, "id" | "createdAt">>(emptyFamily)
   const [selectedStudentToAdd, setSelectedStudentToAdd] = useState<string>("")
 
+  // Helper function to get student group discounts
+  const getStudentGroupDiscounts = (studentId: string, category: string = "tuition") => {
+    try {
+      const storageKey = category === "tuition" ? "studentGroups" : `studentGroups_${category}`
+      const stored = localStorage.getItem(storageKey)
+      if (!stored) return []
+
+      const groups = JSON.parse(stored)
+      const studentGroups: { name: string, discountType: string, discountPercentage: number, fixedAmount: number }[] = []
+
+      groups.forEach((group: any) => {
+        if (group.isActive === false) return
+        if (group.students && group.students.some((s: any) => s.id === studentId && s.isActive !== false)) {
+          studentGroups.push({
+            name: group.name,
+            discountType: group.discountType || "percentage",
+            discountPercentage: group.discountPercentage || 0,
+            fixedAmount: group.fixedAmount || 0
+          })
+        }
+      })
+      return studentGroups
+    } catch (e) {
+      console.error("Error loading group discounts:", e)
+      return []
+    }
+  }
+
   // Bulk selection and invitation states
   const [selectedFamilyIds, setSelectedFamilyIds] = useState<string[]>([])
   const [isInvitationDialogOpen, setIsInvitationDialogOpen] = useState(false)
   const [invitationTarget, setInvitationTarget] = useState<"single" | "bulk">("single")
   const [isMarkRegisteredDialogOpen, setIsMarkRegisteredDialogOpen] = useState(false)
-const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
+  const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
   const [emailIssueType, setEmailIssueType] = useState<"without" | "invalid" | "duplicate">("without")
 
   // Get students without family
@@ -220,8 +247,14 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
         case "totalDiscount":
           const aStudents = getStudentsByFamily(a.id)
           const bStudents = getStudentsByFamily(b.id)
-          aValue = aStudents.reduce((total: number, student: Student) => total + getSiblingDiscount(student), 0)
-          bValue = bStudents.reduce((total: number, student: Student) => total + getSiblingDiscount(student), 0)
+          aValue = aStudents.reduce((total: number, student: Student) => {
+            const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+            return total + groupDiscounts.reduce((s, d) => s + (d.discountType === 'percentage' ? d.discountPercentage : 0), 0)
+          }, 0)
+          bValue = bStudents.reduce((total: number, student: Student) => {
+            const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+            return total + groupDiscounts.reduce((s, d) => s + (d.discountType === 'percentage' ? d.discountPercentage : 0), 0)
+          }, 0)
           break
         default:
           return 0
@@ -234,7 +267,7 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue
       }
     })
-  }, [filteredFamilies, sortColumn, sortDirection, getStudentsByFamily, getSiblingDiscount])
+  }, [filteredFamilies, sortColumn, sortDirection, getStudentsByFamily])
 
   // Pagination logic
   const totalPages = Math.ceil(sortedFamilies.length / pageSize)
@@ -257,10 +290,10 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
   const stats = useMemo(() => {
     const totalFamilies = families.length
     const totalStudentsInFamilies = students.filter((s: Student) => s.familyId).length
-    const studentsWithDiscount = students.filter((s: Student) => getSiblingDiscount(s) > 0).length
+    const studentsWithDiscount = students.filter((s: Student) => getStudentGroupDiscounts(s.studentId).length > 0).length
     const multiChildFamilies = families.filter((f: Family) => getStudentsByFamily(f.id).length > 1).length
     return { totalFamilies, totalStudentsInFamilies, studentsWithDiscount, multiChildFamilies }
-  }, [families, students, getStudentsByFamily, getSiblingDiscount])
+  }, [families, students, getStudentsByFamily])
 
   const toggleFamilyExpanded = (familyId: string) => {
     setExpandedFamilies((prev: string[]) =>
@@ -495,7 +528,10 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
 
   const getTotalDiscount = (familyId: string): number => {
     const familyStudents = getStudentsByFamily(familyId)
-    return familyStudents.reduce((total, student) => total + getSiblingDiscount(student), 0)
+    return familyStudents.reduce((total, student) => {
+      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+      return total + groupDiscounts.reduce((s, d) => s + (d.discountType === 'percentage' ? d.discountPercentage : 0), 0)
+    }, 0)
   }
 
   // Export to CSV
@@ -524,7 +560,7 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
         family.address || "",
         familyStudents.length,
         status === "not_invited" ? "Not Invited" :
-        status === "invited" ? "Invited" : "Registered",
+          status === "invited" ? "Invited" : "Registered",
         family.invitationSentAt ? new Date(family.invitationSentAt).toLocaleDateString() : "",
         family.invitationAcceptedAt ? new Date(family.invitationAcceptedAt).toLocaleDateString() : "",
         totalDiscount > 0 ? `${totalDiscount}%` : "0%"
@@ -899,8 +935,8 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
                               <TableHead align="left">{t("familyGroups.studentId")}</TableHead>
                               {/* Year Group - LEFT (text) */}
                               <TableHead align="left">{t("familyGroups.yearGroup")}</TableHead>
-                              {/* Sibling Discount - CENTER (badge) */}
-                              <TableHead align="center">{t("familyGroups.siblingDiscount")}</TableHead>
+                              {/* Discounts - CENTER (badge list) */}
+                              <TableHead align="center">{t("discountReports.discountsDetail")}</TableHead>
                               {/* Fee Waiver - CENTER (badge) */}
                               <TableHead align="center">{t("familyGroups.feeWaiver")}</TableHead>
                               {/* Actions - CENTER */}
@@ -938,15 +974,21 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
                                 <TableCell align="left">{student.studentId}</TableCell>
                                 {/* Year Group - LEFT (text) */}
                                 <TableCell align="left">{gradeLevels[student.gradeLevel] || student.gradeLevel}</TableCell>
-                                {/* Sibling Discount - CENTER (badge) */}
+                                {/* Discounts - CENTER (badge list) */}
                                 <TableCell align="center">
-                                  {getSiblingDiscount(student) > 0 ? (
-                                    <Badge className="bg-green-100 text-green-800">
-                                      {getSiblingDiscount(student)}{t("familyGroups.off")}
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground">{t("familyGroups.noDiscount")}</span>
-                                  )}
+                                  <div className="flex flex-wrap justify-center gap-1">
+                                    {(() => {
+                                      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+                                      if (groupDiscounts.length > 0) {
+                                        return groupDiscounts.map((d, i) => (
+                                          <Badge key={i} className="bg-green-100 text-green-800 text-[10px] py-0 h-5">
+                                            {d.name} {d.discountType === 'percentage' ? `${d.discountPercentage}%` : `฿${d.fixedAmount.toLocaleString()}`}
+                                          </Badge>
+                                        ))
+                                      }
+                                      return <span className="text-muted-foreground text-sm">{t("familyGroups.noDiscount")}</span>
+                                    })()}
+                                  </div>
                                 </TableCell>
                                 {/* Fee Waiver - CENTER (badge) */}
                                 <TableCell align="center">
@@ -990,22 +1032,33 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
                       {/* Discount & Fee Waiver Summary */}
                       {familyStudents.length >= 1 && (
                         <div className="mt-4 space-y-3">
-                          {/* Sibling Discount Summary */}
-                          {familyStudents.some(s => getSiblingDiscount(s) > 0) && (
-                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                              <h4 className="font-medium text-green-800 mb-2">{t("familyGroups.siblingDiscountSummary")}</h4>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                {familyStudents.map(student => (
-                                  <div key={student.id}>
-                                    <p className="text-green-700">{student.firstName}</p>
-                                    <p className="font-bold text-green-800">
-                                      {t("familyGroups.discountLabel").replace("{percent}", String(getSiblingDiscount(student)))}
-                                    </p>
+                          {/* Student Discount Summary */}
+                          {(() => {
+                            const studentsWithDiscounts = familyStudents.filter(s => getStudentGroupDiscounts(s.studentId).length > 0);
+                            if (studentsWithDiscounts.length > 0) {
+                              return (
+                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                  <h4 className="font-medium text-green-800 mb-2">{t("discountReports.studentDiscountDetails")}</h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    {studentsWithDiscounts.map(student => {
+                                      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
+                                      return (
+                                        <div key={student.id}>
+                                          <p className="font-medium text-green-800">{student.firstName}</p>
+                                          {groupDiscounts.map((d, i) => (
+                                            <p key={i} className="text-xs text-green-700">
+                                              • {d.name}: {d.discountType === 'percentage' ? `${d.discountPercentage}%` : `฿${d.fixedAmount.toLocaleString()}`}
+                                            </p>
+                                          ))}
+                                        </div>
+                                      )
+                                    })}
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
 
                           {/* Fee Waiver Summary (only show if any student is eligible) */}
                           {(() => {
@@ -1059,105 +1112,109 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
       </div>
 
       {/* Pagination Controls */}
-      {sortedFamilies.length > 0 && (
-        <div className="flex items-center justify-between border rounded-lg p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("familyGroups.show")}</span>
-            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))} disabled={!userCanEdit}>
-              <SelectTrigger className="w-[70px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-            <span>{t("familyGroups.entries")}</span>
-          </div>
-
-          <div className="text-sm text-muted-foreground">
-            {t("familyGroups.showingOf")
-              .replace("{from}", String(((currentPage - 1) * pageSize) + 1))
-              .replace("{to}", String(Math.min(currentPage * pageSize, sortedFamilies.length)))
-              .replace("{total}", String(sortedFamilies.length))}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              {t("familyGroups.previous")}
-            </Button>
-            <div className="flex items-center gap-1 mx-2">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number
-                if (totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
-                } else {
-                  pageNum = currentPage - 2 + i
-                }
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    className="w-8 h-8 p-0"
-                    onClick={() => setCurrentPage(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
+      {
+        sortedFamilies.length > 0 && (
+          <div className="flex items-center justify-between border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{t("familyGroups.show")}</span>
+              <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))} disabled={!userCanEdit}>
+                <SelectTrigger className="w-[70px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span>{t("familyGroups.entries")}</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              {t("familyGroups.next")}
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+
+            <div className="text-sm text-muted-foreground">
+              {t("familyGroups.showingOf")
+                .replace("{from}", String(((currentPage - 1) * pageSize) + 1))
+                .replace("{to}", String(Math.min(currentPage * pageSize, sortedFamilies.length)))
+                .replace("{total}", String(sortedFamilies.length))}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {t("familyGroups.previous")}
+              </Button>
+              <div className="flex items-center gap-1 mx-2">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      className="w-8 h-8 p-0"
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                {t("familyGroups.next")}
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Students without family */}
-      {studentsWithoutFamily.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              {t("familyGroups.studentsNotAssigned")} ({studentsWithoutFamily.length})
-            </CardTitle>
-            <CardDescription>
-              {t("familyGroups.notAssignedDesc")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {studentsWithoutFamily.slice(0, 10).map(student => (
-                <Badge key={student.id} variant="outline" className="py-1.5">
-                  {student.firstName} {student.lastName} ({student.studentId})
-                </Badge>
-              ))}
-              {studentsWithoutFamily.length > 10 && (
-                <Badge variant="secondary">{t("familyGroups.more").replace("{count}", String(studentsWithoutFamily.length - 10))}</Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {
+        studentsWithoutFamily.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                {t("familyGroups.studentsNotAssigned")} ({studentsWithoutFamily.length})
+              </CardTitle>
+              <CardDescription>
+                {t("familyGroups.notAssignedDesc")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {studentsWithoutFamily.slice(0, 10).map(student => (
+                  <Badge key={student.id} variant="outline" className="py-1.5">
+                    {student.firstName} {student.lastName} ({student.studentId})
+                  </Badge>
+                ))}
+                {studentsWithoutFamily.length > 10 && (
+                  <Badge variant="secondary">{t("familyGroups.more").replace("{count}", String(studentsWithoutFamily.length - 10))}</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* Add Family Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -1727,6 +1784,6 @@ const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
         </DialogContent>
       </Dialog>
 
-    </div>
+    </div >
   )
 }

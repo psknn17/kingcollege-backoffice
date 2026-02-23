@@ -162,7 +162,7 @@ const mockCreditNotes: CreditNote[] = [
   {
     id: "1",
     creditNoteNumber: "CN-2025-000001",
-    invoiceNumber: "INV-2025-001234",
+    invoiceNumber: "20250000001",
     studentName: studentData[0].name,
     studentId: studentData[0].id,
     studentGrade: studentData[0].grade,
@@ -176,7 +176,7 @@ const mockCreditNotes: CreditNote[] = [
   {
     id: "2",
     creditNoteNumber: "CN-2025-000002",
-    invoiceNumber: "INV-2025-001235",
+    invoiceNumber: "20250000001",
     studentName: studentData[1].name,
     studentId: studentData[1].id,
     studentGrade: studentData[1].grade,
@@ -190,7 +190,7 @@ const mockCreditNotes: CreditNote[] = [
   {
     id: "3",
     creditNoteNumber: "CN-2025-000003",
-    invoiceNumber: "INV-2025-001236",
+    invoiceNumber: "20250000001",
     studentName: studentData[2].name,
     studentId: studentData[2].id,
     studentGrade: studentData[2].grade,
@@ -214,7 +214,7 @@ for (let i = 4; i <= 50; i++) {
   mockCreditNotes.push({
     id: i.toString(),
     creditNoteNumber: `CN-2025-${String(i).padStart(6, '0')}`,
-    invoiceNumber: `INV-2025-${String(1234 + i).padStart(6, '0')}`,
+    invoiceNumber: `20250000001${String(1234 + i).padStart(6, '0')}`,
     studentName: student.name,
     studentId: student.id,
     studentGrade: student.grade,
@@ -2379,7 +2379,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 <div className="space-y-2">
                   <Label>Invoice Number <span className="text-red-500">*</span></Label>
                   <Input
-                    placeholder="INV-2025-001234"
+                    placeholder="20250000001"
                     value={creditNoteForm.invoiceNumber}
                     onChange={(e) => setCreditNoteForm({ ...creditNoteForm, invoiceNumber: e.target.value })}
                   />

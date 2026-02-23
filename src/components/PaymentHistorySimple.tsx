@@ -36,7 +36,7 @@ interface PaymentRecord {
 const mockPayments: PaymentRecord[] = [
   {
     id: "1",
-    invoiceNumber: "INV-2025-000001",
+    invoiceNumber: "20250000001",
     referenceOrder: "REF-KC2024001-20250815093425",
     studentName: "James Smith",
     studentId: "KC2024001",
@@ -50,7 +50,7 @@ const mockPayments: PaymentRecord[] = [
   },
   {
     id: "2",
-    invoiceNumber: "INV-2025-000002",
+    invoiceNumber: "20250000001",
     referenceOrder: "REF-KC2024002-20250816101530",
     studentName: "Emily Smith",
     studentId: "KC2024002",
@@ -64,7 +64,7 @@ const mockPayments: PaymentRecord[] = [
   },
   {
     id: "3",
-    invoiceNumber: "INV-2025-000003",
+    invoiceNumber: "20250000001",
     referenceOrder: "REF-KC2024003-20250817143022",
     studentName: "Michael Johnson",
     studentId: "KC2024003",

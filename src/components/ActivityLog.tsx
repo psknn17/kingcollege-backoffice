@@ -12,7 +12,7 @@ const mockActivityLogs: ActivityLogEntry[] = [
   {
     id: "log-001",
     user: "Admin",
-    action: "Approved invoice INV-202601-5014",
+    action: "Approved invoice 20250000001",
     module: "Invoices",
     detail: "Approval Status: wait -> approved",
     ip: "192.168.1.100",
@@ -23,7 +23,7 @@ const mockActivityLogs: ActivityLogEntry[] = [
   {
     id: "log-002",
     user: "Finance Manager",
-    action: "Rejected invoice INV-202601-5028",
+    action: "Rejected invoice 20250000001",
     module: "Invoices",
     detail: "Reason: Missing document",
     ip: "192.168.1.101",
@@ -45,7 +45,7 @@ const mockActivityLogs: ActivityLogEntry[] = [
   {
     id: "log-004",
     user: "Admin",
-    action: "Updated invoice INV-202601-5057",
+    action: "Updated invoice 20250000001",
     module: "Invoices",
     detail: "Due Date: \"2026-01-15\" → \"2026-01-30\"; Notes: \"-\" → \"Updated payment date\"",
     ip: "192.168.1.100",
@@ -56,7 +56,7 @@ const mockActivityLogs: ActivityLogEntry[] = [
   {
     id: "log-005",
     user: "Admin",
-    action: "Approved invoice INV-202601-5057",
+    action: "Approved invoice 20250000001",
     module: "Approval Queue",
     detail: "Approval Status: wait → approved",
     ip: "192.168.1.100",

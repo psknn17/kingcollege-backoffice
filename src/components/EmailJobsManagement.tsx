@@ -105,7 +105,7 @@ const mockStudentEmailJobs: EmailJob[] = [
     description: "Term 2 Tuition Invoice - Year 7"
   },
   {
-    id: "EJ002", 
+    id: "EJ002",
     batchId: "BATCH-2024-002",
     invoiceType: "eca",
     yearGroup: "Year 8-9",
@@ -120,7 +120,7 @@ const mockStudentEmailJobs: EmailJob[] = [
   },
   {
     id: "EJ003",
-    batchId: "BATCH-2024-003", 
+    batchId: "BATCH-2024-003",
     invoiceType: "trip",
     yearGroup: "Year 10",
     totalEmails: 28,
@@ -135,7 +135,7 @@ const mockStudentEmailJobs: EmailJob[] = [
   {
     id: "EJ004",
     batchId: "BATCH-2024-004",
-    invoiceType: "tuition", 
+    invoiceType: "tuition",
     yearGroup: "Reception",
     totalEmails: 22,
     sentCount: 0,
@@ -210,7 +210,7 @@ const loadInvoiceEmailLogs = (): EmailJob[] => {
       const firstLog = invoiceLogs[0]
 
       return {
-        id: `INV-${invoiceNumber}`,
+        id: `${new Date().getFullYear()}JOB-${invoiceNumber}`,
         batchId: invoiceNumber,
         invoiceType: "tuition",
         yearGroup: "Invoice Email",
@@ -290,7 +290,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
     switch (status) {
       case "completed":
         return "default"
-      case "in-progress": 
+      case "in-progress":
         return "secondary"
       case "failed":
         return "destructive"
@@ -319,8 +319,8 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
   // Use emailJobs from state (already filtered by jobType via localStorage)
   const filteredJobs = emailJobs.filter(job => {
     const matchesSearch = job.batchId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.yearGroup.toLowerCase().includes(searchTerm.toLowerCase())
+      job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.yearGroup.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || job.status === statusFilter
     const matchesType = typeFilter === "all" || job.invoiceType === typeFilter
 

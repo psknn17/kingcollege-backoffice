@@ -8,6 +8,8 @@ import { Textarea } from "./ui/textarea"
 import { Switch } from "./ui/switch"
 import { Checkbox } from "./ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Calendar } from "./ui/calendar"
+import { cn } from "./ui/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy } from "lucide-react"
@@ -97,7 +99,7 @@ const initialReminders: ReminderConfig[] = [
     enabled: true,
     subject: "Tuition Payment Reminder",
     emailTitle: "Tuition Payment Reminder - Term 1",
-    message: "Dear Parent, This is a friendly reminder that your child's tuition payment is due soon. Please make your payment to avoid any late fees.",
+    message: "Dear Parent, This is a friendly reminder that your child's tuition payment is due soon. Please make your payment by the due date.",
     invoiceStatuses: ["unpaid", "overdue"],
     status: "draft"
   },
@@ -186,6 +188,7 @@ export function DebtReminderSettings() {
   const [isScheduledCollapsed, setIsScheduledCollapsed] = useState(false)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [reminderHistory, setReminderHistory] = useState<{ id: string; sentDate: string; subject: string; academicYear: string; term: string; recipients: number; status: string }[]>([])
+  const [openCalendarId, setOpenCalendarId] = useState<string | null>(null)
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -606,644 +609,682 @@ export function DebtReminderSettings() {
 
       <div className="space-y-6">
         <div className="flex justify-end">
-            <Button onClick={addReminder} disabled={!userCanEdit} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              {t("debt.addReminder")}
-            </Button>
-          </div>
+          <Button onClick={addReminder} disabled={!userCanEdit} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            {t("debt.addReminder")}
+          </Button>
+        </div>
 
-          {/* Global Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                {t("debt.globalReminderSettings")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>{t("debt.enableAutoReminders")}</Label>
-                  <p className="text-sm text-muted-foreground">{t("debt.enableAutoRemindersDesc")}</p>
-                </div>
-                <Switch
-                  checked={globalSettings.enableReminders}
-                  onCheckedChange={(checked) =>
-                    setGlobalSettings({...globalSettings, enableReminders: checked})
-                  }
-                  disabled={!userCanEdit}
-                />
+        {/* Global Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              {t("debt.globalReminderSettings")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>{t("debt.enableAutoReminders")}</Label>
+                <p className="text-sm text-muted-foreground">{t("debt.enableAutoRemindersDesc")}</p>
               </div>
+              <Switch
+                checked={globalSettings.enableReminders}
+                onCheckedChange={(checked) =>
+                  setGlobalSettings({ ...globalSettings, enableReminders: checked })
+                }
+                disabled={!userCanEdit}
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label>{t("debt.fromEmailAddress")}</Label>
-                <Input
-                  value={globalSettings.fromEmail}
-                  onChange={(e) =>
-                    setGlobalSettings({...globalSettings, fromEmail: e.target.value})
-                  }
-                  placeholder="noreply@example.com"
-                  disabled={!userCanEdit}
-                />
-              </div>
-            </CardContent>
-          </Card>
+            <div className="space-y-2">
+              <Label>{t("debt.fromEmailAddress")}</Label>
+              <Input
+                value={globalSettings.fromEmail}
+                onChange={(e) =>
+                  setGlobalSettings({ ...globalSettings, fromEmail: e.target.value })
+                }
+                placeholder="noreply@example.com"
+                disabled={!userCanEdit}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Draft and Sent Reminders */}
-          <div className="space-y-4">
-            {(reminders || []).filter(r => r.status !== "scheduled" && r.status !== "sent").map((reminder, index) => (
-              <Card key={reminder.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Mail className="w-5 h-5 flex-shrink-0" />
-                        <Input
-                          value={reminder.name}
-                          onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
-                          className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 flex-1"
-                          disabled={!userCanEdit || isReminderLocked(reminder)}
-                          placeholder={reminder.name || "Enter reminder name"}
-                        />
-                      </div>
-                      <div className="flex-shrink-0">
-                        {getStatusBadge(reminder.status)}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={reminder.enabled}
-                        onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
+        {/* Draft and Sent Reminders */}
+        <div className="space-y-4">
+          {(reminders || []).filter(r => r.status !== "scheduled" && r.status !== "sent").map((reminder, index) => (
+            <Card key={reminder.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Mail className="w-5 h-5 flex-shrink-0" />
+                      <Input
+                        value={reminder.name}
+                        onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
+                        className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 flex-1"
                         disabled={!userCanEdit || isReminderLocked(reminder)}
+                        placeholder={reminder.name || "Enter reminder name"}
                       />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDuplicateReminder(reminder)}
-                        disabled={!userCanEdit}
-                        title="Duplicate reminder"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteReminder(reminder.id)}
-                        disabled={!userCanEdit || isReminderLocked(reminder)}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
                     </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Row 1: Academic Year & Term */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Academic Year</Label>
-                      <Select
-                        value={reminder.academicYear}
-                        onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
-                        disabled={!userCanEdit || isReminderLocked(reminder)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select academic year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {academicYears.map(year => (
-                            <SelectItem key={year.id} value={year.id}>
-                              {formatAcademicYear(year.name)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Term</Label>
-                      <Select
-                        value={reminder.term}
-                        onValueChange={(value) => updateReminder(reminder.id, "term", value)}
-                        disabled={!userCanEdit || isReminderLocked(reminder)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select term" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {academicYears
-                            .find(y => y.id === reminder.academicYear)
-                            ?.terms.map(term => (
-                              <SelectItem key={term.id} value={term.id}>
-                                {term.name}
-                              </SelectItem>
-                            )) || []}
-                        </SelectContent>
-                      </Select>
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(reminder.status)}
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={reminder.enabled}
+                      onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDuplicateReminder(reminder)}
+                      disabled={!userCanEdit}
+                      title="Duplicate reminder"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteReminder(reminder.id)}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Row 1: Academic Year & Term */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Academic Year</Label>
+                    <Select
+                      value={reminder.academicYear}
+                      onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select academic year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {academicYears.map(year => (
+                          <SelectItem key={year.id} value={year.id}>
+                            {formatAcademicYear(year.name)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                  {/* Row 2: Email Subject & Invoice Status Filter */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Email Subject</Label>
-                      <Select
-                        value={reminder.subject}
-                        onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
-                        disabled={!userCanEdit || isReminderLocked(reminder)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select email subject" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PRESET_EMAIL_SUBJECTS.map(subject => (
-                            <SelectItem key={subject} value={subject}>
-                              {subject}
+                  <div className="space-y-2">
+                    <Label>Term</Label>
+                    <Select
+                      value={reminder.term}
+                      onValueChange={(value) => updateReminder(reminder.id, "term", value)}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select term" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {academicYears
+                          .find(y => y.id === reminder.academicYear)
+                          ?.terms.map(term => (
+                            <SelectItem key={term.id} value={term.id}>
+                              {term.name}
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                          )) || []}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label>Invoice Status Filter</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={!userCanEdit || isReminderLocked(reminder)}
-                          >
-                            <span className="truncate">
-                              {reminder.invoiceStatuses?.length
-                                ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
-                                : "Select invoice statuses"}
-                            </span>
-                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-2" align="start">
-                          <div className="space-y-1">
-                            {INVOICE_STATUS_OPTIONS.map(option => (
-                              <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
-                                onClick={() => {
-                                  if (!userCanEdit) return
+                {/* Row 2: Email Subject & Invoice Status Filter */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Email Subject</Label>
+                    <Select
+                      value={reminder.subject}
+                      onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select email subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRESET_EMAIL_SUBJECTS.map(subject => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Invoice Status Filter</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={!userCanEdit || isReminderLocked(reminder)}
+                        >
+                          <span className="truncate">
+                            {reminder.invoiceStatuses?.length
+                              ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
+                              : "Select invoice statuses"}
+                          </span>
+                          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-2" align="start">
+                        <div className="space-y-1">
+                          {INVOICE_STATUS_OPTIONS.map(option => (
+                            <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                              onClick={() => {
+                                if (!userCanEdit) return
+                                const current = reminder.invoiceStatuses || []
+                                const updated = current.includes(option.value)
+                                  ? current.filter(s => s !== option.value)
+                                  : [...current, option.value]
+                                updateReminder(reminder.id, "invoiceStatuses", updated)
+                              }}
+                            >
+                              <Checkbox
+                                id={`status-${reminder.id}-${option.value}`}
+                                checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
+                                onCheckedChange={(checked) => {
                                   const current = reminder.invoiceStatuses || []
-                                  const updated = current.includes(option.value)
-                                    ? current.filter(s => s !== option.value)
-                                    : [...current, option.value]
+                                  const updated = checked
+                                    ? [...current, option.value]
+                                    : current.filter(s => s !== option.value)
                                   updateReminder(reminder.id, "invoiceStatuses", updated)
                                 }}
+                                disabled={!userCanEdit}
+                              />
+                              <Label
+                                htmlFor={`status-${reminder.id}-${option.value}`}
+                                className="text-sm font-normal cursor-pointer flex-1"
                               >
-                                <Checkbox
-                                  id={`status-${reminder.id}-${option.value}`}
-                                  checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
-                                  onCheckedChange={(checked) => {
-                                    const current = reminder.invoiceStatuses || []
-                                    const updated = checked
-                                      ? [...current, option.value]
-                                      : current.filter(s => s !== option.value)
-                                    updateReminder(reminder.id, "invoiceStatuses", updated)
-                                  }}
-                                  disabled={!userCanEdit}
-                                />
-                                <Label
-                                  htmlFor={`status-${reminder.id}-${option.value}`}
-                                  className="text-sm font-normal cursor-pointer flex-1"
-                                >
-                                  {option.label}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                                {option.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* Row 3: Email Title */}
+                <div className="space-y-2">
+                  <Label>Email Title</Label>
+                  <Input
+                    value={reminder.emailTitle}
+                    onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
+                    placeholder="Enter custom email title..."
+                    disabled={!userCanEdit || isReminderLocked(reminder)}
+                  />
+                </div>
+
+                {/* Row 4: Send Date & Send Time */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4" />
+                      Send Date
+                    </Label>
+                    <Popover open={openCalendarId === reminder.id} onOpenChange={(open) => setOpenCalendarId(open ? reminder.id : null)}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn("w-full justify-start text-left font-normal", !reminder.sendDate && "text-muted-foreground")}
+                          disabled={!userCanEdit}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {reminder.sendDate ? format(new Date(reminder.sendDate), "dd/MM/yyyy") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={reminder.sendDate ? new Date(reminder.sendDate) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              handleDateChange(reminder.id, format(date, "yyyy-MM-dd"))
+                              setOpenCalendarId(null)
+                            }
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
-                  {/* Row 3: Email Title */}
                   <div className="space-y-2">
-                    <Label>Email Title</Label>
+                    <Label className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Send Time
+                    </Label>
                     <Input
-                      value={reminder.emailTitle}
-                      onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
-                      placeholder="Enter custom email title..."
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                      type="time"
+                      value={reminder.sendTime}
+                      onChange={(e) => handleTimeChange(reminder.id, e.target.value)}
+                      disabled={!userCanEdit}
                     />
                   </div>
+                </div>
 
-                  {/* Row 4: Send Date & Send Time */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4" />
-                        Send Date
-                      </Label>
-                      <Input
-                        type="date"
-                        value={reminder.sendDate}
-                        min={getTodayString()}
-                        onChange={(e) => handleDateChange(reminder.id, e.target.value)}
-                        disabled={!userCanEdit}
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label>Message Template</Label>
+                  <Textarea
+                    value={reminder.message}
+                    onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
+                    placeholder="Enter reminder message template"
+                    rows={4}
+                    disabled={!userCanEdit || isReminderLocked(reminder)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Available variables: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
+                  </p>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Send Time
-                      </Label>
-                      <Input
-                        type="time"
-                        value={reminder.sendTime}
-                        onChange={(e) => handleTimeChange(reminder.id, e.target.value)}
-                        disabled={!userCanEdit}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Message Template</Label>
-                    <Textarea
-                      value={reminder.message}
-                      onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
-                      placeholder="Enter reminder message template"
-                      rows={4}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Available variables: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
+                {/* Preview */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Reminder Preview</h4>
+                  <div className="text-sm space-y-1">
+                    <p><strong>Academic Year:</strong> {formatAcademicYear(reminder.academicYear) || "Not selected"}</p>
+                    <p><strong>Term:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term || "Not selected"}</p>
+                    <p><strong>Send Date:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
+                    <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
+                    <p><strong>Status:</strong>
+                      <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
+                        {reminder.enabled ? "Active" : "Disabled"}
+                      </span>
                     </p>
                   </div>
+                </div>
 
-                  {/* Preview */}
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">Reminder Preview</h4>
-                    <div className="text-sm space-y-1">
-                      <p><strong>Academic Year:</strong> {formatAcademicYear(reminder.academicYear) || "Not selected"}</p>
-                      <p><strong>Term:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term || "Not selected"}</p>
-                      <p><strong>Send Date:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
-                      <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
-                      <p><strong>Status:</strong>
-                        <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-                          {reminder.enabled ? "Active" : "Disabled"}
-                        </span>
-                      </p>
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2">
+                  {(!reminder.status || reminder.status === "draft") && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => handlePreviewReminder(reminder)}
+                        disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
+                        className="flex items-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Preview & Schedule
+                      </Button>
+                      <Button
+                        onClick={() => handleSendNow(reminder)}
+                        disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
+                        className="flex items-center gap-2"
+                      >
+                        <Send className="w-4 h-4" />
+                        Send Now
+                      </Button>
+                    </>
+                  )}
+                  {reminder.status === "scheduled" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => handlePreviewReminder(reminder)}
+                        className="flex items-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Preview
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleCancelSchedule(reminder)}
+                        disabled={!userCanEdit || !isScheduledInFuture(reminder)}
+                        title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
+                        className="flex items-center gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Cancel Schedule
+                      </Button>
+                    </>
+                  )}
+                  {reminder.status === "sent" && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      Sent on {reminder.sentAt ? new Date(reminder.sentAt).toLocaleString() : "Unknown"}
+                      {reminder.recipientCount && ` to ${reminder.recipientCount} recipients`}
                     </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Scheduled Reminders - Collapsible */}
+        {(reminders || []).filter(r => r.status === "scheduled").length > 0 && (
+          <Collapsible open={!isScheduledCollapsed} onOpenChange={(open) => setIsScheduledCollapsed(!open)}>
+            <Card className="border-blue-300">
+              <CardHeader className="pb-3">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ClockIcon className="w-5 h-5 text-blue-600" />
+                      <CardTitle className="text-base">
+                        Scheduled Reminders ({(reminders || []).filter(r => r.status === "scheduled").length})
+                      </CardTitle>
+                    </div>
+                    <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isScheduledCollapsed ? '' : 'rotate-180'}`} />
+                  </div>
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="space-y-4 pt-0">
+                  {/* Lock Warning */}
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                    <ClockIcon className="w-4 h-4 flex-shrink-0" />
+                    <p><strong>Locked:</strong> Scheduled reminders are read-only. Click "Cancel Schedule" to edit.</p>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex justify-end gap-2">
-                    {(!reminder.status || reminder.status === "draft") && (
-                      <>
-                        <Button
-                          variant="outline"
-                          onClick={() => handlePreviewReminder(reminder)}
-                          disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
-                          className="flex items-center gap-2"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Preview & Schedule
-                        </Button>
-                        <Button
-                          onClick={() => handleSendNow(reminder)}
-                          disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
-                          className="flex items-center gap-2"
-                        >
-                          <Send className="w-4 h-4" />
-                          Send Now
-                        </Button>
-                      </>
-                    )}
-                    {reminder.status === "scheduled" && (
-                      <>
-                        <Button
-                          variant="outline"
-                          onClick={() => handlePreviewReminder(reminder)}
-                          className="flex items-center gap-2"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View Preview
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleCancelSchedule(reminder)}
-                          disabled={!userCanEdit || !isScheduledInFuture(reminder)}
-                          title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
-                          className="flex items-center gap-2"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Cancel Schedule
-                        </Button>
-                      </>
-                    )}
-                    {reminder.status === "sent" && (
-                      <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        Sent on {reminder.sentAt ? new Date(reminder.sentAt).toLocaleString() : "Unknown"}
-                        {reminder.recipientCount && ` to ${reminder.recipientCount} recipients`}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Scheduled Reminders - Collapsible */}
-          {(reminders || []).filter(r => r.status === "scheduled").length > 0 && (
-            <Collapsible open={!isScheduledCollapsed} onOpenChange={(open) => setIsScheduledCollapsed(!open)}>
-              <Card className="border-blue-300">
-                <CardHeader className="pb-3">
-                  <CollapsibleTrigger asChild>
-                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-lg transition-colors">
-                      <div className="flex items-center gap-2">
-                        <ClockIcon className="w-5 h-5 text-blue-600" />
-                        <CardTitle className="text-base">
-                          Scheduled Reminders ({(reminders || []).filter(r => r.status === "scheduled").length})
-                        </CardTitle>
-                      </div>
-                      <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isScheduledCollapsed ? '' : 'rotate-180'}`} />
-                    </div>
-                  </CollapsibleTrigger>
-                </CardHeader>
-                <CollapsibleContent>
-                  <CardContent className="space-y-4 pt-0">
-                    {/* Lock Warning */}
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                      <ClockIcon className="w-4 h-4 flex-shrink-0" />
-                      <p><strong>Locked:</strong> Scheduled reminders are read-only. Click "Cancel Schedule" to edit.</p>
-                    </div>
-
-                    {(reminders || []).filter(r => r.status === "scheduled").map((reminder) => (
-                      <Card key={reminder.id} className="border-blue-200">
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <Mail className="w-5 h-5 flex-shrink-0" />
-                                <Input
-                                  value={reminder.name}
-                                  onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
-                                  className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 flex-1"
-                                  disabled={!userCanEdit || isReminderLocked(reminder)}
-                                  placeholder={reminder.name || "Reminder name"}
-                                />
-                              </div>
-                              <div className="flex-shrink-0">
-                                {getStatusBadge(reminder.status)}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={reminder.enabled}
-                                onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
+                  {(reminders || []).filter(r => r.status === "scheduled").map((reminder) => (
+                    <Card key={reminder.id} className="border-blue-200">
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Mail className="w-5 h-5 flex-shrink-0" />
+                              <Input
+                                value={reminder.name}
+                                onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
+                                className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 flex-1"
                                 disabled={!userCanEdit || isReminderLocked(reminder)}
+                                placeholder={reminder.name || "Reminder name"}
                               />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDuplicateReminder(reminder)}
-                                disabled={!userCanEdit}
-                                title="Duplicate reminder"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => deleteReminder(reminder.id)}
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                                title={isReminderLocked(reminder) ? "Cancel schedule first to delete" : "Delete reminder"}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
                             </div>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {/* Row 1: Academic Year & Term */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>{t("common.academicYear")}</Label>
-                              <Select
-                                value={reminder.academicYear}
-                                onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t("common.selectYear")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {academicYears.map(year => (
-                                    <SelectItem key={year.id} value={year.id}>
-                                      {formatAcademicYear(year.name)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>{t("common.term")}</Label>
-                              <Select
-                                value={reminder.term}
-                                onValueChange={(value) => updateReminder(reminder.id, "term", value)}
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t("common.selectTerm")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {academicYears
-                                    .find(y => y.id === reminder.academicYear)
-                                    ?.terms.map(term => (
-                                      <SelectItem key={term.id} value={term.id}>
-                                        {term.name}
-                                      </SelectItem>
-                                    )) || []}
-                                </SelectContent>
-                              </Select>
+                            <div className="flex-shrink-0">
+                              {getStatusBadge(reminder.status)}
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={reminder.enabled}
+                              onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
+                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDuplicateReminder(reminder)}
+                              disabled={!userCanEdit}
+                              title="Duplicate reminder"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteReminder(reminder.id)}
+                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                              title={isReminderLocked(reminder) ? "Cancel schedule first to delete" : "Delete reminder"}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Row 1: Academic Year & Term */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>{t("common.academicYear")}</Label>
+                            <Select
+                              value={reminder.academicYear}
+                              onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
+                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("common.selectYear")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {academicYears.map(year => (
+                                  <SelectItem key={year.id} value={year.id}>
+                                    {formatAcademicYear(year.name)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                          {/* Row 2: Email Subject & Invoice Status Filter */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>{t("debt.emailSubject")}</Label>
-                              <Select
-                                value={reminder.subject}
-                                onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t("debt.emailSubjectPlaceholder")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {PRESET_EMAIL_SUBJECTS.map(subject => (
-                                    <SelectItem key={subject} value={subject}>
-                                      {subject}
+                          <div className="space-y-2">
+                            <Label>{t("common.term")}</Label>
+                            <Select
+                              value={reminder.term}
+                              onValueChange={(value) => updateReminder(reminder.id, "term", value)}
+                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("common.selectTerm")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {academicYears
+                                  .find(y => y.id === reminder.academicYear)
+                                  ?.terms.map(term => (
+                                    <SelectItem key={term.id} value={term.id}>
+                                      {term.name}
                                     </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
+                                  )) || []}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
 
-                            <div className="space-y-2">
-                              <Label>Invoice Status Filter</Label>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={!userCanEdit || isReminderLocked(reminder)}
-                                  >
-                                    <span className="truncate">
-                                      {reminder.invoiceStatuses?.length
-                                        ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
-                                        : "Select invoice statuses"}
-                                    </span>
-                                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                                  </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[200px] p-2" align="start">
-                                  <div className="space-y-1">
-                                    {INVOICE_STATUS_OPTIONS.map(option => (
-                                      <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
-                                        onClick={() => {
-                                          if (!userCanEdit) return
+                        {/* Row 2: Email Subject & Invoice Status Filter */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>{t("debt.emailSubject")}</Label>
+                            <Select
+                              value={reminder.subject}
+                              onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
+                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("debt.emailSubjectPlaceholder")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PRESET_EMAIL_SUBJECTS.map(subject => (
+                                  <SelectItem key={subject} value={subject}>
+                                    {subject}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Invoice Status Filter</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
+                                  disabled={!userCanEdit || isReminderLocked(reminder)}
+                                >
+                                  <span className="truncate">
+                                    {reminder.invoiceStatuses?.length
+                                      ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
+                                      : "Select invoice statuses"}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[200px] p-2" align="start">
+                                <div className="space-y-1">
+                                  {INVOICE_STATUS_OPTIONS.map(option => (
+                                    <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                                      onClick={() => {
+                                        if (!userCanEdit) return
+                                        const current = reminder.invoiceStatuses || []
+                                        const updated = current.includes(option.value)
+                                          ? current.filter(s => s !== option.value)
+                                          : [...current, option.value]
+                                        updateReminder(reminder.id, "invoiceStatuses", updated)
+                                      }}
+                                    >
+                                      <Checkbox
+                                        id={`status-${reminder.id}-${option.value}`}
+                                        checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
+                                        onCheckedChange={(checked) => {
                                           const current = reminder.invoiceStatuses || []
-                                          const updated = current.includes(option.value)
-                                            ? current.filter(s => s !== option.value)
-                                            : [...current, option.value]
+                                          const updated = checked
+                                            ? [...current, option.value]
+                                            : current.filter(s => s !== option.value)
                                           updateReminder(reminder.id, "invoiceStatuses", updated)
                                         }}
+                                        disabled={!userCanEdit || isReminderLocked(reminder)}
+                                      />
+                                      <Label
+                                        htmlFor={`status-${reminder.id}-${option.value}`}
+                                        className="text-sm font-normal cursor-pointer flex-1"
                                       >
-                                        <Checkbox
-                                          id={`status-${reminder.id}-${option.value}`}
-                                          checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
-                                          onCheckedChange={(checked) => {
-                                            const current = reminder.invoiceStatuses || []
-                                            const updated = checked
-                                              ? [...current, option.value]
-                                              : current.filter(s => s !== option.value)
-                                            updateReminder(reminder.id, "invoiceStatuses", updated)
-                                          }}
-                                          disabled={!userCanEdit || isReminderLocked(reminder)}
-                                        />
-                                        <Label
-                                          htmlFor={`status-${reminder.id}-${option.value}`}
-                                          className="text-sm font-normal cursor-pointer flex-1"
-                                        >
-                                          {option.label}
-                                        </Label>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
+                                        {option.label}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+
+                        {/* Row 3: Email Title */}
+                        <div className="space-y-2">
+                          <Label>Email Title</Label>
+                          <Input
+                            value={reminder.emailTitle}
+                            onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
+                            placeholder="Enter custom email title..."
+                            disabled={!userCanEdit || isReminderLocked(reminder)}
+                          />
+                        </div>
+
+                        {/* Row 4: Send Date & Send Time */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <CalendarIcon className="w-4 h-4" />
+                              {t("debt.sendDate")}
+                            </Label>
+                            <Popover open={openCalendarId === `scheduled-${reminder.id}`} onOpenChange={(open) => setOpenCalendarId(open ? `scheduled-${reminder.id}` : null)}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn("w-full justify-start text-left font-normal", !reminder.sendDate && "text-muted-foreground")}
+                                  disabled={!userCanEdit || isReminderLocked(reminder)}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {reminder.sendDate ? format(new Date(reminder.sendDate), "dd/MM/yyyy") : <span>Pick a date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={reminder.sendDate ? new Date(reminder.sendDate) : undefined}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      handleDateChange(reminder.id, format(date, "yyyy-MM-dd"))
+                                      setOpenCalendarId(null)
+                                    }
+                                  }}
+                                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
-                          {/* Row 3: Email Title */}
                           <div className="space-y-2">
-                            <Label>Email Title</Label>
+                            <Label className="flex items-center gap-2">
+                              <Settings className="w-4 h-4" />
+                              Send Time
+                            </Label>
                             <Input
-                              value={reminder.emailTitle}
-                              onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
-                              placeholder="Enter custom email title..."
+                              type="time"
+                              value={reminder.sendTime}
+                              onChange={(e) => handleTimeChange(reminder.id, e.target.value)}
                               disabled={!userCanEdit || isReminderLocked(reminder)}
                             />
                           </div>
+                        </div>
 
-                          {/* Row 4: Send Date & Send Time */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <CalendarIcon className="w-4 h-4" />
-                                {t("debt.sendDate")}
-                              </Label>
-                              <Input
-                                type="date"
-                                value={reminder.sendDate}
-                                min={getTodayString()}
-                                onChange={(e) => handleDateChange(reminder.id, e.target.value)}
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                              />
-                            </div>
+                        <div className="space-y-2">
+                          <Label>{t("debt.messageTemplate")}</Label>
+                          <Textarea
+                            value={reminder.message}
+                            onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
+                            placeholder={t("debt.messageTemplatePlaceholder")}
+                            rows={4}
+                            disabled={!userCanEdit || isReminderLocked(reminder)}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t("debt.availableVariables")}: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
+                          </p>
+                        </div>
 
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <Settings className="w-4 h-4" />
-                                Send Time
-                              </Label>
-                              <Input
-                                type="time"
-                                value={reminder.sendTime}
-                                onChange={(e) => handleTimeChange(reminder.id, e.target.value)}
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>{t("debt.messageTemplate")}</Label>
-                            <Textarea
-                              value={reminder.message}
-                              onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
-                              placeholder={t("debt.messageTemplatePlaceholder")}
-                              rows={4}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              {t("debt.availableVariables")}: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
+                        {/* Preview */}
+                        <div className="p-4 bg-muted rounded-lg">
+                          <h4 className="font-medium mb-2">{t("debt.reminderPreview")}</h4>
+                          <div className="text-sm space-y-1">
+                            <p><strong>{t("common.academicYear")}:</strong> {formatAcademicYear(reminder.academicYear)}</p>
+                            <p><strong>{t("common.term")}:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term}</p>
+                            <p><strong>{t("debt.sendDate")}:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
+                            <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
+                            <p><strong>{t("common.status")}:</strong>
+                              <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
+                                {reminder.enabled ? t("common.active") : t("common.disabled")}
+                              </span>
                             </p>
                           </div>
+                        </div>
 
-                          {/* Preview */}
-                          <div className="p-4 bg-muted rounded-lg">
-                            <h4 className="font-medium mb-2">{t("debt.reminderPreview")}</h4>
-                            <div className="text-sm space-y-1">
-                              <p><strong>{t("common.academicYear")}:</strong> {formatAcademicYear(reminder.academicYear)}</p>
-                              <p><strong>{t("common.term")}:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term}</p>
-                              <p><strong>{t("debt.sendDate")}:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
-                              <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
-                              <p><strong>{t("common.status")}:</strong>
-                                <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-                                  {reminder.enabled ? t("common.active") : t("common.disabled")}
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => handlePreviewReminder(reminder)}
-                              className="flex items-center gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View Preview
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              onClick={() => handleCancelSchedule(reminder)}
-                              disabled={!userCanEdit || !isScheduledInFuture(reminder)}
-                              title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
-                              className="flex items-center gap-2"
-                            >
-                              <XCircle className="w-4 h-4" />
-                              Cancel Schedule
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          )}
+                        {/* Action Buttons */}
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handlePreviewReminder(reminder)}
+                            className="flex items-center gap-2"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View Preview
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleCancelSchedule(reminder)}
+                            disabled={!userCanEdit || !isScheduledInFuture(reminder)}
+                            title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
+                            className="flex items-center gap-2"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Cancel Schedule
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
       </div>
 
       {/* Preview & Schedule Modal */}

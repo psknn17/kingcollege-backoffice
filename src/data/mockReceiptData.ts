@@ -45,7 +45,7 @@ export const mockTripActivityReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-trp-001",
-        invoiceNo: "INV-TRP-2501-001",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-05T00:00:00.000Z",
         invoiceAmount: 3500,
         receivedAmount: 3500,
@@ -70,7 +70,7 @@ export const mockTripActivityReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-trp-002",
-        invoiceNo: "INV-TRP-2501-002",
+        invoiceNo: "20250000002",
         invoiceDate: "2025-01-08T00:00:00.000Z",
         invoiceAmount: 4500,
         receivedAmount: 4500,
@@ -95,7 +95,7 @@ export const mockTripActivityReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-trp-003",
-        invoiceNo: "INV-TRP-2501-003",
+        invoiceNo: "20250000003",
         invoiceDate: "2025-01-10T00:00:00.000Z",
         invoiceAmount: 2800,
         receivedAmount: 2800,
@@ -120,7 +120,7 @@ export const mockTripActivityReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-trp-004a",
-        invoiceNo: "INV-TRP-2501-004",
+        invoiceNo: "20250000004",
         invoiceDate: "2025-01-12T00:00:00.000Z",
         invoiceAmount: 5000,
         receivedAmount: 5000,
@@ -128,7 +128,7 @@ export const mockTripActivityReceipts: MockReceiptRecord[] = [
       },
       {
         id: "inv-trp-004b",
-        invoiceNo: "INV-TRP-2501-005",
+        invoiceNo: "20250000005",
         invoiceDate: "2025-01-12T00:00:00.000Z",
         invoiceAmount: 3500,
         receivedAmount: 3500,
@@ -153,7 +153,7 @@ export const mockTripActivityReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-trp-005",
-        invoiceNo: "INV-TRP-2501-006",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-14T00:00:00.000Z",
         invoiceAmount: 2200,
         receivedAmount: 2200,
@@ -182,7 +182,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-exm-001",
-        invoiceNo: "INV-EXM-2501-001",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-03T00:00:00.000Z",
         invoiceAmount: 15000,
         receivedAmount: 15000,
@@ -207,7 +207,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-exm-002a",
-        invoiceNo: "INV-EXM-2501-002",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-05T00:00:00.000Z",
         invoiceAmount: 15000,
         receivedAmount: 15000,
@@ -215,7 +215,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
       },
       {
         id: "inv-exm-002b",
-        invoiceNo: "INV-EXM-2501-003",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-05T00:00:00.000Z",
         invoiceAmount: 10000,
         receivedAmount: 10000,
@@ -240,7 +240,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-exm-003",
-        invoiceNo: "INV-EXM-2501-004",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-08T00:00:00.000Z",
         invoiceAmount: 8500,
         receivedAmount: 8500,
@@ -265,7 +265,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-exm-004",
-        invoiceNo: "INV-EXM-2501-005",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-10T00:00:00.000Z",
         invoiceAmount: 35000,
         receivedAmount: 35000,
@@ -290,7 +290,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-exm-005",
-        invoiceNo: "INV-EXM-2501-006",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-12T00:00:00.000Z",
         invoiceAmount: 12000,
         receivedAmount: 12000,
@@ -315,7 +315,7 @@ export const mockExamReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-exm-006",
-        invoiceNo: "INV-EXM-2501-007",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-13T00:00:00.000Z",
         invoiceAmount: 18500,
         receivedAmount: 18500,
@@ -344,7 +344,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-001",
-        invoiceNo: "INV-BUS-2501-001",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-02T00:00:00.000Z",
         invoiceAmount: 45000,
         receivedAmount: 45000,
@@ -369,7 +369,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-002",
-        invoiceNo: "INV-BUS-2501-002",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-04T00:00:00.000Z",
         invoiceAmount: 36000,
         receivedAmount: 36000,
@@ -394,7 +394,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-003a",
-        invoiceNo: "INV-BUS-2501-003",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-06T00:00:00.000Z",
         invoiceAmount: 26000,
         receivedAmount: 26000,
@@ -402,7 +402,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
       },
       {
         id: "inv-bus-003b",
-        invoiceNo: "INV-BUS-2501-004",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-06T00:00:00.000Z",
         invoiceAmount: 26000,
         receivedAmount: 26000,
@@ -427,7 +427,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-004",
-        invoiceNo: "INV-BUS-2501-005",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-08T00:00:00.000Z",
         invoiceAmount: 48000,
         receivedAmount: 48000,
@@ -452,7 +452,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-005",
-        invoiceNo: "INV-BUS-2501-006",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-10T00:00:00.000Z",
         invoiceAmount: 32000,
         receivedAmount: 32000,
@@ -477,7 +477,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-006",
-        invoiceNo: "INV-BUS-2501-007",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-12T00:00:00.000Z",
         invoiceAmount: 54000,
         receivedAmount: 54000,
@@ -502,7 +502,7 @@ export const mockSchoolBusReceipts: MockReceiptRecord[] = [
     invoices: [
       {
         id: "inv-bus-007",
-        invoiceNo: "INV-BUS-2501-008",
+        invoiceNo: "20250000001",
         invoiceDate: "2025-01-13T00:00:00.000Z",
         invoiceAmount: 42000,
         receivedAmount: 42000,

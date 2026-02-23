@@ -7,6 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Calendar as CalendarComponent } from "./ui/calendar"
+import { cn } from "./ui/utils"
+import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -78,9 +82,9 @@ const getStatusBadge = (status: string) => {
     'inactive': { variant: 'secondary' as const, color: 'bg-gray-100 text-gray-700 border-gray-300' },
     'draft': { variant: 'outline' as const, color: 'bg-blue-100 text-blue-700 border-blue-300' }
   }
-  
+
   const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || statusConfig.pending
-  
+
   return (
     <Badge variant={config.variant} className={config.color}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -374,12 +378,6 @@ export function ViewModal({
           </table>
         </div>
 
-        {/* Late Payment Notice */}
-        <div className="px-4 py-2" style={{ fontSize: '11px' }}>
-          <p className="text-gray-500 italic text-xs">
-            Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.
-          </p>
-        </div>
 
         {/* Payment Methods */}
         <div className="px-4 py-2" style={{ fontSize: '11px', lineHeight: '1.5' }}>
@@ -888,12 +886,27 @@ export function ViewModal({
               <div className="space-y-2">
                 <div>
                   <Label className="text-xs">Due Date</Label>
-                  <Input
-                    type="date"
-                    value={editedData.dueDate ? new Date(editedData.dueDate).toISOString().split('T')[0] : ""}
-                    onChange={(e) => handleFieldChange("dueDate", e.target.value)}
-                    className="h-8 text-sm"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal h-8 text-sm", !editedData.dueDate && "text-muted-foreground")}
+                      >
+                        <Calendar className="mr-2 h-3.5 w-3.5" />
+                        {editedData.dueDate ? format(new Date(editedData.dueDate), "dd/MM/yyyy") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={editedData.dueDate ? new Date(editedData.dueDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) handleFieldChange("dueDate", format(date, "yyyy-MM-dd"))
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label className="text-xs">Parent Email</Label>
@@ -978,107 +991,107 @@ export function ViewModal({
     return (
       <>
         <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsPreviewMode(false)
-          onClose()
-        }
-      }}>
-        <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{!isPreviewMode ? "Edit Invoice" : "Invoice Preview"}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col">
-            <div className="flex-1 p-6">
-              {showPreview ? renderInvoiceView() : renderEditableInvoiceView()}
-            </div>
-            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
-              {invoiceCanBeEdited && !previewOnly && (
-                <>
+          if (!open) {
+            setIsPreviewMode(false)
+            onClose()
+          }
+        }}>
+          <DialogContent className="max-w-[850px] w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{!isPreviewMode ? "Edit Invoice" : "Invoice Preview"}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col">
+              <div className="flex-1 p-6">
+                {showPreview ? renderInvoiceView() : renderEditableInvoiceView()}
+              </div>
+              <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+                {invoiceCanBeEdited && !previewOnly && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsPreviewMode(!isPreviewMode)}
+                      className="flex items-center gap-1.5"
+                    >
+                      {!isPreviewMode ? (
+                        <>
+                          <Eye className="w-3.5 h-3.5" />
+                          Preview
+                        </>
+                      ) : (
+                        <>
+                          <Edit className="w-3.5 h-3.5" />
+                          Edit
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveChanges}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      Save
+                    </Button>
+                  </>
+                )}
+                {/* Cancel Invoice button - only for approved, non-cancelled invoices */}
+                {type === "invoice" && data?.approvalStatus === "approved" && data?.status !== "cancelled" && onCancel && (
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
-                    onClick={() => setIsPreviewMode(!isPreviewMode)}
+                    onClick={() => setIsCancelDialogOpen(true)}
                     className="flex items-center gap-1.5"
                   >
-                    {!isPreviewMode ? (
-                      <>
-                        <Eye className="w-3.5 h-3.5" />
-                        Preview
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="w-3.5 h-3.5" />
-                        Edit
-                      </>
-                    )}
+                    <X className="w-3.5 h-3.5" />
+                    Cancel Invoice
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveChanges}
-                    className="flex items-center gap-1.5"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Save
-                  </Button>
-                </>
-              )}
-              {/* Cancel Invoice button - only for approved, non-cancelled invoices */}
-              {type === "invoice" && data?.approvalStatus === "approved" && data?.status !== "cancelled" && onCancel && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setIsCancelDialogOpen(true)}
-                  className="flex items-center gap-1.5"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Cancel Invoice
+                )}
+                <Button variant="outline" size="sm" onClick={onClose}>
+                  {t("common.close")}
                 </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={onClose}>
-                {t("common.close")}
-              </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
+          </DialogContent>
         </Dialog>
 
         {/* Cancel Invoice Dialog */}
         <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Cancel Invoice</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this invoice? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="cancel-reason">Cancellation Reason *</Label>
-              <textarea
-                id="cancel-reason"
-                className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Please provide a reason for cancellation..."
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-              />
+          <DialogContent className="sm:max-w-[450px]">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Cancel Invoice</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to cancel this invoice? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="cancel-reason">Cancellation Reason *</Label>
+                <textarea
+                  id="cancel-reason"
+                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Please provide a reason for cancellation..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => {
-              setIsCancelDialogOpen(false)
-              setCancelReason("")
-            }}>
-              Back
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancelInvoice}
-              disabled={!cancelReason.trim()}
-            >
-              Confirm Cancel
-            </Button>
-          </div>
-        </DialogContent>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => {
+                setIsCancelDialogOpen(false)
+                setCancelReason("")
+              }}>
+                Back
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancelInvoice}
+                disabled={!cancelReason.trim()}
+              >
+                Confirm Cancel
+              </Button>
+            </div>
+          </DialogContent>
         </Dialog>
 
         {/* Delete Item Confirmation Dialog */}

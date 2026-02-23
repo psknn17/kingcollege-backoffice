@@ -8,12 +8,6 @@ interface SiblingDiscount {
   enabled: boolean
 }
 
-interface LatePaymentSettings {
-  chargePercentage: number
-  chargeFrequency: "monthly" | "weekly"
-  gracePeriodDays: number
-  enabled: boolean
-}
 
 interface RegistrationFeeSettings {
   applicationFee: number
@@ -35,7 +29,6 @@ interface RegistrationPrivilege {
 export interface DiscountOptionsData {
   academicYear: string
   siblingDiscounts: SiblingDiscount[]
-  latePayment: LatePaymentSettings
   registrationFees: RegistrationFeeSettings
   registrationPrivileges: RegistrationPrivilege[]
   waiverAfter3rdYear: {
@@ -60,7 +53,6 @@ interface DiscountOptionsContextType {
   getDiscountOptions: (academicYear: string, term: string) => DiscountOptionsData
   getSiblingDiscountPercentage: (childOrder: number, academicYear: string, term: string) => number
   getRegistrationFees: (academicYear: string, term: string) => RegistrationFeeSettings
-  getLatePaymentSettings: (academicYear: string, term: string) => LatePaymentSettings
   getWaiverSettings: (academicYear: string, term: string) => DiscountOptionsData["waiverAfter3rdYear"]
   updateDiscountOptions: (academicYear: string, term: string, updates: Partial<DiscountOptionsData>) => void
   refreshData: () => void
@@ -77,12 +69,6 @@ const defaultSiblingDiscounts: SiblingDiscount[] = [
   { childOrder: "fifth", label: "Fifth Child and subsequent", percentage: 20, enabled: true },
 ]
 
-const defaultLatePayment: LatePaymentSettings = {
-  chargePercentage: 1.5,
-  chargeFrequency: "monthly",
-  gracePeriodDays: 0,
-  enabled: true,
-}
 
 const defaultRegistrationFees: RegistrationFeeSettings = {
   applicationFee: 5000,
@@ -118,7 +104,6 @@ const defaultRegistrationPrivileges: RegistrationPrivilege[] = [
 const createDefaultData = (academicYear: string): DiscountOptionsData => ({
   academicYear,
   siblingDiscounts: defaultSiblingDiscounts,
-  latePayment: defaultLatePayment,
   registrationFees: defaultRegistrationFees,
   registrationPrivileges: defaultRegistrationPrivileges,
   waiverAfter3rdYear: {
@@ -205,10 +190,6 @@ export function DiscountOptionsProvider({ children }: { children: ReactNode }) {
     return getDiscountOptions(academicYear, term).registrationFees
   }
 
-  // Get late payment settings
-  const getLatePaymentSettings = (academicYear: string, term: string): LatePaymentSettings => {
-    return getDiscountOptions(academicYear, term).latePayment
-  }
 
   // Get waiver settings
   // Get waiver settings
@@ -235,7 +216,6 @@ export function DiscountOptionsProvider({ children }: { children: ReactNode }) {
       getDiscountOptions,
       getSiblingDiscountPercentage,
       getRegistrationFees,
-      getLatePaymentSettings,
       getWaiverSettings,
       updateDiscountOptions,
       refreshData
