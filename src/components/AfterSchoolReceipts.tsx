@@ -39,6 +39,7 @@ interface AfterSchoolReceipt {
   paymentMethod: string
   transactionDate: Date
   paymentType: "single" | "complete"
+  status: "issued" | "resent" | "failed"
   downloadCount: number
   isExternal: boolean
 }
@@ -472,7 +473,7 @@ export function AfterSchoolReceipts() {
                     <Calendar
                       mode="single"
                       selected={dateFrom || undefined}
-                      onSelect={setDateFrom}
+                      onSelect={(date) => setDateFrom(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -489,7 +490,7 @@ export function AfterSchoolReceipts() {
                     <Calendar
                       mode="single"
                       selected={dateTo || undefined}
-                      onSelect={setDateTo}
+                      onSelect={(date) => setDateTo(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>

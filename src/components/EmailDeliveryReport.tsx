@@ -519,7 +519,7 @@ export function EmailDeliveryReport() {
                     <Calendar
                       mode="single"
                       selected={dateFrom || undefined}
-                      onSelect={setDateFrom}
+                      onSelect={(date) => setDateFrom(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -536,7 +536,7 @@ export function EmailDeliveryReport() {
                     <Calendar
                       mode="single"
                       selected={dateTo || undefined}
-                      onSelect={setDateTo}
+                      onSelect={(date) => setDateTo(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>

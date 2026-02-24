@@ -215,8 +215,8 @@ export function ApprovalQueue() {
   const [rejectReason, setRejectReason] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
-  const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "approvalStatus" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", null)
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "asc")
+  const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "approvalStatus" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", "invoiceNumber")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "desc")
   const [currentPage, setCurrentPage] = usePersistedState("approval-queue:page", 1)
   const [pageSize, setPageSize] = usePersistedState("approval-queue:pageSize", 10)
 
@@ -336,18 +336,8 @@ export function ApprovalQueue() {
   const sortedInvoices = useMemo(() => {
     const sorted = [...filteredInvoices]
 
-    // If no sortKey is set, default to sorting by timestamp descending (newest first)
-    if (!sortKey) {
-      sorted.sort((a, b) => {
-        // Extract timestamp from ID format: inv-{studentId}-{timestamp}
-        const getTimestamp = (id: string) => {
-          const parts = id.split('-')
-          return parseInt(parts[parts.length - 1]) || 0
-        }
-        return getTimestamp(b.id) - getTimestamp(a.id)
-      })
-      return sorted
-    }
+    // If no sortKey is set, reverse to show newest first
+    if (!sortKey) return sorted.reverse()
 
     sorted.sort((a, b) => {
       const direction = sortDirection === "asc" ? 1 : -1
@@ -922,7 +912,7 @@ export function ApprovalQueue() {
                 {/* Approval Status - center */}
                 <TableHead align="center">{renderSortHeader("Approval Status", "approvalStatus")}</TableHead>
                 {/* Email Status - center */}
-                <TableHead align="center">E-mail Status</TableHead>
+                <TableHead align="center">Email Status</TableHead>
                 {/* Invoice Status - center */}
                 <TableHead align="center">Invoice Status</TableHead>
                 {/* Issue Date - left aligned */}

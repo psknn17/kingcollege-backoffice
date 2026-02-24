@@ -580,7 +580,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                     <Calendar
                       mode="single"
                       selected={dueDateFrom || undefined}
-                      onSelect={setDueDateFrom}
+                      onSelect={(date) => setDueDateFrom(date ?? null)}
                       initialFocus
                       disabled={!userCanEdit}
                     />
@@ -598,7 +598,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                     <Calendar
                       mode="single"
                       selected={dueDateTo || undefined}
-                      onSelect={setDueDateTo}
+                      onSelect={(date) => setDueDateTo(date ?? null)}
                       initialFocus
                       disabled={!userCanEdit}
                     />
@@ -737,7 +737,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {invoice.paymentChannel ? getPaymentChannelLabel(invoice.paymentChannel) : "-"}
+                      {invoice.paymentChannel ? getPaymentChannelLabel(invoice.paymentChannel, t) : "-"}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">

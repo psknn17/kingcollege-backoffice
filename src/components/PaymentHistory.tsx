@@ -32,7 +32,7 @@ interface PaymentRecord {
   paymentMethod: string
   paymentChannel: "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank"
   payerName: string
-  status: "paid" | "partial" | "unpaid" | "cancelled" | "overdue"
+  status: "paid" | "partial" | "unpaid" | "cancelled" | "overdue" | "failed"
   transactionDate: Date
   parentType?: "internal" | "external"
   referenceNumber?: string
@@ -556,7 +556,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                     <Calendar
                       mode="single"
                       selected={dateFrom || undefined}
-                      onSelect={setDateFrom}
+                      onSelect={(date) => setDateFrom(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -573,7 +573,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                     <Calendar
                       mode="single"
                       selected={dateTo || undefined}
-                      onSelect={setDateTo}
+                      onSelect={(date) => setDateTo(date ?? null)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -758,7 +758,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                               <p className="text-sm text-muted-foreground">{payment.paymentDescription}</p>
                             </div>
                             <div className="text-right">
-                              {getStatusBadge(payment.status)}
+                              {getStatusBadge(payment.status, t)}
                               <p className="text-sm text-muted-foreground mt-1">
                                 {format(payment.transactionDate, "MMM dd, yyyy 'at' HH:mm", { locale })}
                               </p>

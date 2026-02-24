@@ -383,8 +383,8 @@ export function EventRegistrationReports() {
                     setSelectedYearGroup("all")
                     setSelectedPaymentStatus("all")
                     setSelectedPaymentChannel("all")
-                    setDateFrom(null)
-                    setDateTo(null)
+                    setDateFrom(undefined)
+                    setDateTo(undefined)
                     toast.success(t("common.filtersCleared"))
                   }} className="h-9">{t("common.clear")}</Button>
                 </div>
@@ -609,9 +609,9 @@ export function EventRegistrationReports() {
                       {/* Amount - currency/right */}
                       <TableCell align="right">฿{registration.amount}</TableCell>
                       {/* Payment Channel - text/left */}
-                      <TableCell align="left">{getPaymentChannelLabel(registration.paymentChannel)}</TableCell>
+                      <TableCell align="left">{getPaymentChannelLabel(registration.paymentChannel, t)}</TableCell>
                       {/* Status - badge/center */}
-                      <TableCell align="center">{getStatusBadge(registration.paymentStatus)}</TableCell>
+                      <TableCell align="center">{getStatusBadge(registration.paymentStatus, t)}</TableCell>
                       {/* Parent Email - text/left */}
                       <TableCell align="left">{registration.parentEmail}</TableCell>
                     </TableRow>

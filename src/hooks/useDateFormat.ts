@@ -13,7 +13,7 @@ export const useDateFormat = () => {
   const formatDate = useMemo(() => {
     return (date: Date | number | string, formatStr: string): string => {
       if (!date) return "";
-      const dateObj = typeof date === "string" ? new Date(date) : date;
+      const dateObj = typeof date === "string" ? new Date(date) : date instanceof Date ? date : new Date(date);
       if (isNaN(dateObj.getTime())) return "";
       return dateFnsFormat(dateObj, formatStr, { locale });
     };

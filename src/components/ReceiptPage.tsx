@@ -163,6 +163,7 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
   const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [statusFilter, setStatusFilter] = useState("all")
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -305,7 +306,7 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
   }
 
   const selectAllFiltered = () => {
-    const newSelected = new Set()
+    const newSelected = new Set<string>()
     filteredReceipts.forEach(receipt => {
       newSelected.add(receipt.id)
     })
@@ -606,7 +607,7 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                         <Calendar
                           mode="single"
                           selected={dateFrom || undefined}
-                          onSelect={setDateFrom}
+                          onSelect={(date) => setDateFrom(date ?? null)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -623,7 +624,7 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                         <Calendar
                           mode="single"
                           selected={dateTo || undefined}
-                          onSelect={setDateTo}
+                          onSelect={(date) => setDateTo(date ?? null)}
                           initialFocus
                         />
                       </PopoverContent>

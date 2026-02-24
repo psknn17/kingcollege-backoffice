@@ -444,8 +444,8 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
               <Label className="text-sm">{t("waiveFee.minTerms1stChild")}</Label>
               <Input
                 type="number"
-                value={waiverSettings.minimumYears}
-                onChange={(e) => updateWaiverSettings({ minimumYears: parseInt(e.target.value) || 3 })}
+                value={waiverSettings.minimumTerms}
+                onChange={(e) => updateWaiverSettings({ minimumTerms: parseInt(e.target.value) || 3 })}
                 disabled={!waiverSettings.enabled}
                 min={1}
               />
@@ -495,7 +495,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                  <span>{waiverSettings.firstChildImmediate ? t("waiveFee.firstChildImmediate") : t("waiveFee.firstChildAfterTerms").replace("{terms}", String(waiverSettings.minimumYears))}</span>
+                  <span>{waiverSettings.firstChildImmediate ? t("waiveFee.firstChildImmediate") : t("waiveFee.firstChildAfterTerms").replace("{terms}", String(waiverSettings.minimumTerms))}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>

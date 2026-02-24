@@ -322,7 +322,7 @@ export function EmailHistory() {
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="range"
-                  selected={dateRange}
+                  selected={dateRange.from ? (dateRange as { from: Date; to?: Date }) : undefined}
                   onSelect={(range) => setDateRange(range || {})}
                   numberOfMonths={2}
                   initialFocus

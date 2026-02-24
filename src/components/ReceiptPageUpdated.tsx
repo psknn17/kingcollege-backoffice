@@ -67,6 +67,7 @@ interface Receipt {
   chequeNo?: string
   chequeDate?: Date
   collectorName?: string
+  familyCode?: string
 }
 
 interface CreditNote {
@@ -82,6 +83,7 @@ interface CreditNote {
   academicYear: string
   term: string
   status: "issued" | "cancelled" | "pending"
+  familyCode?: string
 }
 
 // Function to load receipts from localStorage based on category
@@ -123,18 +125,19 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
       }
 
       // Find matching invoice to get parent info
-      const invoiceNumber = r.invoices?.[0]?.invoiceNo || ""
-      const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === invoiceNumber)
+      const invoiceNumber = (r.invoices?.[0]?.invoiceNo || "").trim()
+      const matchingInvoice = invoices.find((inv: any) => (inv.invoiceNumber || "").trim().toLowerCase() === invoiceNumber.toLowerCase())
       const parentName = matchingInvoice?.parentName || r.clientName || ""
       const studentName = matchingInvoice?.studentName || r.contactName || r.clientName
       const address = matchingInvoice?.address || ""
+      const familyCode = matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || r.familyCode || ""
 
       return {
         id: r.id,
         receiptNumber: r.receiptNo,
         invoiceNumber: invoiceNumber,
         studentName: studentName,
-        studentId: r.clientNo || "",
+        studentId: matchingInvoice?.studentId || r.clientNo || "",
         studentGrade: r.yearGroup || "",
         contactName: parentName,
         address: address,
@@ -148,7 +151,8 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         academicYear: academicYear,
         term: term,
         downloadCount: 0,
-        collectorName: "System"
+        collectorName: "System",
+        familyCode: familyCode
       }
     })
   } catch (error) {
@@ -232,18 +236,39 @@ const CREDIT_NOTES_STORAGE_KEY = "creditNotesRecords"
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
     const stored = localStorage.getItem(CREDIT_NOTES_STORAGE_KEY)
+
+    // Load invoices to get family code
+    const invoicesStored = localStorage.getItem("createdInvoices")
+    const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
+
     if (stored) {
       const parsed = JSON.parse(stored)
-      return parsed.map((cn: any) => ({ ...cn, issueDate: new Date(cn.issueDate) }))
+      return parsed.map((cn: any) => {
+        const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
+        return {
+          ...cn,
+          issueDate: new Date(cn.issueDate),
+          familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || ""
+        }
+      })
     }
-  } catch {}
-  return mockCreditNotes
+  } catch { }
+  return mockCreditNotes.map(cn => {
+    // Also try to find family code for mock data if possible
+    const invoicesStored = localStorage.getItem("createdInvoices")
+    const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
+    const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
+    return {
+      ...cn,
+      familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || ""
+    }
+  })
 }
 
 const saveCreditNotesToStorage = (notes: CreditNote[]) => {
   try {
     localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(notes))
-  } catch {}
+  } catch { }
 }
 
 interface ReceiptPageProps {
@@ -499,24 +524,58 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return
     }
 
-    const mapPaymentMethod = (method: string) => {
-      const m = (method || "").toLowerCase()
-      if (m.includes("bank") || m.includes("transfer") || m.includes("edc") || m.includes("tran")) return "Bank"
-      if (m.includes("credit") || m.includes("card") || m.includes("pos")) return "POS"
-      if (m.includes("qr") || m.includes("prompt")) return "POS"
-      if (m.includes("cash")) return "Cash"
+    const mapPaymentMethod = (method: string): string => {
+      if (!method) return ""
+      const m = method.toLowerCase()
+      if (m.includes("bank transfer") || m === "bank") return "Bank"
+      if (m.startsWith("edc") || m.includes("pos") || m.includes("qr") || m.includes("credit card")) return "POS (QR/CC)"
       if (m.includes("cheque") || m.includes("check")) return "Cheque"
-      return method || "Bank"
+      if (m.includes("cash")) return "Cash"
+      return method
     }
 
-    const mapPaymentOption = (method: string) => {
-      const m = (method || "").toLowerCase()
-      if (m.includes("transfer") || m.includes("bank") || m.includes("edc")) return "Transfer"
-      if (m.includes("credit") || m.includes("card")) return "Credit Card"
-      if (m.includes("qr") || m.includes("prompt")) return "QR"
-      if (m.includes("cash")) return "Cash"
+    const mapPaymentOption = (method: string): string => {
+      if (!method) return ""
+      const m = method.toLowerCase()
+      if (m.includes("transfer") || m.includes("bank")) return "Transfer"
+      if (m.startsWith("edc") || m.includes("credit card")) return "Credit Card"
       if (m.includes("cheque") || m.includes("check")) return "Cheque"
-      return "Transfer"
+      if (m.includes("cash")) return "Cash"
+      return method
+    }
+
+    // Load bank accounts to get Receive Account no.
+    const bankAccountsStored = localStorage.getItem("kingscollege_backoffice_bankAccounts")
+    const bankAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
+
+    const getReceiveAccountNo = (paymentMethod: string): string => {
+      if (!paymentMethod) return ""
+      const m = paymentMethod.toLowerCase()
+      let matchedAccount: any = null
+
+      if (m.startsWith("edc")) {
+        // "EDC - BankName (accountNumber)" — match by bank name and account number
+        const edcMatch = paymentMethod.match(/EDC\s*-\s*(.+?)\s*\((.+?)\)/)
+        if (edcMatch) {
+          const [, bankName, accountNumber] = edcMatch
+          matchedAccount = bankAccounts.find((acc: any) =>
+            acc.paymentSource === "EDC" &&
+            acc.bankName === bankName.trim() &&
+            acc.accountNumber === accountNumber.trim() &&
+            acc.isActive
+          )
+        }
+        // Fallback: any active EDC account
+        if (!matchedAccount) {
+          matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "EDC" && acc.isActive)
+        }
+      } else if (m.includes("bank transfer") || m.includes("bank")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Bank Transfer" && acc.isActive)
+      } else if (m.includes("cheque")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Cashier's cheque" && acc.isActive)
+      }
+
+      return matchedAccount?.glAccount || matchedAccount?.accountNumber || ""
     }
 
     const wb = XLSX.utils.book_new()
@@ -525,22 +584,22 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const titleRow = ["Interface File - Sales Receipt for school fees"]
     const headerRow = [
       "Receipt no.", "Customer no.", "Type", "RV no. series",
-      "Date", "Payment method", "Payment option", "Sell-to-customer No.",
+      "Receive date", "Payment method", "Payment option", "Sell-to-customer No.",
       "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
     ]
 
     const dataRows = filteredReceipts.map(r => [
       r.receiptNumber,
-      r.studentId,
+      r.familyCode || r.studentId, // Customer no. (Family Code)
       "CASHRCPT",
       "AR-RV",
       format(r.transactionDate, "dd/MM/yyyy"),
       mapPaymentMethod(r.paymentMethod),
       mapPaymentOption(r.paymentMethod),
-      r.studentId,
-      "",
+      r.studentId, // Sell-to-customer No. (Student ID)
+      getReceiveAccountNo(r.paymentMethod),
       r.studentGrade,
-      formatAcademicYear(r.academicYear),
+      (r.academicYear || "").replace(/-/g, "/"),
       r.invoiceNumber,
       r.amount
     ])
@@ -1440,7 +1499,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <TableCell align="left">
                         <div>
                           <div className="font-medium">{receipt.studentName}</div>
-                          <div className="text-sm text-muted-foreground">{receipt.studentId}</div>
+                          <div className="text-sm text-muted-foreground">{receipt.familyCode || receipt.studentId}</div>
                         </div>
                       </TableCell>
                       {category !== "external" && (
@@ -1456,7 +1515,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         </>
                       )}
                       {/* Amount - right aligned */}
-                      <TableCell align="right">₿{receipt.amount.toLocaleString()}</TableCell>
+                      <TableCell align="right">฿{receipt.amount.toLocaleString()}</TableCell>
                       {/* Payment Method - left aligned */}
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - left aligned */}
@@ -1593,8 +1652,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         {/* Left Column - Student Info */}
                         <div className="space-y-1">
                           <div className="flex">
-                            <span className="w-28">Student ID no.</span>
-                            <span>{viewingReceipt.studentId}</span>
+                            <span className="w-28">Family Code</span>
+                            <span>{viewingReceipt.familyCode || viewingReceipt.studentId}</span>
                           </div>
                           <div className="flex">
                             <span className="w-28">Student name</span>
@@ -2107,7 +2166,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <TableCell align="left">
                           <div>
                             <div className="font-medium">{creditNote.studentName}</div>
-                            <div className="text-sm text-muted-foreground">{creditNote.studentId}</div>
+                            <div className="text-sm text-muted-foreground">{creditNote.familyCode || creditNote.studentId}</div>
                           </div>
                         </TableCell>
                         {/* Grade - center aligned */}
@@ -2262,8 +2321,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           <p className="text-base font-semibold">{viewingCreditNote.studentName}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Student ID</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.studentId}</p>
+                          <p className="text-sm text-muted-foreground mb-2">Family Code</p>
+                          <p className="text-base font-semibold">{viewingCreditNote.familyCode || viewingCreditNote.studentId}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground mb-2">Year Group</p>
@@ -2388,9 +2447,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Student ID</Label>
+                  <Label>Family Code</Label>
                   <Input
-                    placeholder="KC2024001"
+                    placeholder="FAM001"
                     value={creditNoteForm.studentId}
                     onChange={(e) => setCreditNoteForm({ ...creditNoteForm, studentId: e.target.value })}
                   />
@@ -2514,12 +2573,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       }}>
         <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
           <div className="p-6 pb-0">
-          <DialogHeader>
-            <DialogTitle>Import Credit Notes</DialogTitle>
-            <DialogDescription>
-              Upload an Excel file to import credit notes. Download the template for the correct format.
-            </DialogDescription>
-          </DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Import Credit Notes</DialogTitle>
+              <DialogDescription>
+                Upload an Excel file to import credit notes. Download the template for the correct format.
+              </DialogDescription>
+            </DialogHeader>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">

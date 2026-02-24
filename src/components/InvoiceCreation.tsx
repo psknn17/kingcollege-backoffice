@@ -25,7 +25,7 @@ import { Calendar as CalendarComponent } from "./ui/calendar"
 import { Search, Plus, CheckCircle, Trash2, X, Upload, Users, User, FileSpreadsheet, FileText, Bookmark, GraduationCap, Zap, MapPin, Calendar, Clock, Eye, Mail, Package, Save, CreditCard, AlertCircle, Pencil, ArrowLeft, RefreshCw, Download } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
-import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, formatCurrency, getAcademicYear, peekNextInvoiceNumber } from "@/lib/invoiceUtils"
+import { BILL_PAYMENT, INVOICE_NOTES, numberToWords, getAcademicYear, peekNextInvoiceNumber, generateNextInvoiceNumber } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
@@ -41,6 +41,8 @@ interface PreCreatedItem {
   category: string
   isActive: boolean
   applicableGrades: string[]
+  itemCode?: string
+  nominalCode?: string
 }
 
 interface ItemTemplate {
@@ -1379,7 +1381,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const gradeLabel = getGradeLabel(student.gradeLevel)
 
       // Get room/section from student if available, or leave empty for "All Rooms"
-      const studentRoom = student.section || student.room || ""
+      const studentRoom = (student as any).section || (student as any).room || ""
 
       // For simplified views (Trip/Activity, Exam, School Bus), don't calculate discounts or fee waivers
       if (isSimplifiedView) {
@@ -1953,13 +1955,14 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 return
               }
 
-              const tuitionItem = {
+              const tuitionItem: PreCreatedItem = {
                 id: `tuition-${gradeId}-${selectedTerm}`,
                 name: `${termName} Tuition Fee - ${selectedGrade}`,
                 description: `${termName} tuition payment for ${selectedGrade}`,
                 category: "Tuition",
-                quantity: 1,
                 amount: termAmount,
+                isActive: true,
+                applicableGrades: [],
                 itemCode: itemCode || undefined,
                 nominalCode: nominalCode || undefined
               }
@@ -2148,8 +2151,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   name: `${termName} Tuition Fee - ${selectedGrade}`,
                   description: `${termName} tuition payment for ${selectedGrade}`,
                   category: "Tuition",
-                  quantity: 1,
                   amount: termAmount,
+                  isActive: true,
+                  applicableGrades: [],
                   itemCode: itemCode || undefined,
                   nominalCode: nominalCode || undefined
                 }])
@@ -2892,7 +2896,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
-        invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+        invoiceType: invoiceType as "student" | "summer" | "external" | "afterschool" | "event" | undefined, // Use the actual invoice type (student/afterschool/event/summer/eca)
         category: category, // Category for filtering by menu type
         // Event/Trip/Activity name for afterschool/event/summer/eca/exam invoices
         eventName: (invoiceType === "exam" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
@@ -2902,7 +2906,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
         // Excel export fields
         familyCode: invoiceStudent.originalStudent?.familyCode || '',
-        adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
+        adultIdNo: invoiceStudent.originalStudent?.parents?.find((p: any) => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
         accountCode: invoiceAccountCode,
         documentType: 'SI', // Sales Invoice
         academicYear: formatAcademicYearForExcel(selectedAcademicYear || effectiveAcademicYear),
@@ -3084,7 +3088,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
           paymentType: "termly",
           createdAt: now.toISOString(),
-          invoiceType: invoiceType, // Use the actual invoice type (student/afterschool/event/summer/eca)
+          invoiceType: invoiceType as "student" | "summer" | "external" | "afterschool" | "event" | undefined, // Use the actual invoice type (student/afterschool/event/summer/eca)
           category: category, // Category for filtering by menu type
           // Event/Trip/Activity name for afterschool/event/summer/eca/exam invoices
           eventName: (invoiceType === "exam" ? examName : invoiceType === "eca" ? examName : tripName) || undefined,
@@ -3094,7 +3098,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
           // Excel export fields
           familyCode: invoiceStudent.originalStudent?.familyCode || '',
-          adultIdNo: invoiceStudent.originalStudent?.parents?.find(p => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
+          adultIdNo: invoiceStudent.originalStudent?.parents?.find((p: any) => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
           accountCode: invoiceAccountCode,
           documentType: 'SI', // Sales Invoice
           academicYear: formatAcademicYearForExcel(selectedAcademicYear || effectiveAcademicYear),
@@ -3639,7 +3643,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {hasInvalidItems && (
-                                    <AlertCircle className="w-4 h-4 text-orange-500" title={`${missingItemsCount} item(s) not found`} />
+                                    <AlertCircle className="w-4 h-4 text-orange-500" aria-label={`${missingItemsCount} item(s) not found`} />
                                   )}
                                   {isSelected && (
                                     <CheckCircle className="w-5 h-5 text-primary" />
@@ -4596,7 +4600,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </Select>
                   {newStudentFamilyId && (
                     <p className="text-xs text-green-600">
-                      This student will be added as child #{families.find(f => f.id === newStudentFamilyId)?.studentIds.length + 1} and may receive sibling discount.
+                      This student will be added as child #{(families.find(f => f.id === newStudentFamilyId)?.studentIds.length ?? 0) + 1} and may receive sibling discount.
                     </p>
                   )}
                 </div>
@@ -4757,7 +4761,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const finalTotal = subtotal
                   const academicYearPrefix = selectedAcademicYear ? selectedAcademicYear.match(/(\d{4})/)?.[1] : new Date().getFullYear().toString()
                   const invoiceNumber = `${academicYearPrefix}DRAFT-${Date.now()}-MANUAL`
-                  const issueDate = null // Will be set on approval
+                  const issueDate = null as (Date | null) // Will be set on approval
                   const dueDate = paymentDeadline || null
 
                   return (
@@ -5029,7 +5033,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const discountCalc = calculateStudentDiscounts(currentStudent, getTotalAmount(), invoiceType) // Discounts apply only to regular items
                   const academicYearPrefix = selectedAcademicYear ? selectedAcademicYear.match(/(\d{4})/)?.[1] : new Date().getFullYear().toString()
                   const invoiceNumber = `${academicYearPrefix}DRAFT-${Date.now()}-${currentStudent.id.slice(-4)}`
-                  const issueDate = null // Will be set on approval
+                  const issueDate = null as (Date | null) // Will be set on approval
                   const dueDate = paymentDeadline || null
 
                   // Security Deposit Fee Waiver (for new students who are eligible for fee waiver)

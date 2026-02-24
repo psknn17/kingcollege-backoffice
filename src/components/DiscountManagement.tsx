@@ -80,6 +80,17 @@ interface DiscountCode {
 }
 
 
+interface StudentGroup {
+  id: string
+  name: string
+  students: Student[]
+  discountType: string
+  discountPercentage: number
+  fixedAmount: number
+  departments: string[]
+  isActive: boolean
+}
+
 // Helper function to convert students from context to local format
 const convertStudentsToDiscountFormat = (contextStudents: any[]): Student[] => {
   return contextStudents.map(student => {
@@ -218,7 +229,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   // Form states for discount codes
   const [formData, setFormData] = useState({
     code: "",
-    type: "percentage" as const,
+    type: "percentage" as 'percentage' | 'fixed',
     value: 0,
     description: "",
     startDate: undefined as Date | undefined,
@@ -227,7 +238,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     targetTypes: [] as string[],
     minAmount: 0,
     category: "",
-    period: "general" as const,
+    period: "general" as 'general' | 'yearly' | 'termly',
     selectedStudents: [] as Student[],
     applicableTerms: [] as string[]
   })
@@ -291,7 +302,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   }
 
   // Student Groups Management - Load from localStorage or use defaults
-  const [studentGroups, setStudentGroups] = useState(() => {
+  const [studentGroups, setStudentGroups] = useState<StudentGroup[]>(() => {
     const saved = loadStudentGroupsFromStorage(STORAGE_KEY)
     if (saved) return saved
     return [] // Will be populated in useEffect when students are available
@@ -1740,7 +1751,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               if (file && file.type === 'text/csv') {
                                 const fakeEvent = {
                                   target: { files: [file] }
-                                } as React.ChangeEvent<HTMLInputElement>
+                                } as unknown as React.ChangeEvent<HTMLInputElement>
                                 handleFileUpload(fakeEvent)
                               } else {
                                 toast.error("Please upload a CSV file")

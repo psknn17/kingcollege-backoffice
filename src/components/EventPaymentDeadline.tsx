@@ -436,7 +436,6 @@ export function EventPaymentDeadline() {
                         <Switch
                           checked={deadline.isActive}
                           onCheckedChange={() => toggleActiveStatus(deadline.id)}
-                          size="sm"
                           disabled={!userCanEdit}
                         />
                         <span className="text-xs text-muted-foreground">

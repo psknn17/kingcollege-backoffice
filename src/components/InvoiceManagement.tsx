@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog"
 import { Separator } from "./ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
@@ -89,6 +90,7 @@ interface Invoice {
   academicYear?: string
   // Import fields
   adultIdNo?: string
+  receiveAccountNo?: string
   // Discount breakdown
   discounts?: Array<{ name: string; amount: number; percentage?: number }>
 }
@@ -215,9 +217,9 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           studentGrade: inv.studentGrade || "-",
           parentName: inv.parentName || inv.recipientName || "Parent",
           parentEmail: inv.parentEmail || "",
-          totalAmount: inv.subtotal ?? 0,
-          discountAmount: inv.totalDiscount ?? 0,
-          finalAmount: inv.netAmount ?? inv.subtotal ?? 0,
+          totalAmount: inv.subtotal ?? inv.totalAmount ?? 0,
+          discountAmount: inv.totalDiscount ?? inv.discountAmount ?? 0,
+          finalAmount: inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? inv.totalAmount ?? 0,
           status: (inv.status === "pending" ? "draft" : inv.status) as "draft" | "sent" | "paid" | "overdue" | "cancelled",
           approvalStatus,
           issueDate: issueDate && !isNaN(issueDate.getTime()) ? issueDate : null,
@@ -255,7 +257,11 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           rejectedReason: inv.rejectedReason,
           rejectedBy: inv.rejectedBy,
           // Discount breakdown
-          discounts: inv.discounts || []
+          discounts: inv.discounts || [],
+          // Family/parent info
+          adultIdNo: inv.adultIdNo || "",
+          // Bank account GL code (stored at mark-as-paid time)
+          receiveAccountNo: inv.receiveAccountNo || ""
         }
       })
     }
@@ -451,6 +457,7 @@ export function InvoiceManagement({
   const [isImportInterfaceOpen, setIsImportInterfaceOpen] = useState(false)
   const [importInterfaceRows, setImportInterfaceRows] = useState<Record<string, string>[]>([])
   const [importInterfaceError, setImportInterfaceError] = useState("")
+  const [showImportDuplicateConfirm, setShowImportDuplicateConfirm] = useState(false)
   const [sortKey, setSortKey] = usePersistedState<
     | "invoiceNumber"
     | "studentName"
@@ -463,8 +470,8 @@ export function InvoiceManagement({
     | "issueDate"
     | "dueDate"
     | null
-  >("invoice-management:sortKey", null)
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("invoice-management:sortDirection", "asc")
+  >("invoice-management:sortKey", "invoiceNumber")
+  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("invoice-management:sortDirection", "desc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = usePersistedState("invoice-management:page", 1)
@@ -604,6 +611,7 @@ export function InvoiceManagement({
   const [isSavingPayment, setIsSavingPayment] = useState(false)
   const [edcBank, setEdcBank] = useState("")
   const [edcAccountNumber, setEdcAccountNumber] = useState("")
+  const [selectedGlAccount, setSelectedGlAccount] = useState("")
   const [bankAccounts] = usePersistedState<any[]>("bankAccounts", [])
   const [isSendEmailConfirmOpen, setIsSendEmailConfirmOpen] = useState(false)
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
@@ -757,7 +765,7 @@ export function InvoiceManagement({
   // Pagination logic
   const totalPages = Math.ceil(filteredInvoices.length / pageSize)
   const sortedInvoices = useMemo(() => {
-    if (!sortKey) return filteredInvoices
+    if (!sortKey) return [...filteredInvoices].reverse()
     const sorted = [...filteredInvoices]
     const direction = sortDirection === "asc" ? 1 : -1
     const invoiceStatusOrder: Record<ApprovalStatus, number> = { wait: 0, approved: 1, rejected: 2 }
@@ -2464,6 +2472,159 @@ export function InvoiceManagement({
     toast.success(`Exported ${rows.length} line items from ${filteredInvoices.length} invoice${filteredInvoices.length > 1 ? 's' : ''}`)
   }
 
+  const downloadPaymentReceiptInterface = () => {
+    const headers = [
+      "Receipt no.",
+      "Customer no.",
+      "Type",
+      "RV no. series",
+      "Receive date",
+      "Payment method",
+      "Payment option",
+      "Sell-to-customer No.",
+      "Receive Account no.",
+      "Year group",
+      "School year",
+      "Invoice no.",
+      "Amount"
+    ]
+
+    // Read directly from localStorage to avoid stale React state
+    const rawInvoicesFromStorage: any[] = (() => {
+      try {
+        const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+        return stored ? JSON.parse(stored) : []
+      } catch { return [] }
+    })()
+
+    // Filter paid invoices directly from raw localStorage data
+    const paidInvoices = rawInvoicesFromStorage.filter((inv: any) =>
+      inv.status === "paid" || !!inv.paidDate
+    )
+    if (paidInvoices.length === 0) {
+      toast.error("No paid invoices to export")
+      return
+    }
+
+    // Load all receipt records from localStorage to look up receiptNo
+    const receiptStorageKeys = [
+      "receiptRecords_tuition", "receiptRecords_eca", "receiptRecords_trip",
+      "receiptRecords_event", "receiptRecords_external", "receiptRecords_summer"
+    ]
+    const allReceipts: any[] = []
+    receiptStorageKeys.forEach(key => {
+      try {
+        const stored = localStorage.getItem(key)
+        if (stored) allReceipts.push(...JSON.parse(stored))
+      } catch { /* ignore */ }
+    })
+
+    // Use bankAccounts from state, fallback to localStorage if empty
+    // Note: usePersistedState stores with prefix "kingscollege_backoffice_"
+    let allBankAccounts: any[] = bankAccounts || []
+    if (!allBankAccounts.length) {
+      try {
+        const stored = localStorage.getItem("kingscollege_backoffice_bankAccounts")
+        if (stored) allBankAccounts = JSON.parse(stored)
+      } catch { /* ignore */ }
+    }
+
+    const mapPaymentMethod = (method: string): string => {
+      if (!method) return ""
+      const m = method.toLowerCase()
+      if (m.includes("bank transfer") || m === "bank") return "Bank"
+      if (m.startsWith("edc") || m.includes("pos") || m.includes("qr") || m.includes("credit card")) return "POS (QR/CC)"
+      if (m.includes("cheque") || m.includes("check")) return "Cheque"
+      if (m.includes("cash")) return "Cash"
+      return method
+    }
+
+    const mapPaymentOption = (method: string): string => {
+      if (!method) return ""
+      const m = method.toLowerCase()
+      if (m.includes("bank transfer")) return "Transfer"
+      if (m.startsWith("edc") || m.includes("credit card")) return "Credit Card"
+      if (m.includes("cheque") || m.includes("check")) return "Cheque"
+      if (m.includes("cash")) return "Cash"
+      return method
+    }
+
+    // Get GL account from BankSettings by matching payment method
+    const getReceiveAccountNo = (paymentMethod: string): string => {
+      if (!paymentMethod) return ""
+      const m = paymentMethod.toLowerCase()
+      let matchedAccount: any = null
+
+      if (m.startsWith("edc")) {
+        // "EDC - BankName (accountNumber)" — match by bank name and account number
+        const edcMatch = paymentMethod.match(/EDC\s*-\s*(.+?)\s*\((.+?)\)/)
+        if (edcMatch) {
+          const [, bankName, accountNumber] = edcMatch
+          matchedAccount = allBankAccounts.find(acc =>
+            acc.paymentSource === "EDC" &&
+            acc.bankName === bankName.trim() &&
+            acc.accountNumber === accountNumber.trim() &&
+            acc.isActive
+          )
+        }
+        // Fallback: any active EDC account
+        if (!matchedAccount) {
+          matchedAccount = allBankAccounts.find(acc => acc.paymentSource === "EDC" && acc.isActive)
+        }
+      } else if (m.includes("bank transfer")) {
+        matchedAccount = allBankAccounts.find(acc => acc.paymentSource === "Bank Transfer" && acc.isActive)
+      } else if (m.includes("cheque")) {
+        matchedAccount = allBankAccounts.find(acc => acc.paymentSource === "Cashier's cheque" && acc.isActive)
+      }
+
+      return matchedAccount?.glAccount || matchedAccount?.accountNumber || ""
+    }
+
+    const rows: (string | number)[][] = []
+
+    paidInvoices.forEach((inv: any) => {
+      const studentIdStr = String(inv.studentId || "").trim()
+
+      // adultIdNo comes directly from raw localStorage — no state fallback needed
+      const adultIDNo = String(inv.adultIdNo || "").trim()
+
+      // Find receipt record for this invoice
+      const receiptRecord = allReceipts.find((r: any) =>
+        r.invoices?.some((ri: any) => ri.invoiceNo === inv.invoiceNumber || ri.id === inv.id)
+      )
+      const receiptNo = receiptRecord?.receiptNo || ""
+
+      const receiveDate = inv.paidDate ? format(new Date(inv.paidDate), "dd/MM/yyyy") : ""
+      const paymentMethod = mapPaymentMethod(inv.paymentMethod || "")
+      const paymentOption = mapPaymentOption(inv.paymentMethod || "")
+      const schoolYear = (inv.academicYear || "").replace(/-/g, "/")
+      const yearGroup = inv.studentGrade || ""
+
+      // Get Receive Account no.: use stored value first, then lookup from BankSettings
+      const receiveAccountNo = inv.receiveAccountNo || getReceiveAccountNo(inv.paymentMethod || "")
+
+      rows.push([
+        receiptNo,
+        adultIDNo,
+        "CASHRCPT",
+        "AR-RV",
+        receiveDate,
+        paymentMethod,
+        paymentOption,
+        studentIdStr,
+        receiveAccountNo,
+        yearGroup,
+        schoolYear,
+        inv.invoiceNumber || "",
+        inv.finalAmount || 0
+      ])
+    })
+
+    const timestamp = format(new Date(), "yyyyMMdd_HHmmss")
+    downloadAsXlsx(headers, rows, `payment_receipt_interface_${timestamp}`)
+    toast.success(`Exported ${rows.length} payment receipt${rows.length !== 1 ? 's' : ''}`)
+  }
+
   const downloadInvoice = (invoiceId: string) => {
     downloadInvoiceData(invoiceId)
   }
@@ -2794,15 +2955,7 @@ export function InvoiceManagement({
       return
     }
     if (paymentMethod === "edc" && !edcBank) {
-      toast.error("Please select a bank for EDC payment")
-      return
-    }
-    if (paymentMethod === "edc" && !edcAccountNumber.trim()) {
-      toast.error("Please enter account number for EDC payment")
-      return
-    }
-    if (paymentFiles.length === 0) {
-      toast.error("Please upload at least 1 proof image (JPG/PNG)")
+      toast.error("Please select a bank account for EDC payment")
       return
     }
 
@@ -2823,6 +2976,7 @@ export function InvoiceManagement({
             status: isPartial ? inv.status : ("paid" as const),
             paidDate: isPartial ? inv.paidDate : paidAt,
             paymentMethod: paymentMethodDetail,
+            receiveAccountNo: selectedGlAccount,
             paymentProofs: proofs
           }
           : inv
@@ -2841,6 +2995,7 @@ export function InvoiceManagement({
                 status: isPartial ? inv.status : "paid",
                 paidDate: isPartial ? inv.paidDate : paidAt.toISOString(),
                 paymentMethod: paymentMethodDetail,
+                receiveAccountNo: selectedGlAccount,
                 paymentProofs: proofs
               }
               : inv
@@ -2917,11 +3072,14 @@ export function InvoiceManagement({
           const storedReceipts = localStorage.getItem(receiptStorageKey)
           const receipts = storedReceipts ? JSON.parse(storedReceipts) : []
 
-          // Generate receipt number
-          const now = new Date()
-          const yearMonth = format(now, "yyMM")
-          const nextNumber = receipts.length + 1
-          const receiptNo = `${receiptPrefix}-${yearMonth}-${String(nextNumber).padStart(4, "0")}`
+          // Generate receipt number: R{YYYY}-{NNNNN} using global running number per academic year
+          const academicYearStr = markPaidInvoice.academicYear || ""
+          const acYearStart = academicYearStr.match(/(\d{4})/)?.[1] || new Date().getFullYear().toString()
+          const runningKey = `receipt_running_no_${acYearStart}`
+          const currentRunning = parseInt(localStorage.getItem(runningKey) || "0", 10)
+          const nextRunning = currentRunning + 1
+          localStorage.setItem(runningKey, nextRunning.toString())
+          const receiptNo = `R${acYearStart}-${String(nextRunning).padStart(5, "0")}`
 
           // Create receipt record
           const receiptRecord = {
@@ -3166,7 +3324,7 @@ export function InvoiceManagement({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={downloadInterfaceFile}>
                 <Download className="w-4 h-4 mr-2" />
-                Download Interface File
+                Download Invoice Interface
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={downloadInterfaceTemplate}>
@@ -3445,7 +3603,7 @@ export function InvoiceManagement({
 
                 {/* Status */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">E-mail Status</label>
+                  <label className="text-sm font-medium text-muted-foreground">Email Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder={t("invoice.allStatus")} />
@@ -3567,7 +3725,7 @@ export function InvoiceManagement({
                     {/* Approval Status - CENTER */}
                     <TableHead align="center">{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
                     {/* Email Status - CENTER */}
-                    <TableHead align="center">{renderSortHeader("E-mail Status", "emailStatus")}</TableHead>
+                    <TableHead align="center">{renderSortHeader("Email Status", "emailStatus")}</TableHead>
                     {/* Invoice Status - CENTER */}
                     <TableHead align="center">{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
                     {/* Issue Date - LEFT */}
@@ -3865,9 +4023,9 @@ export function InvoiceManagement({
                   </Select>
                 </div>
 
-                {/* E-mail Status */}
+                {/* Email Status */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">E-mail Status</label>
+                  <label className="text-sm font-medium text-muted-foreground">Email Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder={t("invoice.allStatus")} />
@@ -4523,7 +4681,7 @@ export function InvoiceManagement({
                       if (!isNonDiscountableInvoice && student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
                         const feeWaiverEligibility = checkFeePrivilegeEligibility(
                           student,
-                          student.academicYear || selectedInvoice.academicYear,
+                          student.academicYear || selectedInvoice.academicYear || "",
                           student.enrollmentTerm || "term1"
                         )
                         if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
@@ -5503,7 +5661,7 @@ export function InvoiceManagement({
           <DialogHeader>
             <DialogTitle>Mark Invoice as Paid</DialogTitle>
             <DialogDescription>
-              Upload payment proof (JPG/PNG) and select a payment method.
+              Select a payment method. Optionally upload payment proof (JPG/PNG).
             </DialogDescription>
           </DialogHeader>
 
@@ -5533,6 +5691,7 @@ export function InvoiceManagement({
                       if (account) {
                         setEdcBank(account.bankName);
                         setEdcAccountNumber(account.accountNumber);
+                        setSelectedGlAccount(account.glAccount || account.accountNumber || "");
                       }
                     }}
                   >
@@ -5557,31 +5716,11 @@ export function InvoiceManagement({
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Bank Name</label>
-                    <Input
-                      value={edcBank}
-                      onChange={(e) => setEdcBank(e.target.value)}
-                      placeholder="Bank name"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Account Number</label>
-                    <Input
-                      value={edcAccountNumber}
-                      onChange={(e) => setEdcAccountNumber(e.target.value)}
-                      placeholder="Account number"
-                      className="h-9"
-                    />
-                  </div>
-                </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Proof (JPG/PNG)</label>
+              <label className="text-sm font-medium">Payment Proof (JPG/PNG) <span className="text-muted-foreground font-normal">- optional</span></label>
               <div className="flex items-center gap-3">
                 <input
                   type="file"
@@ -5782,7 +5921,7 @@ export function InvoiceManagement({
                   if (student) {
                     const feeWaiverEligibility = checkFeePrivilegeEligibility(
                       student,
-                      student.academicYear || selectedInvoice.academicYear,
+                      student.academicYear || selectedInvoice.academicYear || "",
                       student.enrollmentTerm || "term1"
                     )
                     if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
@@ -6438,7 +6577,7 @@ export function InvoiceManagement({
           <DialogHeader className="px-8 pt-5 pb-4 border-b bg-white">
             <DialogTitle className="flex items-center gap-2 text-base font-semibold">
               <Mail className="w-4 h-4 text-foreground" />
-              E-mail Status Details
+              Email Status Details
             </DialogTitle>
           </DialogHeader>
 
@@ -6721,6 +6860,24 @@ export function InvoiceManagement({
       </Dialog>
 
       {/* Import Interface File Dialog */}
+      {/* Duplicate import confirmation dialog */}
+      <AlertDialog open={showImportDuplicateConfirm} onOpenChange={setShowImportDuplicateConfirm}>
+        <AlertDialogContent style={{ maxWidth: "420px" }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>พบ Invoice ซ้ำ</AlertDialogTitle>
+            <AlertDialogDescription>
+              มี Document No. บางรายการที่มีอยู่ในระบบแล้ว ต้องการสร้าง Invoice ซ้ำหรือไม่?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowImportDuplicateConfirm(false); performImportInterface() }}>
+              สร้างต่อ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={isImportInterfaceOpen} onOpenChange={setIsImportInterfaceOpen}>
         <DialogContent className="p-6 bg-white" style={{ width: "95vw", maxWidth: "1400px" }}>
           <DialogHeader>
@@ -6761,13 +6918,27 @@ export function InvoiceManagement({
                     }).map(r => r["DocumentNo"]))
                     const totalDocNos = new Set(importInterfaceRows.map(r => r["DocumentNo"]))
                     const skippedCount = totalDocNos.size - validDocNos.size
+                    const duplicateDocNos = [...new Set(importInterfaceRows.map(r => r["DocumentNo"]))].filter(docNo =>
+                      docNo && invoices.some(inv => inv.invoiceNumber === docNo)
+                    )
                     return (
-                      <p className="text-sm text-muted-foreground">
-                        พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้าง <strong>{validDocNos.size}</strong> invoice
-                        {skippedCount > 0 && (
-                          <span className="text-red-600 ml-2">(ข้ามไป {skippedCount} รายการ — ข้อมูลไม่ครบ)</span>
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          พบข้อมูล <strong>{importInterfaceRows.length}</strong> แถว จะสร้าง <strong>{validDocNos.size}</strong> invoice
+                          {skippedCount > 0 && (
+                            <span className="text-red-600 ml-2">(ข้ามไป {skippedCount} รายการ — ข้อมูลไม่ครบ)</span>
+                          )}
+                        </p>
+                        {duplicateDocNos.length > 0 && (
+                          <div className="flex items-start gap-2 rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+                            <span className="mt-0.5 text-base">⚠️</span>
+                            <div>
+                              <p className="font-medium">พบ Invoice ซ้ำ {duplicateDocNos.length} รายการ</p>
+                              <p className="text-xs mt-0.5 text-yellow-700">Document No. เหล่านี้มีอยู่ในระบบแล้ว: <span className="font-mono">{duplicateDocNos.join(", ")}</span></p>
+                            </div>
+                          </div>
                         )}
-                      </p>
+                      </>
                     )
                   })()}
                   <div className="border rounded-lg overflow-auto max-h-96">
@@ -6846,8 +7017,14 @@ export function InvoiceManagement({
                 })?.itemCode
                 return !!s && !!ic
               }).map(r => r["DocumentNo"])).size
+              const hasDuplicates = [...new Set(importInterfaceRows.map(r => r["DocumentNo"]))].some(docNo =>
+                docNo && invoices.some(inv => inv.invoiceNumber === docNo)
+              )
               return (
-                <Button onClick={performImportInterface} disabled={validCount === 0}>
+                <Button
+                  onClick={() => hasDuplicates ? setShowImportDuplicateConfirm(true) : performImportInterface()}
+                  disabled={validCount === 0}
+                >
                   <Upload className="w-4 h-4 mr-2" />
                   Import {validCount} Invoice{validCount !== 1 ? "s" : ""}
                 </Button>

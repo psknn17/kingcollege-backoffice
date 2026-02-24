@@ -397,7 +397,7 @@ export function SummerPaymentReports() {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip
-                    formatter={[(value: number) => [`฿${value.toLocaleString()}`, t("common.revenue")]]}
+                    formatter={(value: number) => [`฿${value.toLocaleString()}`, t("common.revenue")]}
                   />
                   <Area 
                     type="monotone" 
@@ -486,8 +486,8 @@ export function SummerPaymentReports() {
                     setSelectedCategory("all")
                     setSelectedStatus("all")
                     setSelectedPaymentMethod("all")
-                    setDateFrom(null)
-                    setDateTo(null)
+                    setDateFrom(undefined)
+                    setDateTo(undefined)
                     toast.success(t("common.filtersCleared"))
                   }} className="h-9">{t("common.clear")}</Button>
                 </div>
@@ -707,7 +707,7 @@ export function SummerPaymentReports() {
                       {/* Payment Channel - text (left aligned) */}
                       <TableCell align="left">{getPaymentMethodLabel(payment.paymentMethod)}</TableCell>
                       {/* Status - badge (center aligned) */}
-                      <TableCell align="center">{getStatusBadge(payment.status)}</TableCell>
+                      <TableCell align="center">{getStatusBadge(payment.status, t)}</TableCell>
                       {/* Transaction ID - text (left aligned) */}
                       <TableCell align="left" className="font-mono text-sm">{payment.transactionId}</TableCell>
                     </TableRow>

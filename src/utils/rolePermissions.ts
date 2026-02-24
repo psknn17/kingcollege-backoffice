@@ -52,7 +52,7 @@ export function canAccessMenuItem(userRole: string, menuItemId: string): boolean
   if (permissions.menuItems.length === 0) return true
 
   // Otherwise check if item is in the allowed list
-  return permissions.menuItems.includes(menuItemId)
+  return (permissions.menuItems as string[]).includes(menuItemId)
 }
 
 export function getAccessibleMenuItems(userRole: string, section: string, items: any[]): any[] {
@@ -68,7 +68,7 @@ export function getAccessibleMenuItems(userRole: string, section: string, items:
   if (permissions.menuItems.length === 0) return items
 
   // Filter items based on allowed menuItems
-  return items.filter(item => permissions.menuItems.includes(item.id))
+  return items.filter(item => (permissions.menuItems as string[]).includes(item.id))
 }
 
 function normalizeRoleName(role: string): string {

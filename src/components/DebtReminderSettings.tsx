@@ -130,7 +130,7 @@ const initialReminders: ReminderConfig[] = [
     subject: "School Bus Payment Reminder",
     emailTitle: "School Bus - Final Payment Notice",
     message: "Dear Parent, This is a reminder that your child's school bus payment is due. Please contact our office immediately if you need assistance with payment arrangements.",
-    invoiceStatuses: ["unpaid", "overdue", "sent"],
+    invoiceStatuses: ["unpaid", "overdue"],
     status: "draft"
   }
 ]

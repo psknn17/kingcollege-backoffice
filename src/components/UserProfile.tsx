@@ -21,8 +21,8 @@ export function UserProfile() {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "user@example.com",
-    phone: user?.phone || "",
-    department: user?.department || "",
+    phone: "",
+    department: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",

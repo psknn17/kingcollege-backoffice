@@ -1789,7 +1789,7 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): Item[] => {
 
       // Filter by allowed categories if applicable
       if (allowedCategories) {
-        finalItems = finalItems.filter(item => allowedCategories.includes(item.category || ""))
+        finalItems = finalItems.filter((item: Item) => allowedCategories.includes(item.category || ""))
       }
 
       return finalItems
@@ -2071,7 +2071,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       name: item.name,
       description: item.description,
       amount: item.amount.toString(),
-      category: item.category,
+      category: item.category || "",
       nominalCode: item.nominalCode || "",
       documentType: item.documentType || "SI",
       applicableGrades: item.applicableGrades
@@ -2145,7 +2145,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       documentType: newItem.documentType || "SI",
       applicableGrades: newItem.applicableGrades,
       isActive: true,
-      invoiceType: editingItem?.invoiceType || invoiceType
+      invoiceType: (editingItem?.invoiceType || invoiceType) as Item["invoiceType"]
     }
 
     if (editingItem) {
@@ -2179,7 +2179,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     // Remove item from all templates that contain it
     const updatedTemplates = templates.map(template => ({
       ...template,
-      items: template.items.filter(item => item.itemId !== itemId)
+      items: template.items.filter(item => item !== itemId)
     }))
     setTemplates(updatedTemplates)
 
@@ -2205,7 +2205,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     // Remove from all templates
     const updatedTemplates = templates.map(template => ({
       ...template,
-      items: template.items.filter(item => !idsToDelete.includes(item.itemId))
+      items: template.items.filter(item => !idsToDelete.includes(item))
     }))
     setTemplates(updatedTemplates)
 
@@ -2500,7 +2500,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       items: selectedItemsForTemplate,
       applicableGrades: applicableGrades,
       isActive: true,
-      invoiceType: editingTemplate?.invoiceType || invoiceType
+      invoiceType: (editingTemplate?.invoiceType || invoiceType) as ItemTemplate["invoiceType"]
     }
 
     if (editingTemplate) {

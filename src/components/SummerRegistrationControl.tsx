@@ -574,7 +574,6 @@ export function SummerRegistrationControl() {
                           <Switch
                             checked={period.isActive}
                             onCheckedChange={() => togglePeriodStatus(period.id)}
-                            size="sm"
                           />
                           <span className="text-xs text-muted-foreground">
                             {period.isActive ? t("common.active") : t("common.inactive")}
@@ -705,7 +704,6 @@ export function SummerRegistrationControl() {
                           <Switch
                             checked={activity.isOpen}
                             onCheckedChange={() => toggleActivityStatus(activity.id)}
-                            size="sm"
                           />
                           <span className="text-xs text-muted-foreground">
                             {activity.isOpen ? t("summer.open") : t("summer.closed")}

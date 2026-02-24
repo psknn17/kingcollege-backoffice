@@ -125,21 +125,20 @@ const SCHOOL_YEARS = ["2024-2025", "2025-2026", "2026-2027"]
 // HELPER FUNCTIONS
 // ========================
 
-const generateReceiptNo = (menuType: string): string => {
-  const prefix = {
-    afterschool: "TRP",
-    event: "EXM",
-    summer: "BUS",
-    tuition: "TUI",
-    eca: "ECA"
-  }[menuType] || "RCP"
+const generateReceiptNo = (_menuType: string): string => {
+  // Determine academic year start year from current date
+  const now = new Date()
+  const month = now.getMonth() + 1 // 1-12
+  const year = now.getFullYear()
+  const acYearStart = month >= 8 ? year : year - 1 // Aug+ = new academic year
 
-  const date = new Date()
-  const year = date.getFullYear().toString().slice(-2)
-  const month = (date.getMonth() + 1).toString().padStart(2, "0")
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
+  // Global running number per academic year
+  const runningKey = `receipt_running_no_${acYearStart}`
+  const current = parseInt(localStorage.getItem(runningKey) || "0", 10)
+  const next = current + 1
+  localStorage.setItem(runningKey, next.toString())
 
-  return `${prefix}-${year}${month}-${random}`
+  return `R${acYearStart}-${String(next).padStart(5, "0")}`
 }
 
 const formatCurrency = (amount: number): string => {
