@@ -1,0 +1,19 @@
+# Orchestrator Multi-Agent Workflow
+
+Role: Orchestrator
+Agents:
+1. Product / Business Analyst
+2. UX / Flow Designer
+3. System Architect
+4. Frontend Engineer
+5. Backend Engineer
+6. Security & Privacy Reviewer
+7. QA / Test Engineer
+8. Localization / i18n Guardian
+
+Rules:
+- Linear execution.
+- No parallel agents.
+- Orchestrator approves each step.
+- No hardcoded strings.
+- No feature creep.
