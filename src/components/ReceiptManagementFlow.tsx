@@ -281,6 +281,9 @@ export function ReceiptManagementFlow({
   // Search and filter state
   const [searchTerm, setSearchTerm] = usePersistedState(`eca-receipts:search`, "")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterYearGroup, setFilterYearGroup] = useState<string>("all")
+  const [filterDateFrom, setFilterDateFrom] = useState<Date | undefined>(undefined)
+  const [filterDateTo, setFilterDateTo] = useState<Date | undefined>(undefined)
 
   // View receipt state
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptRecord | null>(null)
@@ -630,7 +633,13 @@ export function ReceiptManagementFlow({
 
     const matchesFilter = filterStatus === "all" || receipt.status === filterStatus
 
-    return matchesSearch && matchesFilter
+    const matchesYearGroup = filterYearGroup === "all" || receipt.yearGroup === filterYearGroup
+
+    const receiptDate = new Date(receipt.receiptDate)
+    const matchesDateFrom = !filterDateFrom || receiptDate >= filterDateFrom
+    const matchesDateTo = !filterDateTo || receiptDate <= filterDateTo
+
+    return matchesSearch && matchesFilter && matchesYearGroup && matchesDateFrom && matchesDateTo
   })
 
   // ========================
@@ -959,8 +968,8 @@ export function ReceiptManagementFlow({
           {/* Filters */}
           <Card>
             <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
+              <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+                <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by receipt no., client name, or client no."
@@ -969,8 +978,19 @@ export function ReceiptManagementFlow({
                     className="pl-10"
                   />
                 </div>
+                <Select value={filterYearGroup} onValueChange={setFilterYearGroup}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder={t("table.yearGroup")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Year Groups</SelectItem>
+                    {YEAR_GROUPS.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[160px]">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -981,6 +1001,52 @@ export function ReceiptManagementFlow({
                     <SelectItem value="downloaded">{t("receiptStatus.downloaded")}</SelectItem>
                   </SelectContent>
                 </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {filterDateFrom ? format(filterDateFrom, "dd/MM/yyyy") : "Date from"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={filterDateFrom}
+                      onSelect={setFilterDateFrom}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {filterDateTo ? format(filterDateTo, "dd/MM/yyyy") : "Date to"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={filterDateTo}
+                      onSelect={setFilterDateTo}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {(filterYearGroup !== "all" || filterStatus !== "all" || filterDateFrom || filterDateTo) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFilterYearGroup("all")
+                      setFilterStatus("all")
+                      setFilterDateFrom(undefined)
+                      setFilterDateTo(undefined)
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

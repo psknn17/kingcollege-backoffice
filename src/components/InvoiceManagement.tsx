@@ -323,7 +323,7 @@ const mockTemplates: InvoiceTemplate[] = [
 ]
 
 const grades = [
-  "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
+  "Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
   "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
@@ -466,6 +466,8 @@ export function InvoiceManagement({
   const [gradeFilter, setGradeFilter] = usePersistedState("invoice-management:grade", "all")
   const [dateFrom, setDateFrom] = usePersistedState<Date | null>("invoice-management:dateFrom", null)
   const [dateTo, setDateTo] = usePersistedState<Date | null>("invoice-management:dateTo", null)
+  const [dueDateFrom, setDueDateFrom] = usePersistedState<Date | null>("invoice-management:dueDateFrom", null)
+  const [dueDateTo, setDueDateTo] = usePersistedState<Date | null>("invoice-management:dueDateTo", null)
   const [isExportingAll, setIsExportingAll] = useState(false)
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
   const [isImportInterfaceUploadOpen, setIsImportInterfaceUploadOpen] = useState(false)
@@ -484,6 +486,8 @@ export function InvoiceManagement({
     | "eventName"
     | "issueDate"
     | "dueDate"
+    | "academicYear"
+    | "term"
     | null
   >("invoice-management:sortKey", "invoiceNumber")
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("invoice-management:sortDirection", "desc")
@@ -702,6 +706,14 @@ export function InvoiceManagement({
       filtered = filtered.filter(inv => inv.invoiceType !== "external" && inv.studentId !== "EXTERNAL")
     }
 
+    if (academicYearFilter !== "all") {
+      filtered = filtered.filter(inv => inv.academicYear === academicYearFilter)
+    }
+
+    if (termFilter !== "all") {
+      filtered = filtered.filter(inv => inv.term === termFilter)
+    }
+
     if (searchTerm) {
       filtered = filtered.filter(inv =>
         inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -751,6 +763,14 @@ export function InvoiceManagement({
 
     if (dateTo) {
       filtered = filtered.filter(inv => inv.issueDate && inv.issueDate <= dateTo)
+    }
+
+    if (dueDateFrom) {
+      filtered = filtered.filter(inv => inv.dueDate && new Date(inv.dueDate) >= dueDateFrom)
+    }
+
+    if (dueDateTo) {
+      filtered = filtered.filter(inv => inv.dueDate && new Date(inv.dueDate) <= dueDateTo)
     }
 
     setFilteredInvoices(filtered)
@@ -809,6 +829,10 @@ export function InvoiceManagement({
           return ((a.issueDate?.getTime() || 0) - (b.issueDate?.getTime() || 0)) * direction
         case "dueDate":
           return ((a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)) * direction
+        case "academicYear":
+          return (a.academicYear || "").localeCompare(b.academicYear || "") * direction
+        case "term":
+          return (a.term || "").localeCompare(b.term || "") * direction
         default:
           return 0
       }
@@ -832,6 +856,8 @@ export function InvoiceManagement({
     setGradeFilter("all")
     setDateFrom(null)
     setDateTo(null)
+    setDueDateFrom(null)
+    setDueDateTo(null)
     setFilteredInvoices(invoices)
     setCurrentPage(1)
   }
@@ -3561,9 +3587,9 @@ export function InvoiceManagement({
                   </Select>
                 </div>
 
-                {/* Date Range */}
+                {/* Issue Date Range */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.dateRange")}</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
@@ -3682,6 +3708,46 @@ export function InvoiceManagement({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Due Date Range */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.dueDate")}</label>
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dueDateFrom || undefined}
+                          onSelect={(date) => setDueDateFrom(date || null)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-muted-foreground">→</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dueDateTo || undefined}
+                          onSelect={(date) => setDueDateTo(date || null)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -3761,6 +3827,10 @@ export function InvoiceManagement({
                     <TableHead align="left">{renderSortHeader(t("invoice.student"), "studentName")}</TableHead>
                     {/* Year Group - CENTER */}
                     <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
+                    {/* Academic Year - LEFT */}
+                    <TableHead align="left">{renderSortHeader(t("invoice.academicYear"), "academicYear")}</TableHead>
+                    {/* Term - LEFT */}
+                    <TableHead align="left">{renderSortHeader(t("invoice.term"), "term")}</TableHead>
                     {/* Amount - RIGHT */}
                     <TableHead align="right">{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
                     {/* Approval Status - CENTER */}
@@ -3802,6 +3872,14 @@ export function InvoiceManagement({
                       {/* Year Group - CENTER */}
                       <TableCell align="center">
                         <Badge variant="secondary">{invoice.studentGrade}</Badge>
+                      </TableCell>
+                      {/* Academic Year - LEFT */}
+                      <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
+                        {invoice.academicYear || "-"}
+                      </TableCell>
+                      {/* Term - LEFT */}
+                      <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
+                        {invoice.term || "-"}
                       </TableCell>
                       {/* Amount - RIGHT */}
                       <TableCell align="right">

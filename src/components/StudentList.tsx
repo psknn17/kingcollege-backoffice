@@ -251,6 +251,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const [filterGrade, setFilterGrade] = usePersistedState("student-list:gradeFilter", "all")
   const [filterStatus, setFilterStatus] = usePersistedState("student-list:statusFilter", "all")
   const [filterAcademicYear, setFilterAcademicYear] = usePersistedState("student-list:academicYearFilter", "all")
+  const [filterTerm, setFilterTerm] = usePersistedState("student-list:termFilter", "all")
 
   // Sorting states
   const [sortColumn, setSortColumn] = usePersistedState("student-list:sortColumn", "")
@@ -299,15 +300,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         (student.familyCode && student.familyCode.toLowerCase().includes(searchTerm.toLowerCase()))
 
       const matchesGrade = filterGrade === "all" || student.gradeLevel === filterGrade
-      // Year and Term filters disabled - students should appear in all years and terms
-      // const matchesYear = filterYear === "all" || student.academicYear === filterYear
-      // const matchesTerm = filterTerm === "all" || student.enrollmentTerm === filterTerm
+      const matchesTerm = filterTerm === "all" || student.enrollmentTerm === filterTerm
       const matchesStatus = filterStatus === "all" || student.status === filterStatus
       const matchesAcademicYear = filterAcademicYear === "all" || student.academicYear === filterAcademicYear
 
-      return matchesSearch && matchesGrade && matchesStatus && matchesAcademicYear
+      return matchesSearch && matchesGrade && matchesTerm && matchesStatus && matchesAcademicYear
     })
-  }, [students, searchTerm, filterGrade, filterStatus, filterAcademicYear])
+  }, [students, searchTerm, filterGrade, filterTerm, filterStatus, filterAcademicYear])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -1743,7 +1742,20 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 ))}
               </SelectContent>
             </Select>
-            {(searchTerm || filterGrade !== "all" || filterStatus !== "all" || filterAcademicYear !== "all") && (
+            <Select value={filterTerm} onValueChange={setFilterTerm}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder={t("student.term")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.allTerms")}</SelectItem>
+                {getTermOptions(t).map(term => (
+                  <SelectItem key={term.id} value={term.id}>
+                    {term.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(searchTerm || filterGrade !== "all" || filterStatus !== "all" || filterAcademicYear !== "all" || filterTerm !== "all") && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1752,6 +1764,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   setFilterGrade("all")
                   setFilterStatus("all")
                   setFilterAcademicYear("all")
+                  setFilterTerm("all")
                 }}
                 className="text-muted-foreground"
               >

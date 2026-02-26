@@ -198,7 +198,8 @@ export function EventRegistrationReports() {
     if (selectedPaymentStatus !== "all" && reg.paymentStatus !== selectedPaymentStatus) return false
     if (selectedPaymentChannel !== "all" && reg.paymentChannel !== selectedPaymentChannel) return false
     if (searchTerm && !reg.studentName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !reg.studentId.toLowerCase().includes(searchTerm.toLowerCase())) return false
+        !reg.studentId.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !reg.parentEmail.toLowerCase().includes(searchTerm.toLowerCase())) return false
     return true
   })
 

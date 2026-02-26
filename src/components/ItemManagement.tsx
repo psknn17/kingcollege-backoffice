@@ -1890,6 +1890,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [selectedCategory, setSelectedCategory] = invoiceType === "tuition"
     ? usePersistedState<string>("tuition-item-management:filterCategory", "all")
     : useState("all")
+  const [selectedDocType, setSelectedDocType] = useState("all")
 
   // Multi-select for bulk delete
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
@@ -2610,10 +2611,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       item.name.toLowerCase().includes(searchLower) ||
       item.description.toLowerCase().includes(searchLower) ||
       (item.category || "").toLowerCase().includes(searchLower) ||
+      (item.nominalCode || "").toLowerCase().includes(searchLower) ||
+      (item.documentType || "").toLowerCase().includes(searchLower) ||
       item.applicableGrades.some(grade => grade.toLowerCase() === searchLower) ||
       item.applicableGrades.some(grade => grade.toLowerCase().startsWith(searchLower))
     const matchesCategory = !selectedCategory || selectedCategory === "all" || item.category === selectedCategory
-    return matchesSearch && matchesCategory
+    const matchesDocType = selectedDocType === "all" || item.documentType === selectedDocType
+    return matchesSearch && matchesCategory && matchesDocType
   })
 
   // Sort filtered items
@@ -2718,13 +2722,34 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             <div className="flex gap-4 mb-6">
               <div className="flex-1 relative">
                 <Input
-                  placeholder={isSimplifiedView ? "Search by code, name, category..." : "Search by code, name, category, grade..."}
+                  placeholder="Search by code, name, nominal code, category..."
                   value={searchItemTerm}
-                  onChange={(e) => setSearchItemTerm(e.target.value)}
+                  onChange={(e) => { setSearchItemTerm(e.target.value); setCurrentPage(1) }}
                   className=""
                   disabled={!userCanEdit}
                 />
               </div>
+              <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1) }} disabled={!userCanEdit}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {Array.from(new Set(items.map(item => item.category).filter((c): c is string => Boolean(c)))).map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedDocType} onValueChange={(val) => { setSelectedDocType(val); setCurrentPage(1) }} disabled={!userCanEdit}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="SI">SI</SelectItem>
+                  <SelectItem value="CI">CI</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Bulk Delete Bar */}

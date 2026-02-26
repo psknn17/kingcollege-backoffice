@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
 import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer } from "lucide-react"
 import { PaymentChannel } from "./StatusFilter"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Checkbox } from "./ui/checkbox"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -356,9 +356,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [dateTo, setDateTo] = useState<Date | null>(null)
 
   // Pagination states
-  const [currentPage, setCurrentPage] = usePersistedState("receipt-page:page", 1)
-  const [pageSize] = usePersistedState("receipt-page:pageSize", 15)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = usePersistedState("receipt-page:pageSize", 10)
   const itemsPerPage = pageSize
+  const [cnCurrentPage, setCnCurrentPage] = useState(1)
+  const [cnPageSize, setCnPageSize] = usePersistedState("receipt-page:cn-pageSize", 10)
 
   // View Dialog states
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
@@ -801,7 +803,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
 
     setFilteredCreditNotes(filtered)
-    setCurrentPage(1)
+    setCnCurrentPage(1)
   }
 
   const clearCreditNoteFilters = () => {
@@ -813,7 +815,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     setDateFrom(null)
     setDateTo(null)
     setFilteredCreditNotes(creditNotes)
-    setCurrentPage(1)
+    setCnCurrentPage(1)
   }
 
   const viewCreditNote = (creditNoteId: string) => {
@@ -1102,9 +1104,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
   // Calculate pagination for credit notes
   const sortedCreditNotes = getSortedCreditNotes(filteredCreditNotes)
-  const totalCreditNotePages = Math.ceil(sortedCreditNotes.length / itemsPerPage)
-  const startCreditNoteIndex = (currentPage - 1) * itemsPerPage
-  const endCreditNoteIndex = startCreditNoteIndex + itemsPerPage
+  const totalCreditNotePages = Math.ceil(sortedCreditNotes.length / cnPageSize)
+  const startCreditNoteIndex = (cnCurrentPage - 1) * cnPageSize
+  const endCreditNoteIndex = startCreditNoteIndex + cnPageSize
   const currentPageCreditNotes = sortedCreditNotes.slice(startCreditNoteIndex, endCreditNoteIndex)
 
   const getStatusBadge = (status: string) => {
@@ -1397,23 +1399,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             </Card>
           )}
 
-          {/* Results Summary */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <p className="text-sm text-muted-foreground">
-                {t("receipt.showing")} {startIndex + 1}-{Math.min(endIndex, filteredReceipts.length)} {t("receipt.of")} {filteredReceipts.length} {t("receipt.receipts")}
-                {filteredReceipts.length !== receipts.length && (
-                  <span> ({t("receipt.filteredFrom")} {receipts.length} {t("receipt.total")})</span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {t("common.page")} {currentPage} {t("common.of")} {totalPages}
-              </span>
-            </div>
-          </div>
-
           {/* Receipt Table */}
           <Card>
             <CardContent className="p-0">
@@ -1613,50 +1598,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           </Card>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => goToPage(currentPage - 1)}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-
-                  {[...Array(Math.min(5, totalPages))].map((_, index) => {
-                    const pageNumber = Math.max(1, currentPage - 2) + index
-                    if (pageNumber > totalPages) return null
-
-                    return (
-                      <PaginationItem key={pageNumber}>
-                        <PaginationLink
-                          onClick={() => goToPage(pageNumber)}
-                          isActive={currentPage === pageNumber}
-                          className="cursor-pointer"
-                        >
-                          {pageNumber}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  })}
-
-                  {totalPages > 5 && currentPage < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => goToPage(currentPage + 1)}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedReceipts.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
 
           {/* View Receipt Dialog - Official Receipt Template */}
           <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
@@ -2075,22 +2023,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </Card>
             )}
 
-            {/* Results Summary */}
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {startCreditNoteIndex + 1}-{Math.min(endCreditNoteIndex, filteredCreditNotes.length)} of {filteredCreditNotes.length} credit notes
-                  {filteredCreditNotes.length !== creditNotes.length && (
-                    <span> (filtered from {creditNotes.length} total)</span>
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalCreditNotePages}
-                </span>
-              </div>
-            </div>
 
             {/* Credit Notes Table */}
             <Card>
@@ -2282,50 +2214,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             </Card>
 
             {/* Pagination for Credit Notes */}
-            {totalCreditNotePages > 1 && (
-              <div className="flex items-center justify-center">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => goToPage(currentPage - 1)}
-                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-
-                    {[...Array(Math.min(5, totalCreditNotePages))].map((_, index) => {
-                      const pageNumber = Math.max(1, currentPage - 2) + index
-                      if (pageNumber > totalCreditNotePages) return null
-
-                      return (
-                        <PaginationItem key={pageNumber}>
-                          <PaginationLink
-                            onClick={() => goToPage(pageNumber)}
-                            isActive={currentPage === pageNumber}
-                            className="cursor-pointer"
-                          >
-                            {pageNumber}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )
-                    })}
-
-                    {totalCreditNotePages > 5 && currentPage < totalCreditNotePages - 2 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => goToPage(currentPage + 1)}
-                        className={currentPage === totalCreditNotePages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
+            <PaginationBar
+              currentPage={cnCurrentPage}
+              pageSize={cnPageSize}
+              totalCount={sortedCreditNotes.length}
+              onPageChange={setCnCurrentPage}
+              onPageSizeChange={(size) => { setCnPageSize(size); setCnCurrentPage(1) }}
+            />
 
             {/* View Credit Note Dialog */}
             <Dialog open={isViewDialogOpen && viewingCreditNote !== null} onOpenChange={setIsViewDialogOpen}>

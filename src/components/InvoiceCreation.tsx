@@ -508,7 +508,7 @@ const loadItemsFromStorage = (invoiceCategory: string = "student"): PreCreatedIt
         )
         if (needsMigration) {
           console.log("[Migration] Updating summer items with applicableGrades")
-          const allGrades = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+          const allGrades = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
           loadedItems = loadedItems.map((item: PreCreatedItem) => ({
             ...item,
             applicableGrades: item.applicableGrades.length === 0 ? allGrades : item.applicableGrades
@@ -559,7 +559,7 @@ const loadTemplatesFromStorage = (invoiceCategory: string = "student"): ItemTemp
         )
         if (needsMigration) {
           console.log("[Migration] Updating summer templates with applicableGrades")
-          const allGrades = ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
+          const allGrades = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
           const migratedTemplates = loadedTemplates.map((template: ItemTemplate) => ({
             ...template,
             applicableGrades: template.applicableGrades.length === 0 ? allGrades : template.applicableGrades

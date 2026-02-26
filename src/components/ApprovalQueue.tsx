@@ -75,7 +75,7 @@ interface Invoice {
 }
 
 const grades = [
-  "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
+  "Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
   "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
@@ -209,6 +209,10 @@ export function ApprovalQueue() {
   const [gradeFilter, setGradeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
+  const [dueDateFrom, setDueDateFrom] = useState<Date | null>(null)
+  const [dueDateTo, setDueDateTo] = useState<Date | null>(null)
+  const [emailStatusFilter, setEmailStatusFilter] = useState("all")
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
@@ -309,6 +313,22 @@ export function ApprovalQueue() {
       filtered = filtered.filter(inv => inv.issueDate && inv.issueDate <= dateTo)
     }
 
+    if (dueDateFrom) {
+      filtered = filtered.filter(inv => inv.dueDate && inv.dueDate >= dueDateFrom)
+    }
+
+    if (dueDateTo) {
+      filtered = filtered.filter(inv => inv.dueDate && inv.dueDate <= dueDateTo)
+    }
+
+    if (emailStatusFilter !== "all") {
+      filtered = filtered.filter(inv => getEmailStatus(inv) === emailStatusFilter)
+    }
+
+    if (paymentStatusFilter !== "all") {
+      filtered = filtered.filter(inv => getPaymentStatus(inv) === paymentStatusFilter)
+    }
+
     setFilteredInvoices(filtered)
     setSelectedInvoiceIds(new Set())
   }
@@ -321,6 +341,10 @@ export function ApprovalQueue() {
     setGradeFilter("all")
     setDateFrom(null)
     setDateTo(null)
+    setDueDateFrom(null)
+    setDueDateTo(null)
+    setEmailStatusFilter("all")
+    setPaymentStatusFilter("all")
     setFilteredInvoices(invoices)
     setSelectedInvoiceIds(new Set())
   }
@@ -826,9 +850,9 @@ export function ApprovalQueue() {
               </Select>
             </div>
 
-            {/* Invoice Status */}
+            {/* Approval Status */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+              <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
               <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allStatus")} />
@@ -848,9 +872,9 @@ export function ApprovalQueue() {
               </Select>
             </div>
 
-            {/* Date Range */}
+            {/* Issue Date */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("payment.dateRange")}</label>
+              <label className="text-sm font-medium text-muted-foreground">Issue Date</label>
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -881,6 +905,81 @@ export function ApprovalQueue() {
                       mode="single"
                       selected={dateTo || undefined}
                       onSelect={(day) => setDateTo(day || null)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Email Status */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Email Status</label>
+              <Select value={emailStatusFilter} onValueChange={setEmailStatusFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Email Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Email Status</SelectItem>
+                  <SelectItem value="wait">Wait</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Invoice Status (Payment) */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Invoice Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Invoice Status</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Due Date Range */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Due Date</label>
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDateFrom || undefined}
+                      onSelect={(day) => setDueDateFrom(day || null)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-muted-foreground">→</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDateTo || undefined}
+                      onSelect={(day) => setDueDateTo(day || null)}
                       initialFocus
                     />
                   </PopoverContent>

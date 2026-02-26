@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Separator } from "./ui/separator"
 import {
   Dialog,
@@ -225,7 +225,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [currentPage, setCurrentPage] = usePersistedState("email-history-view:page", 1)
+  const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = usePersistedState("email-history-view:pageSize", 15)
   const itemsPerPage = pageSize
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -521,13 +521,13 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                 <Input
                   placeholder={t("emailHistory.searchPlaceholder")}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
                   className=""
                 />
               </div>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1) }}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder={t("common.status")} />
               </SelectTrigger>
@@ -693,37 +693,13 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-            
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <PaginationItem key={page}>
-                <PaginationLink
-                  onClick={() => setCurrentPage(page)}
-                  isActive={currentPage === page}
-                  className="cursor-pointer"
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            
-            <PaginationItem>
-              <PaginationNext 
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={itemsPerPage}
+        totalCount={sortedHistory.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
 
       {/* Failure Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>

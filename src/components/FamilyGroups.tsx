@@ -96,13 +96,14 @@ export function FamilyGroups() {
   const [searchTerm, setSearchTerm] = usePersistedState("family-groups:search", "")
   const [expandedFamilies, setExpandedFamilies] = usePersistedState<string[]>("family-groups:expanded", [])
   const [statusFilter, setStatusFilter] = usePersistedState("family-groups:statusFilter", "all")
+  const [yearGroupFilter, setYearGroupFilter] = usePersistedState("family-groups:yearGroupFilter", "all")
 
   // Sorting states
   const [sortColumn, setSortColumn] = usePersistedState("family-groups:sortColumn", "")
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("family-groups:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = usePersistedState("family-groups:currentPage", 1)
+  const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = usePersistedState("family-groups:pageSize", 10)
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -210,9 +211,14 @@ export function FamilyGroups() {
       const familyStatus = family.portalStatus || "not_invited"
       const matchesStatus = statusFilter === "all" || familyStatus === statusFilter
 
-      return matchesSearch && matchesStatus
+      // Year Group filter - show family if any student matches
+      const matchesYearGroup = yearGroupFilter === "all" || familyStudents.some((s: Student) =>
+        (s.gradeLevel || "").toLowerCase() === yearGroupFilter.toLowerCase()
+      )
+
+      return matchesSearch && matchesStatus && matchesYearGroup
     })
-  }, [families, searchTerm, statusFilter, students])
+  }, [families, searchTerm, statusFilter, yearGroupFilter, students])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -704,7 +710,18 @@ export function FamilyGroups() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Select value={yearGroupFilter} onValueChange={(val) => { setYearGroupFilter(val); setCurrentPage(1) }}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All Year Groups" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Year Groups</SelectItem>
+                  {Object.values(gradeLevels).map(label => (
+                    <SelectItem key={label} value={label}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by status" />
