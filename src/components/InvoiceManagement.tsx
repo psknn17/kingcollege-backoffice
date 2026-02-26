@@ -3941,7 +3941,7 @@ export function InvoiceManagement({
                               <Mail className="w-4 h-4" />
                             </Button>
                           )}
-                          {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && invoice.status !== "cancelled" && (
+                          {getApprovalStatus(invoice) === "approved" && getPaymentStatus(invoice) !== "paid" && invoice.status !== "cancelled" && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -4319,7 +4319,7 @@ export function InvoiceManagement({
                                 <Mail className="w-4 h-4" />
                               </Button>
                             )}
-                            {getApprovalStatus(invoice) === "approved" && invoice.status !== "paid" && invoice.status !== "cancelled" && (
+                            {getApprovalStatus(invoice) === "approved" && getPaymentStatus(invoice) !== "paid" && invoice.status !== "cancelled" && (
                               <Button
                                 size="sm"
                                 variant="ghost"
