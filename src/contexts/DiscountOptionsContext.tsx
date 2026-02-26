@@ -64,9 +64,9 @@ const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const defaultSiblingDiscounts: SiblingDiscount[] = [
   { childOrder: "first", label: "First Child", percentage: 0, enabled: true },
   { childOrder: "second", label: "Second Child", percentage: 0, enabled: true },
-  { childOrder: "third", label: "Third Child", percentage: 5, enabled: true },
-  { childOrder: "fourth", label: "Fourth Child", percentage: 10, enabled: true },
-  { childOrder: "fifth", label: "Fifth Child and subsequent", percentage: 20, enabled: true },
+  { childOrder: "third", label: "Third child sibling discount (5%)", percentage: 5, enabled: true },
+  { childOrder: "fourth", label: "Fourth child sibling discount (10%)", percentage: 10, enabled: true },
+  { childOrder: "fifth", label: "Fifth child sibling discount (20%)", percentage: 20, enabled: true },
 ]
 
 
