@@ -5645,6 +5645,7 @@ export function InvoiceManagement({
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* 1. Payment Method */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Payment Method</label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -5659,46 +5660,43 @@ export function InvoiceManagement({
               </Select>
             </div>
 
-            {/* Bank Account Selection - Show for methods that have accounts configured */}
+            {/* 2. Bank Account - shown when a payment method is selected */}
             {PAYMENT_SOURCES.some(s => s.value === paymentMethod) && (
-              <div className="space-y-4 pt-2 border-t mt-2">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Select Bank Account</label>
-                  <Select
-                    onValueChange={(accountId) => {
-                      const account = bankAccounts.find(a => a.id === accountId);
-                      if (account) {
-                        setEdcBank(account.bankName);
-                        setEdcAccountNumber(account.accountNumber);
-                        setSelectedGlAccount(account.glAccount || account.accountNumber || "");
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Choose an account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bankAccounts
-                        .filter(acc => acc.paymentSource === paymentMethod && acc.isActive)
-                        .map(acc => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.bankName} - {acc.accountNumber}
-                          </SelectItem>
-                        ))
-                      }
-                      {bankAccounts.filter(acc => acc.paymentSource === paymentMethod && acc.isActive).length === 0 && (
-                        <div className="p-2 text-xs text-muted-foreground italic">
-                          No bank accounts configured for this method.
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Select Bank Account</label>
+                <Select
+                  onValueChange={(accountId) => {
+                    const account = bankAccounts.find(a => a.id === accountId);
+                    if (account) {
+                      setEdcBank(account.bankName);
+                      setEdcAccountNumber(account.accountNumber);
+                      setSelectedGlAccount(account.glAccount || account.accountNumber || "");
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Choose an account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts
+                      .filter(acc => acc.paymentSource === paymentMethod && acc.isActive)
+                      .map(acc => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.bankName} - {acc.accountNumber}
+                        </SelectItem>
+                      ))
+                    }
+                    {bankAccounts.filter(acc => acc.paymentSource === paymentMethod && acc.isActive).length === 0 && (
+                      <div className="p-2 text-xs text-muted-foreground italic">
+                        No bank accounts configured for this method.
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
-            {/* Apply Credit Notes */}
+            {/* 3. Apply Credit Notes */}
             {availableCNsForPaid.length > 0 && (
               <div className="space-y-2 border rounded-lg p-3 bg-green-50 border-green-200">
                 <label className="text-sm font-medium text-green-800">Apply Credit Notes <span className="font-normal text-green-700">(optional)</span></label>
@@ -5753,6 +5751,7 @@ export function InvoiceManagement({
               </div>
             )}
 
+            {/* 4. Payment Proof */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Payment Proof (JPG/PNG) <span className="text-muted-foreground font-normal">- optional</span></label>
               <div className="flex items-center gap-3">
