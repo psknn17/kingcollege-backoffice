@@ -208,6 +208,8 @@ const emptyStudent: Omit<Student, "id"> = {
   academicYear: "",
   enrollmentTerm: "term1",
   status: "active",
+  withdrawalAcademicYear: undefined,
+  withdrawalTerm: undefined,
   familyId: "",
   childOrder: 1,
   parents: [],
@@ -1360,7 +1362,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Label>Status</Label>
             <Select
               value={formData.status}
-              onValueChange={(value: "active" | "graduated" | "withdrawn" | "on_leave") => setFormData(prev => ({ ...prev, status: value }))}
+              onValueChange={(value: "active" | "graduated" | "withdrawn" | "on_leave") => setFormData(prev => ({
+                ...prev,
+                status: value,
+                // Clear withdrawal fields when switching away from "withdrawn"
+                withdrawalAcademicYear: value === "withdrawn" ? prev.withdrawalAcademicYear : undefined,
+                withdrawalTerm: value === "withdrawn" ? prev.withdrawalTerm : undefined,
+              }))}
               disabled={!userCanEdit}
             >
               <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
@@ -1376,6 +1384,55 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Select>
           </div>
         </div>
+
+        {/* Withdrawal Effective Term — shown only when status is "withdrawn" */}
+        {formData.status === "withdrawn" && (
+          <div className="border rounded-lg p-4 bg-red-50 border-red-200 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-red-800">Withdrawal Effective From</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Sibling discounts and fee waivers will be removed starting from this term.
+                Invoices for earlier terms are not affected.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Academic Year</Label>
+                <Select
+                  value={formData.withdrawalAcademicYear || ""}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, withdrawalAcademicYear: value }))}
+                  disabled={!userCanEdit}
+                >
+                  <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                    {availableYears.map((year: string) => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Term</Label>
+                <Select
+                  value={formData.withdrawalTerm || ""}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, withdrawalTerm: value }))}
+                  disabled={!userCanEdit}
+                >
+                  <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                    <SelectValue placeholder="Select term" />
+                  </SelectTrigger>
+                  <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                    {getTermOptions(t).map(term => (
+                      <SelectItem key={term.id} value={term.id}>{term.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">

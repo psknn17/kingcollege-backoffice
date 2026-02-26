@@ -22,6 +22,8 @@ export interface Student {
   academicYear: string
   enrollmentTerm: "term1" | "term2" | "term3" // Term when student enrolled
   status: "active" | "graduated" | "withdrawn" | "on_leave"
+  withdrawalAcademicYear?: string // e.g. "2025-2026" — term withdrawal takes effect FROM
+  withdrawalTerm?: string         // e.g. "term1" | "term2" | "term3"
   familyId: string
   familyCode?: string // Added for easier display and search
   childOrder: number // 1 = first child, 2 = second child, etc.
@@ -64,7 +66,7 @@ interface StudentContextType {
   updateFamily: (familyId: string, updates: Partial<Family>) => void
   deleteFamily: (familyId: string) => void
   getStudentsByFamily: (familyId: string) => Student[]
-  getSiblingDiscount: (student: Student, term?: string) => number
+  getSiblingDiscount: (student: Student, term?: string, billingAcademicYear?: string) => number
   checkFeePrivilegeEligibility: (student: Student, currentYear: string, term: string) => {
     eligible: boolean
     reason: string
@@ -114,6 +116,16 @@ export const convertTermFormat = (term: string): string => {
   if (term === "term3") return "3"
   // If already in correct format ("1", "2", "3"), return as-is
   return term
+}
+
+// Returns a comparable integer for (academicYear, term) — used to check if
+// a billing term is before or after a withdrawal effective date.
+// e.g. "2025-2026 term2" → 2025*3+1 = 6076
+const termToSortKey = (academicYear: string, term: string): number => {
+  const yearStart = parseInt(academicYear.split("-")[0]) || 2025
+  const termIndex = (term === "term1" || term === "1") ? 0
+    : (term === "term2" || term === "2") ? 1 : 2
+  return yearStart * 3 + termIndex
 }
 
 // Get sibling discount percentage from settings
@@ -427,21 +439,27 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => a.childOrder - b.childOrder)
   }
 
-  const getSiblingDiscount = (student: Student, term: string = "term1"): number => {
-    // Check if any sibling in the family has withdrawn status
-    // If yes, no sibling discount for anyone in that family
+  const getSiblingDiscount = (student: Student, term: string = "term1", billingAcademicYear?: string): number => {
+    // Check if any sibling in the family has withdrawn status.
+    // Withdrawal only removes the discount FROM the effective term onwards.
+    // If no effective term is set, removal is immediate (backward compatible).
     if (student.familyId) {
       const familySiblings = students.filter(s => s.familyId === student.familyId)
-      const hasWithdrawnSibling = familySiblings.some(s => s.status === "withdrawn")
-      if (hasWithdrawnSibling) {
-        return 0
-      }
+      const billingYear = billingAcademicYear || student.academicYear || "2025-2026"
+      const currentKey = termToSortKey(billingYear, term)
+
+      const hasEffectiveWithdrawal = familySiblings.some(s => {
+        if (s.status !== "withdrawn") return false
+        // No effective date set → remove immediately (backward compatible)
+        if (!s.withdrawalAcademicYear || !s.withdrawalTerm) return true
+        // Remove discount only if billing term >= withdrawal effective term
+        return currentKey >= termToSortKey(s.withdrawalAcademicYear, s.withdrawalTerm)
+      })
+
+      if (hasEffectiveWithdrawal) return 0
     }
 
-    // Sibling discount is available from 1st child onwards
-    // No Year 3+ requirement for sibling discount (that's only for Registration Fee Waiver)
-    // Get discount from Discount Options settings
-    const academicYear = student.academicYear || "2025-2026"
+    const academicYear = billingAcademicYear || student.academicYear || "2025-2026"
     return getSiblingDiscountFromSettings(student.childOrder, academicYear, term)
   }
 
@@ -499,14 +517,27 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     // Find first child in family (childOrder === 1)
     const firstChild = student.childOrder === 1 ? student : familySiblings.find(s => s.childOrder === 1)
 
-    // Check if first child has withdrawn (affects second child+ from next term)
-    // If first child is "graduated", siblings still keep their privilege
+    // Check if first child has withdrawn — only removes privilege FROM the effective term.
+    // If first child is "graduated", siblings still keep their privilege.
     if (student.childOrder > 1 && firstChild?.status === "withdrawn") {
-      return {
-        eligible: false,
-        reason: "First child has withdrawn - siblings not eligible from next term",
-        completedYears: 0
+      if (!firstChild.withdrawalAcademicYear || !firstChild.withdrawalTerm) {
+        // No effective date → remove immediately (backward compatible)
+        return {
+          eligible: false,
+          reason: "First child has withdrawn - siblings not eligible",
+          completedYears: 0
+        }
       }
+      const currentKey = termToSortKey(currentYear, term)
+      const withdrawalKey = termToSortKey(firstChild.withdrawalAcademicYear, firstChild.withdrawalTerm)
+      if (currentKey >= withdrawalKey) {
+        return {
+          eligible: false,
+          reason: `First child withdrew effective ${firstChild.withdrawalAcademicYear} ${firstChild.withdrawalTerm} — siblings not eligible from that term`,
+          completedYears: 0
+        }
+      }
+      // Billing term is BEFORE effective withdrawal → siblings still eligible, fall through
     }
 
     // Calculate credit per term
