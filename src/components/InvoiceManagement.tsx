@@ -413,6 +413,19 @@ const mockPreCreatedItems: PreCreatedItem[] = [
   }
 ]
 
+interface CreditNoteRecord {
+  id: string
+  creditNoteNumber: string
+  studentName: string
+  studentId: string
+  familyCode?: string
+  amount: number
+  remainingBalance?: number
+  reason: string
+  status: "issued" | "pending" | "cancelled" | "used" | "partial"
+  issueDate: string
+}
+
 interface InvoiceManagementProps {
   onNavigateToSubPage: (subPage: string, params?: any) => void
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
@@ -614,6 +627,8 @@ export function InvoiceManagement({
   const [edcAccountNumber, setEdcAccountNumber] = useState("")
   const [selectedGlAccount, setSelectedGlAccount] = useState("")
   const [bankAccounts] = usePersistedState<any[]>("bankAccounts", [])
+  const [availableCNsForPaid, setAvailableCNsForPaid] = useState<CreditNoteRecord[]>([])
+  const [selectedCNIdsForPaid, setSelectedCNIdsForPaid] = useState<Set<string>>(new Set())
   const [isSendEmailConfirmOpen, setIsSendEmailConfirmOpen] = useState(false)
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
 
@@ -2933,6 +2948,20 @@ export function InvoiceManagement({
     setMarkPaidInvoice(invoice)
     setPaymentMethod("")
     setPaymentFiles([])
+    setSelectedCNIdsForPaid(new Set())
+    // Load available credit notes for this student/family
+    try {
+      const stored = localStorage.getItem("creditNotesRecords")
+      const all: CreditNoteRecord[] = stored ? JSON.parse(stored) : []
+      const matching = all.filter(cn =>
+        (cn.status === "issued" || cn.status === "partial") &&
+        (cn.studentId === invoice.studentId ||
+          (invoice.adultIdNo && cn.familyCode === invoice.adultIdNo))
+      )
+      setAvailableCNsForPaid(matching)
+    } catch {
+      setAvailableCNsForPaid([])
+    }
     setIsMarkPaidOpen(true)
   }
 
@@ -3127,17 +3156,35 @@ export function InvoiceManagement({
         }
       }
 
+      // Mark applied Credit Notes as "used"
+      if (selectedCNIdsForPaid.size > 0) {
+        try {
+          const storedCNs = localStorage.getItem("creditNotesRecords")
+          const allCNs: CreditNoteRecord[] = storedCNs ? JSON.parse(storedCNs) : []
+          const updatedCNs = allCNs.map(cn =>
+            selectedCNIdsForPaid.has(cn.id)
+              ? { ...cn, status: "used" as const, remainingBalance: 0, appliedToInvoice: markPaidInvoice.invoiceNumber }
+              : cn
+          )
+          localStorage.setItem("creditNotesRecords", JSON.stringify(updatedCNs))
+        } catch (e) {
+          console.error("Failed to update credit notes:", e)
+        }
+      }
+
       window.dispatchEvent(new CustomEvent("invoicesUpdated"))
       logActivity({
         action: `${isPartial ? "Recorded partial payment" : "Marked invoice as paid"} ${markPaidInvoice.invoiceNumber}`,
         module: "Invoices",
-        detail: `Payment Method: ${paymentMethodDetail}, Proofs: ${proofs.length}`
+        detail: `Payment Method: ${paymentMethodDetail}, Proofs: ${proofs.length}${selectedCNIdsForPaid.size > 0 ? `, Credit Notes applied: ${selectedCNIdsForPaid.size}` : ""}`
       })
       toast.success(isPartial ? "Saved partial payment" : "Marked invoice as paid and receipt generated")
       setIsMarkPaidOpen(false)
       setMarkPaidInvoice(null)
       setPaymentMethod("")
       setPaymentFiles([])
+      setAvailableCNsForPaid([])
+      setSelectedCNIdsForPaid(new Set())
       setEdcBank("")
       setEdcAccountNumber("")
     } catch (error) {
@@ -5619,6 +5666,61 @@ export function InvoiceManagement({
               </div>
             )}
 
+            {/* Apply Credit Notes */}
+            {availableCNsForPaid.length > 0 && (
+              <div className="space-y-2 border rounded-lg p-3 bg-green-50 border-green-200">
+                <label className="text-sm font-medium text-green-800">Apply Credit Notes <span className="font-normal text-green-700">(optional)</span></label>
+                <div className="space-y-2">
+                  {availableCNsForPaid.map(cn => (
+                    <div key={cn.id} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedCNIdsForPaid.has(cn.id)}
+                          onCheckedChange={() => {
+                            setSelectedCNIdsForPaid(prev => {
+                              const next = new Set(prev)
+                              next.has(cn.id) ? next.delete(cn.id) : next.add(cn.id)
+                              return next
+                            })
+                          }}
+                        />
+                        <div className="text-sm">
+                          <span className="font-mono font-medium">{cn.creditNoteNumber}</span>
+                          <span className="text-muted-foreground ml-2">— {cn.reason}</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium text-green-700">
+                        ฿{(cn.remainingBalance ?? cn.amount).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {selectedCNIdsForPaid.size > 0 && (() => {
+                  const totalCN = [...selectedCNIdsForPaid].reduce((sum, id) => {
+                    const cn = availableCNsForPaid.find(c => c.id === id)
+                    return sum + (cn ? (cn.remainingBalance ?? cn.amount) : 0)
+                  }, 0)
+                  const netPayable = Math.max(0, (markPaidInvoice?.finalAmount ?? 0) - totalCN)
+                  return (
+                    <div className="border-t border-green-200 pt-2 mt-2 space-y-1 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Invoice Amount</span>
+                        <span>฿{markPaidInvoice?.finalAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-green-700">
+                        <span>Credit Note Applied</span>
+                        <span>−฿{totalCN.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold border-t border-green-300 pt-1">
+                        <span>Net Payable</span>
+                        <span>฿{netPayable.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Payment Proof (JPG/PNG) <span className="text-muted-foreground font-normal">- optional</span></label>
               <div className="flex items-center gap-3">
@@ -5660,6 +5762,8 @@ export function InvoiceManagement({
                 setMarkPaidInvoice(null)
                 setPaymentMethod("")
                 setPaymentFiles([])
+                setAvailableCNsForPaid([])
+                setSelectedCNIdsForPaid(new Set())
               }}
             >
               Cancel
