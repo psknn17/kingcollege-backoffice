@@ -255,16 +255,45 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
       })
     }
   } catch { }
-  return mockCreditNotes.map(cn => {
-    // Also try to find family code for mock data if possible
-    const invoicesStored = localStorage.getItem("createdInvoices")
-    const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
-    const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
-    return {
-      ...cn,
-      familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || ""
+  // Build mock data with family code enrichment
+  const invoicesStored = localStorage.getItem("createdInvoices")
+  const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
+  // Enrich mock CNs with student data from actual invoices so IDs match real invoices
+  const invoiceStudents = invoices.reduce((acc: Record<string, { studentId: string; studentName: string; familyCode: string }>, inv: any) => {
+    if (inv.studentId && inv.studentName) {
+      acc[inv.studentId] = { studentId: inv.studentId, studentName: inv.studentName, familyCode: inv.adultIdNo || inv.familyCode || "" }
     }
-  })
+    return acc
+  }, {})
+  const invoiceStudentList = Object.values(invoiceStudents) as { studentId: string; studentName: string; familyCode: string }[]
+
+  // Generate extra mock CNs for actual students in the system if there are real invoices
+  const extraCNs: CreditNote[] = invoiceStudentList.slice(0, 5).map((s, i) => ({
+    id: `mock-real-${i + 1}`,
+    creditNoteNumber: `CN-${new Date().getFullYear()}-${String(900 + i + 1).padStart(6, "0")}`,
+    invoiceNumber: "",
+    studentName: s.studentName,
+    studentId: s.studentId,
+    studentGrade: "",
+    amount: [5000, 10000, 15000, 3000, 8000][i % 5],
+    reason: ["Overpayment refund", "Course cancellation", "Duplicate payment", "Activity cancellation", "Billing adjustment"][i % 5],
+    issueDate: new Date(Date.now() - (i + 1) * 7 * 24 * 3600 * 1000),
+    academicYear: "2025-2026",
+    term: "Term 1",
+    status: "issued" as const,
+    familyCode: s.familyCode
+  }))
+
+  const mockData = [
+    ...mockCreditNotes.map(cn => {
+      const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
+      return { ...cn, familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || "" }
+    }),
+    ...extraCNs
+  ]
+  // Save to localStorage so other components (InvoiceManagement) can read them
+  try { localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(mockData)) } catch { }
+  return mockData
 }
 
 const saveCreditNotesToStorage = (notes: CreditNote[]) => {

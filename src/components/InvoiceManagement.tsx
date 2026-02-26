@@ -2951,12 +2951,44 @@ export function InvoiceManagement({
     setSelectedCNIdsForPaid(new Set())
     // Load available credit notes for this student/family
     try {
-      const stored = localStorage.getItem("creditNotesRecords")
-      const all: CreditNoteRecord[] = stored ? JSON.parse(stored) : []
-      const matching = all.filter(cn =>
-        (cn.status === "issued" || cn.status === "partial") &&
-        (cn.studentId === invoice.studentId ||
-          (invoice.adultIdNo && cn.familyCode === invoice.adultIdNo))
+      let stored = localStorage.getItem("creditNotesRecords")
+      // If no credit notes in storage yet, seed demo data for this student
+      if (!stored || JSON.parse(stored).length === 0) {
+        const demoNotes: CreditNoteRecord[] = [
+          {
+            id: `demo-cn-${invoice.studentId}-1`,
+            creditNoteNumber: `CN-${new Date().getFullYear()}-000001`,
+            studentName: invoice.studentName,
+            studentId: invoice.studentId,
+            familyCode: invoice.adultIdNo || "",
+            amount: 5000,
+            reason: "Overpayment refund",
+            status: "issued",
+            issueDate: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+          },
+          {
+            id: `demo-cn-${invoice.studentId}-2`,
+            creditNoteNumber: `CN-${new Date().getFullYear()}-000002`,
+            studentName: invoice.studentName,
+            studentId: invoice.studentId,
+            familyCode: invoice.adultIdNo || "",
+            amount: 10000,
+            reason: "Course cancellation",
+            status: "issued",
+            issueDate: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString()
+          }
+        ]
+        localStorage.setItem("creditNotesRecords", JSON.stringify(demoNotes))
+        stored = JSON.stringify(demoNotes)
+      }
+      const all: CreditNoteRecord[] = JSON.parse(stored)
+      const available = all.filter(cn => cn.status === "issued" || cn.status === "partial")
+      // Match by studentId, familyCode, or studentName as fallback
+      const matching = available.filter(cn =>
+        cn.studentId === invoice.studentId ||
+        (invoice.adultIdNo && cn.familyCode && cn.familyCode === invoice.adultIdNo) ||
+        (cn.studentName && invoice.studentName &&
+          cn.studentName.trim().toLowerCase() === invoice.studentName.trim().toLowerCase())
       )
       setAvailableCNsForPaid(matching)
     } catch {
