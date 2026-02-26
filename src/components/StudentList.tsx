@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -254,8 +255,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("student-list:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = usePersistedState("student-list:currentPage", 1)
-  const [pageSize, setPageSize] = usePersistedState("student-list:pageSize", 10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -382,12 +383,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     const startIndex = (currentPage - 1) * pageSize
     return sortedStudents.slice(startIndex, startIndex + pageSize)
   }, [sortedStudents, currentPage, pageSize])
-
-  // Reset to page 1 when filters change
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize)
-    setCurrentPage(1)
-  }
 
   // Reset to page 1 when filters or sorting changes
   useEffect(() => {
@@ -1997,75 +1992,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </Table>
 
           {/* Pagination Controls */}
-          {sortedStudents.length > 0 && (
-            <div className="flex items-center justify-between border-t pt-4 mt-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Show</span>
-                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span>entries</span>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedStudents.length)} of {sortedStudents.length} students
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1 mx-2">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum: number
-                    if (totalPages <= 5) {
-                      pageNum = i + 1
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i
-                    } else {
-                      pageNum = currentPage - 2 + i
-                    }
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        className="w-8 h-8 p-0"
-                        onClick={() => setCurrentPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedStudents.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

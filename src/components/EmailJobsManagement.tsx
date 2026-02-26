@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,8 +31,6 @@ import {
   History,
   FileSpreadsheet,
   ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
   Save
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
@@ -274,13 +272,8 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
   const [searchTerm, setSearchTerm] = usePersistedState("email-jobs:search", "")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
-  const [currentPage, setCurrentPage] = usePersistedState("email-jobs:page", 1)
-  const [pageSize, setPageSize] = usePersistedState("email-jobs:pageSize", 10)
-
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize)
-    setCurrentPage(1)
-  }
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -685,77 +678,13 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
         </CardContent>
       </Card>
 
-      {/* Pagination Controls */}
-      {sortedJobs.length > 0 && (
-        <div className="flex items-center justify-between border rounded-lg p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("emailJobs.show")}</span>
-            <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))} disabled={!userCanEdit}>
-              <SelectTrigger className="w-[70px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-            <span>{t("emailJobs.entries")}</span>
-          </div>
-
-          <div className="text-sm text-muted-foreground">
-            {t("emailJobs.showing")} {((currentPage - 1) * pageSize) + 1} {t("emailJobs.to")} {Math.min(currentPage * pageSize, sortedJobs.length)} {t("emailJobs.of")} {sortedJobs.length} {t("emailJobs.emailJobs")}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || !userCanEdit}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              {t("emailJobs.previous")}
-            </Button>
-            <div className="flex items-center gap-1 mx-2">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number
-                if (totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
-                } else {
-                  pageNum = currentPage - 2 + i
-                }
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    className="w-8 h-8 p-0"
-                    onClick={() => setCurrentPage(pageNum)}
-                    disabled={!userCanEdit}
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || !userCanEdit}
-            >
-              {t("emailJobs.next")}
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={sortedJobs.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
     </div>
   )
 }

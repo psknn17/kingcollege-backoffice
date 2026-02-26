@@ -8,9 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
-import { CalendarIcon, Search, Download, Filter, Eye, Send, AlertTriangle, ChevronLeft, ChevronRight, X, User, FileText, Calendar as CalendarEmoji, DollarSign, Clock, MessageSquare, RefreshCw, ArrowUpDown } from "lucide-react"
+import { CalendarIcon, Search, Download, Filter, Eye, Send, AlertTriangle, X, User, FileText, Calendar as CalendarEmoji, DollarSign, Clock, MessageSquare, RefreshCw, ArrowUpDown } from "lucide-react"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { format } from "date-fns"
@@ -154,7 +154,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 50
+  const [pageSize, setPageSize] = useState(10)
 
   // Modal states
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
@@ -360,9 +360,9 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
 
   // Calculate pagination with sorting
   const sortedInvoices = getSortedInvoices(filteredInvoices)
-  const totalPages = Math.ceil(sortedInvoices.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const totalPages = Math.ceil(sortedInvoices.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
   const currentPageInvoices = sortedInvoices.slice(startIndex, endIndex)
 
   const summaryStats = {
@@ -372,10 +372,6 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
     overdue: invoices.filter(i => i.status === "overdue").length,
     totalAmount: invoices.reduce((sum, i) => sum + i.amount, 0),
     unpaidAmount: invoices.filter(i => i.status === "unpaid" || i.status === "overdue").reduce((sum, i) => sum + i.amount, 0)
-  }
-
-  const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
   }
 
   // Manual refresh function
@@ -788,123 +784,13 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              {t("invoice.previous")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              {t("invoice.next")}
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => goToPage(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              
-              {/* First page */}
-              {currentPage > 2 && (
-                <>
-                  <PaginationItem>
-                    <PaginationLink onClick={() => goToPage(1)} className="cursor-pointer">
-                      1
-                    </PaginationLink>
-                  </PaginationItem>
-                  {currentPage > 3 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-                </>
-              )}
-              
-              {/* Previous page */}
-              {currentPage > 1 && (
-                <PaginationItem>
-                  <PaginationLink onClick={() => goToPage(currentPage - 1)} className="cursor-pointer">
-                    {currentPage - 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-              
-              {/* Current page */}
-              <PaginationItem>
-                <PaginationLink isActive>
-                  {currentPage}
-                </PaginationLink>
-              </PaginationItem>
-              
-              {/* Next page */}
-              {currentPage < totalPages && (
-                <PaginationItem>
-                  <PaginationLink onClick={() => goToPage(currentPage + 1)} className="cursor-pointer">
-                    {currentPage + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-              
-              {/* Last page */}
-              {currentPage < totalPages - 1 && (
-                <>
-                  {currentPage < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-                  <PaginationItem>
-                    <PaginationLink onClick={() => goToPage(totalPages)} className="cursor-pointer">
-                      {totalPages}
-                    </PaginationLink>
-                  </PaginationItem>
-                </>
-              )}
-              
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => goToPage(currentPage + 1)}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{t("invoiceOverview.goToPage")}:</span>
-            <Input
-              type="number"
-              min={1}
-              max={totalPages}
-              value={currentPage}
-              onChange={(e) => {
-                const page = parseInt(e.target.value)
-                if (page >= 1 && page <= totalPages) {
-                  goToPage(page)
-                }
-              }}
-              className="w-16 h-8"
-              disabled={!userCanEdit}
-            />
-          </div>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={sortedInvoices.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
 
       {/* Invoice Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

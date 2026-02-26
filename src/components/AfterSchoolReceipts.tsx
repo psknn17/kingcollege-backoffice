@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -13,6 +13,7 @@ import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
 import { InternalEmailManagement } from "./InternalEmailManagement"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 
 // Student data matching StudentContext (for internal SISB students)
 const studentData = [
@@ -128,9 +129,8 @@ export function AfterSchoolReceipts() {
   const [receipts] = useState<AfterSchoolReceipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<AfterSchoolReceipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 15
+  const [pageSize, setPageSize] = useState(10)
   const [statusFilter, setStatusFilter] = useState("all")
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("all")
   const [parentTypeFilter, setParentTypeFilter] = useState("all")
@@ -293,6 +293,12 @@ export function AfterSchoolReceipts() {
     externalParents: receipts.filter(r => r.isExternal).length,
     totalRevenue: receipts.reduce((sum, r) => sum + r.totalAmount, 0)
   }
+
+  useEffect(() => { setCurrentPage(1) }, [filteredReceipts])
+
+  const sortedReceipts = getSortedReceipts(filteredReceipts)
+  const totalCount = sortedReceipts.length
+  const paginatedReceipts = sortedReceipts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="space-y-6">
@@ -572,7 +578,7 @@ export function AfterSchoolReceipts() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedReceipts(filteredReceipts).map((receipt) => (
+              {paginatedReceipts.map((receipt) => (
                 <TableRow key={receipt.id}>
                   {/* Receipt Number - LEFT */}
                   <TableCell align="left" className="font-mono text-sm">
@@ -649,6 +655,13 @@ export function AfterSchoolReceipts() {
               ))}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

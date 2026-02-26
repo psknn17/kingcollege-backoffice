@@ -6,7 +6,7 @@ import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Search, Filter, Download, Users, Calendar, CreditCard, Mail, Phone, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -134,8 +134,8 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [parentTypeFilter, setParentTypeFilter] = useState("all")
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
-  const [currentPage, setCurrentPage] = usePersistedState("course-student-report:page", 1)
-  const [itemsPerPage, setItemsPerPage] = usePersistedState("course-student-report:pageSize", 15)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [sortColumn, setSortColumn] = usePersistedState("course-student-report:sortColumn", "")
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("course-student-report:sortDirection", "asc")
 
@@ -290,9 +290,8 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   }
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
   const currentPageStudents = filteredStudents.slice(startIndex, endIndex)
 
   const yearGroups = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
@@ -472,21 +471,6 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Showing {startIndex + 1}-{Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} students
-          {filteredStudents.length !== studentRegistrations.length && (
-            <span> (filtered from {studentRegistrations.length} total)</span>
-          )}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </span>
-        </div>
-      </div>
-
       {/* Students Table */}
       <Card>
         <CardContent className="p-0">
@@ -606,50 +590,13 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum
-                if (totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
-                } else {
-                  pageNum = currentPage - 2 + i
-                }
-                
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(pageNum)}
-                      isActive={currentPage === pageNum}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
-              })}
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={filteredStudents.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
     </div>
   )
 }

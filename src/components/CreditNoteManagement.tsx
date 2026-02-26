@@ -49,23 +49,40 @@ interface CreditNote {
 const CREDIT_NOTES_STORAGE_KEY = "creditNotes"
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
+// Sample credit notes for demo/initial display
+const SAMPLE_CREDIT_NOTES: CreditNote[] = [
+  { id: "cn-001", creditNoteNumber: "CN-2025-000001", invoiceNumber: "20250000101", studentName: "Oliver Brown", studentId: "KC2025001", studentGrade: "Year 5", parentName: "Mr. Robert Brown", originalAmount: 450000, creditAmount: 45000, reason: "Overpayment refund", type: "refund", status: "issued", issueDate: new Date("2025-01-10"), issuedBy: "Admin", notes: "" },
+  { id: "cn-002", creditNoteNumber: "CN-2025-000002", invoiceNumber: "20250000102", studentName: "Emma Wilson", studentId: "KC2025002", studentGrade: "Year 3", parentName: "Mrs. Sarah Wilson", originalAmount: 380000, creditAmount: 19000, reason: "Early withdrawal discount", type: "adjustment", status: "applied", issueDate: new Date("2025-01-12"), appliedDate: new Date("2025-01-15"), issuedBy: "Admin", notes: "" },
+  { id: "cn-003", creditNoteNumber: "CN-2025-000003", invoiceNumber: "20250000103", studentName: "James Chen", studentId: "KC2025003", studentGrade: "Year 7", parentName: "Mr. David Chen", originalAmount: 520000, creditAmount: 52000, reason: "Cancelled activity fee", type: "cancellation", status: "draft", issueDate: new Date("2025-01-14"), issuedBy: "Admin", notes: "" },
+  { id: "cn-004", creditNoteNumber: "CN-2025-000004", invoiceNumber: "20250000104", studentName: "Sophia Lee", studentId: "KC2025004", studentGrade: "Year 1", parentName: "Ms. Jennifer Lee", originalAmount: 295000, creditAmount: 29500, reason: "Sibling discount applied", type: "discount", status: "issued", issueDate: new Date("2025-01-16"), issuedBy: "Admin", notes: "" },
+  { id: "cn-005", creditNoteNumber: "CN-2025-000005", invoiceNumber: "20250000105", studentName: "Liam Taylor", studentId: "KC2025005", studentGrade: "Year 9", parentName: "Mr. James Taylor", originalAmount: 410000, creditAmount: 41000, reason: "Medical leave refund", type: "refund", status: "applied", issueDate: new Date("2025-01-18"), appliedDate: new Date("2025-01-20"), issuedBy: "Admin", notes: "" },
+  { id: "cn-006", creditNoteNumber: "CN-2025-000006", invoiceNumber: "20250000106", studentName: "Ava Martinez", studentId: "KC2025006", studentGrade: "Year 6", parentName: "Mrs. Carmen Martinez", originalAmount: 430000, creditAmount: 43000, reason: "Duplicate payment", type: "refund", status: "issued", issueDate: new Date("2025-01-20"), issuedBy: "Admin", notes: "" },
+  { id: "cn-007", creditNoteNumber: "CN-2025-000007", invoiceNumber: "20250000107", studentName: "Noah Johnson", studentId: "KC2025007", studentGrade: "Year 4", parentName: "Mr. Michael Johnson", originalAmount: 350000, creditAmount: 17500, reason: "Staff child discount", type: "discount", status: "draft", issueDate: new Date("2025-01-22"), issuedBy: "Admin", notes: "" },
+  { id: "cn-008", creditNoteNumber: "CN-2025-000008", invoiceNumber: "20250000108", studentName: "Isabella Anderson", studentId: "KC2025008", studentGrade: "Year 10", parentName: "Mrs. Patricia Anderson", originalAmount: 560000, creditAmount: 56000, reason: "Scholarship adjustment", type: "adjustment", status: "applied", issueDate: new Date("2025-01-24"), appliedDate: new Date("2025-01-26"), issuedBy: "Admin", notes: "" },
+  { id: "cn-009", creditNoteNumber: "CN-2025-000009", invoiceNumber: "20250000109", studentName: "William Thompson", studentId: "KC2025009", studentGrade: "Year 2", parentName: "Mr. Thomas Thompson", originalAmount: 310000, creditAmount: 15500, reason: "Event cancellation", type: "cancellation", status: "issued", issueDate: new Date("2025-01-26"), issuedBy: "Admin", notes: "" },
+  { id: "cn-010", creditNoteNumber: "CN-2025-000010", invoiceNumber: "20250000110", studentName: "Mia Garcia", studentId: "KC2025010", studentGrade: "Year 8", parentName: "Mrs. Rosa Garcia", originalAmount: 490000, creditAmount: 49000, reason: "Term fee adjustment", type: "adjustment", status: "draft", issueDate: new Date("2025-01-28"), issuedBy: "Admin", notes: "" },
+  { id: "cn-011", creditNoteNumber: "CN-2025-000011", invoiceNumber: "20250000111", studentName: "Ethan White", studentId: "KC2025011", studentGrade: "Year 11", parentName: "Mr. Steven White", originalAmount: 580000, creditAmount: 58000, reason: "Bursary credit", type: "discount", status: "applied", issueDate: new Date("2025-02-01"), appliedDate: new Date("2025-02-03"), issuedBy: "Admin", notes: "" },
+  { id: "cn-012", creditNoteNumber: "CN-2025-000012", invoiceNumber: "20250000112", studentName: "Charlotte Harris", studentId: "KC2025012", studentGrade: "Year 12", parentName: "Mrs. Linda Harris", originalAmount: 620000, creditAmount: 31000, reason: "Exam fee waiver", type: "cancellation", status: "issued", issueDate: new Date("2025-02-03"), issuedBy: "Admin", notes: "" },
+]
+
 // Load Credit Notes from localStorage
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
     const stored = localStorage.getItem(CREDIT_NOTES_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
-      return parsed.map((cn: any) => ({
+      const loaded = parsed.map((cn: any) => ({
         ...cn,
         issueDate: new Date(cn.issueDate),
         dueDate: cn.dueDate ? new Date(cn.dueDate) : undefined,
         appliedDate: cn.appliedDate ? new Date(cn.appliedDate) : undefined
       }))
+      if (loaded.length > 0) return loaded
     }
   } catch (error) {
     console.error("Failed to load credit notes:", error)
   }
-  return []
+  return SAMPLE_CREDIT_NOTES
 }
 
 // Save Credit Notes to localStorage
@@ -145,8 +162,8 @@ export function CreditNoteManagement() {
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("credit-note:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = usePersistedState("credit-note:currentPage", 1)
-  const [pageSize, setPageSize] = usePersistedState("credit-note:pageSize", 10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Confirm dialog hooks
   const createDialog = useConfirmDialog()

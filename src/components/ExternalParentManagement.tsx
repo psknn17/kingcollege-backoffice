@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -13,7 +14,6 @@ import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download,
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { usePersistedState } from "@/hooks/usePersistedState"
 
 interface ExternalParent {
   id: string
@@ -123,8 +123,8 @@ export function ExternalParentManagement() {
   const [statusFilter, setStatusFilter] = usePersistedState("external-parent:filterStatus", "all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [selectedParent, setSelectedParent] = useState<ExternalParent | null>(null)
-  const [currentPage, setCurrentPage] = usePersistedState("external-parent:page", 1)
-  const [pageSize, setPageSize] = usePersistedState("external-parent:pageSize", 10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -485,7 +485,7 @@ export function ExternalParentManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedParents(filteredParents).map((parent) => (
+              {getSortedParents(filteredParents).slice((currentPage - 1) * pageSize, currentPage * pageSize).map((parent) => (
                 <TableRow key={parent.id}>
                   <TableCell>
                     <div>
@@ -687,6 +687,14 @@ export function ExternalParentManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={filteredParents.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
     </div>
   )
 }

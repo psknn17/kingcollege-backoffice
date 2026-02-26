@@ -1709,6 +1709,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Edit item state
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<PreCreatedItem | null>(null)
+  const [editItemSelectedId, setEditItemSelectedId] = useState<string>("")
+  const [editItemName, setEditItemName] = useState<string>("")
+  const [editItemCategory, setEditItemCategory] = useState<string>("")
   const [editItemDescription, setEditItemDescription] = useState("")
   const [editItemAmount, setEditItemAmount] = useState<number>(0)
 
@@ -1857,6 +1860,36 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Track if tuition fee has been loaded for current selection
   const [tuitionFeeLoaded, setTuitionFeeLoaded] = useState<string>("")
 
+  // Auto-populate items from catalog for non-tuition invoice types when grade + term are selected
+  useEffect(() => {
+    if (invoiceType === "student" || invoiceType === "tuition" || !invoiceType) return
+    if (isEditMode) return
+
+    const hasGrade = selectedGrade || selectedGrades.length > 0
+    if (!hasGrade) return
+
+    const matching = allStoredItems.filter(item => {
+      if (!item.isActive) return false
+
+      // Grade match (if item has grade restrictions)
+      if (item.applicableGrades.length > 0) {
+        const gradeMatch = selectedGrade
+          ? item.applicableGrades.includes(selectedGrade)
+          : selectedGrades.some(g => item.applicableGrades.includes(g))
+        if (!gradeMatch) return false
+      }
+
+      // Term match (only for items whose name contains "term")
+      if (selectedTerm && item.name.toLowerCase().includes('term')) {
+        if (!item.name.toLowerCase().includes(selectedTerm.toLowerCase())) return false
+      }
+
+      return true
+    })
+
+    setSelectedItems(matching.map(item => ({ ...item })))
+  }, [selectedGrade, selectedGrades, selectedTerm, invoiceType, isEditMode, allStoredItems])
+
   // Auto-load tuition fee when Academic Year, Grade, and Term are all selected (for Tuition invoices)
   useEffect(() => {
     // Only for tuition category and student invoice type
@@ -1918,10 +1951,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             }
 
             if (termAmount > 0 && termNumber) {
-              // Look up item code and nominal code from items (imported or auto-generated)
+              // Look up item code, nominal code, and name from items (imported or auto-generated)
               const storageKey = getItemsStorageKey(invoiceType || "student")
               let itemCode: string | undefined = undefined
               let nominalCode: string | undefined = undefined
+              let catalogItemName: string | undefined = undefined
+              let catalogItemDescription: string | undefined = undefined
 
               try {
                 const storedItems = localStorage.getItem(storageKey)
@@ -1936,6 +1971,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   if (importedMatch) {
                     itemCode = importedMatch.itemCode
                     nominalCode = importedMatch.nominalCode
+                    catalogItemName = importedMatch.name
+                    catalogItemDescription = importedMatch.description
                   } else {
                     // 2) Fallback: match by auto-generated itemCode
                     const syncedItemCode = `TUI-T${termNumber}-${gradeId.toUpperCase()}`
@@ -1943,6 +1980,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     if (autoMatch) {
                       itemCode = autoMatch.itemCode
                       nominalCode = autoMatch.nominalCode
+                      catalogItemName = autoMatch.name
+                      catalogItemDescription = autoMatch.description
                     }
                   }
                 }
@@ -1957,8 +1996,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
               const tuitionItem: PreCreatedItem = {
                 id: `tuition-${gradeId}-${selectedTerm}`,
-                name: `${termName} Tuition Fee - ${selectedGrade}`,
-                description: `${termName} tuition payment for ${selectedGrade}`,
+                name: catalogItemName || `${termName} Tuition Fee - ${selectedGrade}`,
+                description: catalogItemDescription || `${termName} tuition payment for ${selectedGrade}`,
                 category: "Tuition",
                 amount: termAmount,
                 isActive: true,
@@ -2108,10 +2147,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               }
 
               if (termAmount > 0 && termNumber) {
-                // Look up item code and nominal code from items (imported or auto-generated)
+                // Look up item code, nominal code, and name from items (imported or auto-generated)
                 const storageKey2 = getItemsStorageKey(invoiceType || "student")
                 let itemCode: string | undefined = undefined
                 let nominalCode: string | undefined = undefined
+                let catalogItemName2: string | undefined = undefined
+                let catalogItemDescription2: string | undefined = undefined
 
                 try {
                   const storedItems2 = localStorage.getItem(storageKey2)
@@ -2126,6 +2167,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                     if (importedMatch2) {
                       itemCode = importedMatch2.itemCode
                       nominalCode = importedMatch2.nominalCode
+                      catalogItemName2 = importedMatch2.name
+                      catalogItemDescription2 = importedMatch2.description
                     } else {
                       // 2) Fallback: match by auto-generated itemCode
                       const syncedItemCode = `TUI-T${termNumber}-${gradeId.toUpperCase()}`
@@ -2133,6 +2176,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       if (autoMatch2) {
                         itemCode = autoMatch2.itemCode
                         nominalCode = autoMatch2.nominalCode
+                        catalogItemName2 = autoMatch2.name
+                        catalogItemDescription2 = autoMatch2.description
                       }
                     }
                   }
@@ -2148,8 +2193,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
                 setSelectedItems([{
                   id: `tuition-${gradeId}-${term}`,
-                  name: `${termName} Tuition Fee - ${selectedGrade}`,
-                  description: `${termName} tuition payment for ${selectedGrade}`,
+                  name: catalogItemName2 || `${termName} Tuition Fee - ${selectedGrade}`,
+                  description: catalogItemDescription2 || `${termName} tuition payment for ${selectedGrade}`,
                   category: "Tuition",
                   amount: termAmount,
                   isActive: true,
@@ -2666,9 +2711,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Edit item handlers
   const handleEditItem = (item: PreCreatedItem) => {
     setEditingItem(item)
+    setEditItemSelectedId(item.id)
+    setEditItemName(item.name)
+    setEditItemCategory(item.category)
     setEditItemDescription(item.description)
     setEditItemAmount(item.amount)
     setIsEditItemDialogOpen(true)
+  }
+
+  const handleEditItemCatalogSelect = (catalogItemId: string) => {
+    const catalogItem = loadItemsFromStorage(invoiceType).find(i => i.id === catalogItemId)
+    if (catalogItem) {
+      setEditItemSelectedId(catalogItemId)
+      setEditItemName(catalogItem.name)
+      setEditItemCategory(catalogItem.category)
+      setEditItemDescription(catalogItem.description)
+      setEditItemAmount(catalogItem.amount)
+    }
   }
 
   const handleSaveEditItem = () => {
@@ -2676,7 +2735,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
     setSelectedItems(selectedItems.map(item =>
       item.id === editingItem.id
-        ? { ...item, description: editItemDescription, amount: editItemAmount }
+        ? { ...item, name: editItemName, category: editItemCategory, description: editItemDescription, amount: editItemAmount }
         : item
     ))
     setIsEditItemDialogOpen(false)
@@ -5420,15 +5479,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               <div className="space-y-2">
                 <Label className="text-sm font-medium">{t('invoiceCreation.itemName')}</Label>
                 <div className="p-3 bg-muted rounded-md">
-                  <p className="font-medium">{editingItem.name}</p>
+                  <p className="font-medium">{editItemName}</p>
                   <Badge
                     variant="outline"
-                    className={`mt-1 text-xs ${editingItem.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                      editingItem.category === "ECA" ? "border-green-300 text-green-700" :
+                    className={`mt-1 text-xs ${editItemCategory === "Tuition" ? "border-blue-300 text-blue-700" :
+                      editItemCategory === "ECA" ? "border-green-300 text-green-700" :
                         "border-orange-300 text-orange-700"
                       }`}
                   >
-                    {editingItem.category}
+                    {editItemCategory}
                   </Badge>
                 </div>
               </div>

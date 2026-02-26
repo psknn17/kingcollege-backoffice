@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import {
   BarChart,
   Bar,
@@ -40,8 +40,6 @@ import {
   Users,
   AlertTriangle,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   ArrowUpDown
 } from "lucide-react"
 import { format } from "date-fns"
@@ -194,7 +192,7 @@ export function SummerPaymentReports() {
   const [dateTo, setDateTo] = useState<Date>()
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [pageSize, setPageSize] = useState(10)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -258,15 +256,10 @@ export function SummerPaymentReports() {
   })
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const totalPages = Math.ceil(filteredPayments.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
   const currentPagePayments = filteredPayments.slice(startIndex, endIndex)
-
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(parseInt(value))
-    setCurrentPage(1) // Reset to first page when changing items per page
-  }
 
   const getPaymentMethodLabel = (method: PaymentRecord['paymentMethod']) => {
     const labels = {
@@ -607,27 +600,11 @@ export function SummerPaymentReports() {
             </CardContent>
           </Card>
 
-          {/* Results Summary with Display Size Selector */}
+          {/* Results Summary */}
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <p className="text-sm text-muted-foreground">
-                {t("summerPayment.showingRecords").replace("{from}", String(startIndex + 1)).replace("{to}", String(Math.min(endIndex, filteredPayments.length))).replace("{total}", String(filteredPayments.length))}
-              </p>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">{t("payment.show")}:</label>
-                <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">{t("payment.perPage")}</span>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("summerPayment.showingRecords").replace("{from}", String(startIndex + 1)).replace("{to}", String(Math.min(endIndex, filteredPayments.length))).replace("{total}", String(filteredPayments.length))}
+            </p>
           </div>
 
           {/* Payment Details Table */}
@@ -718,59 +695,13 @@ export function SummerPaymentReports() {
           </Card>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage > 1) setCurrentPage(currentPage - 1)
-                      }}
-                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
-                    return (
-                      <PaginationItem key={pageNumber}>
-                        <PaginationLink
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setCurrentPage(pageNumber)
-                          }}
-                          isActive={currentPage === pageNumber}
-                        >
-                          {pageNumber}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  })}
-                  
-                  {totalPages > 5 && currentPage < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-                      }}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredPayments.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

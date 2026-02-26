@@ -38,6 +38,7 @@ import { ColumnPresets } from "@/utils/tableAlignment"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import * as XLSX from "xlsx"
@@ -474,8 +475,8 @@ export function InvoiceManagement({
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("invoice-management:sortDirection", "desc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = usePersistedState("invoice-management:page", 1)
-  const [pageSize, setPageSize] = usePersistedState("invoice-management:pageSize", 10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Invoice type tab state (unique key per category to avoid conflicts)
   const [invoiceTypeTab, setInvoiceTypeTab] = usePersistedState<"student" | "external">(`invoice-management:invoiceTypeTab:${category || 'default'}`, defaultTab || "student")
@@ -804,10 +805,6 @@ export function InvoiceManagement({
     return sortedInvoices.slice(startIndex, startIndex + pageSize)
   }, [sortedInvoices, currentPage, pageSize])
 
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize)
-    setCurrentPage(1)
-  }
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -3898,75 +3895,13 @@ export function InvoiceManagement({
               </Table>
 
               {/* Pagination Controls */}
-              {filteredInvoices.length > 0 && (
-                <div className="flex items-center justify-between border-t p-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{t("invoice.show")}</span>
-                    <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-                      <SelectTrigger className="w-[70px] h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="25">25</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <span>{t("invoice.entries")}</span>
-                  </div>
-
-                  <div className="text-sm text-muted-foreground">
-                    {t("invoice.show")} {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredInvoices.length)} / {filteredInvoices.length} {t("invoice.entries")}
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      {t("invoice.previous")}
-                    </Button>
-                    <div className="flex items-center gap-1 mx-2">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum: number
-                        if (totalPages <= 5) {
-                          pageNum = i + 1
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i
-                        } else {
-                          pageNum = currentPage - 2 + i
-                        }
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={currentPage === pageNum ? "default" : "outline"}
-                            size="sm"
-                            className="w-8 h-8 p-0"
-                            onClick={() => setCurrentPage(pageNum)}
-                          >
-                            {pageNum}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      {t("invoice.next")}
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <PaginationBar
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={filteredInvoices.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -4338,48 +4273,13 @@ export function InvoiceManagement({
               )}
 
               {/* Pagination for External */}
-              {filteredInvoices.length > 0 && (
-                <div className="flex items-center justify-between border-t p-4 mt-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{t("invoice.show")}</span>
-                    <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-                      <SelectTrigger className="w-[70px] h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="25">25</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <span>{t("invoice.entries")}</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {t("invoice.show")} {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredInvoices.length)} / {filteredInvoices.length} {t("invoice.entries")}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      {t("invoice.previous")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      {t("invoice.next")}
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <PaginationBar
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={filteredInvoices.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
         </TabsContent>

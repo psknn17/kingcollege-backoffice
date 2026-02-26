@@ -213,12 +213,29 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     [contextStudents]
   )
 
+  // Normalize grade for comparison — handles "Year 10", "year10", "Year10", "10" variations
+  const normalizeGrade = (grade: string) => (grade || "").toLowerCase().replace(/\s+/g, "")
+
+  // Match year group filter with normalization
+  const matchesYearGroup = (studentGrade: string, filter: string) =>
+    filter === "All" || normalizeGrade(studentGrade) === normalizeGrade(filter)
+
+  // Dynamic search placeholder based on actual students
+  const searchPlaceholder = useMemo(() => {
+    const example = availableStudents.find(s => s.id)
+    return example ? `Search by ID or Name (e.g., ${example.id})` : "Search by ID or Name"
+  }, [availableStudents])
+
   const [selectedYearGroup, setSelectedYearGroup] = useState<string>("All")
   const [isInputFocused, setIsInputFocused] = useState(false)
 
-  // Get unique year groups
+  // Get unique year groups — always include full grade list so filter works even without students loaded
+  const ALL_GRADE_LEVELS = ["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"]
   const uniqueYearGroups = useMemo(() => {
-    const groups = new Set(availableStudents.map((s: Student) => s.yearGroup))
+    const groups = new Set([
+      ...ALL_GRADE_LEVELS,
+      ...availableStudents.map((s: Student) => s.yearGroup).filter(Boolean)
+    ])
     return getSortedYearGroups(["All", ...Array.from(groups)])
   }, [availableStudents])
 
@@ -1192,7 +1209,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 onChange={(e) => setStudentInput(e.target.value)}
                                 onFocus={() => setIsInputFocused(true)}
                                 onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
-                                placeholder="Search by ID or Name (e.g., KC2024001)"
+                                placeholder={searchPlaceholder}
                                 className="rounded-none"
                                 disabled={!userCanEdit}
                               />
@@ -1202,8 +1219,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               <div className="absolute z-50 mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                                 {availableStudents.filter((s: Student) =>
                                   !groupForm.selectedStudents.find((sel: Student) => sel.id === s.id) &&
-                                  (selectedYearGroup === "All" || s.yearGroup === selectedYearGroup) &&
-                                  (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
+                                  matchesYearGroup(s.yearGroup, selectedYearGroup) &&
+                                  (studentInput === "" || s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
                                     s.name.toLowerCase().includes(studentInput.toLowerCase()))
                                 ).length === 0 ? (
                                   <div className="py-12 px-4 text-center">
@@ -1217,8 +1234,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                   availableStudents
                                     .filter((s: Student) =>
                                       !groupForm.selectedStudents.find((sel: Student) => sel.id === s.id) &&
-                                      (selectedYearGroup === "All" || s.yearGroup === selectedYearGroup) &&
-                                      (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
+                                      matchesYearGroup(s.yearGroup, selectedYearGroup) &&
+                                      (studentInput === "" || s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
                                         s.name.toLowerCase().includes(studentInput.toLowerCase()))
                                     )
                                     .slice(0, 10)
@@ -1670,7 +1687,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               id="edit-student-input"
                               value={studentInput}
                               onChange={(e) => setStudentInput(e.target.value)}
-                              placeholder="Search by ID or Name (e.g., KC2024001)"
+                              placeholder={searchPlaceholder}
                               className="rounded-none"
                             />
                           </div>

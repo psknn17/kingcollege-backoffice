@@ -7,6 +7,7 @@ import { Badge } from "./ui/badge"
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 
 const mockActivityLogs: ActivityLogEntry[] = [
   {
@@ -82,6 +83,8 @@ const getStatusBadge = (status: ActivityLogEntry["status"]) => {
 export function ActivityLog() {
   const [searchTerm, setSearchTerm] = usePersistedState("activity-log:search", "")
   const [logs, setLogs] = useState<ActivityLogEntry[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const filteredLogs = useMemo(() => {
     // Filter out "Viewed" actions
@@ -109,6 +112,11 @@ export function ActivityLog() {
     window.addEventListener("activityLogsUpdated", handleUpdate)
     return () => window.removeEventListener("activityLogsUpdated", handleUpdate)
   }, [])
+
+  useEffect(() => { setCurrentPage(1) }, [searchTerm])
+
+  const totalCount = filteredLogs.length
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="space-y-6">
@@ -153,7 +161,7 @@ export function ActivityLog() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLogs.map(log => (
+              {paginatedLogs.map(log => (
                 <TableRow key={log.id}>
                   {/* Timestamp - date column, left aligned */}
                   <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "MMM dd, yyyy HH:mm")}</TableCell>
@@ -178,6 +186,13 @@ export function ActivityLog() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
     </div>

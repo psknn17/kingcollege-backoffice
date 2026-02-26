@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import {
   BarChart,
@@ -34,8 +34,6 @@ import {
   DollarSign,
   Filter,
   Search,
-  ChevronLeft,
-  ChevronRight,
   ArrowUpDown
 } from "lucide-react"
 import { format } from "date-fns"
@@ -136,8 +134,8 @@ export function EventRegistrationReports() {
   const [dateFrom, setDateFrom] = useState<Date>()
   const [dateTo, setDateTo] = useState<Date>()
   const [searchTerm, setSearchTerm] = usePersistedState("event-registration:search", "")
-  const [currentPage, setCurrentPage] = usePersistedState("event-registration:page", 1)
-  const [itemsPerPage, setItemsPerPage] = usePersistedState("event-registration:pageSize", 50)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -205,15 +203,9 @@ export function EventRegistrationReports() {
   })
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredRegistrations.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
   const currentPageRegistrations = filteredRegistrations.slice(startIndex, endIndex)
-
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(parseInt(value))
-    setCurrentPage(1) // Reset to first page when changing items per page
-  }
 
   const exportReport = (format: 'csv' | 'excel') => {
     toast.success(t("eventReports.exportSuccess").replace("{format}", format.toUpperCase()))
@@ -502,32 +494,6 @@ export function EventRegistrationReports() {
             </CardContent>
           </Card>
 
-          {/* Results Summary with Display Size Selector */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <p className="text-sm text-muted-foreground">
-                {t("eventReports.showingRegistrations")
-                  .replace("{from}", String(startIndex + 1))
-                  .replace("{to}", String(Math.min(endIndex, filteredRegistrations.length)))
-                  .replace("{total}", String(filteredRegistrations.length))}
-              </p>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">{t("eventReports.show")}:</label>
-                <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">{t("eventReports.perPage")}</span>
-              </div>
-            </div>
-          </div>
-
           {/* Detailed Registration Table */}
           <Card>
             <CardHeader>
@@ -622,59 +588,13 @@ export function EventRegistrationReports() {
           </Card>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage > 1) setCurrentPage(currentPage - 1)
-                      }}
-                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
-                    return (
-                      <PaginationItem key={pageNumber}>
-                        <PaginationLink
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setCurrentPage(pageNumber)
-                          }}
-                          isActive={currentPage === pageNumber}
-                        >
-                          {pageNumber}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  })}
-                  
-                  {totalPages > 5 && currentPage < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-                      }}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredRegistrations.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

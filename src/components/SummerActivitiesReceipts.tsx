@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -13,6 +13,7 @@ import { CalendarIcon, Search, Download, Filter, Eye, Mail, Receipt, Users, Sun,
 import { format } from "date-fns"
 import { InternalEmailManagement } from "./InternalEmailManagement"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 
 // Student data matching StudentContext
 const studentData = [
@@ -152,6 +153,8 @@ export function SummerActivitiesReceipts() {
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -315,6 +318,12 @@ export function SummerActivitiesReceipts() {
     avgAmount: receipts.reduce((sum, r) => sum + r.amount, 0) / receipts.length,
     avgAge: receipts.reduce((sum, r) => sum + r.participantAge, 0) / receipts.length
   }
+
+  useEffect(() => { setCurrentPage(1) }, [filteredReceipts])
+
+  const sortedReceipts = getSortedReceipts(filteredReceipts)
+  const totalCount = sortedReceipts.length
+  const paginatedItems = sortedReceipts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="space-y-6">
@@ -610,7 +619,7 @@ export function SummerActivitiesReceipts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {getSortedReceipts(filteredReceipts).map((receipt) => (
+                  {paginatedItems.map((receipt) => (
                     <TableRow key={receipt.id}>
                       {/* Receipt Number - text (left aligned) */}
                       <TableCell align="left" className="font-mono text-sm">
@@ -695,6 +704,13 @@ export function SummerActivitiesReceipts() {
                   ))}
                 </TableBody>
               </Table>
+              <PaginationBar
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
 

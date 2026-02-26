@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -10,7 +11,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
@@ -43,6 +44,7 @@ interface ItemTemplate {
   name: string
   description: string
   items: string[] // Item IDs
+  itemData?: Record<string, { name: string; amount: number; category?: string }> // Snapshot for display fallback
   applicableGrades: string[]
   isActive: boolean
   invoiceType?: "student" | "external"
@@ -1893,12 +1895,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
 
   // Pagination states
-  const [currentPage, setCurrentPage] = invoiceType === "tuition"
-    ? usePersistedState<number>("tuition-item-management:currentPage", 1)
-    : useState(1)
-  const [pageSize, setPageSize] = invoiceType === "tuition"
-    ? usePersistedState<number>("tuition-item-management:pageSize", 10)
-    : useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Sorting states
   const [sortColumn, setSortColumn] = invoiceType === "tuition"
@@ -2493,11 +2491,21 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       ? []
       : newTemplate.applicableGrades
 
+    // Build item snapshot so templates can display name/price even if item is later deleted
+    const itemData: Record<string, { name: string; amount: number; category?: string }> = {}
+    selectedItemsForTemplate.forEach(itemId => {
+      const found = items.find(i => i.id === itemId)
+      if (found) {
+        itemData[itemId] = { name: found.name, amount: found.amount, category: found.category }
+      }
+    })
+
     const templateData: ItemTemplate = {
       id: editingTemplate?.id || `template-${Date.now()}`,
       name: newTemplate.name,
       description: newTemplate.description,
       items: selectedItemsForTemplate,
+      itemData,
       applicableGrades: applicableGrades,
       isActive: true,
       invoiceType: (editingTemplate?.invoiceType || invoiceType) as ItemTemplate["invoiceType"]
@@ -2892,78 +2900,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             </div>
 
             {/* Pagination Controls */}
-            {filteredItems.length > 0 && (
-              <div className="flex items-center justify-between border-t p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Show</span>
-                  <Select value={pageSize.toString()} onValueChange={(value) => {
-                    setPageSize(Number(value))
-                    setCurrentPage(1)
-                  }}>
-                    <SelectTrigger className="w-[70px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span>entries</span>
-                </div>
-
-                <div className="text-sm text-muted-foreground">
-                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredItems.length)} of {filteredItems.length} items
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1 mx-2">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum: number
-                      if (totalPages <= 5) {
-                        pageNum = i + 1
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i
-                      } else {
-                        pageNum = currentPage - 2 + i
-                      }
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          className="w-8 h-8 p-0"
-                          onClick={() => setCurrentPage(pageNum)}
-                        >
-                          {pageNum}
-                        </Button>
-                      )
-                    })}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <PaginationBar
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={filteredItems.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+            />
           </CardContent>
         </Card>
       )}
@@ -3066,16 +3009,18 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                       <p className="text-sm font-medium">{template.items.length} items:</p>
                       <div className="space-y-1">
                         {template.items.map(itemId => {
-                          const item = items.find(i => i.id === itemId)
-                          return item ? (
+                          const liveItem = items.find(i => i.id === itemId)
+                          const snapshot = template.itemData?.[itemId]
+                          const displayItem = liveItem || (snapshot ? { name: snapshot.name, amount: snapshot.amount } : null)
+                          return displayItem ? (
                             <div key={itemId} className="flex justify-between text-sm">
-                              <span>{item.name}</span>
-                              <span className="font-medium">{formatCurrency(item.amount)}</span>
+                              <span>{displayItem.name}</span>
+                              <span className="font-medium">{formatCurrency(displayItem.amount)}</span>
                             </div>
                           ) : (
-                            <div key={itemId} className="flex justify-between text-sm text-red-500">
-                              <span>Item not found (ID: {itemId})</span>
-                              <span className="font-medium">0</span>
+                            <div key={itemId} className="flex justify-between text-sm text-muted-foreground italic">
+                              <span>Item removed — please re-edit template</span>
+                              <span className="font-medium">—</span>
                             </div>
                           )
                         })}
@@ -3086,8 +3031,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         <span>
                           {formatCurrency(
                             template.items.reduce((sum, itemId) => {
-                              const item = items.find(i => i.id === itemId)
-                              return sum + (item?.amount || 0)
+                              const liveItem = items.find(i => i.id === itemId)
+                              const snapshot = template.itemData?.[itemId]
+                              return sum + (liveItem?.amount ?? snapshot?.amount ?? 0)
                             }, 0)
                           )}
                         </span>

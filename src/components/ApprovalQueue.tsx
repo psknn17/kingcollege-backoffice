@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
@@ -217,8 +218,8 @@ export function ApprovalQueue() {
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
   const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "approvalStatus" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", "invoiceNumber")
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "desc")
-  const [currentPage, setCurrentPage] = usePersistedState("approval-queue:page", 1)
-  const [pageSize, setPageSize] = usePersistedState("approval-queue:pageSize", 10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
@@ -364,6 +365,11 @@ export function ApprovalQueue() {
     })
     return sorted
   }, [filteredInvoices, sortKey, sortDirection])
+
+  const pagedInvoices = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedInvoices.slice(start, start + pageSize)
+  }, [sortedInvoices, currentPage, pageSize])
 
   const renderSortHeader = (label: string, key: NonNullable<typeof sortKey>) => (
     <button
@@ -924,7 +930,7 @@ export function ApprovalQueue() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedInvoices.map(invoice => (
+              {pagedInvoices.map(invoice => (
                 <TableRow key={invoice.id}>
                   {/* Checkbox - center aligned */}
                   <TableCell align="center">
@@ -1040,6 +1046,13 @@ export function ApprovalQueue() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedInvoices.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

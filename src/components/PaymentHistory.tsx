@@ -11,8 +11,8 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Separator } from "./ui/separator"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
-import { CalendarIcon, Search, Download, Filter, Eye, Receipt, CreditCard, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react"
+import { PaginationBar } from "@/components/ui/pagination-bar"
+import { CalendarIcon, Search, Download, Filter, Eye, Receipt, CreditCard, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
 import { toast } from "@/components/ui/sonner"
@@ -137,7 +137,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [pageSize, setPageSize] = useState(10)
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -280,11 +280,6 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     setCurrentPage(1)
   }
 
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(parseInt(value))
-    setCurrentPage(1) // Reset to first page when changing items per page
-  }
-
   const exportData = () => {
     // Create data headers
     const headers = [
@@ -344,9 +339,9 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
   // Pagination calculations
   const sortedPayments = getSortedPayments(filteredPayments)
-  const totalPages = Math.ceil(sortedPayments.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const totalPages = Math.ceil(sortedPayments.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
   const currentPagePayments = sortedPayments.slice(startIndex, endIndex)
 
   const downloadReceipt = (payment: PaymentRecord) => {
@@ -586,27 +581,10 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
 
       {/* Results Summary */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            {t("payment.showingRecords", { from: startIndex + 1, to: Math.min(endIndex, filteredPayments.length), total: filteredPayments.length })}
-            {filteredPayments.length < payments.length && ` (${t("payment.filteredFrom", { total: payments.length })})`}
-          </p>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground">{t("payment.show")}:</label>
-            <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-muted-foreground">{t("payment.perPage")}</span>
-          </div>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {t("payment.showingRecords", { from: startIndex + 1, to: Math.min(endIndex, filteredPayments.length), total: filteredPayments.length })}
+          {filteredPayments.length < payments.length && ` (${t("payment.filteredFrom", { total: payments.length })})`}
+        </p>
         <div className="text-sm text-muted-foreground">
           {t("payment.totalAmount")}: ₿{filteredPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString()}
         </div>
@@ -871,80 +849,13 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-
-            {/* Show first few pages */}
-            {Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + 1).map(page => (
-              <PaginationItem key={page}>
-                <PaginationLink
-                  onClick={() => setCurrentPage(page)}
-                  isActive={currentPage === page}
-                  className="cursor-pointer"
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-
-            {/* Show ellipsis if there are many pages */}
-            {totalPages > 6 && currentPage < totalPages - 2 && (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            )}
-
-            {/* Show current page area if it's in the middle */}
-            {currentPage > 3 && currentPage < totalPages - 2 && (
-              <PaginationItem>
-                <PaginationLink
-                  onClick={() => setCurrentPage(currentPage)}
-                  isActive={true}
-                  className="cursor-pointer"
-                >
-                  {currentPage}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-
-            {/* Show last few pages */}
-            {totalPages > 3 && (
-              <>
-                {totalPages > 6 && currentPage < totalPages - 2 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => totalPages - 2 + i).filter(page => page > 3).map(page => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(page)}
-                      isActive={currentPage === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-              </>
-            )}
-
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={sortedPayments.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
     </div>
   )
 }

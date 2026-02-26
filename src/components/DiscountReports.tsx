@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
@@ -470,8 +471,8 @@ export function DiscountReports() {
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("discount-reports:sortDirection", "asc")
 
   // Pagination states
-  const [currentPage, setCurrentPage] = usePersistedState("discount-reports:page", 1)
-  const [pageSize] = usePersistedState("discount-reports:pageSize", 10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const itemsPerPage = pageSize
 
   // Reset page when filters change
@@ -1101,50 +1102,13 @@ export function DiscountReports() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                {t("discountReports.showing") || "Showing"} {startIndex + 1}-{Math.min(endIndex, sortedStudents.length)} {t("discountReports.of") || "of"} {sortedStudents.length} {t("discountReports.students")}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                >
-                  {"<<"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  {t("discountReports.previous") || "Previous"}
-                </Button>
-                <span className="text-sm px-2">
-                  {t("discountReports.page") || "Page"} {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  {t("discountReports.next") || "Next"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                >
-                  {">>"}
-                </Button>
-              </div>
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedStudents.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 
