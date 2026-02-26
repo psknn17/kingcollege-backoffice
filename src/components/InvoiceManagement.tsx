@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { getCreditNotesByFamily, applyCreditNotes } from "@/services/creditNoteService"
 import { triggerDownload } from "@/utils/downloadUtils"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { cn } from "./ui/utils"
@@ -2944,58 +2945,19 @@ export function InvoiceManagement({
     setIsEmailDetailDialogOpen(true)
   }
 
-  const openMarkPaidDialog = (invoice: Invoice) => {
+  const openMarkPaidDialog = useCallback(async (invoice: Invoice) => {
     setMarkPaidInvoice(invoice)
     setPaymentMethod("")
     setPaymentFiles([])
     setSelectedCNIdsForPaid(new Set())
-    // Load available credit notes for this student/family
-    try {
-      let stored = localStorage.getItem("creditNotesRecords")
-      // If no credit notes in storage yet, seed demo data for this student
-      if (!stored || JSON.parse(stored).length === 0) {
-        const demoNotes: CreditNoteRecord[] = [
-          {
-            id: `demo-cn-${invoice.studentId}-1`,
-            creditNoteNumber: `CN-${new Date().getFullYear()}-000001`,
-            studentName: invoice.studentName,
-            studentId: invoice.studentId,
-            familyCode: invoice.adultIdNo || "",
-            amount: 5000,
-            reason: "Overpayment refund",
-            status: "issued",
-            issueDate: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
-          },
-          {
-            id: `demo-cn-${invoice.studentId}-2`,
-            creditNoteNumber: `CN-${new Date().getFullYear()}-000002`,
-            studentName: invoice.studentName,
-            studentId: invoice.studentId,
-            familyCode: invoice.adultIdNo || "",
-            amount: 10000,
-            reason: "Course cancellation",
-            status: "issued",
-            issueDate: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString()
-          }
-        ]
-        localStorage.setItem("creditNotesRecords", JSON.stringify(demoNotes))
-        stored = JSON.stringify(demoNotes)
-      }
-      const all: CreditNoteRecord[] = JSON.parse(stored)
-      const available = all.filter(cn => cn.status === "issued" || cn.status === "partial")
-      // Match by studentId, familyCode, or studentName as fallback
-      const matching = available.filter(cn =>
-        cn.studentId === invoice.studentId ||
-        (invoice.adultIdNo && cn.familyCode && cn.familyCode === invoice.adultIdNo) ||
-        (cn.studentName && invoice.studentName &&
-          cn.studentName.trim().toLowerCase() === invoice.studentName.trim().toLowerCase())
-      )
-      setAvailableCNsForPaid(matching)
-    } catch {
-      setAvailableCNsForPaid([])
-    }
+    // Use service to load available CNs — swap getCreditNotesByFamily() to API when backend ready
+    const cns = await getCreditNotesByFamily(
+      invoice.adultIdNo || invoice.studentId,
+      invoice.studentId
+    )
+    setAvailableCNsForPaid(cns)
     setIsMarkPaidOpen(true)
-  }
+  }, [])
 
   const readFileAsDataUrl = (file: File): Promise<{ name: string; dataUrl: string }> => {
     return new Promise((resolve, reject) => {
@@ -3188,17 +3150,20 @@ export function InvoiceManagement({
         }
       }
 
-      // Mark applied Credit Notes as "used"
+      // Mark applied Credit Notes as "used" via service
+      // → swap applyCreditNotes() to API call when backend ready
       if (selectedCNIdsForPaid.size > 0) {
         try {
-          const storedCNs = localStorage.getItem("creditNotesRecords")
-          const allCNs: CreditNoteRecord[] = storedCNs ? JSON.parse(storedCNs) : []
-          const updatedCNs = allCNs.map(cn =>
-            selectedCNIdsForPaid.has(cn.id)
-              ? { ...cn, status: "used" as const, remainingBalance: 0, appliedToInvoice: markPaidInvoice.invoiceNumber }
-              : cn
-          )
-          localStorage.setItem("creditNotesRecords", JSON.stringify(updatedCNs))
+          const payloads = [...selectedCNIdsForPaid].map(id => {
+            const cn = availableCNsForPaid.find(c => c.id === id)
+            return {
+              creditNoteId: id,
+              invoiceId: markPaidInvoice.invoiceNumber,
+              appliedAmount: cn?.remainingBalance ?? cn?.amount ?? 0,
+              appliedBy: "staff" as const,
+            }
+          })
+          await applyCreditNotes(payloads)
         } catch (e) {
           console.error("Failed to update credit notes:", e)
         }
