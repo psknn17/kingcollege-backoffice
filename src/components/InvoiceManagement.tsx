@@ -5698,12 +5698,22 @@ export function InvoiceManagement({
 
             {/* 3. Apply Credit Notes */}
             {availableCNsForPaid.length > 0 && (
-              <div className="space-y-2 border rounded-lg p-3 bg-green-50 border-green-200">
-                <label className="text-sm font-medium text-green-800">Apply Credit Notes <span className="font-normal text-green-700">(optional)</span></label>
-                <div className="space-y-2">
+              <div className="border border-green-200 rounded-lg overflow-hidden">
+                {/* Header */}
+                <div className="bg-green-50 px-4 py-2.5 border-b border-green-200">
+                  <p className="text-sm font-medium text-green-800">
+                    Apply Credit Notes <span className="font-normal text-green-600">(optional)</span>
+                  </p>
+                </div>
+
+                {/* CN list */}
+                <div className="divide-y divide-green-100">
                   {availableCNsForPaid.map(cn => (
-                    <div key={cn.id} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                    <label
+                      key={cn.id}
+                      className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-green-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
                         <Checkbox
                           checked={selectedCNIdsForPaid.has(cn.id)}
                           onCheckedChange={() => {
@@ -5714,17 +5724,19 @@ export function InvoiceManagement({
                             })
                           }}
                         />
-                        <div className="text-sm">
-                          <span className="font-mono font-medium">{cn.creditNoteNumber}</span>
-                          <span className="text-muted-foreground ml-2">— {cn.reason}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium font-mono text-gray-800">{cn.creditNoteNumber}</p>
+                          <p className="text-xs text-muted-foreground truncate">{cn.reason}</p>
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-green-700">
+                      <span className="text-sm font-semibold text-green-700 shrink-0">
                         ฿{(cn.remainingBalance ?? cn.amount).toLocaleString()}
                       </span>
-                    </div>
+                    </label>
                   ))}
                 </div>
+
+                {/* Summary */}
                 {selectedCNIdsForPaid.size > 0 && (() => {
                   const totalCN = [...selectedCNIdsForPaid].reduce((sum, id) => {
                     const cn = availableCNsForPaid.find(c => c.id === id)
@@ -5732,16 +5744,16 @@ export function InvoiceManagement({
                   }, 0)
                   const netPayable = Math.max(0, (markPaidInvoice?.finalAmount ?? 0) - totalCN)
                   return (
-                    <div className="border-t border-green-200 pt-2 mt-2 space-y-1 text-sm">
-                      <div className="flex justify-between text-muted-foreground">
+                    <div className="bg-green-50 border-t border-green-200 px-4 py-3 space-y-1.5">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Invoice Amount</span>
                         <span>฿{markPaidInvoice?.finalAmount.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between text-green-700">
+                      <div className="flex justify-between text-sm text-green-700">
                         <span>Credit Note Applied</span>
                         <span>−฿{totalCN.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between font-semibold border-t border-green-300 pt-1">
+                      <div className="flex justify-between text-sm font-bold text-gray-900 pt-1 border-t border-green-200">
                         <span>Net Payable</span>
                         <span>฿{netPayable.toLocaleString()}</span>
                       </div>
