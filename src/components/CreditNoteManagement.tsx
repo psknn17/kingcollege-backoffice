@@ -995,13 +995,6 @@ export function CreditNoteManagement() {
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
-                      {/* Original Invoice - text/left */}
-                      <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
-                        <div className="flex items-center gap-1">
-                          Original Invoice
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
                       {/* Amount - currency/right */}
                       <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditAmount")}>
                         <div className="flex items-center gap-1 justify-end">
@@ -1037,10 +1030,6 @@ export function CreditNoteManagement() {
                             <div className="font-medium">{creditNote.studentName}</div>
                             <div className="text-sm text-muted-foreground">{creditNote.studentId}</div>
                           </div>
-                        </TableCell>
-                        {/* Original Invoice - text/left */}
-                        <TableCell align="left" className="font-mono text-sm">
-                          {creditNote.invoiceNumber}
                         </TableCell>
                         {/* Amount - currency/right */}
                         <TableCell align="right">

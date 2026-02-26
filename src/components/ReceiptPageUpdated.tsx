@@ -78,12 +78,14 @@ interface CreditNote {
   studentId: string
   studentGrade: string
   amount: number
+  remainingBalance?: number
   reason: string
   issueDate: Date
   academicYear: string
   term: string
-  status: "issued" | "cancelled" | "pending"
+  status: "issued" | "cancelled" | "pending" | "used" | "partial"
   familyCode?: string
+  appliedToReceipt?: string
 }
 
 // Function to load receipts from localStorage based on category
@@ -1080,7 +1082,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const variants: Record<string, { bg: string; text: string; border: string }> = {
       issued: { bg: "bg-green-100", text: "text-green-800", border: "border-green-200" },
       cancelled: { bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
-      pending: { bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-200" }
+      pending: { bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-200" },
+      used: { bg: "bg-gray-100", text: "text-gray-600", border: "border-gray-200" },
+      partial: { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" }
     }
     const variant = variants[status] || variants.issued
     return (
@@ -2090,13 +2094,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
-                      {/* Invoice # - left aligned (ID/code) */}
-                      <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
-                        <div className="flex items-center gap-1">
-                          Invoice No.
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
                       {/* Student - left aligned (text/name) */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                         <div className="flex items-center gap-1">
@@ -2116,6 +2113,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <div className="flex items-center gap-1 justify-end">
                           Amount
                           <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      {/* Remaining Balance - right aligned (currency) */}
+                      <TableHead align="right">
+                        <div className="flex items-center gap-1 justify-end">
+                          Remaining Balance
                         </div>
                       </TableHead>
                       {/* Reason - left aligned (text) */}
@@ -2158,10 +2161,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <TableCell align="left" className="font-mono text-sm">
                           {creditNote.creditNoteNumber}
                         </TableCell>
-                        {/* Invoice # - left aligned */}
-                        <TableCell align="left" className="font-mono text-sm">
-                          {creditNote.invoiceNumber}
-                        </TableCell>
                         {/* Student - left aligned */}
                         <TableCell align="left">
                           <div>
@@ -2177,6 +2176,15 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         </TableCell>
                         {/* Amount - right aligned */}
                         <TableCell align="right">฿{creditNote.amount.toLocaleString()}</TableCell>
+                        {/* Remaining Balance - right aligned */}
+                        <TableCell align="right">
+                          {creditNote.status === "used"
+                            ? <span className="text-gray-400">฿0</span>
+                            : creditNote.remainingBalance !== undefined
+                              ? <span className={creditNote.remainingBalance < creditNote.amount ? "text-amber-700 font-medium" : ""}>฿{creditNote.remainingBalance.toLocaleString()}</span>
+                              : <span className="text-muted-foreground">฿{creditNote.amount.toLocaleString()}</span>
+                          }
+                        </TableCell>
                         {/* Reason - left aligned */}
                         <TableCell align="left" className="max-w-xs truncate">{creditNote.reason}</TableCell>
                         {/* Issue Date - left aligned */}

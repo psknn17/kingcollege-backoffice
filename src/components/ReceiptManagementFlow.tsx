@@ -44,6 +44,27 @@ import { BANKS, PAYMENT_SOURCES } from "@/constants/paymentConstants"
 // TYPE DEFINITIONS
 // ========================
 
+interface CreditNoteRecord {
+  id: string
+  creditNoteNumber: string
+  studentName: string
+  studentId: string
+  familyCode?: string
+  amount: number
+  remainingBalance?: number
+  reason: string
+  status: "issued" | "pending" | "cancelled" | "used" | "partial"
+  issueDate: string
+}
+
+interface AppliedCreditNote {
+  id: string
+  creditNoteNumber: string
+  studentName: string
+  reason: string
+  appliedAmount: number
+}
+
 interface InvoiceRow {
   id: string
   invoiceNo: string
@@ -90,6 +111,9 @@ interface ReceiptRecord {
   yearGroup: string
   schoolYear: string
   totalAmount: number
+  creditNoteTotal?: number
+  netPayableAmount?: number
+  appliedCreditNotes?: AppliedCreditNote[]
   paymentMethod: string
   status: "generated" | "sent" | "downloaded"
   createdAt: Date
@@ -215,6 +239,44 @@ export function ReceiptManagementFlow({
   })
 
   const [bankAccounts] = usePersistedState<any[]>("bankAccounts", [])
+
+  // Credit Note state
+  const [availableCreditNotes, setAvailableCreditNotes] = useState<CreditNoteRecord[]>([])
+  const [selectedCNIds, setSelectedCNIds] = useState<Set<string>>(new Set())
+
+  // Load available credit notes when clientNo changes
+  useEffect(() => {
+    const clientNo = formData.clientNo.trim()
+    if (!clientNo) {
+      setAvailableCreditNotes([])
+      setSelectedCNIds(new Set())
+      return
+    }
+    try {
+      const stored = localStorage.getItem("creditNotesRecords")
+      if (stored) {
+        const all: CreditNoteRecord[] = JSON.parse(stored)
+        const available = all.filter(cn =>
+          (cn.status === "issued" || cn.status === "partial") &&
+          ((cn.familyCode || cn.studentId || "").toLowerCase() === clientNo.toLowerCase())
+        )
+        setAvailableCreditNotes(available)
+      }
+    } catch { /* ignore */ }
+  }, [formData.clientNo])
+
+  const toggleCN = (id: string) => {
+    setSelectedCNIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const totalAppliedCN = availableCreditNotes
+    .filter(cn => selectedCNIds.has(cn.id))
+    .reduce((sum, cn) => sum + (cn.remainingBalance ?? cn.amount), 0)
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = usePersistedState(`eca-receipts:search`, "")
@@ -428,6 +490,16 @@ export function ReceiptManagementFlow({
   const handleGenerateReceipt = () => {
     if (!validateForm()) return
 
+    const appliedCNs: AppliedCreditNote[] = availableCreditNotes
+      .filter(cn => selectedCNIds.has(cn.id))
+      .map(cn => ({
+        id: cn.id,
+        creditNoteNumber: cn.creditNoteNumber,
+        studentName: cn.studentName,
+        reason: cn.reason,
+        appliedAmount: cn.remainingBalance ?? cn.amount
+      }))
+
     const newReceipt: ReceiptRecord = {
       id: crypto.randomUUID(),
       receiptNo: formData.receiptNo,
@@ -439,6 +511,9 @@ export function ReceiptManagementFlow({
       yearGroup: formData.clientType === "internal" ? formData.yearGroup : "",
       schoolYear: formData.schoolYear,
       totalAmount: getTotalReceivedAmount(),
+      creditNoteTotal: totalAppliedCN,
+      netPayableAmount: Math.max(0, getTotalReceivedAmount() - totalAppliedCN),
+      appliedCreditNotes: appliedCNs.length > 0 ? appliedCNs : undefined,
       paymentMethod: formData.paymentMethod,
       status: "generated",
       createdAt: new Date(),
@@ -449,11 +524,35 @@ export function ReceiptManagementFlow({
     setReceipts(updatedReceipts)
     localStorage.setItem(getStorageKey(menuType), JSON.stringify(updatedReceipts))
 
+    // Update applied credit notes in storage
+    if (selectedCNIds.size > 0) {
+      try {
+        const stored = localStorage.getItem("creditNotesRecords")
+        if (stored) {
+          const all = JSON.parse(stored)
+          const updatedCNs = all.map((cn: any) => {
+            if (!selectedCNIds.has(cn.id)) return cn
+            const balance = cn.remainingBalance ?? cn.amount
+            const newBalance = Math.max(0, balance)
+            return {
+              ...cn,
+              remainingBalance: 0,
+              status: "used",
+              appliedToReceipt: formData.receiptNo
+            }
+          })
+          localStorage.setItem("creditNotesRecords", JSON.stringify(updatedCNs))
+        }
+      } catch { /* ignore */ }
+    }
+
     toast.success(t("receiptStatus.generatedSuccess"))
     setIsFormOpen(false)
     setIsPreviewOpen(false)
+    setSelectedCNIds(new Set())
+    setAvailableCreditNotes([])
     resetForm()
-    onFormClose?.() // Call callback when form closes
+    onFormClose?.()
   }
 
   const handlePrint = () => {
@@ -729,6 +828,46 @@ export function ReceiptManagementFlow({
             })()}
           </tbody>
         </table>
+
+        {/* CREDIT NOTES APPLIED */}
+        {(() => {
+          const cnList: AppliedCreditNote[] = (data as any).appliedCreditNotes ||
+            (selectedCNIds.size > 0
+              ? availableCreditNotes
+                  .filter(cn => selectedCNIds.has(cn.id))
+                  .map(cn => ({ id: cn.id, creditNoteNumber: cn.creditNoteNumber, studentName: cn.studentName, reason: cn.reason, appliedAmount: cn.remainingBalance ?? cn.amount }))
+              : [])
+          const cnTotal = cnList.reduce((s, cn) => s + cn.appliedAmount, 0)
+          if (cnList.length === 0) return null
+          const totalReceived = data.invoices.reduce((sum, inv) => sum + (inv.receivedAmount || 0), 0)
+          return (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: forPrint ? '8px' : '12px' }}>
+              <thead>
+                <tr>
+                  <th colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'left', fontWeight: 'normal', backgroundColor: '#f0fdf4' }}>
+                    Credit Note Applied
+                  </th>
+                  <th style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'center', fontWeight: 'normal', backgroundColor: '#f0fdf4' }}>Credit Note No.</th>
+                  <th style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'right', fontWeight: 'normal', backgroundColor: '#f0fdf4' }}>Amount (THB)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cnList.map((cn, i) => (
+                  <tr key={cn.id}>
+                    <td colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px' }}>{cn.reason} — {cn.studentName}</td>
+                    <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'center', fontFamily: 'monospace' }}>{cn.creditNoteNumber}</td>
+                    <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'right', color: '#16a34a' }}>-{formatCurrency(cn.appliedAmount)}</td>
+                  </tr>
+                ))}
+                <tr style={{ backgroundColor: '#f0fdf4' }}>
+                  <td colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', fontWeight: 'bold' }}>Net Payable Amount</td>
+                  <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px' }}></td>
+                  <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(Math.max(0, totalReceived - cnTotal))}</td>
+                </tr>
+              </tbody>
+            </table>
+          )
+        })()}
 
         {/* PAYMENT INFORMATION */}
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: forPrint ? '30px' : '45px' }}>
@@ -1286,6 +1425,76 @@ export function ReceiptManagementFlow({
                 </Table>
               </div>
             </div>
+
+            {/* Section 3.5: Apply Credit Note */}
+            {availableCreditNotes.length > 0 && (
+              <div className="border border-emerald-200 rounded-lg p-6 bg-emerald-50">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <FileText className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-gray-900">Apply Credit Note</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Found {availableCreditNotes.length} available credit note(s) for family code <span className="font-mono font-semibold">{formData.clientNo}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {availableCreditNotes.map(cn => {
+                    const balance = cn.remainingBalance ?? cn.amount
+                    const isSelected = selectedCNIds.has(cn.id)
+                    return (
+                      <div
+                        key={cn.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected ? "bg-emerald-100 border-emerald-400" : "bg-white border-gray-200 hover:border-emerald-300"
+                        }`}
+                        onClick={() => toggleCN(cn.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleCN(cn.id)}
+                            className="w-4 h-4 accent-emerald-600"
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <div>
+                            <p className="font-mono text-sm font-semibold text-gray-900">{cn.creditNoteNumber}</p>
+                            <p className="text-xs text-gray-500">{cn.reason} • {cn.studentName}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-700">-{formatCurrency(balance)}</p>
+                          {cn.status === "partial" && (
+                            <p className="text-xs text-amber-600">Remaining balance</p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {selectedCNIds.size > 0 && (
+                  <div className="mt-4 pt-4 border-t border-emerald-200 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Invoice Total:</span>
+                      <span className="font-mono">{formatCurrency(getTotalReceivedAmount())}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-emerald-700 font-medium">
+                      <span>Credit Note Applied:</span>
+                      <span className="font-mono">-{formatCurrency(totalAppliedCN)}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold border-t border-emerald-300 pt-2 mt-2">
+                      <span>Net Payable:</span>
+                      <span className="font-mono text-blue-700">{formatCurrency(Math.max(0, getTotalReceivedAmount() - totalAppliedCN))}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Section 4: Payment Information */}
             <div className="border border-gray-200 rounded-lg p-6 bg-white">
