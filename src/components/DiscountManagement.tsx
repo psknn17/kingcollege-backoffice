@@ -1546,6 +1546,19 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       <Button
                         variant="outline"
                         onClick={() => {
+                          const group = viewGroupDialog.group
+                          if (!group) return
+                          const headers = ["Student ID", "Name", "Year Group"]
+                          const rows = group.students.map((s: Student) => [s.id, s.name, s.yearGroup])
+                          downloadAsXlsx(headers, rows, `${group.name}-student-list`)
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download List
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
                           setCsvUploadDialog({ isOpen: true, groupId: viewGroupDialog.group?.id })
                           setViewGroupDialog({ isOpen: false, group: null })
                         }}

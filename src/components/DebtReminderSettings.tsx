@@ -22,6 +22,50 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 
+interface DebtReminderTemplate {
+  id: string
+  name: string
+  description: string
+  subject: string
+  emailTitle: string
+  message: string
+}
+
+const DEFAULT_REMINDER_TEMPLATES: DebtReminderTemplate[] = [
+  {
+    id: "tpl-first",
+    name: "First Reminder",
+    description: "Friendly first reminder for upcoming payment",
+    subject: "Tuition Payment Reminder",
+    emailTitle: "Friendly Payment Reminder",
+    message: "Dear {parent_name},\n\nThis is a friendly reminder that {student_name}'s payment of {amount} is due on {due_date} ({days_remaining} days remaining).\n\nPlease make your payment at your earliest convenience.\n\nBest regards,\nFinance Office"
+  },
+  {
+    id: "tpl-second",
+    name: "Second Reminder",
+    description: "Follow-up reminder for overdue payment",
+    subject: "Tuition Payment Reminder",
+    emailTitle: "Second Payment Reminder",
+    message: "Dear {parent_name},\n\nThis is our second reminder that {student_name}'s payment of {amount} was due on {due_date}.\n\nWe kindly ask you to settle this payment as soon as possible to avoid any disruption to your child's enrollment.\n\nBest regards,\nFinance Office"
+  },
+  {
+    id: "tpl-final",
+    name: "Final Notice",
+    description: "Urgent final notice before action is taken",
+    subject: "Urgent: Final Payment Notice",
+    emailTitle: "Final Payment Notice",
+    message: "Dear {parent_name},\n\nThis is a final notice regarding {student_name}'s outstanding payment of {amount} which was due on {due_date}.\n\nPlease contact our Finance Office immediately to make payment arrangements. Failure to do so may affect your child's enrollment status.\n\nBest regards,\nFinance Office"
+  },
+  {
+    id: "tpl-overdue",
+    name: "Overdue Notice",
+    description: "Notice for payments that are already overdue",
+    subject: "Overdue Payment Notice",
+    emailTitle: "Overdue Payment Notice",
+    message: "Dear {parent_name},\n\nWe wish to inform you that {student_name}'s payment of {amount} is now overdue as of {due_date}.\n\nPlease make immediate payment or contact our Finance Office to discuss payment arrangements.\n\nBest regards,\nFinance Office"
+  }
+]
+
 // Preset email subject options based on system menus
 const PRESET_EMAIL_SUBJECTS = [
   "Tuition Payment Reminder",
@@ -189,6 +233,10 @@ export function DebtReminderSettings() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [reminderHistory, setReminderHistory] = useState<{ id: string; sentDate: string; subject: string; academicYear: string; term: string; recipients: number; status: string }[]>([])
   const [openCalendarId, setOpenCalendarId] = useState<string | null>(null)
+  const [templatePickerDialog, setTemplatePickerDialog] = useState<{ isOpen: boolean; reminderId: string | null }>({ isOpen: false, reminderId: null })
+  const [reminderTemplates, setReminderTemplates] = usePersistedState<DebtReminderTemplate[]>("debt-reminder:templates", DEFAULT_REMINDER_TEMPLATES)
+  const [templateManageDialog, setTemplateManageDialog] = useState<{ isOpen: boolean; editing: DebtReminderTemplate | null }>({ isOpen: false, editing: null })
+  const [templateForm, setTemplateForm] = useState({ name: "", description: "", subject: "", emailTitle: "", message: "" })
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -241,6 +289,49 @@ export function DebtReminderSettings() {
       status: "draft"
     }
     setReminders((currentReminders) => [...(currentReminders || []), newReminder])
+  }
+
+  const openNewTemplate = () => {
+    setTemplateForm({ name: "", description: "", subject: "", emailTitle: "", message: "" })
+    setTemplateManageDialog({ isOpen: true, editing: null })
+  }
+
+  const openEditTemplate = (template: DebtReminderTemplate) => {
+    setTemplateForm({ name: template.name, description: template.description, subject: template.subject, emailTitle: template.emailTitle, message: template.message })
+    setTemplateManageDialog({ isOpen: true, editing: template })
+  }
+
+  const saveTemplateForm = () => {
+    if (!templateForm.name.trim() || !templateForm.subject.trim() || !templateForm.message.trim()) {
+      toast.error("Name, subject, and message are required")
+      return
+    }
+    if (templateManageDialog.editing) {
+      setReminderTemplates((current) => (current || []).map(t => t.id === templateManageDialog.editing!.id ? { ...t, ...templateForm } : t))
+      toast.success("Template updated")
+    } else {
+      const newTemplate: DebtReminderTemplate = { id: `tpl-${Date.now()}`, ...templateForm }
+      setReminderTemplates((current) => [...(current || []), newTemplate])
+      toast.success("Template created")
+    }
+    setTemplateManageDialog({ isOpen: false, editing: null })
+  }
+
+  const deleteTemplate = (id: string) => {
+    setReminderTemplates((current) => (current || []).filter(t => t.id !== id))
+    toast.success("Template deleted")
+  }
+
+  const applyTemplate = (reminderId: string, template: DebtReminderTemplate) => {
+    setReminders((current) =>
+      (current || []).map(r =>
+        r.id === reminderId
+          ? { ...r, subject: template.subject, emailTitle: template.emailTitle, message: template.message }
+          : r
+      )
+    )
+    setTemplatePickerDialog({ isOpen: false, reminderId: null })
+    toast.success(`Template "${template.name}" applied`)
   }
 
   const updateReminder = (id: string, field: keyof ReminderConfig, value: any) => {
@@ -652,6 +743,50 @@ export function DebtReminderSettings() {
           </CardContent>
         </Card>
 
+        {/* Email Templates */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Email Templates
+              </div>
+              <Button size="sm" onClick={openNewTemplate} disabled={!userCanEdit} className="flex items-center gap-1.5">
+                <Plus className="w-4 h-4" />
+                New Template
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(reminderTemplates || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No templates yet. Create one to get started.</p>
+            ) : (
+              <div className="divide-y">
+                {(reminderTemplates || []).map((template) => (
+                  <div key={template.id} className="flex items-start justify-between py-3 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{template.name}</div>
+                      {template.description && <div className="text-xs text-muted-foreground mt-0.5">{template.description}</div>}
+                      <div className="text-xs text-muted-foreground mt-1 space-x-3">
+                        <span><span className="text-foreground font-medium">Subject:</span> {template.subject}</span>
+                        <span><span className="text-foreground font-medium">Title:</span> {template.emailTitle}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button size="sm" variant="ghost" onClick={() => openEditTemplate(template)} disabled={!userCanEdit} className="h-7 w-7 p-0">
+                        <Edit className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => deleteTemplate(template.id)} disabled={!userCanEdit} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Draft and Sent Reminders */}
         <div className="space-y-4">
           {(reminders || []).filter(r => r.status !== "scheduled" && r.status !== "sent").map((reminder, index) => (
@@ -674,6 +809,16 @@ export function DebtReminderSettings() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTemplatePickerDialog({ isOpen: true, reminderId: reminder.id })}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                      className="flex items-center gap-1.5"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Use Template
+                    </Button>
                     <Switch
                       checked={reminder.enabled}
                       onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
@@ -1016,6 +1161,16 @@ export function DebtReminderSettings() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setTemplatePickerDialog({ isOpen: true, reminderId: reminder.id })}
+                              disabled={!userCanEdit || isReminderLocked(reminder)}
+                              className="flex items-center gap-1.5 text-xs"
+                            >
+                              <FileText className="w-3 h-3" />
+                              Use Template
+                            </Button>
                             <Switch
                               checked={reminder.enabled}
                               onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
@@ -1474,6 +1629,92 @@ export function DebtReminderSettings() {
           <div className="flex items-center justify-end px-6 py-4 border-t bg-muted/20">
             <Button variant="outline" onClick={() => setIsHistoryModalOpen(false)}>
               Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create / Edit Template Dialog */}
+      <Dialog open={templateManageDialog.isOpen} onOpenChange={(open) => !open && setTemplateManageDialog({ isOpen: false, editing: null })}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle>{templateManageDialog.editing ? "Edit Template" : "New Template"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Template Name <span className="text-destructive">*</span></Label>
+              <Input value={templateForm.name} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. First Reminder" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Input value={templateForm.description} onChange={(e) => setTemplateForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email Subject <span className="text-destructive">*</span></Label>
+              <Select value={templateForm.subject} onValueChange={(v) => setTemplateForm(f => ({ ...f, subject: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                <SelectContent>
+                  {PRESET_EMAIL_SUBJECTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email Title</Label>
+              <Input value={templateForm.emailTitle} onChange={(e) => setTemplateForm(f => ({ ...f, emailTitle: e.target.value }))} placeholder="e.g. Friendly Payment Reminder" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Message <span className="text-destructive">*</span></Label>
+              <Textarea value={templateForm.message} onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))} placeholder="Enter message template..." rows={4} />
+              <p className="text-xs text-muted-foreground">Variables: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setTemplateManageDialog({ isOpen: false, editing: null })}>Cancel</Button>
+            <Button onClick={saveTemplateForm}><Save className="w-4 h-4 mr-2" />{templateManageDialog.editing ? "Save Changes" : "Create Template"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Picker Dialog */}
+      <Dialog open={templatePickerDialog.isOpen} onOpenChange={(open) => !open && setTemplatePickerDialog({ isOpen: false, reminderId: null })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Select Email Template
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Select a template to auto-fill the subject, title, and message. You can edit the content after applying.
+          </p>
+          <div className="grid gap-3 mt-2">
+            {(reminderTemplates || []).length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No templates available. Create one in the Email Templates section.</p>
+            )}
+            {(reminderTemplates || []).map((template) => (
+              <button
+                key={template.id}
+                onClick={() => templatePickerDialog.reminderId && applyTemplate(templatePickerDialog.reminderId, template)}
+                className="text-left p-4 border rounded-lg hover:border-primary hover:bg-muted/50 transition-all group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-0.5 group-hover:text-primary">{template.name}</div>
+                    <div className="text-xs text-muted-foreground mb-2">{template.description}</div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div><span className="font-medium text-foreground">Subject:</span> {template.subject}</div>
+                      <div><span className="font-medium text-foreground">Title:</span> {template.emailTitle}</div>
+                      <div className="line-clamp-2"><span className="font-medium text-foreground">Message:</span> {template.message.split("\n")[0]}</div>
+                    </div>
+                  </div>
+                  <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap pt-0.5">Use this →</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button variant="outline" onClick={() => setTemplatePickerDialog({ isOpen: false, reminderId: null })}>
+              Cancel
             </Button>
           </div>
         </DialogContent>

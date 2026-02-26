@@ -142,12 +142,9 @@ export function OTPVerification({
             padding: "48px 40px"
           }}
         >
-          {/* School Logo & Name */}
+          {/* School Logo */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "120px", width: "auto", marginBottom: "12px" }} />
-            <p style={{ fontSize: "12px", color: "#6b7280", textAlign: "center", lineHeight: "1.4", letterSpacing: "0.5px" }}>
-              KING'S COLLEGE<br/>INTERNATIONAL SCHOOL<br/>BANGKOK
-            </p>
+            <img src={SchoolLogo} alt="King's College" style={{ height: "200px", width: "auto", marginBottom: "0px" }} />
           </div>
 
           {/* Title */}
