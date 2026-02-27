@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { Plus, Edit, Trash2, Eye, Star, FileText, Receipt, Copy } from "lucide-react"
+import { Plus, Edit, Trash2, Eye, Star, FileText, Receipt, Copy, Info } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -124,25 +124,25 @@ King's College International School Bangkok`,
   },
 ]
 
-// ─── Placeholder Chips ────────────────────────────────────────────────────────
+// ─── Placeholder definitions ──────────────────────────────────────────────────
 
 const INVOICE_PLACEHOLDERS = [
-  { key: "{parentName}", label: "Parent Name" },
-  { key: "{studentName}", label: "Student Name" },
-  { key: "{studentId}", label: "Student ID" },
-  { key: "{grade}", label: "Year Group" },
-  { key: "{invoiceNumber}", label: "Invoice No." },
-  { key: "{invoiceAmount}", label: "Amount" },
-  { key: "{dueDate}", label: "Due Date" },
+  { key: "{parentName}",    label: "Parent Name",    example: "Mr. Robert Smith" },
+  { key: "{studentName}",   label: "Student Name",   example: "James Smith" },
+  { key: "{studentId}",     label: "Student ID",     example: "KC2025001" },
+  { key: "{grade}",         label: "Year Group",     example: "Year 7" },
+  { key: "{invoiceNumber}", label: "Invoice No.",    example: "2025INV-000123" },
+  { key: "{invoiceAmount}", label: "Amount",         example: "130,000" },
+  { key: "{dueDate}",       label: "Due Date",       example: "31/01/2026" },
 ]
 
 const RECEIPT_PLACEHOLDERS = [
-  { key: "{parentName}", label: "Parent Name" },
-  { key: "{studentName}", label: "Student Name" },
-  { key: "{receiptNumber}", label: "Receipt No." },
-  { key: "{receiptDate}", label: "Receipt Date" },
-  { key: "{amount}", label: "Amount" },
-  { key: "{paymentMethod}", label: "Payment Method" },
+  { key: "{parentName}",    label: "Parent Name",    example: "Mr. Robert Smith" },
+  { key: "{studentName}",   label: "Student Name",   example: "James Smith" },
+  { key: "{receiptNumber}", label: "Receipt No.",    example: "R2025-00456" },
+  { key: "{receiptDate}",   label: "Receipt Date",   example: "28/02/2026" },
+  { key: "{amount}",        label: "Amount",         example: "130,000" },
+  { key: "{paymentMethod}", label: "Payment Method", example: "Bank Transfer" },
 ]
 
 // ─── Sample preview data ──────────────────────────────────────────────────────
@@ -173,13 +173,37 @@ function applyPlaceholders(text: string, sample: Record<string, string>): string
   )
 }
 
-// ─── Template Panel (reused for both tabs) ───────────────────────────────────
+// ─── How it works banner ──────────────────────────────────────────────────────
+
+function HowItWorksBanner({ type }: { type: "invoice" | "receipt" }) {
+  return (
+    <div className="flex gap-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-5">
+      <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+      <div>
+        <p className="text-sm font-medium text-blue-800 mb-1">วิธีใช้งาน</p>
+        <ol className="text-xs text-blue-700 space-y-0.5 list-decimal list-inside leading-relaxed">
+          <li>สร้าง Template และกำหนดเนื้อหาอีเมลตามที่ต้องการ</li>
+          <li>
+            คลิก <Star className="w-3 h-3 inline text-yellow-500 fill-yellow-400" /> เพื่อตั้ง Template เป็น{" "}
+            <span className="font-semibold">Default</span> — ระบบจะใช้ Template นี้เมื่อส่งอีเมล{type === "invoice" ? " Invoice" : " Receipt"}
+          </li>
+          <li>
+            ตัวแปร เช่น <code className="bg-blue-100 px-1 rounded text-[11px]">{"{studentName}"}</code> จะถูกแทนที่ด้วยข้อมูลจริงโดยอัตโนมัติเมื่อส่งอีเมล
+          </li>
+        </ol>
+      </div>
+    </div>
+  )
+}
+
+// ─── Template Panel ───────────────────────────────────────────────────────────
 
 interface TemplatePanelProps {
   storageKey: string
   defaultTemplates: EmailTemplate[]
   placeholders: typeof INVOICE_PLACEHOLDERS
   sampleData: Record<string, string>
+  type: "invoice" | "receipt"
   userCanEdit: boolean
   confirmDialog: ReturnType<typeof useConfirmDialog>
 }
@@ -189,6 +213,7 @@ function TemplatePanel({
   defaultTemplates,
   placeholders,
   sampleData,
+  type,
   userCanEdit,
   confirmDialog,
 }: TemplatePanelProps) {
@@ -199,6 +224,7 @@ function TemplatePanel({
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
   const [form, setForm] = useState({ name: "", subject: "", body: "" })
   const [errors, setErrors] = useState<{ name?: string; subject?: string; body?: string }>({})
+  const [bodyRef, setBodyRef] = useState<HTMLTextAreaElement | null>(null)
 
   const openAdd = () => {
     setEditingTemplate(null)
@@ -221,7 +247,7 @@ function TemplatePanel({
 
   const setDefault = (id: string) => {
     setTemplates(prev => prev.map(t => ({ ...t, isDefault: t.id === id })))
-    toast.success("Default template updated")
+    toast.success("ตั้ง Default template เรียบร้อยแล้ว")
   }
 
   const handleDuplicate = (t: EmailTemplate) => {
@@ -233,14 +259,14 @@ function TemplatePanel({
       createdAt: new Date().toISOString(),
     }
     setTemplates(prev => [...prev, copy])
-    toast.success("Template duplicated")
+    toast.success("คัดลอก Template เรียบร้อยแล้ว")
   }
 
   const validate = () => {
     const errs: typeof errors = {}
-    if (!form.name.trim()) errs.name = "Name is required"
-    if (!form.subject.trim()) errs.subject = "Subject is required"
-    if (!form.body.trim()) errs.body = "Body is required"
+    if (!form.name.trim()) errs.name = "กรุณากรอกชื่อ Template"
+    if (!form.subject.trim()) errs.subject = "กรุณากรอก Subject"
+    if (!form.body.trim()) errs.body = "กรุณากรอกเนื้อหาอีเมล"
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -251,7 +277,7 @@ function TemplatePanel({
       setTemplates(prev =>
         prev.map(t => t.id === editingTemplate.id ? { ...t, ...form } : t)
       )
-      toast.success("Template updated")
+      toast.success("อัปเดต Template เรียบร้อยแล้ว")
     } else {
       const isFirst = templates.length === 0
       setTemplates(prev => [
@@ -263,7 +289,7 @@ function TemplatePanel({
           createdAt: new Date().toISOString(),
         },
       ])
-      toast.success("Template added")
+      toast.success("เพิ่ม Template เรียบร้อยแล้ว")
     }
     setIsDialogOpen(false)
   }
@@ -277,20 +303,36 @@ function TemplatePanel({
         }
         return updated
       })
-      toast.success("Template deleted")
+      toast.success("ลบ Template เรียบร้อยแล้ว")
     })
   }
 
+  // Insert placeholder at cursor position in body textarea
   const insertPlaceholder = (key: string) => {
-    setForm(prev => ({ ...prev, body: prev.body + key }))
+    if (bodyRef) {
+      const start = bodyRef.selectionStart ?? form.body.length
+      const end = bodyRef.selectionEnd ?? form.body.length
+      const newBody = form.body.slice(0, start) + key + form.body.slice(end)
+      setForm(prev => ({ ...prev, body: newBody }))
+      // Restore cursor after insertion
+      setTimeout(() => {
+        bodyRef.focus()
+        bodyRef.setSelectionRange(start + key.length, start + key.length)
+      }, 0)
+    } else {
+      setForm(prev => ({ ...prev, body: prev.body + key }))
+    }
   }
 
   return (
     <>
+      <HowItWorksBanner type={type} />
+
       <div className="space-y-4">
-        {/* Table */}
         <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">{templates.length} template{templates.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground">
+            {templates.length} template{templates.length !== 1 ? "s" : ""}
+          </p>
           {userCanEdit && (
             <Button size="sm" onClick={openAdd} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
@@ -305,15 +347,15 @@ function TemplatePanel({
               <TableRow>
                 <TableHead className="text-left">Template Name</TableHead>
                 <TableHead className="text-left">Subject</TableHead>
-                <TableHead className="text-center">Default</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="text-center w-24">Default</TableHead>
+                <TableHead className="text-center w-36">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {templates.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                    No templates yet. Click "Add Template" to create one.
+                    ยังไม่มี Template — คลิก "Add Template" เพื่อสร้าง
                   </TableCell>
                 </TableRow>
               ) : (
@@ -322,7 +364,7 @@ function TemplatePanel({
                     <TableCell className="text-left font-medium">
                       {t.name}
                       {t.isDefault && (
-                        <Badge className="ml-2 bg-green-100 text-green-700 text-xs">Default</Badge>
+                        <Badge className="ml-2 bg-green-100 text-green-700 text-xs border-0">Default</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-left text-sm text-muted-foreground max-w-xs truncate">
@@ -330,12 +372,12 @@ function TemplatePanel({
                     </TableCell>
                     <TableCell className="text-center">
                       {t.isDefault ? (
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 mx-auto" />
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 mx-auto" title="Default template" />
                       ) : (
                         userCanEdit && (
                           <button
                             onClick={() => setDefault(t.id)}
-                            title="Set as default"
+                            title="ตั้งเป็น Default"
                             className="text-muted-foreground hover:text-yellow-500 mx-auto block transition-colors"
                           >
                             <Star className="w-4 h-4" />
@@ -345,22 +387,22 @@ function TemplatePanel({
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openPreview(t)} title="Preview">
+                        <Button variant="ghost" size="sm" onClick={() => openPreview(t)} title="ดูตัวอย่าง">
                           <Eye className="w-4 h-4" />
                         </Button>
                         {userCanEdit && (
                           <>
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(t)} title="Edit">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(t)} title="แก้ไข">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDuplicate(t)} title="Duplicate">
+                            <Button variant="ghost" size="sm" onClick={() => handleDuplicate(t)} title="คัดลอก">
                               <Copy className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost" size="sm"
                               className="text-red-500 hover:text-red-700"
                               onClick={() => handleDelete(t)}
-                              title="Delete"
+                              title="ลบ"
                               disabled={t.isDefault && templates.length === 1}
                             >
                               <Trash2 className="w-4 h-4" />
@@ -377,19 +419,19 @@ function TemplatePanel({
         </div>
       </div>
 
-      {/* Add/Edit Dialog */}
+      {/* ─── Add / Edit Dialog ─── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent style={{ maxWidth: "680px", padding: "24px" }}>
+        <DialogContent style={{ maxWidth: "700px", padding: "24px" }}>
           <DialogHeader>
-            <DialogTitle>{editingTemplate ? "Edit Template" : "Add Template"}</DialogTitle>
+            <DialogTitle>{editingTemplate ? "แก้ไข Template" : "เพิ่ม Template"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-1">
-            {/* Name */}
+            {/* Template Name */}
             <div className="space-y-1.5">
-              <Label>Template Name <span className="text-red-500">*</span></Label>
+              <Label>ชื่อ Template <span className="text-red-500">*</span></Label>
               <Input
-                placeholder="e.g. Standard Invoice Email (English)"
+                placeholder="เช่น Standard Invoice Email (English)"
                 value={form.name}
                 onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                 autoComplete="off"
@@ -400,9 +442,11 @@ function TemplatePanel({
 
             {/* Subject */}
             <div className="space-y-1.5">
-              <Label>Subject <span className="text-red-500">*</span></Label>
+              <Label>
+                หัวเรื่องอีเมล (Subject) <span className="text-red-500">*</span>
+              </Label>
               <Input
-                placeholder="e.g. Invoice {invoiceNumber} — Payment Due {dueDate}"
+                placeholder="เช่น Invoice {invoiceNumber} — กำหนดชำระ {dueDate}"
                 value={form.subject}
                 onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
                 autoComplete="off"
@@ -411,73 +455,83 @@ function TemplatePanel({
               {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
             </div>
 
-            {/* Placeholder chips */}
-            <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
-              <p className="text-xs font-medium text-blue-700 mb-1.5">Insert placeholder into body:</p>
-              <div className="flex flex-wrap gap-1.5">
+            {/* Body */}
+            <div className="space-y-1.5">
+              <Label>
+                เนื้อหาอีเมล (Body) <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                ref={el => setBodyRef(el)}
+                placeholder="พิมพ์เนื้อหาอีเมล และใช้ตัวแปรด้านล่างแทรกข้อมูลอัตโนมัติ..."
+                value={form.body}
+                onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
+                className={`min-h-52 font-mono text-sm resize-y ${errors.body ? "border-red-500" : ""}`}
+              />
+              {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
+            </div>
+
+            {/* Variable chips — placed below body so user understands they go INTO body */}
+            <div className="border rounded-md p-3 bg-gray-50 space-y-2">
+              <div>
+                <p className="text-xs font-semibold text-gray-700">ตัวแปรที่ใช้ได้ — คลิกเพื่อแทรกลงในเนื้อหา</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  ระบบจะแทนที่ตัวแปรด้วยข้อมูลจริงโดยอัตโนมัติเมื่อส่งอีเมล
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {placeholders.map(p => (
                   <button
                     key={p.key}
                     type="button"
                     onClick={() => insertPlaceholder(p.key)}
-                    className="text-xs bg-white border border-blue-300 text-blue-700 rounded px-2 py-0.5 hover:bg-blue-100 font-mono"
+                    className="flex flex-col items-start bg-white border border-gray-200 rounded-md px-2.5 py-1.5 hover:border-blue-400 hover:bg-blue-50 transition-colors text-left"
+                    title={`ตัวอย่าง: ${p.example}`}
                   >
-                    {p.key}
+                    <span className="text-xs font-medium text-gray-800 leading-tight">{p.label}</span>
+                    <span className="text-[10px] text-gray-400 font-mono leading-tight">{p.key}</span>
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Body */}
-            <div className="space-y-1.5">
-              <Label>Body <span className="text-red-500">*</span></Label>
-              <Textarea
-                placeholder="Write your email body here..."
-                value={form.body}
-                onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
-                className={`min-h-48 font-mono text-sm resize-y ${errors.body ? "border-red-500" : ""}`}
-              />
-              {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
-            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingTemplate ? "Save Changes" : "Add Template"}</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>ยกเลิก</Button>
+            <Button onClick={handleSave}>{editingTemplate ? "บันทึก" : "เพิ่ม Template"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog */}
+      {/* ─── Preview Dialog ─── */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent style={{ maxWidth: "620px", padding: "24px" }}>
+        <DialogContent style={{ maxWidth: "640px", padding: "24px" }}>
           <DialogHeader>
-            <DialogTitle>Preview — {previewTemplate?.name}</DialogTitle>
+            <DialogTitle>ตัวอย่างอีเมล — {previewTemplate?.name}</DialogTitle>
           </DialogHeader>
 
           {previewTemplate && (
             <div className="space-y-3">
-              <div className="bg-gray-50 border rounded-md p-4 space-y-2">
-                <div className="flex gap-2 text-sm">
-                  <span className="font-medium text-muted-foreground w-16 shrink-0">Subject:</span>
-                  <span>{applyPlaceholders(previewTemplate.subject, sampleData)}</span>
+              <div className="rounded-md border bg-white overflow-hidden">
+                {/* Subject bar */}
+                <div className="bg-gray-50 border-b px-4 py-2.5 flex gap-3 text-sm">
+                  <span className="text-muted-foreground font-medium w-16 shrink-0">Subject:</span>
+                  <span className="font-medium">{applyPlaceholders(previewTemplate.subject, sampleData)}</span>
                 </div>
-                <hr />
-                <div className="flex gap-2 text-sm">
-                  <span className="font-medium text-muted-foreground w-16 shrink-0">Body:</span>
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                {/* Body */}
+                <div className="px-4 py-4">
+                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-800">
                     {applyPlaceholders(previewTemplate.body, sampleData)}
                   </pre>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Preview uses sample data. Actual email will use real student/invoice data.
+                ตัวอย่างนี้ใช้ข้อมูลสมมติ — เมื่อส่งจริงจะใช้ข้อมูลของนักเรียน/ผู้ปกครองจริง
               </p>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>ปิด</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -499,14 +553,14 @@ export function InvoiceReceiptTemplate() {
         isOpen={confirmDialog.isOpen}
         onConfirm={confirmDialog.handleConfirm}
         onCancel={confirmDialog.handleCancel}
-        title="Delete Template"
-        description="Are you sure you want to delete this template? This action cannot be undone."
+        title="ลบ Template"
+        description="ต้องการลบ Template นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้"
       />
 
       <div>
         <h1 className="text-2xl font-bold">{t("menu.invoiceReceiptTemplate")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage email templates sent to parents with invoices and receipts
+          จัดการ Template อีเมลสำหรับส่ง Invoice และ Receipt ให้ผู้ปกครอง
         </p>
       </div>
 
@@ -527,7 +581,7 @@ export function InvoiceReceiptTemplate() {
             <CardHeader>
               <CardTitle>Invoice Email Templates</CardTitle>
               <CardDescription>
-                Templates used when sending invoices to parents by email
+                Template อีเมลสำหรับส่ง Invoice ให้ผู้ปกครอง
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -536,6 +590,7 @@ export function InvoiceReceiptTemplate() {
                 defaultTemplates={DEFAULT_INVOICE_TEMPLATES}
                 placeholders={INVOICE_PLACEHOLDERS}
                 sampleData={INVOICE_SAMPLE}
+                type="invoice"
                 userCanEdit={userCanEdit}
                 confirmDialog={confirmDialog}
               />
@@ -548,7 +603,7 @@ export function InvoiceReceiptTemplate() {
             <CardHeader>
               <CardTitle>Receipt Email Templates</CardTitle>
               <CardDescription>
-                Templates used when sending receipts to parents by email
+                Template อีเมลสำหรับส่ง Receipt ให้ผู้ปกครอง
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -557,6 +612,7 @@ export function InvoiceReceiptTemplate() {
                 defaultTemplates={DEFAULT_RECEIPT_TEMPLATES}
                 placeholders={RECEIPT_PLACEHOLDERS}
                 sampleData={RECEIPT_SAMPLE}
+                type="receipt"
                 userCanEdit={userCanEdit}
                 confirmDialog={confirmDialog}
               />
