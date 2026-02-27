@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { Plus, Edit, Trash2, Eye, Star, FileText, Receipt, Copy, Info } from "lucide-react"
+import { Plus, Edit, Trash2, Eye, Star, FileText, Receipt, Copy, Info, Mail } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -28,7 +28,7 @@ interface EmailTemplate {
   createdAt: string
 }
 
-// ─── Defaults ────────────────────────────────────────────────────────────────
+// ─── Default templates ────────────────────────────────────────────────────────
 
 const DEFAULT_INVOICE_TEMPLATES: EmailTemplate[] = [
   {
@@ -124,9 +124,9 @@ King's College International School Bangkok`,
   },
 ]
 
-// ─── Placeholder definitions ──────────────────────────────────────────────────
+// ─── Variable definitions ─────────────────────────────────────────────────────
 
-const INVOICE_PLACEHOLDERS = [
+const INVOICE_VARIABLES = [
   { key: "{parentName}",    label: "Parent Name",    example: "Mr. Robert Smith" },
   { key: "{studentName}",   label: "Student Name",   example: "James Smith" },
   { key: "{studentId}",     label: "Student ID",     example: "KC2025001" },
@@ -136,7 +136,7 @@ const INVOICE_PLACEHOLDERS = [
   { key: "{dueDate}",       label: "Due Date",       example: "31/01/2026" },
 ]
 
-const RECEIPT_PLACEHOLDERS = [
+const RECEIPT_VARIABLES = [
   { key: "{parentName}",    label: "Parent Name",    example: "Mr. Robert Smith" },
   { key: "{studentName}",   label: "Student Name",   example: "James Smith" },
   { key: "{receiptNumber}", label: "Receipt No.",    example: "R2025-00456" },
@@ -144,8 +144,6 @@ const RECEIPT_PLACEHOLDERS = [
   { key: "{amount}",        label: "Amount",         example: "130,000" },
   { key: "{paymentMethod}", label: "Payment Method", example: "Bank Transfer" },
 ]
-
-// ─── Sample preview data ──────────────────────────────────────────────────────
 
 const INVOICE_SAMPLE: Record<string, string> = {
   "{parentName}": "Mr. Robert Smith",
@@ -166,7 +164,7 @@ const RECEIPT_SAMPLE: Record<string, string> = {
   "{paymentMethod}": "Bank Transfer",
 }
 
-function applyPlaceholders(text: string, sample: Record<string, string>): string {
+function applyVariables(text: string, sample: Record<string, string>): string {
   return Object.entries(sample).reduce(
     (result, [key, val]) => result.replaceAll(key, val),
     text
@@ -180,18 +178,78 @@ function HowItWorksBanner({ type }: { type: "invoice" | "receipt" }) {
     <div className="flex gap-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-5">
       <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
       <div>
-        <p className="text-sm font-medium text-blue-800 mb-1">วิธีใช้งาน</p>
+        <p className="text-sm font-semibold text-blue-800 mb-1">How it works</p>
         <ol className="text-xs text-blue-700 space-y-0.5 list-decimal list-inside leading-relaxed">
-          <li>สร้าง Template และกำหนดเนื้อหาอีเมลตามที่ต้องการ</li>
+          <li>Create an email template with the content you want to send to parents.</li>
           <li>
-            คลิก <Star className="w-3 h-3 inline text-yellow-500 fill-yellow-400" /> เพื่อตั้ง Template เป็น{" "}
-            <span className="font-semibold">Default</span> — ระบบจะใช้ Template นี้เมื่อส่งอีเมล{type === "invoice" ? " Invoice" : " Receipt"}
+            Click <Star className="w-3 h-3 inline text-yellow-500 fill-yellow-400" /> to set a template as{" "}
+            <span className="font-semibold">Default</span> — the system will use this when sending{" "}
+            {type === "invoice" ? "invoice" : "receipt"} emails.
           </li>
           <li>
-            ตัวแปร เช่น <code className="bg-blue-100 px-1 rounded text-[11px]">{"{studentName}"}</code> จะถูกแทนที่ด้วยข้อมูลจริงโดยอัตโนมัติเมื่อส่งอีเมล
+            Variables like <code className="bg-blue-100 px-1 rounded text-[11px] font-mono">{"{studentName}"}</code> are
+            automatically replaced with real student data when the email is sent.
           </li>
         </ol>
       </div>
+    </div>
+  )
+}
+
+// ─── Email Preview panel ──────────────────────────────────────────────────────
+
+function EmailPreview({
+  subject,
+  body,
+  sample,
+}: {
+  subject: string
+  body: string
+  sample: Record<string, string>
+}) {
+  const previewSubject = applyVariables(subject || "(no subject)", sample)
+  const previewBody = applyVariables(body || "", sample)
+  const isEmpty = !subject && !body
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 mb-3">
+        <Mail className="w-4 h-4 text-muted-foreground" />
+        <p className="text-sm font-semibold text-gray-700">Live Preview</p>
+        <span className="text-xs text-muted-foreground">(sample data)</span>
+      </div>
+
+      {isEmpty ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground gap-2 rounded-lg border border-dashed bg-gray-50 p-6">
+          <Mail className="w-8 h-8 opacity-30" />
+          <p className="text-xs">Start typing to see a preview of your email here.</p>
+        </div>
+      ) : (
+        <div className="flex-1 rounded-lg border bg-white overflow-hidden flex flex-col text-sm">
+          {/* Email header */}
+          <div className="bg-gray-50 border-b px-4 py-3 space-y-1.5">
+            <div className="flex gap-2">
+              <span className="text-xs text-muted-foreground w-14 shrink-0 pt-0.5">To:</span>
+              <span className="text-xs text-gray-700">parent@example.com</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="text-xs font-medium text-muted-foreground w-14 shrink-0 pt-0.5">Subject:</span>
+              <span className="text-xs font-semibold text-gray-900 leading-snug">{previewSubject}</span>
+            </div>
+          </div>
+          {/* Email body */}
+          <div className="flex-1 px-4 py-4 overflow-y-auto">
+            <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-gray-800">
+              {previewBody || <span className="text-muted-foreground italic">(body is empty)</span>}
+            </pre>
+          </div>
+          <div className="border-t px-4 py-2 bg-gray-50">
+            <p className="text-[10px] text-muted-foreground text-center">
+              Preview uses sample data — actual email will use real student data
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -201,7 +259,7 @@ function HowItWorksBanner({ type }: { type: "invoice" | "receipt" }) {
 interface TemplatePanelProps {
   storageKey: string
   defaultTemplates: EmailTemplate[]
-  placeholders: typeof INVOICE_PLACEHOLDERS
+  variables: typeof INVOICE_VARIABLES
   sampleData: Record<string, string>
   type: "invoice" | "receipt"
   userCanEdit: boolean
@@ -211,7 +269,7 @@ interface TemplatePanelProps {
 function TemplatePanel({
   storageKey,
   defaultTemplates,
-  placeholders,
+  variables,
   sampleData,
   type,
   userCanEdit,
@@ -219,9 +277,7 @@ function TemplatePanel({
 }: TemplatePanelProps) {
   const [templates, setTemplates] = usePersistedState<EmailTemplate[]>(storageKey, defaultTemplates)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
-  const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
   const [form, setForm] = useState({ name: "", subject: "", body: "" })
   const [errors, setErrors] = useState<{ name?: string; subject?: string; body?: string }>({})
   const [bodyRef, setBodyRef] = useState<HTMLTextAreaElement | null>(null)
@@ -240,14 +296,9 @@ function TemplatePanel({
     setIsDialogOpen(true)
   }
 
-  const openPreview = (t: EmailTemplate) => {
-    setPreviewTemplate(t)
-    setIsPreviewOpen(true)
-  }
-
   const setDefault = (id: string) => {
     setTemplates(prev => prev.map(t => ({ ...t, isDefault: t.id === id })))
-    toast.success("ตั้ง Default template เรียบร้อยแล้ว")
+    toast.success("Default template updated")
   }
 
   const handleDuplicate = (t: EmailTemplate) => {
@@ -259,14 +310,14 @@ function TemplatePanel({
       createdAt: new Date().toISOString(),
     }
     setTemplates(prev => [...prev, copy])
-    toast.success("คัดลอก Template เรียบร้อยแล้ว")
+    toast.success("Template duplicated")
   }
 
   const validate = () => {
     const errs: typeof errors = {}
-    if (!form.name.trim()) errs.name = "กรุณากรอกชื่อ Template"
-    if (!form.subject.trim()) errs.subject = "กรุณากรอก Subject"
-    if (!form.body.trim()) errs.body = "กรุณากรอกเนื้อหาอีเมล"
+    if (!form.name.trim()) errs.name = "Template name is required"
+    if (!form.subject.trim()) errs.subject = "Subject is required"
+    if (!form.body.trim()) errs.body = "Email body is required"
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -274,22 +325,15 @@ function TemplatePanel({
   const handleSave = () => {
     if (!validate()) return
     if (editingTemplate) {
-      setTemplates(prev =>
-        prev.map(t => t.id === editingTemplate.id ? { ...t, ...form } : t)
-      )
-      toast.success("อัปเดต Template เรียบร้อยแล้ว")
+      setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? { ...t, ...form } : t))
+      toast.success("Template updated")
     } else {
       const isFirst = templates.length === 0
       setTemplates(prev => [
         ...prev,
-        {
-          id: `tpl-${Date.now()}`,
-          ...form,
-          isDefault: isFirst,
-          createdAt: new Date().toISOString(),
-        },
+        { id: `tpl-${Date.now()}`, ...form, isDefault: isFirst, createdAt: new Date().toISOString() },
       ])
-      toast.success("เพิ่ม Template เรียบร้อยแล้ว")
+      toast.success("Template added")
     }
     setIsDialogOpen(false)
   }
@@ -298,23 +342,19 @@ function TemplatePanel({
     confirmDialog.confirm(() => {
       setTemplates(prev => {
         const updated = prev.filter(x => x.id !== t.id)
-        if (t.isDefault && updated.length > 0) {
-          updated[0].isDefault = true
-        }
+        if (t.isDefault && updated.length > 0) updated[0].isDefault = true
         return updated
       })
-      toast.success("ลบ Template เรียบร้อยแล้ว")
+      toast.success("Template deleted")
     })
   }
 
-  // Insert placeholder at cursor position in body textarea
-  const insertPlaceholder = (key: string) => {
+  const insertVariable = (key: string) => {
     if (bodyRef) {
       const start = bodyRef.selectionStart ?? form.body.length
       const end = bodyRef.selectionEnd ?? form.body.length
       const newBody = form.body.slice(0, start) + key + form.body.slice(end)
       setForm(prev => ({ ...prev, body: newBody }))
-      // Restore cursor after insertion
       setTimeout(() => {
         bodyRef.focus()
         bodyRef.setSelectionRange(start + key.length, start + key.length)
@@ -328,211 +368,217 @@ function TemplatePanel({
     <>
       <HowItWorksBanner type={type} />
 
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
-            {templates.length} template{templates.length !== 1 ? "s" : ""}
-          </p>
-          {userCanEdit && (
-            <Button size="sm" onClick={openAdd} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Template
-            </Button>
-          )}
-        </div>
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-left">Template Name</TableHead>
-                <TableHead className="text-left">Subject</TableHead>
-                <TableHead className="text-center w-24">Default</TableHead>
-                <TableHead className="text-center w-36">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                    ยังไม่มี Template — คลิก "Add Template" เพื่อสร้าง
-                  </TableCell>
-                </TableRow>
-              ) : (
-                templates.map(t => (
-                  <TableRow key={t.id}>
-                    <TableCell className="text-left font-medium">
-                      {t.name}
-                      {t.isDefault && (
-                        <Badge className="ml-2 bg-green-100 text-green-700 text-xs border-0">Default</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-left text-sm text-muted-foreground max-w-xs truncate">
-                      {t.subject}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {t.isDefault ? (
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 mx-auto" title="Default template" />
-                      ) : (
-                        userCanEdit && (
-                          <button
-                            onClick={() => setDefault(t.id)}
-                            title="ตั้งเป็น Default"
-                            className="text-muted-foreground hover:text-yellow-500 mx-auto block transition-colors"
-                          >
-                            <Star className="w-4 h-4" />
-                          </button>
-                        )
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openPreview(t)} title="ดูตัวอย่าง">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {userCanEdit && (
-                          <>
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(t)} title="แก้ไข">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDuplicate(t)} title="คัดลอก">
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost" size="sm"
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() => handleDelete(t)}
-                              title="ลบ"
-                              disabled={t.isDefault && templates.length === 1}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      {/* Table header */}
+      <div className="flex justify-between items-center mb-3">
+        <p className="text-sm text-muted-foreground">
+          {templates.length} template{templates.length !== 1 ? "s" : ""}
+        </p>
+        {userCanEdit && (
+          <Button size="sm" onClick={openAdd} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Template
+          </Button>
+        )}
       </div>
 
-      {/* ─── Add / Edit Dialog ─── */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-left">Template Name</TableHead>
+              <TableHead className="text-left">Subject</TableHead>
+              <TableHead className="text-center w-24">Default</TableHead>
+              <TableHead className="text-center w-36">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {templates.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                  No templates yet — click "Add Template" to create one.
+                </TableCell>
+              </TableRow>
+            ) : (
+              templates.map(t => (
+                <TableRow key={t.id}>
+                  <TableCell className="text-left font-medium">
+                    {t.name}
+                    {t.isDefault && (
+                      <Badge className="ml-2 bg-green-100 text-green-700 text-xs border-0">Default</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-left text-sm text-muted-foreground max-w-xs truncate">
+                    {t.subject}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {t.isDefault ? (
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 mx-auto" title="Default template" />
+                    ) : (
+                      userCanEdit && (
+                        <button
+                          onClick={() => setDefault(t.id)}
+                          title="Set as default"
+                          className="text-muted-foreground hover:text-yellow-500 mx-auto block transition-colors"
+                        >
+                          <Star className="w-4 h-4" />
+                        </button>
+                      )
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(t)} title="Preview & Edit">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {userCanEdit && (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(t)} title="Edit">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDuplicate(t)} title="Duplicate">
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleDelete(t)}
+                            title="Delete"
+                            disabled={t.isDefault && templates.length === 1}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* ─── Add / Edit Dialog with Live Preview ─── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent style={{ maxWidth: "700px", padding: "24px" }}>
-          <DialogHeader>
-            <DialogTitle>{editingTemplate ? "แก้ไข Template" : "เพิ่ม Template"}</DialogTitle>
-          </DialogHeader>
+        <DialogContent style={{ maxWidth: "960px", padding: "0", overflow: "hidden" }}>
+          <div className="flex" style={{ minHeight: "560px", maxHeight: "88vh" }}>
 
-          <div className="space-y-4 py-1">
-            {/* Template Name */}
-            <div className="space-y-1.5">
-              <Label>ชื่อ Template <span className="text-red-500">*</span></Label>
-              <Input
-                placeholder="เช่น Standard Invoice Email (English)"
-                value={form.name}
-                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                autoComplete="off"
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-            </div>
-
-            {/* Subject */}
-            <div className="space-y-1.5">
-              <Label>
-                หัวเรื่องอีเมล (Subject) <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="เช่น Invoice {invoiceNumber} — กำหนดชำระ {dueDate}"
-                value={form.subject}
-                onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
-                autoComplete="off"
-                className={errors.subject ? "border-red-500" : ""}
-              />
-              {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
-            </div>
-
-            {/* Body */}
-            <div className="space-y-1.5">
-              <Label>
-                เนื้อหาอีเมล (Body) <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                ref={el => setBodyRef(el)}
-                placeholder="พิมพ์เนื้อหาอีเมล และใช้ตัวแปรด้านล่างแทรกข้อมูลอัตโนมัติ..."
-                value={form.body}
-                onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
-                className={`min-h-52 font-mono text-sm resize-y ${errors.body ? "border-red-500" : ""}`}
-              />
-              {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
-            </div>
-
-            {/* Variable chips — placed below body so user understands they go INTO body */}
-            <div className="border rounded-md p-3 bg-gray-50 space-y-2">
-              <div>
-                <p className="text-xs font-semibold text-gray-700">ตัวแปรที่ใช้ได้ — คลิกเพื่อแทรกลงในเนื้อหา</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  ระบบจะแทนที่ตัวแปรด้วยข้อมูลจริงโดยอัตโนมัติเมื่อส่งอีเมล
+            {/* Left: Form */}
+            <div className="flex flex-col" style={{ width: "52%", borderRight: "1px solid #e5e7eb" }}>
+              <div className="px-6 pt-6 pb-4 border-b">
+                <h2 className="text-base font-semibold">
+                  {editingTemplate ? "Edit Template" : "Add Template"}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Fill in the fields — the preview updates live on the right.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {placeholders.map(p => (
-                  <button
-                    key={p.key}
-                    type="button"
-                    onClick={() => insertPlaceholder(p.key)}
-                    className="flex flex-col items-start bg-white border border-gray-200 rounded-md px-2.5 py-1.5 hover:border-blue-400 hover:bg-blue-50 transition-colors text-left"
-                    title={`ตัวอย่าง: ${p.example}`}
-                  >
-                    <span className="text-xs font-medium text-gray-800 leading-tight">{p.label}</span>
-                    <span className="text-[10px] text-gray-400 font-mono leading-tight">{p.key}</span>
-                  </button>
-                ))}
+
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                {/* Template Name */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">
+                    Template Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    placeholder="e.g. Standard Invoice Email (English)"
+                    value={form.name}
+                    onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                    autoComplete="off"
+                    className={errors.name ? "border-red-500" : ""}
+                  />
+                  {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                </div>
+
+                {/* Subject */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">
+                    Email Subject <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    placeholder="e.g. Invoice {invoiceNumber} — Payment Due {dueDate}"
+                    value={form.subject}
+                    onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
+                    autoComplete="off"
+                    className={errors.subject ? "border-red-500" : ""}
+                  />
+                  {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
+                </div>
+
+                {/* Body */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">
+                    Email Body <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    ref={el => setBodyRef(el)}
+                    placeholder="Type your email content here. Use the variable buttons below to insert dynamic data automatically."
+                    value={form.body}
+                    onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
+                    className={`font-mono text-sm resize-none ${errors.body ? "border-red-500" : ""}`}
+                    style={{ minHeight: "200px" }}
+                  />
+                  {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
+                </div>
+
+                {/* Variables */}
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700">Insert Variables into Body</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Click a variable to insert it at your cursor. It will be replaced with real data when the email is sent.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {variables.map(v => (
+                      <button
+                        key={v.key}
+                        type="button"
+                        onClick={() => insertVariable(v.key)}
+                        className="flex flex-col items-start bg-white border border-gray-200 rounded-md px-2.5 py-2 hover:border-blue-400 hover:bg-blue-50 transition-colors text-left"
+                        title={`Example: ${v.example}`}
+                      >
+                        <span className="text-xs font-medium text-gray-800 leading-tight">{v.label}</span>
+                        <span className="text-[10px] text-gray-400 font-mono mt-0.5">{v.key}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 px-6 py-4 border-t">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSave}>{editingTemplate ? "Save Changes" : "Add Template"}</Button>
+              </div>
+            </div>
+
+            {/* Right: Live Preview */}
+            <div className="flex flex-col bg-gray-50" style={{ width: "48%" }}>
+              <div className="px-6 pt-6 pb-4 border-b bg-white">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email Preview</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Updates as you type — using sample data</p>
+              </div>
+              <div className="flex-1 overflow-hidden px-5 py-4">
+                <EmailPreview
+                  subject={form.subject}
+                  body={form.body}
+                  sample={sampleData}
+                />
+              </div>
+              {/* Sample data reference */}
+              <div className="px-5 py-3 border-t bg-white">
+                <p className="text-[11px] font-medium text-gray-500 mb-1.5">Sample data used in preview:</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                  {variables.map(v => (
+                    <div key={v.key} className="flex gap-1 text-[10px]">
+                      <span className="text-gray-400 font-mono shrink-0">{v.key}</span>
+                      <span className="text-gray-500">→ {sampleData[v.key]}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>ยกเลิก</Button>
-            <Button onClick={handleSave}>{editingTemplate ? "บันทึก" : "เพิ่ม Template"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ─── Preview Dialog ─── */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent style={{ maxWidth: "640px", padding: "24px" }}>
-          <DialogHeader>
-            <DialogTitle>ตัวอย่างอีเมล — {previewTemplate?.name}</DialogTitle>
-          </DialogHeader>
-
-          {previewTemplate && (
-            <div className="space-y-3">
-              <div className="rounded-md border bg-white overflow-hidden">
-                {/* Subject bar */}
-                <div className="bg-gray-50 border-b px-4 py-2.5 flex gap-3 text-sm">
-                  <span className="text-muted-foreground font-medium w-16 shrink-0">Subject:</span>
-                  <span className="font-medium">{applyPlaceholders(previewTemplate.subject, sampleData)}</span>
-                </div>
-                {/* Body */}
-                <div className="px-4 py-4">
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-800">
-                    {applyPlaceholders(previewTemplate.body, sampleData)}
-                  </pre>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                ตัวอย่างนี้ใช้ข้อมูลสมมติ — เมื่อส่งจริงจะใช้ข้อมูลของนักเรียน/ผู้ปกครองจริง
-              </p>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>ปิด</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
@@ -553,14 +599,14 @@ export function InvoiceReceiptTemplate() {
         isOpen={confirmDialog.isOpen}
         onConfirm={confirmDialog.handleConfirm}
         onCancel={confirmDialog.handleCancel}
-        title="ลบ Template"
-        description="ต้องการลบ Template นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้"
+        title="Delete Template"
+        description="Are you sure you want to delete this template? This action cannot be undone."
       />
 
       <div>
         <h1 className="text-2xl font-bold">{t("menu.invoiceReceiptTemplate")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          จัดการ Template อีเมลสำหรับส่ง Invoice และ Receipt ให้ผู้ปกครอง
+          Manage email templates sent to parents with invoices and receipts
         </p>
       </div>
 
@@ -581,14 +627,14 @@ export function InvoiceReceiptTemplate() {
             <CardHeader>
               <CardTitle>Invoice Email Templates</CardTitle>
               <CardDescription>
-                Template อีเมลสำหรับส่ง Invoice ให้ผู้ปกครอง
+                Templates used when sending invoices to parents by email
               </CardDescription>
             </CardHeader>
             <CardContent>
               <TemplatePanel
                 storageKey="emailTemplates:invoice"
                 defaultTemplates={DEFAULT_INVOICE_TEMPLATES}
-                placeholders={INVOICE_PLACEHOLDERS}
+                variables={INVOICE_VARIABLES}
                 sampleData={INVOICE_SAMPLE}
                 type="invoice"
                 userCanEdit={userCanEdit}
@@ -603,14 +649,14 @@ export function InvoiceReceiptTemplate() {
             <CardHeader>
               <CardTitle>Receipt Email Templates</CardTitle>
               <CardDescription>
-                Template อีเมลสำหรับส่ง Receipt ให้ผู้ปกครอง
+                Templates used when sending receipts to parents by email
               </CardDescription>
             </CardHeader>
             <CardContent>
               <TemplatePanel
                 storageKey="emailTemplates:receipt"
                 defaultTemplates={DEFAULT_RECEIPT_TEMPLATES}
-                placeholders={RECEIPT_PLACEHOLDERS}
+                variables={RECEIPT_VARIABLES}
                 sampleData={RECEIPT_SAMPLE}
                 type="receipt"
                 userCanEdit={userCanEdit}
