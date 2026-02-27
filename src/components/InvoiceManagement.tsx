@@ -3854,10 +3854,14 @@ export function InvoiceManagement({
                     {category !== "external" && (
                       <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
                     )}
-                    {/* Academic Year - LEFT */}
-                    <TableHead align="left">{renderSortHeader(t("invoice.academicYear"), "academicYear")}</TableHead>
-                    {/* Term - LEFT */}
-                    <TableHead align="left">{renderSortHeader(t("invoice.term"), "term")}</TableHead>
+                    {/* Academic Year - LEFT (hidden for external) */}
+                    {category !== "external" && (
+                      <TableHead align="left">{renderSortHeader(t("invoice.academicYear"), "academicYear")}</TableHead>
+                    )}
+                    {/* Term - LEFT (hidden for external) */}
+                    {category !== "external" && (
+                      <TableHead align="left">{renderSortHeader(t("invoice.term"), "term")}</TableHead>
+                    )}
                     {/* Amount - RIGHT */}
                     <TableHead align="right">{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
                     {/* Approval Status - CENTER */}
@@ -3904,14 +3908,18 @@ export function InvoiceManagement({
                           <Badge variant="secondary">{invoice.studentGrade}</Badge>
                         </TableCell>
                       )}
-                      {/* Academic Year - LEFT */}
-                      <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
-                        {invoice.academicYear || "-"}
-                      </TableCell>
-                      {/* Term - LEFT */}
-                      <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
-                        {invoice.term || "-"}
-                      </TableCell>
+                      {/* Academic Year - LEFT (hidden for external) */}
+                      {category !== "external" && (
+                        <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
+                          {invoice.academicYear || "-"}
+                        </TableCell>
+                      )}
+                      {/* Term - LEFT (hidden for external) */}
+                      {category !== "external" && (
+                        <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
+                          {invoice.term || "-"}
+                        </TableCell>
+                      )}
                       {/* Amount - RIGHT */}
                       <TableCell align="right">
                         <div className="font-medium">
