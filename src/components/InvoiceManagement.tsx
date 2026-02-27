@@ -3564,7 +3564,7 @@ export function InvoiceManagement({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Row 1 */}
+              {/* Row 1: Search + Identity filters */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Search */}
                 <div className="space-y-1.5">
@@ -3616,49 +3616,6 @@ export function InvoiceManagement({
                   </div>
                 )}
 
-                {/* Issue Date Range */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
-                  <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("date.from")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dateFrom || undefined}
-                          onSelect={(date) => setDateFrom(date || null)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <span className="text-muted-foreground">→</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : t("date.to")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dateTo || undefined}
-                          onSelect={(date) => setDateTo(date || null)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Year Group (hidden for external) */}
                 {category !== "external" && (
                   <div className="space-y-1.5">
@@ -3676,7 +3633,10 @@ export function InvoiceManagement({
                     </Select>
                   </div>
                 )}
+              </div>
 
+              {/* Row 2: Status filters + Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Approval Status */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
@@ -3699,7 +3659,7 @@ export function InvoiceManagement({
                   </Select>
                 </div>
 
-                {/* Status */}
+                {/* Email Status */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">Email Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -3740,6 +3700,36 @@ export function InvoiceManagement({
                   </Select>
                 </div>
 
+                {/* Issue Date Range */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("date.from")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date || null)} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-muted-foreground">→</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateTo ? format(dateTo, "dd/MM/yy") : t("date.to")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date || null)} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
                 {/* Due Date Range */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("invoice.dueDate")}</label>
@@ -3752,12 +3742,7 @@ export function InvoiceManagement({
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dueDateFrom || undefined}
-                          onSelect={(date) => setDueDateFrom(date || null)}
-                          initialFocus
-                        />
+                        <Calendar mode="single" selected={dueDateFrom || undefined} onSelect={(date) => setDueDateFrom(date || null)} initialFocus />
                       </PopoverContent>
                     </Popover>
                     <span className="text-muted-foreground">→</span>
@@ -3769,12 +3754,7 @@ export function InvoiceManagement({
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dueDateTo || undefined}
-                          onSelect={(date) => setDueDateTo(date || null)}
-                          initialFocus
-                        />
+                        <Calendar mode="single" selected={dueDateTo || undefined} onSelect={(date) => setDueDateTo(date || null)} initialFocus />
                       </PopoverContent>
                     </Popover>
                   </div>
