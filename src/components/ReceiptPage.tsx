@@ -155,9 +155,11 @@ for (let i = 6; i <= 120; i++) {
 
 interface ReceiptPageProps {
   onNavigateToSubPage?: (page: string, params?: any) => void
+  category?: string
 }
 
-export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
+export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps = {}) {
+  const isExternal = category === "external"
   const { t } = useLanguage()
   const [receipts] = useState<Receipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>(mockReceipts)
@@ -534,12 +536,12 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className={`grid grid-cols-1 md:grid-cols-2 ${isExternal ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-4`}>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t("common.search")}</label>
                   <div className="relative">
                     <Input
-                      placeholder={t("receipt.tuitionSearchPlaceholder")}
+                      placeholder={isExternal ? "Search by receipt no., invoice no., client name..." : t("receipt.tuitionSearchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className=""
@@ -562,36 +564,40 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("receipt.paymentType")}</label>
-                  <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("receipt.allTypes")}</SelectItem>
-                      <SelectItem value="yearly">{t("receipt.yearly")}</SelectItem>
-                      <SelectItem value="termly">{t("receipt.termly")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!isExternal && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">{t("receipt.paymentType")}</label>
+                    <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("receipt.allTypes")}</SelectItem>
+                        <SelectItem value="yearly">{t("receipt.yearly")}</SelectItem>
+                        <SelectItem value="termly">{t("receipt.termly")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("receipt.yearGroup")}</label>
-                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("receipt.allYearGroups")}</SelectItem>
-                      {gradeOptions.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                          {grade}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!isExternal && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">{t("receipt.yearGroup")}</label>
+                    <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("receipt.allYearGroups")}</SelectItem>
+                        {gradeOptions.map((grade) => (
+                          <SelectItem key={grade} value={grade}>
+                            {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t("receipt.dateRange")}</label>
@@ -709,16 +715,18 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                     </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
-                        {t("receipt.student")}
+                        {isExternal ? "Client" : t("receipt.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
-                      <div className="flex items-center gap-1">
-                        {t("receipt.yearGroup")}
-                        <ArrowUpDown className="h-4 w-4" />
-                      </div>
-                    </TableHead>
+                    {!isExternal && (
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
+                        <div className="flex items-center gap-1">
+                          {t("receipt.yearGroup")}
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                    )}
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center gap-1">
                         {t("common.amount")}
@@ -770,12 +778,14 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                       <TableCell>
                         <div>
                           <div className="font-medium">{receipt.studentName}</div>
-                          <div className="text-sm text-muted-foreground">{receipt.studentId}</div>
+                          {!isExternal && <div className="text-sm text-muted-foreground">{receipt.studentId}</div>}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{receipt.studentGrade}</Badge>
-                      </TableCell>
+                      {!isExternal && (
+                        <TableCell>
+                          <Badge variant="secondary">{receipt.studentGrade}</Badge>
+                        </TableCell>
+                      )}
                       <TableCell>₿{receipt.amount.toLocaleString()}</TableCell>
                       <TableCell>{receipt.paymentMethod}</TableCell>
                       <TableCell>{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
@@ -941,11 +951,11 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium">{t("receipt.studentInformation")}</h4>
+                  <h4 className="font-medium">{isExternal ? "Client Information" : t("receipt.studentInformation")}</h4>
                   <div className="space-y-2 mt-2">
-                    <p><span className="font-medium">{t("common.name")}:</span> {selectedReceipt.studentName}</p>
-                    <p><span className="font-medium">{t("receipt.studentId")}:</span> {selectedReceipt.studentId}</p>
-                    <p><span className="font-medium">{t("receipt.grade")}:</span> {selectedReceipt.studentGrade}</p>
+                    <p><span className="font-medium">{isExternal ? "Client Name" : t("common.name")}:</span> {selectedReceipt.studentName}</p>
+                    {!isExternal && <p><span className="font-medium">{t("receipt.studentId")}:</span> {selectedReceipt.studentId}</p>}
+                    {!isExternal && <p><span className="font-medium">{t("receipt.grade")}:</span> {selectedReceipt.studentGrade}</p>}
                   </div>
                 </div>
               </div>
@@ -956,14 +966,14 @@ export function ReceiptPage({ onNavigateToSubPage }: ReceiptPageProps = {}) {
                   <div className="space-y-2 mt-2">
                     <p><span className="font-medium">{t("common.amount")}:</span> ₿{selectedReceipt.amount.toLocaleString()}</p>
                     <p><span className="font-medium">{t("receipt.method")}:</span> {selectedReceipt.paymentMethod}</p>
-                    <p><span className="font-medium">{t("common.type")}:</span> {selectedReceipt.paymentType}</p>
+                    {!isExternal && <p><span className="font-medium">{t("common.type")}:</span> {selectedReceipt.paymentType}</p>}
                   </div>
                 </div>
                 <div>
                   <h4 className="font-medium">{t("receipt.additionalInfo")}</h4>
                   <div className="space-y-2 mt-2">
                     <p><span className="font-medium">{t("common.date")}:</span> {format(selectedReceipt.transactionDate, "MMMM dd, yyyy")}</p>
-                    <p><span className="font-medium">{t("receipt.term")}:</span> {selectedReceipt.term}</p>
+                    {!isExternal && <p><span className="font-medium">{t("receipt.term")}:</span> {selectedReceipt.term}</p>}
                     <p><span className="font-medium">{t("receipt.downloads")}:</span> {selectedReceipt.downloadCount} {t("receipt.times")}</p>
                   </div>
                 </div>
