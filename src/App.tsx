@@ -122,6 +122,7 @@ import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
 import { BankSettings } from "./components/BankSettings"
 import { ClientList } from "./components/ClientList"
+import { InvoiceReceiptTemplate } from "./components/InvoiceReceiptTemplate"
 import { Login } from "./components/Login"
 
 import { ViewModal } from "./components/ViewModal"
@@ -137,6 +138,7 @@ const menuItems = {
   ],
   debtReminder: [
     { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
+    { id: "invoice-receipt-template", labelKey: "menu.invoiceReceiptTemplate", icon: FileText },
     { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
   ],
@@ -873,6 +875,7 @@ export default function App() {
 
                     {/* Debt Reminder */}
                     <Route path="/debt-reminder-settings" element={<DebtReminderSettings />} />
+                    <Route path="/invoice-receipt-template" element={<InvoiceReceiptTemplate />} />
                     <Route path="/payment-history" element={<PaymentHistorySimple />} />
                     <Route path="/email-jobs" element={<EmailHistory />} />
 
