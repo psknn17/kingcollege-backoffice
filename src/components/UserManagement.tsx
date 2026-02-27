@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
