@@ -3577,40 +3577,44 @@ export function InvoiceManagement({
                   />
                 </div>
 
-                {/* Academic Year */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
-                  <Select value={academicYearFilter} onValueChange={(value) => {
-                    setAcademicYearFilter(value)
-                    setTermFilter("all") // Reset term when year changes
-                  }}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allYears")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
-                      {academicYears.map(year => (
-                        <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Academic Year (hidden for external) */}
+                {category !== "external" && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
+                    <Select value={academicYearFilter} onValueChange={(value) => {
+                      setAcademicYearFilter(value)
+                      setTermFilter("all")
+                    }}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={t("invoice.allYears")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
+                        {academicYears.map(year => (
+                          <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-                {/* Term */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
-                  <Select value={termFilter} onValueChange={setTermFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allTerms")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
-                      {availableTerms.map(term => (
-                        <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Term (hidden for external) */}
+                {category !== "external" && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
+                    <Select value={termFilter} onValueChange={setTermFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={t("invoice.allTerms")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
+                        {availableTerms.map(term => (
+                          <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Issue Date Range */}
                 <div className="space-y-1.5">
@@ -3655,21 +3659,23 @@ export function InvoiceManagement({
 
               {/* Row 2 */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Year Group */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
-                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allYearGroups")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
-                      {grades.map(grade => (
-                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Year Group (hidden for external) */}
+                {category !== "external" && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
+                    <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={t("invoice.allYearGroups")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
+                        {grades.map(grade => (
+                          <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Approval Status */}
                 <div className="space-y-1.5">
