@@ -1953,6 +1953,75 @@ export function InvoiceManagement({
 
     const newInvoices: Invoice[] = Object.entries(grouped).map(([docNo, rows]) => {
       const first = rows[0]
+
+      // ── External invoice path (Clientname / Contact name / address columns) ──
+      if (category === "external") {
+        const clientName = first["Clientname"] || first["ClientName"] || first["Client Name"] || ""
+        if (!clientName) {
+          skippedNoStudent++
+          return null
+        }
+
+        const validRows = rows.filter(row => !!resolveItemCode(row))
+        const items: InvoiceItem[] = validRows
+          .sort((a, b) => parseInt(a["InvoiceLineItem"] || "0") - parseInt(b["InvoiceLineItem"] || "0"))
+          .map(row => {
+            const rawAmt = row["Amount"]
+            const amt = typeof rawAmt === "number" ? rawAmt : (parseFloat(String(rawAmt ?? "").replace(/,/g, "")) || 0)
+            const desc = row["Description"] || ""
+            return {
+              id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              description: desc,
+              amount: amt,
+              discountPercent: 0,
+              discountedAmount: amt,
+              notes: resolveItemCode(row)
+            }
+          })
+
+        if (items.length === 0) {
+          skippedNoItems++
+          return null
+        }
+
+        const totalAmount = items.reduce((sum, i) => sum + i.amount, 0)
+        const issueDateRaw = first["InvoiceDate"] || first["DocumentDate"] || first["Date"]
+        const issueDate = issueDateRaw ? parseDate(issueDateRaw) : null
+        const dueDate = first["DueDate"] ? parseDate(first["DueDate"]) : (issueDate ? new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+
+        return {
+          id: `${getAcademicYear(new Date()).split('/')[0]}DRAFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceNumber: docNo,
+          studentName: clientName,
+          studentId: "EXTERNAL",
+          studentGrade: "-",
+          parentName: first["Contact name"] || first["ContactName"] || "",
+          parentEmail: "",
+          totalAmount,
+          discountAmount: 0,
+          finalAmount: totalAmount,
+          status: "pending_approval" as const,
+          approvalStatus: "wait" as const,
+          issueDate,
+          dueDate,
+          issuedBy: "Import",
+          items,
+          discounts: [],
+          notes: "",
+          term: "",
+          academicYear: "",
+          category: "external" as const,
+          adultIdNo: first["AdultIDNo"] || "",
+          clientName,
+          contactName: first["Contact name"] || first["ContactName"] || "",
+          address: first["address"] || first["Address"] || "",
+          recipientName: clientName,
+          recipientAddress: first["address"] || first["Address"] || "",
+          invoiceType: "external" as const
+        }
+      }
+
+      // ── Internal / student invoice path ──
       const pupilId = first["PupilID"] || ""
       const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
 
@@ -2048,7 +2117,7 @@ export function InvoiceManagement({
     importInterfaceRows.forEach(row => {
       const pupilId = row["PupilID"] || ""
       const student = students.find(s => s.studentId === pupilId || s.id === pupilId)
-      if (!student) return // Skip rows for unknown students
+      if (!student && category !== "external") return // Skip rows for unknown students (internal only)
       if (!row["FinanceCode"]) return // Skip rows without item code (FinanceCode)
 
       const desc = (row["Description"] || "").trim()
@@ -2320,6 +2389,41 @@ export function InvoiceManagement({
   }
 
   const downloadInterfaceTemplate = () => {
+    if (category === "external") {
+      // External invoice template — exact columns from external interface file
+      const headers = [
+        "Clientname",
+        "Contact name",
+        "address",
+        "AdultIDNo",
+        "NominalCode",
+        "Type",
+        "DocumentNo",
+        "InvoiceDate",
+        "DueDate",
+        "FinanceCode",
+        "Description",
+        "InvoiceLineItem",
+        "Amount"
+      ]
+      const sampleRow = [
+        "Company ABC Co., Ltd.",  // Clientname
+        "Mr. John Smith",         // Contact name
+        "123 Main Street, Bangkok", // address
+        "A001",                   // AdultIDNo
+        "4110003",                // NominalCode
+        "SI",                     // Type
+        "20260000001",            // DocumentNo
+        "15/01/2026",             // InvoiceDate (dd/MM/yyyy)
+        "31/01/2026",             // DueDate (dd/MM/yyyy)
+        "EXT-001",                // FinanceCode
+        "Service Fee",            // Description
+        "1",                      // InvoiceLineItem
+        "50000"                   // Amount
+      ]
+      downloadAsXlsx(headers, [sampleRow], "external_invoice_template")
+      return
+    }
     const headers = [
       "PupilID",
       "AdultIDNo",
@@ -3564,202 +3668,282 @@ export function InvoiceManagement({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Row 1: Search + Identity filters */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Search */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-                  <SearchInput
-                    placeholder={t("invoice.searchPlaceholder")}
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    className="h-9"
-                  />
-                </div>
-
-                {/* Academic Year (hidden for external) */}
-                {category !== "external" && (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
-                    <Select value={academicYearFilter} onValueChange={(value) => {
-                      setAcademicYearFilter(value)
-                      setTermFilter("all")
-                    }}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("invoice.allYears")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
-                        {academicYears.map(year => (
-                          <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {category === "external" ? (
+                <>
+                  {/* External Row 1: Search | Approval Status | Email Status | Invoice Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
+                      <SearchInput
+                        placeholder={t("invoice.searchPlaceholder")}
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
+                      <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                          <SelectItem value="wait"><Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge></SelectItem>
+                          <SelectItem value="approved"><Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approve</Badge></SelectItem>
+                          <SelectItem value="rejected"><Badge className="bg-red-100 text-red-800 hover:bg-red-100">Reject</Badge></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">Email Status</label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                          <SelectItem value="wait"><Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge></SelectItem>
+                          <SelectItem value="sent"><Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+                      <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                          <SelectItem value="unpaid"><Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge></SelectItem>
+                          <SelectItem value="paid"><Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge></SelectItem>
+                          <SelectItem value="overdue"><Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                )}
-
-                {/* Term (hidden for external) */}
-                {category !== "external" && (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
-                    <Select value={termFilter} onValueChange={setTermFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("invoice.allTerms")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
-                        {availableTerms.map(term => (
-                          <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* External Row 2: Issue Date | Due Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateFrom ? format(dateFrom, "dd/MM/yy") : t("date.from")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                        <span className="text-muted-foreground">→</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateTo ? format(dateTo, "dd/MM/yy") : t("date.to")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.dueDate")}</label>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dueDateFrom || undefined} onSelect={(date) => setDueDateFrom(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                        <span className="text-muted-foreground">→</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dueDateTo || undefined} onSelect={(date) => setDueDateTo(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
                   </div>
-                )}
-
-                {/* Year Group (hidden for external) */}
-                {category !== "external" && (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
-                    <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("invoice.allYearGroups")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
-                        {grades.map(grade => (
-                          <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                </>
+              ) : (
+                <>
+                  {/* Internal Row 1: Search | Academic Year | Term | Year Group */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
+                      <SearchInput
+                        placeholder={t("invoice.searchPlaceholder")}
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
+                      <Select value={academicYearFilter} onValueChange={(value) => {
+                        setAcademicYearFilter(value)
+                        setTermFilter("all")
+                      }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allYears")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allYears")}</SelectItem>
+                          {academicYears.map(year => (
+                            <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
+                      <Select value={termFilter} onValueChange={setTermFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allTerms")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
+                          {availableTerms.map(term => (
+                            <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
+                      <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allYearGroups")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
+                          {grades.map(grade => (
+                            <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Row 2: Status filters + Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Approval Status */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
-                  <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allStatus")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                      <SelectItem value="wait">
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
-                      </SelectItem>
-                      <SelectItem value="approved">
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approve</Badge>
-                      </SelectItem>
-                      <SelectItem value="rejected">
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Reject</Badge>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Email Status */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">Email Status</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allStatus")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                      <SelectItem value="wait">
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
-                      </SelectItem>
-                      <SelectItem value="sent">
-                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Invoice Status */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
-                  <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("invoice.allStatus")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                      <SelectItem value="unpaid">
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge>
-                      </SelectItem>
-                      <SelectItem value="paid">
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
-                      </SelectItem>
-                      <SelectItem value="overdue">
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Issue Date Range */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
-                  <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("date.from")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date || null)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                    <span className="text-muted-foreground">→</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : t("date.to")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date || null)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
+                  {/* Internal Row 2: Approval Status | Email Status | Invoice Status | Issue Date | Due Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
+                      <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                          <SelectItem value="wait"><Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge></SelectItem>
+                          <SelectItem value="approved"><Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approve</Badge></SelectItem>
+                          <SelectItem value="rejected"><Badge className="bg-red-100 text-red-800 hover:bg-red-100">Reject</Badge></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">Email Status</label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                          <SelectItem value="wait"><Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge></SelectItem>
+                          <SelectItem value="sent"><Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sent</Badge></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+                      <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("invoice.allStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                          <SelectItem value="unpaid"><Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge></SelectItem>
+                          <SelectItem value="paid"><Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge></SelectItem>
+                          <SelectItem value="overdue"><Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateFrom ? format(dateFrom, "dd/MM/yy") : t("date.from")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                        <span className="text-muted-foreground">→</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateTo ? format(dateTo, "dd/MM/yy") : t("date.to")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("invoice.dueDate")}</label>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dueDateFrom || undefined} onSelect={(date) => setDueDateFrom(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                        <span className="text-muted-foreground">→</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={dueDateTo || undefined} onSelect={(date) => setDueDateTo(date || null)} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                {/* Due Date Range */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("invoice.dueDate")}</label>
-                  <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("date.from")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={dueDateFrom || undefined} onSelect={(date) => setDueDateFrom(date || null)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                    <span className="text-muted-foreground">→</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("date.to")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={dueDateTo || undefined} onSelect={(date) => setDueDateTo(date || null)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

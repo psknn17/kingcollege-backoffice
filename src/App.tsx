@@ -121,6 +121,7 @@ import { UserProfile } from "./components/UserProfile"
 import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
 import { BankSettings } from "./components/BankSettings"
+import { ClientList } from "./components/ClientList"
 import { Login } from "./components/Login"
 
 import { ViewModal } from "./components/ViewModal"
@@ -165,6 +166,7 @@ const menuItems = {
   ],
   externalInvoice: [
     { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
+    { id: "client-list", labelKey: "menu.clientList", icon: Users },
     { id: "external-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "external-discount-groups", labelKey: "menu.studentGroups", icon: Users },
@@ -948,6 +950,7 @@ export default function App() {
                     <Route path="/external-invoices" element={
                       <InvoiceManagement onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} defaultTab="external" showTypeTabs={false} category="external" />
                     } />
+                    <Route path="/client-list" element={<ClientList />} />
                     <Route path="/external-item-management" element={
                       <ItemManagement key="external-items" onNavigateToSubPage={navigateToSubPage} invoiceType="external" />
                     } />
