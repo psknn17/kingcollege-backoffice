@@ -3848,10 +3848,12 @@ export function InvoiceManagement({
                     </TableHead>
                     {/* Invoice Number - LEFT */}
                     <TableHead align="left">{renderSortHeader(t("invoice.invoiceNumber"), "invoiceNumber")}</TableHead>
-                    {/* Student - LEFT */}
-                    <TableHead align="left">{renderSortHeader(t("invoice.student"), "studentName")}</TableHead>
-                    {/* Year Group - CENTER */}
-                    <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
+                    {/* Student / Client - LEFT */}
+                    <TableHead align="left">{renderSortHeader(category === "external" ? "Client" : t("invoice.student"), "studentName")}</TableHead>
+                    {/* Year Group - CENTER (hidden for external) */}
+                    {category !== "external" && (
+                      <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
+                    )}
                     {/* Academic Year - LEFT */}
                     <TableHead align="left">{renderSortHeader(t("invoice.academicYear"), "academicYear")}</TableHead>
                     {/* Term - LEFT */}
@@ -3887,17 +3889,21 @@ export function InvoiceManagement({
                       <TableCell align="left" className="font-mono text-sm">
                         {displayInvoiceNumber(invoice.invoiceNumber, getApprovalStatus(invoice))}
                       </TableCell>
-                      {/* Student - LEFT */}
+                      {/* Student / Client - LEFT */}
                       <TableCell align="left">
                         <div>
                           <div className="font-medium">{invoice.studentName}</div>
-                          <div className="text-sm text-muted-foreground">{invoice.studentId}</div>
+                          {category !== "external" && (
+                            <div className="text-sm text-muted-foreground">{invoice.studentId}</div>
+                          )}
                         </div>
                       </TableCell>
-                      {/* Year Group - CENTER */}
-                      <TableCell align="center">
-                        <Badge variant="secondary">{invoice.studentGrade}</Badge>
-                      </TableCell>
+                      {/* Year Group - CENTER (hidden for external) */}
+                      {category !== "external" && (
+                        <TableCell align="center">
+                          <Badge variant="secondary">{invoice.studentGrade}</Badge>
+                        </TableCell>
+                      )}
                       {/* Academic Year - LEFT */}
                       <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
                         {invoice.academicYear || "-"}
