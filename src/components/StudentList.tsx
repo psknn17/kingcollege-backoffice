@@ -235,9 +235,8 @@ interface StudentListProps {
 
 export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { t } = useLanguage()
-  const { students, families, addStudent, updateStudent, deleteStudent, addFamily, updateFamily, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
+  const { students, families, addStudent, updateStudent, deleteStudent, addFamily, updateFamily, checkFeePrivilegeEligibility } = useStudents()
   const { academicYears } = useAcademicYears()
-  const { getSiblingDiscountPercentage } = useDiscountOptions()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
 
@@ -1460,23 +1459,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               value={formData.familyCode || ""}
               onChange={(e) => {
                 const inputCode = e.target.value
-
-                // Auto-calculate child order if family exists
-                if (inputCode) {
-                  const existingFamily = families.find((f: Family) => f.familyCode === inputCode)
-                  if (existingFamily) {
-                    const familyStudents = students.filter((s: Student) =>
-                      s.familyId === existingFamily.id && s.studentId !== formData.studentId
-                    )
-                    const newChildOrder = familyStudents.length + 1
-                    setFormData(prev => ({ ...prev, familyCode: inputCode, childOrder: newChildOrder }))
-                  } else {
-                    // New family - default to first child
-                    setFormData(prev => ({ ...prev, familyCode: inputCode, childOrder: 1 }))
-                  }
-                } else {
-                  setFormData(prev => ({ ...prev, familyCode: inputCode, childOrder: 1 }))
-                }
+                setFormData(prev => ({ ...prev, familyCode: inputCode }))
               }}
               placeholder="Enter family code (e.g., FAM001)"
               disabled={!userCanEdit}
@@ -1492,40 +1475,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
         </div>
 
-        {/* Sibling Discount Section */}
-        <div className="border rounded-lg p-4 bg-muted/30">
-          <div className="space-y-3">
-            <Label className="text-base font-medium flex items-center gap-2">
-              <Percent className="w-4 h-4" />
-              Sibling Discount
-            </Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Child Order</Label>
-                <div className="h-10 px-3 py-2 border rounded-md bg-background text-sm flex items-center font-medium">
-                  {formData.childOrder === 1 ? '1st Child' :
-                   formData.childOrder === 2 ? '2nd Child' :
-                   formData.childOrder === 3 ? '3rd Child' :
-                   formData.childOrder === 4 ? '4th Child' :
-                   '5th Child+'}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Discount Rate</Label>
-                <div className="h-10 px-3 py-2 border rounded-md bg-background text-sm flex items-center justify-center font-semibold">
-                  {(() => {
-                    const discountPct = getSiblingDiscountPercentage(formData.childOrder, formData.academicYear, formData.enrollmentTerm)
-                    if (discountPct > 0) {
-                      return <span className="text-green-600">{discountPct}% off</span>
-                    } else {
-                      return <span className="text-muted-foreground">No sibling discount</span>
-                    }
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </TabsContent>
 
       <TabsContent value="parents" className="space-y-4 mt-4">
@@ -1959,22 +1908,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     <TableCell align="left">
                       {(() => {
                         const discounts: any[] = []
-                        const siblingDiscount = getSiblingDiscount(student, student.enrollmentTerm)
                         const feeWaiver = checkFeePrivilegeEligibility(student, student.academicYear, student.enrollmentTerm)
                         const groupDiscounts = getStudentGroupDiscounts(student.studentId)
                         // Check for special discounts from localStorage records (fallback to notes)
                         const isStaff = isStaffChildStudent(student.studentId) || student.notes?.toLowerCase().includes('staff')
                         const hasScholarship = hasScholarshipDiscount(student.studentId) || student.notes?.toLowerCase().includes('scholarship')
                         const hasEarlyBird = hasEarlyBirdDiscount(student.studentId) || student.notes?.toLowerCase().includes('early bird')
-
-                        // Sibling Discount
-                        if (siblingDiscount > 0) {
-                          discounts.push(
-                            <Badge key="sibling" className="bg-green-100 text-green-800 text-xs">
-                              {t("student.sibling")} {siblingDiscount}%
-                            </Badge>
-                          )
-                        }
 
                         // Fee Waiver (only show if eligible)
                         if (feeWaiver.eligible) {
@@ -2166,16 +2105,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   {t("student.discountsBenefits")}
                 </h4>
                 <div className="space-y-2">
-                  {/* Sibling Discount */}
-                  {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>{t("student.siblingDiscount")}</span>
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm)}%
-                      </Badge>
-                    </div>
-                  )}
-
                   {/* Student Group Discounts */}
                   {getStudentGroupDiscounts(selectedStudent.studentId).map((group, index) => (
                     <div key={index} className="flex justify-between text-sm">
@@ -2234,8 +2163,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   })()}
 
                   {/* No discounts message */}
-                  {getSiblingDiscount(selectedStudent, selectedStudent.enrollmentTerm) === 0 &&
-                    getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
+                  {getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
                     !(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) &&
                     !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
                     !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) &&
