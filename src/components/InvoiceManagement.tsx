@@ -1942,6 +1942,14 @@ export function InvoiceManagement({
     let skippedNoStudent = 0
     let skippedNoItems = 0
     let newItemsAdded = 0
+    const inactiveStudentWarnings: string[] = []
+
+    const statusLabels: Record<string, string> = {
+      graduated: "Graduated",
+      withdrawn: "Withdrawn",
+      on_leave: "On Leave",
+      inactive: "Inactive"
+    }
 
     const newInvoices: Invoice[] = Object.entries(grouped).map(([docNo, rows]) => {
       const first = rows[0]
@@ -1950,6 +1958,14 @@ export function InvoiceManagement({
 
       // Skip invoice if student not found in system
       if (!student) {
+        skippedNoStudent++
+        return null
+      }
+
+      // Warn if student is not active
+      if (student.status && student.status !== "active") {
+        const statusLabel = statusLabels[student.status] || student.status
+        inactiveStudentWarnings.push(`${student.firstName} ${student.lastName} (${pupilId}) — Status: ${statusLabel}`)
         skippedNoStudent++
         return null
       }
@@ -2099,7 +2115,7 @@ export function InvoiceManagement({
 
     const itemNote = newItemsAdded > 0 ? ` (auto-created ${newItemsAdded} item${newItemsAdded > 1 ? "s" : ""})` : ""
     const skippedParts = [
-      skippedNoStudent > 0 ? `${skippedNoStudent} รายการไม่พบนักเรียน` : "",
+      skippedNoStudent > 0 ? `${skippedNoStudent} รายการไม่พบนักเรียน/สถานะไม่ active` : "",
       skippedNoItems > 0 ? `${skippedNoItems} รายการไม่มี Item Code` : ""
     ].filter(Boolean).join(", ")
     const skippedNote = skippedParts ? ` — ข้ามไป: ${skippedParts}` : ""
@@ -2108,6 +2124,15 @@ export function InvoiceManagement({
       toast.error(`ไม่มี invoice ที่นำเข้าได้${skippedNote}`)
     } else {
       toast.success(`Imported ${newInvoices.length} invoice${newInvoices.length > 1 ? "s" : ""} successfully${itemNote}${skippedNote}`)
+    }
+
+    // Show individual warnings for inactive students
+    if (inactiveStudentWarnings.length > 0) {
+      setTimeout(() => {
+        inactiveStudentWarnings.forEach(msg => {
+          toast.warning(`ข้ามรายการ: ${msg}`)
+        })
+      }, 500)
     }
 
     logActivity({

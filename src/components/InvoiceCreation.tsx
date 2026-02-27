@@ -1376,7 +1376,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const effectiveTerm = selectedTerm || term
 
   const availableStudents = useMemo(() => {
-    return students.map(student => {
+    return students.filter(student => student.status === "active").map(student => {
       // Convert gradeLevel ID to label format (e.g., "year2" -> "Year 2")
       const gradeLabel = getGradeLabel(student.gradeLevel)
 
