@@ -5,14 +5,16 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { Search, Plus, Edit, Trash2, Building2 } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Building2, Upload, Download } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
+import { format } from "date-fns"
 
 export interface Client {
   id: string
@@ -33,6 +35,7 @@ export function ClientList() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const confirmDialog = useConfirmDialog()
+  const importConfirmDialog = useConfirmDialog()
 
   const [clients, setClients] = usePersistedState<Client[]>("clientList", [])
   const [searchTerm, setSearchTerm] = useState("")
@@ -40,6 +43,12 @@ export function ClientList() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [form, setForm] = useState<Omit<Client, "id" | "createdAt">>(emptyForm)
   const [errors, setErrors] = useState<Partial<Record<keyof typeof emptyForm, string>>>({})
+
+  // Import state
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [importPreview, setImportPreview] = useState<Record<string, string>[]>([])
+  const [importError, setImportError] = useState("")
+  const [showAllPreview, setShowAllPreview] = useState(false)
 
   const filtered = useMemo(() => {
     const q = searchTerm.toLowerCase()
@@ -98,14 +107,126 @@ export function ClientList() {
     })
   }
 
+  // --- Export ---
+  const handleExport = () => {
+    const headers = ["Client Name", "Contact Name", "Address", "Created At"]
+    const rows = filtered.map(c => [
+      c.clientName,
+      c.contactName,
+      c.address,
+      c.createdAt ? format(new Date(c.createdAt), "dd/MM/yyyy HH:mm") : "",
+    ])
+    downloadAsXlsx(headers, rows, `clients_export_${format(new Date(), "yyyyMMdd_HHmmss")}`)
+    toast.success(`Exported ${filtered.length} clients to Excel`)
+  }
+
+  // --- Import ---
+  const handleImport = () => {
+    setImportPreview([])
+    setImportError("")
+    setShowAllPreview(false)
+    setIsImportDialogOpen(true)
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const rows = await parseXlsxOrCsvFile(file)
+      if (rows.length === 0) {
+        setImportError("File has no data rows")
+        return
+      }
+
+      const fileHeaders = Object.keys(rows[0])
+      const hasClientName = fileHeaders.includes("Client Name")
+
+      if (!hasClientName) {
+        setImportError(`Missing required column: Client Name. Found: ${fileHeaders.join(", ")}`)
+        return
+      }
+
+      setImportPreview(rows)
+      setImportError("")
+      setShowAllPreview(false)
+    } catch {
+      setImportError("Failed to parse file. Please use the provided template.")
+    }
+  }
+
+  const performConfirmImport = () => {
+    if (importPreview.length === 0) {
+      toast.error("No data to import")
+      return
+    }
+
+    let imported = 0
+    let duplicates = 0
+
+    importPreview.forEach(row => {
+      const clientName = (row["Client Name"] || "").trim()
+      if (!clientName) return
+
+      const existing = clients.find(c => c.clientName.toLowerCase() === clientName.toLowerCase())
+      if (existing) {
+        duplicates++
+        return
+      }
+
+      const newClient: Client = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        clientName,
+        contactName: (row["Contact Name"] || "").trim(),
+        address: (row["Address"] || "").trim(),
+        createdAt: new Date().toISOString(),
+      }
+      setClients(prev => [...prev, newClient])
+      imported++
+    })
+
+    setIsImportDialogOpen(false)
+    toast.success(`Imported ${imported} clients${duplicates > 0 ? `, skipped ${duplicates} duplicates` : ""}`)
+  }
+
+  const handleConfirmImport = () => {
+    importConfirmDialog.confirm(() => {
+      performConfirmImport()
+    })
+  }
+
+  const downloadTemplate = () => {
+    const headers = ["Client Name", "Contact Name", "Address"]
+    const exampleRow = ["ABC Company Ltd.", "Mr. John Smith", "123 Main Street, Bangkok 10110"]
+    downloadAsXlsx(headers, [exampleRow], "client_import_template")
+    toast.success("Template downloaded")
+  }
+
+  // Check for duplicates in preview
+  const duplicateNames = useMemo(() => {
+    const existingNames = new Set(clients.map(c => c.clientName.toLowerCase()))
+    return new Set(
+      importPreview
+        .map(row => (row["Client Name"] || "").trim().toLowerCase())
+        .filter(name => name && existingNames.has(name))
+    )
+  }, [importPreview, clients])
+
   return (
     <div className="p-6 space-y-6">
       <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
         onConfirm={confirmDialog.handleConfirm}
-        onCancel={confirmDialog.handleCancel}
-        title="Delete Client"
-        description="Are you sure you want to delete this client? This action cannot be undone."
+        titleKey="Delete Client"
+        descriptionKey="Are you sure you want to delete this client? This action cannot be undone."
+      />
+      <ConfirmDialog
+        open={importConfirmDialog.isOpen}
+        onOpenChange={importConfirmDialog.setIsOpen}
+        onConfirm={importConfirmDialog.handleConfirm}
+        titleKey="Confirm Import"
+        descriptionKey={`Import ${importPreview.length} clients? ${duplicateNames.size > 0 ? `${duplicateNames.size} duplicate(s) will be skipped.` : ""}`}
       />
 
       <Card>
@@ -118,12 +239,24 @@ export function ClientList() {
               </CardTitle>
               <CardDescription>Manage external clients for invoice creation</CardDescription>
             </div>
-            {userCanEdit && (
-              <Button onClick={openAdd} className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Add Client
+            <div className="flex items-center gap-2">
+              {userCanEdit && (
+                <Button variant="outline" onClick={handleImport} className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  Import
+                </Button>
+              )}
+              <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Export
               </Button>
-            )}
+              {userCanEdit && (
+                <Button onClick={openAdd} className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Client
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -238,6 +371,119 @@ export function ClientList() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave}>{editingClient ? "Save Changes" : "Add Client"}</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-3xl w-[90vw] flex flex-col max-h-[90vh] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle>Import Clients</DialogTitle>
+              <DialogDescription>
+                Upload a CSV or Excel file to import clients. Download the template for the correct format.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {/* Template Download */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Excel Template</p>
+                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+              </div>
+              <Button variant="outline" onClick={downloadTemplate}>
+                <Download className="w-4 h-4 mr-2" />
+                Download Template
+              </Button>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="clientImportFile">Upload File</Label>
+              <Input
+                id="clientImportFile"
+                type="file"
+                accept={XLSX_ACCEPT}
+                onChange={handleFileUpload}
+                className="cursor-pointer"
+                disabled={!userCanEdit}
+              />
+            </div>
+
+            {/* Error Display */}
+            {importError && (
+              <div className="p-3 border border-red-200 bg-red-50 rounded-lg text-red-700 text-sm">
+                {importError}
+              </div>
+            )}
+
+            {/* Duplicate Warning */}
+            {importPreview.length > 0 && duplicateNames.size > 0 && (
+              <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg text-yellow-800 text-sm">
+                {duplicateNames.size} client(s) already exist and will be skipped: {Array.from(duplicateNames).join(", ")}
+              </div>
+            )}
+
+            {/* Preview Table */}
+            {importPreview.length > 0 && (
+              <div className="space-y-2">
+                <Label>Preview ({importPreview.length} clients)</Label>
+                <div className="border rounded-lg overflow-x-auto">
+                  <Table className="min-w-[480px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-left">Client Name</TableHead>
+                        <TableHead className="text-left">Contact Name</TableHead>
+                        <TableHead className="text-left">Address</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(showAllPreview ? importPreview : importPreview.slice(0, 10)).map((row, index) => {
+                        const isDuplicate = duplicateNames.has((row["Client Name"] || "").trim().toLowerCase())
+                        return (
+                          <TableRow key={index} className={isDuplicate ? "bg-yellow-50" : ""}>
+                            <TableCell className="text-left font-medium">
+                              {row["Client Name"] || ""}
+                              {isDuplicate && <span className="ml-2 text-xs text-yellow-600">(duplicate)</span>}
+                            </TableCell>
+                            <TableCell className="text-left">{row["Contact Name"] || "-"}</TableCell>
+                            <TableCell className="text-left">{row["Address"] || "-"}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                {importPreview.length > 10 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllPreview(!showAllPreview)}
+                  >
+                    {showAllPreview
+                      ? "Show less"
+                      : `Show ${importPreview.length - 10} more`}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmImport}
+              disabled={!userCanEdit || importPreview.length === 0 || !!importError}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import {importPreview.length > 0 ? `${importPreview.length} Clients` : ""}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
