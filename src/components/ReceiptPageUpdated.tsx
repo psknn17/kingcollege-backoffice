@@ -68,6 +68,7 @@ interface Receipt {
   chequeDate?: Date
   collectorName?: string
   familyCode?: string
+  status: "issued" | "resent" | "failed"
 }
 
 interface CreditNote {
@@ -83,7 +84,7 @@ interface CreditNote {
   issueDate: Date
   academicYear: string
   term: string
-  status: "issued" | "cancelled" | "pending" | "used" | "partial"
+  status: "issued" | "resent" | "failed" | "cancelled" | "pending" | "used" | "partial"
   familyCode?: string
   appliedToReceipt?: string
 }
@@ -154,7 +155,8 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         term: term,
         downloadCount: 0,
         collectorName: "System",
-        familyCode: familyCode
+        familyCode: familyCode,
+        status: (r.status as "issued" | "resent" | "failed") || "issued"
       }
     })
   } catch (error) {
@@ -459,6 +461,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     if (paymentChannelFilter !== "all") {
       filtered = filtered.filter(receipt => receipt.paymentChannel === paymentChannelFilter)
+    }
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(receipt => receipt.status === statusFilter)
     }
 
     if (dateFrom) {
@@ -1112,6 +1118,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { bg: string; text: string; border: string }> = {
       issued: { bg: "bg-green-100", text: "text-green-800", border: "border-green-200" },
+      resent: { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-200" },
+      failed: { bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
       cancelled: { bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
       pending: { bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-200" },
       used: { bg: "bg-gray-100", text: "text-gray-600", border: "border-gray-200" },
@@ -1274,8 +1282,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 </div>
               </div>
 
-              {/* Row 2: Year Group, Payment Channel, Date Range */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Row 2: Year Group, Payment Channel, Status, Date Range */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
                   <Select value={gradeFilter} onValueChange={setGradeFilter}>
@@ -1306,6 +1314,21 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <SelectItem value="alipay">{t("common.alipay")}</SelectItem>
                       <SelectItem value="qr_payment">{t("common.qrPayment")}</SelectItem>
                       <SelectItem value="counter_bank">{t("common.counterBank")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="issued">Issued</SelectItem>
+                      <SelectItem value="resent">Resent</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1490,6 +1513,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
+                    {/* Status - center aligned (badge) */}
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                      <div className="flex items-center gap-1 justify-center">
+                        {t("common.status")}
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
                     {/* Actions - center aligned */}
                     <TableHead align="center">{t("common.actions")}</TableHead>
                   </TableRow>
@@ -1538,6 +1568,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - left aligned */}
                       <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      {/* Status - center aligned */}
+                      <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                       {/* Actions - center aligned */}
                       <TableCell align="center">
                         <TooltipProvider>

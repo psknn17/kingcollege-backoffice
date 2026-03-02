@@ -894,9 +894,6 @@ export default function App() {
                     <Route path="/student-groups" element={
                       <DiscountManagement activeTab="student-groups" category="tuition" onNavigateToSubPage={navigateToSubPage} onTabChange={handleMenuItemClick} />
                     } />
-                    <Route path="/promotional-campaigns" element={
-                      <DiscountManagement activeTab="promotional-campaigns" category="tuition" onNavigateToSubPage={navigateToSubPage} onTabChange={handleMenuItemClick} />
-                    } />
                     <Route path="/item-management" element={
                       <ItemManagement key="tuition-items" onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} invoiceType="tuition" />
                     } />

@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Badge } from "./ui/badge"
-import { Checkbox } from "./ui/checkbox"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
@@ -30,12 +29,8 @@ import {
   Percent,
   UserPlus,
   ArrowUpDown,
-  Send,
-  Clock,
-  CheckCircle2,
-  XCircle,
   Download,
-  AlertTriangle
+  Calendar,
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -95,7 +90,6 @@ export function FamilyGroups() {
 
   const [searchTerm, setSearchTerm] = usePersistedState("family-groups:search", "")
   const [expandedFamilies, setExpandedFamilies] = usePersistedState<string[]>("family-groups:expanded", [])
-  const [statusFilter, setStatusFilter] = usePersistedState("family-groups:statusFilter", "all")
   const [yearGroupFilter, setYearGroupFilter] = usePersistedState("family-groups:yearGroupFilter", "all")
 
   // Sorting states
@@ -143,14 +137,6 @@ export function FamilyGroups() {
     }
   }
 
-  // Bulk selection and invitation states
-  const [selectedFamilyIds, setSelectedFamilyIds] = useState<string[]>([])
-  const [isInvitationDialogOpen, setIsInvitationDialogOpen] = useState(false)
-  const [invitationTarget, setInvitationTarget] = useState<"single" | "bulk">("single")
-  const [isMarkRegisteredDialogOpen, setIsMarkRegisteredDialogOpen] = useState(false)
-  const [emailIssueDialogOpen, setEmailIssueDialogOpen] = useState(false)
-  const [emailIssueType, setEmailIssueType] = useState<"without" | "invalid" | "duplicate">("without")
-
   // Get students without family
   const studentsWithoutFamily = useMemo(() => {
     return students.filter((s: Student) => !s.familyId || s.familyId === "")
@@ -159,37 +145,7 @@ export function FamilyGroups() {
   // Summary statistics
   const summaryStats = useMemo(() => {
     const total = families.length
-    const notInvited = families.filter((f: Family) => !f.portalStatus || f.portalStatus === "not_invited").length
-    const invited = families.filter((f: Family) => f.portalStatus === "invited").length
-    const registered = families.filter((f: Family) => f.portalStatus === "registered").length
-
-    return { total, notInvited, invited, registered }
-  }, [families])
-
-  // Email validation warnings
-  const emailValidation = useMemo(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const withoutEmail = families.filter((f: Family) => !f.email || f.email.trim() === "")
-    const invalidEmail = families.filter((f: Family) => f.email && !emailRegex.test(f.email))
-
-    // Check for duplicate emails
-    const emailMap = new Map<string, Family[]>()
-    families.forEach((f: Family) => {
-      if (f.email) {
-        const existing = emailMap.get(f.email) || []
-        emailMap.set(f.email, [...existing, f])
-      }
-    })
-    const duplicateEmails = Array.from(emailMap.entries())
-      .filter(([_, fams]) => fams.length > 1)
-      .map(([email, fams]) => ({ email, families: fams }))
-
-    return {
-      withoutEmail,
-      invalidEmail,
-      duplicateEmails,
-      hasWarnings: withoutEmail.length > 0 || invalidEmail.length > 0 || duplicateEmails.length > 0
-    }
+    return { total }
   }, [families])
 
   // Filter families - search by familyName, familyCode, and student names + status filter
@@ -207,18 +163,14 @@ export function FamilyGroups() {
       )
       const matchesSearch = matchesFamilyName || matchesFamilyCode || matchesStudentName
 
-      // Status filter
-      const familyStatus = family.portalStatus || "not_invited"
-      const matchesStatus = statusFilter === "all" || familyStatus === statusFilter
-
       // Year Group filter - show family if any student matches
       const matchesYearGroup = yearGroupFilter === "all" || familyStudents.some((s: Student) =>
         (s.gradeLevel || "").toLowerCase() === yearGroupFilter.toLowerCase()
       )
 
-      return matchesSearch && matchesStatus && matchesYearGroup
+      return matchesSearch && matchesYearGroup
     })
-  }, [families, searchTerm, statusFilter, yearGroupFilter, students])
+  }, [families, searchTerm, yearGroupFilter, students])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -300,6 +252,14 @@ export function FamilyGroups() {
     const multiChildFamilies = families.filter((f: Family) => getStudentsByFamily(f.id).length > 1).length
     return { totalFamilies, totalStudentsInFamilies, studentsWithDiscount, multiChildFamilies }
   }, [families, students, getStudentsByFamily])
+
+  // Most recently added family
+  const lastAddedFamily = useMemo(() => {
+    if (families.length === 0) return null
+    return families.reduce((latest: Family, f: Family) => {
+      return new Date(f.createdAt) > new Date(latest.createdAt) ? f : latest
+    })
+  }, [families])
 
   const toggleFamilyExpanded = (familyId: string) => {
     setExpandedFamilies((prev: string[]) =>
@@ -432,106 +392,6 @@ export function FamilyGroups() {
     }
   }
 
-  // Selection handlers
-  const handleSelectFamily = (familyId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedFamilyIds(prev => [...prev, familyId])
-    } else {
-      setSelectedFamilyIds(prev => prev.filter(id => id !== familyId))
-    }
-  }
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      const allIds = paginatedFamilies.map((f: Family) => f.id)
-      setSelectedFamilyIds(allIds)
-    } else {
-      setSelectedFamilyIds([])
-    }
-  }
-
-  // Invitation handlers
-  const handleSendInvitation = (family: Family) => {
-    setSelectedFamily(family)
-    setInvitationTarget("single")
-    setIsInvitationDialogOpen(true)
-  }
-
-  const handleBulkInvitation = () => {
-    setInvitationTarget("bulk")
-    setIsInvitationDialogOpen(true)
-  }
-
-  const handleMarkAsRegistered = (family: Family) => {
-    setSelectedFamily(family)
-    setIsMarkRegisteredDialogOpen(true)
-  }
-
-  const performMarkAsRegistered = () => {
-    if (selectedFamily) {
-      updateFamily(selectedFamily.id, {
-        portalStatus: "registered",
-        invitationAcceptedAt: new Date()
-      })
-      toast.success(`${selectedFamily.familyName} marked as registered`)
-      setIsMarkRegisteredDialogOpen(false)
-      setSelectedFamily(null)
-    }
-  }
-
-  const performSendInvitation = () => {
-    const familiesToInvite = invitationTarget === "single" && selectedFamily
-      ? [selectedFamily]
-      : families.filter((f: Family) => selectedFamilyIds.includes(f.id))
-
-    let successCount = 0
-    familiesToInvite.forEach((family: Family) => {
-      if (family.email) {
-        // Update family with invitation status
-        updateFamily(family.id, {
-          portalStatus: "invited",
-          invitationSentAt: new Date()
-        })
-        successCount++
-
-        // TODO: Call API to send actual email invitation
-        console.log(`Sending invitation to ${family.email} for family ${family.familyCode}`)
-      }
-    })
-
-    toast.success(`Sent ${successCount} invitation(s) successfully`)
-    setIsInvitationDialogOpen(false)
-    setSelectedFamilyIds([])
-  }
-
-  const getPortalStatusBadge = (family: Family) => {
-    const status = family.portalStatus || "not_invited"
-
-    switch (status) {
-      case "invited":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-            <Clock className="w-3 h-3 mr-1" />
-            Invited
-          </Badge>
-        )
-      case "registered":
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Registered
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant="outline" className="text-muted-foreground">
-            <Mail className="w-3 h-3 mr-1" />
-            Not Invited
-          </Badge>
-        )
-    }
-  }
-
   const getTotalDiscount = (familyId: string): number => {
     const familyStudents = getStudentsByFamily(familyId)
     return familyStudents.reduce((total, student) => {
@@ -548,16 +408,12 @@ export function FamilyGroups() {
       "Email",
       "Address",
       "Students Count",
-      "Portal Status",
-      "Invitation Sent",
-      "Invitation Accepted",
       "Total Discount"
     ]
 
     const rows = filteredFamilies.map((family: Family) => {
       const familyStudents = getStudentsByFamily(family.id)
       const totalDiscount = getTotalDiscount(family.id)
-      const status = family.portalStatus || "not_invited"
 
       return [
         family.familyCode || "",
@@ -565,10 +421,6 @@ export function FamilyGroups() {
         family.email || "",
         family.address || "",
         familyStudents.length,
-        status === "not_invited" ? "Not Invited" :
-          status === "invited" ? "Invited" : "Registered",
-        family.invitationSentAt ? new Date(family.invitationSentAt).toLocaleDateString() : "",
-        family.invitationAcceptedAt ? new Date(family.invitationAcceptedAt).toLocaleDateString() : "",
         totalDiscount > 0 ? `${totalDiscount}%` : "0%"
       ]
     })
@@ -594,108 +446,84 @@ export function FamilyGroups() {
         </Button>
       </div>
 
-      {/* Portal Status Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Families</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Home className="w-3.5 h-3.5" />
+              Total Families
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
+            <div className="text-2xl font-bold">{stats.totalFamilies}</div>
+            <p className="text-xs text-muted-foreground mt-1">Family groups</p>
           </CardContent>
         </Card>
-        <Card className="border-gray-300">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Not Invited</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5" />
+              Students Assigned
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{summaryStats.notInvited}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pending</p>
+            <div className="text-2xl font-bold text-blue-600">{stats.totalStudentsInFamilies}</div>
+            <p className="text-xs text-muted-foreground mt-1">In a family group</p>
           </CardContent>
         </Card>
-        <Card className="border-yellow-300 bg-yellow-50">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-700">Invited</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Percent className="w-3.5 h-3.5" />
+              With Discount
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-700">{summaryStats.invited}</div>
-            <p className="text-xs text-yellow-600 mt-1">Waiting registration</p>
+            <div className="text-2xl font-bold text-green-600">{stats.studentsWithDiscount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Students with active discount</p>
           </CardContent>
         </Card>
-        <Card className="border-green-300 bg-green-50">
+        <Card className={studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Registered</CardTitle>
+            <CardTitle className={`text-sm font-medium flex items-center gap-1.5 ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`}>
+              <UserPlus className="w-3.5 h-3.5" />
+              Unassigned
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">{summaryStats.registered}</div>
-            <p className="text-xs text-green-600 mt-1">Connected</p>
+            <div className={`text-2xl font-bold ${studentsWithoutFamily.length > 0 ? "text-amber-600" : ""}`}>
+              {studentsWithoutFamily.length}
+            </div>
+            <p className={`text-xs mt-1 ${studentsWithoutFamily.length > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+              {studentsWithoutFamily.length > 0 ? "Need to assign" : "All assigned"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              Last Added
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {lastAddedFamily ? (
+              <>
+                <div className="text-base font-bold leading-tight">
+                  {new Date(lastAddedFamily.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {new Date(lastAddedFamily.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                  {" · "}{lastAddedFamily.familyName}
+                </p>
+              </>
+            ) : (
+              <div className="text-2xl font-bold text-muted-foreground">—</div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Email Validation Warnings */}
-      {emailValidation.hasWarnings && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-              <div className="flex-1 space-y-2">
-                <h3 className="font-semibold text-amber-900">Email Validation Warnings</h3>
-                <div className="space-y-1 text-sm text-amber-800">
-                  {emailValidation.withoutEmail.length > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span>• {emailValidation.withoutEmail.length} familie(s) without email address</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEmailIssueType("without")
-                          setEmailIssueDialogOpen(true)
-                        }}
-                        className="text-xs h-7"
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  )}
-                  {emailValidation.invalidEmail.length > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span>• {emailValidation.invalidEmail.length} familie(s) with invalid email format</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEmailIssueType("invalid")
-                          setEmailIssueDialogOpen(true)
-                        }}
-                        className="text-xs h-7"
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  )}
-                  {emailValidation.duplicateEmails.length > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span>• {emailValidation.duplicateEmails.length} duplicate email(s) found</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEmailIssueType("duplicate")
-                          setEmailIssueDialogOpen(true)
-                        }}
-                        className="text-xs h-7"
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Search & Filters */}
       <Card>
@@ -722,32 +550,6 @@ export function FamilyGroups() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="not_invited">
-                    <span className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      Not Invited
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="invited">
-                    <span className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Invited
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="registered">
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Registered
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
               <Button
                 variant="outline"
                 onClick={handleExportCSV}
@@ -760,44 +562,6 @@ export function FamilyGroups() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Bulk Actions Bar */}
-      {selectedFamilyIds.length > 0 && (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Checkbox
-                  checked={selectedFamilyIds.length === paginatedFamilies.length}
-                  onCheckedChange={handleSelectAll}
-                />
-                <span className="text-sm font-medium">
-                  {selectedFamilyIds.length} family(ies) selected
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleBulkInvitation}
-                  disabled={!userCanEdit}
-                  className="gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  Send Invitations ({selectedFamilyIds.length})
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedFamilyIds([])}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Family List */}
       <div className="space-y-4">
@@ -824,11 +588,6 @@ export function FamilyGroups() {
                     <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <Checkbox
-                            checked={selectedFamilyIds.includes(family.id)}
-                            onCheckedChange={(checked) => handleSelectFamily(family.id, checked as boolean)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
                           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
                             <Home className="w-6 h-6 text-primary" />
                           </div>
@@ -839,7 +598,6 @@ export function FamilyGroups() {
                               {family.familyCode && (
                                 <Badge variant="secondary" className="font-mono">{family.familyCode}</Badge>
                               )}
-                              {getPortalStatusBadge(family)}
                             </CardTitle>
                             <CardDescription className="mt-1 space-y-0.5">
                               <div>{family.address || t("familyGroups.noAddressProvided")}</div>
@@ -859,36 +617,6 @@ export function FamilyGroups() {
                             </Badge>
                           )}
                           <div className="flex items-center gap-2">
-                            {family.portalStatus !== "registered" && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleSendInvitation(family)
-                                }}
-                                disabled={!userCanEdit || !family.email}
-                                className="gap-2"
-                              >
-                                <Send className="w-3 h-3" />
-                                {family.portalStatus === "invited" ? "Resend" : "Invite"}
-                              </Button>
-                            )}
-                            {family.portalStatus === "invited" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleMarkAsRegistered(family)
-                                }}
-                                disabled={!userCanEdit}
-                                className="gap-2 text-green-700 border-green-300 hover:bg-green-50"
-                              >
-                                <CheckCircle2 className="w-3 h-3" />
-                                Mark as Registered
-                              </Button>
-                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1441,233 +1169,6 @@ export function FamilyGroups() {
         </DialogContent>
       </Dialog>
 
-      {/* Send Parent Portal Invitation Dialog */}
-      <Dialog open={isInvitationDialogOpen} onOpenChange={setIsInvitationDialogOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Send Parent Portal Invitation
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {invitationTarget === "single" && selectedFamily ? (
-              <div className="space-y-3">
-                <div className="rounded-lg border p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Family</span>
-                    <Badge variant="secondary" className="font-mono">
-                      {selectedFamily.familyCode}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedFamily.familyName}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4" />
-                    <span className="font-medium">{selectedFamily.email}</span>
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  An invitation email will be sent to the family's primary email address with
-                  instructions to access the Parent Portal.
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="rounded-lg border p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">
-                      {selectedFamilyIds.length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      familie(s) will receive invitations
-                    </div>
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Invitation emails will be sent to all selected families with valid email addresses.
-                </div>
-              </div>
-            )}
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-              <div className="flex gap-2">
-                <div className="text-blue-600 mt-0.5">ℹ️</div>
-                <div className="text-sm text-blue-900">
-                  Parents will receive a secure link to set up their account and access student
-                  information, invoices, and payment history.
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsInvitationDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={performSendInvitation}
-              disabled={!userCanEdit}
-              className="gap-2"
-            >
-              <Send className="w-4 h-4" />
-              Send Invitation{invitationTarget === "bulk" && `s (${selectedFamilyIds.length})`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Email Issue Details Dialog */}
-      <Dialog open={emailIssueDialogOpen} onOpenChange={setEmailIssueDialogOpen}>
-        <DialogContent className="max-w-3xl p-6 max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-              {emailIssueType === "without" && "Families Without Email Address"}
-              {emailIssueType === "invalid" && "Families With Invalid Email Format"}
-              {emailIssueType === "duplicate" && "Families With Duplicate Emails"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto py-4">
-            {emailIssueType === "without" && (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground mb-4">
-                  These families cannot receive Parent Portal invitations until an email address is added.
-                </p>
-                {emailValidation.withoutEmail.map((family: Family) => (
-                  <div key={family.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="font-mono text-xs">
-                          {family.familyCode}
-                        </Badge>
-                        <span className="font-medium">{family.familyName}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                        <XCircle className="w-3 h-3 text-red-500" />
-                        <span>No email address</span>
-                      </div>
-                      {family.address && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {family.address}
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEmailIssueDialogOpen(false)
-                        handleEditFamily(family)
-                      }}
-                      disabled={!userCanEdit}
-                      className="gap-2"
-                    >
-                      <Edit className="w-3 h-3" />
-                      Edit
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {emailIssueType === "invalid" && (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground mb-4">
-                  These families have email addresses with invalid format. Please correct them.
-                </p>
-                {emailValidation.invalidEmail.map((family: Family) => (
-                  <div key={family.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="font-mono text-xs">
-                          {family.familyCode}
-                        </Badge>
-                        <span className="font-medium">{family.familyName}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-sm">
-                        <XCircle className="w-3 h-3 text-red-500" />
-                        <span className="font-mono text-red-600">{family.email}</span>
-                        <Badge variant="destructive" className="text-xs">Invalid format</Badge>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEmailIssueDialogOpen(false)
-                        handleEditFamily(family)
-                      }}
-                      disabled={!userCanEdit}
-                      className="gap-2"
-                    >
-                      <Edit className="w-3 h-3" />
-                      Edit
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {emailIssueType === "duplicate" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Multiple families are using the same email address. Each family should have a unique email for Parent Portal access.
-                </p>
-                {emailValidation.duplicateEmails.map((duplicate, index) => (
-                  <div key={index} className="border rounded-lg p-4 space-y-3 bg-muted/30">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <Mail className="w-4 h-4 text-amber-600" />
-                      <span className="font-mono font-medium">{duplicate.email}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {duplicate.families.length} families
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      {duplicate.families.map((family: Family) => (
-                        <div key={family.id} className="flex items-center justify-between p-3 bg-background rounded">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="font-mono text-xs">
-                              {family.familyCode}
-                            </Badge>
-                            <span className="text-sm font-medium">{family.familyName}</span>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEmailIssueDialogOpen(false)
-                              handleEditFamily(family)
-                            }}
-                            disabled={!userCanEdit}
-                            className="gap-2"
-                          >
-                            <Edit className="w-3 h-3" />
-                            Edit
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="border-t pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setEmailIssueDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Family Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-md p-6">
@@ -1758,48 +1259,6 @@ export function FamilyGroups() {
         descriptionKey="confirmDialog.createDescription"
         confirmTextKey="common.create"
       />
-
-      {/* Mark as Registered Dialog */}
-      <Dialog open={isMarkRegisteredDialogOpen} onOpenChange={setIsMarkRegisteredDialogOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              Mark as Registered
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {selectedFamily && (
-              <div className="rounded-lg border p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="font-mono">{selectedFamily.familyCode}</Badge>
-                  <span className="font-semibold">{selectedFamily.familyName}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-4 h-4" />
-                  {selectedFamily.email}
-                </div>
-              </div>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Confirm that this family's parent has successfully registered on the Parent Portal. The status will be updated to <span className="font-medium text-green-700">Registered</span>.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMarkRegisteredDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={performMarkAsRegistered}
-              disabled={!userCanEdit}
-              className="gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Confirm Registered
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
     </div >
   )

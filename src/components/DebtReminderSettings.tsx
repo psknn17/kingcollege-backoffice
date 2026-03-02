@@ -92,7 +92,7 @@ interface ReminderConfig {
   term: string // Term ID (e.g., "1", "2", "3")
   sendDate: string // Date string in YYYY-MM-DD format
   sendTime: string // Time string in HH:MM format (24-hour)
-  method: "email" | "sms" | "both"
+  method: "email"
   enabled: boolean
   subject: string
   emailTitle: string
@@ -154,7 +154,7 @@ const initialReminders: ReminderConfig[] = [
     term: "1",
     sendDate: "",
     sendTime: "10:00",
-    method: "both",
+    method: "email",
     enabled: true,
     subject: "ECA Payment Reminder",
     emailTitle: "ECA Payment Reminder - Term 1",
@@ -169,7 +169,7 @@ const initialReminders: ReminderConfig[] = [
     term: "1",
     sendDate: "",
     sendTime: "14:00",
-    method: "both",
+    method: "email",
     enabled: true,
     subject: "School Bus Payment Reminder",
     emailTitle: "School Bus - Final Payment Notice",

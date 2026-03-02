@@ -13,6 +13,7 @@ import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
 import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
+import { Switch } from "./ui/switch"
 import { ViewModal } from "./ViewModal"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -1958,7 +1959,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     category: "",
     nominalCode: "",
     documentType: "SI",
-    applicableGrades: [] as string[]
+    applicableGrades: [] as string[],
+    isActive: true
   })
 
   // New template form state
@@ -2051,7 +2053,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       category: "",
       nominalCode: (invoiceType === "external" || invoiceType === "eca") ? generateRandomNominalCode() : "",
       documentType: "SI",
-      applicableGrades: []
+      applicableGrades: [],
+      isActive: true
     })
     setEditingItem(null)
     setIsCreateItemModalOpen(true)
@@ -2073,7 +2076,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       category: item.category || "",
       nominalCode: item.nominalCode || "",
       documentType: item.documentType || "SI",
-      applicableGrades: item.applicableGrades
+      applicableGrades: item.applicableGrades,
+      isActive: item.isActive !== false
     })
     setEditingItem(item)
     setIsCreateItemModalOpen(true)
@@ -2143,7 +2147,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       nominalCode: newItem.nominalCode || undefined,
       documentType: newItem.documentType || "SI",
       applicableGrades: newItem.applicableGrades,
-      isActive: true,
+      isActive: newItem.isActive,
       invoiceType: (editingItem?.invoiceType || invoiceType) as Item["invoiceType"]
     }
 
@@ -3144,6 +3148,22 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 </p>
               )}
             </div>
+
+            {editingItem && (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <label className="font-medium text-sm">Status</label>
+                  <p className="text-xs text-muted-foreground">
+                    {newItem.isActive ? "Active — item is available for invoices" : "Inactive — item is hidden from invoices"}
+                  </p>
+                </div>
+                <Switch
+                  checked={newItem.isActive}
+                  onCheckedChange={(checked) => setNewItem({ ...newItem, isActive: checked })}
+                  disabled={!userCanEdit}
+                />
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <Button onClick={handleSaveItem} className="flex-1">

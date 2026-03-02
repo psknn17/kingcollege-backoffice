@@ -17,7 +17,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { normalizeAcademicYear, formatAcademicYear } from "@/utils/xlsxUtils"
+import { normalizeAcademicYear, formatAcademicYear, downloadAsXlsx } from "@/utils/xlsxUtils"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
@@ -687,16 +687,63 @@ export function ApprovalQueue() {
   const approvedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length
   const rejectedCount = filteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length
 
+  const handleExportExcel = () => {
+    const headers = [
+      "Invoice No.",
+      "Student Name",
+      "Student ID",
+      "Grade",
+      "Parent Name",
+      "Academic Year",
+      "Term",
+      "Amount (THB)",
+      "Discount (THB)",
+      "Final Amount (THB)",
+      "Approval Status",
+      "Approved By",
+      "Approved At",
+      "Rejected Reason",
+      "Issue Date",
+      "Due Date",
+    ]
+    const rows = sortedInvoices.map(inv => [
+      displayInvoiceNumber(inv.invoiceNumber, getApprovalStatus(inv)),
+      inv.studentName,
+      inv.studentId,
+      inv.studentGrade,
+      inv.parentName,
+      formatAcademicYear(inv.academicYear),
+      inv.term,
+      inv.totalAmount ?? "",
+      inv.discountAmount ?? "",
+      inv.finalAmount,
+      getApprovalStatus(inv),
+      inv.approvedBy ?? "",
+      inv.approvedAt ? format(inv.approvedAt, "dd/MM/yyyy HH:mm") : "",
+      inv.rejectedReason ?? "",
+      inv.issueDate ? format(inv.issueDate, "dd/MM/yyyy") : "",
+      inv.dueDate ? format(inv.dueDate, "dd/MM/yyyy") : "",
+    ])
+    downloadAsXlsx(headers, rows, `approval_queue_${format(new Date(), "yyyyMMdd_HHmmss")}`)
+    toast.success(`Exported ${sortedInvoices.length} invoices to Excel`)
+  }
+
   // Check if user can approve invoices (not viewer role)
   const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "super_admin" || user?.role === "admin_accountant" || user?.role === "approver")
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Approval Queue</h2>
-        <p className="text-sm text-muted-foreground">
-          Review and approve pending invoices.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Approval Queue</h2>
+          <p className="text-sm text-muted-foreground">
+            Review and approve pending invoices.
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleExportExcel} className="gap-2">
+          <Download className="w-4 h-4" />
+          Export Excel
+        </Button>
       </div>
 
       {/* Statistics Cards */}

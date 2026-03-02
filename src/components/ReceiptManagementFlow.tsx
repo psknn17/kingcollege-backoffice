@@ -448,6 +448,29 @@ export function ReceiptManagementFlow({
       return false
     }
 
+    // Check all entered invoice numbers are "paid"
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      const allInvoices: any[] = stored ? JSON.parse(stored) : []
+      for (const inv of formData.invoices) {
+        const no = inv.invoiceNo.trim()
+        if (!no) continue
+        const match = allInvoices.find((i: any) =>
+          (i.invoiceNumber || "").trim().toLowerCase() === no.toLowerCase()
+        )
+        if (!match) {
+          toast.error(`Invoice ${no} not found`)
+          return false
+        }
+        if (match.status !== "paid") {
+          toast.error(`Invoice ${no} must be paid before generating a receipt (current status: ${match.status})`)
+          return false
+        }
+      }
+    } catch {
+      // If localStorage read fails, allow through
+    }
+
     // Payment Information
     if (!formData.paymentMethod) {
       toast.error("Payment Method is required")
