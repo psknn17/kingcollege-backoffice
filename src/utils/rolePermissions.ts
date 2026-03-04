@@ -7,7 +7,7 @@ export const rolePermissions = {
     menuItems: [] as string[] // Empty means ALL items within allowed sections
   },
   admin_accountant: {
-    name: "AdminAccountant",
+    name: "Finance Admin",
     sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "studentManagement", "report"],
     menuItems: [] // Combined permissions from Admin and Accountant
   },
@@ -17,8 +17,8 @@ export const rolePermissions = {
     menuItems: [] // Can view all menus (read-only access)
   },
   approver: {
-    name: "Approvalver",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report", "userManagement"],
+    name: "Approver",
+    sections: ["userManagement"],
     menuItems: ["approval-queue"]
   },
   manager: {
@@ -76,8 +76,10 @@ function normalizeRoleName(role: string): string {
   const roleMap: Record<string, string> = {
     "Admin": "super_admin",
     "AdminAccountant": "admin_accountant",
+    "Finance Admin": "admin_accountant",
     "Viewver": "viewer",
     "Approvalver": "approver",
+    "Approver": "approver",
     "Manager": "manager",
     "FinanceHead": "finance_head"
   }

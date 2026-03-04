@@ -41,7 +41,18 @@ interface User {
   permissions: string[]
   createdAt: Date
   lastLogin: Date | null
+  approverInvoiceTypes?: string[]
 }
+
+const INVOICE_CATEGORIES = [
+  { id: "tuition", label: "Tuition" },
+  { id: "eca", label: "After School (ECA)" },
+  { id: "trip", label: "Trip / Events" },
+  { id: "exam", label: "Exam" },
+  { id: "school_bus", label: "School Bus" },
+  { id: "external", label: "External Invoice" },
+  { id: "summer", label: "Summer Activities" },
+]
 
 // Permission definitions with translation keys
 const permissionDefs = [
@@ -191,8 +202,34 @@ export function UserManagement() {
   const addConfirmDialog = useConfirmDialog()
   const editConfirmDialog = useConfirmDialog()
 
-  const [users, setUsers] = useState<User[]>(mockUsers)
-  const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers)
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const stored = localStorage.getItem("users")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return parsed.map((u: any) => ({
+          ...u,
+          createdAt: new Date(u.createdAt),
+          lastLogin: u.lastLogin ? new Date(u.lastLogin) : null,
+        }))
+      }
+    } catch {}
+    return mockUsers
+  })
+  const [filteredUsers, setFilteredUsers] = useState<User[]>(() => {
+    try {
+      const stored = localStorage.getItem("users")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return parsed.map((u: any) => ({
+          ...u,
+          createdAt: new Date(u.createdAt),
+          lastLogin: u.lastLogin ? new Date(u.lastLogin) : null,
+        }))
+      }
+    } catch {}
+    return mockUsers
+  })
   const [searchTerm, setSearchTerm] = usePersistedState("user-management:search", "")
   const [roleFilter, setRoleFilter] = usePersistedState("user-management:roleFilter", "all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -256,6 +293,11 @@ export function UserManagement() {
     })
   }
 
+  // Persist users to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("users", JSON.stringify(users))
+  }, [users])
+
   // Pagination logic
   const sortedUsers = useMemo(() => getSortedUsers(filteredUsers), [filteredUsers, sortColumn, sortDirection])
   const totalPages = Math.ceil(sortedUsers.length / pageSize)
@@ -286,6 +328,7 @@ export function UserManagement() {
     password: "",
     roles: ["viewer"] as UserRole[],
     status: "active" as UserStatus,
+    approverInvoiceTypes: [] as string[],
   })
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
 
@@ -328,6 +371,7 @@ export function UserManagement() {
       password: "",
       roles: ["viewer"] as UserRole[],
       status: "active" as UserStatus,
+      approverInvoiceTypes: [],
     })
     setSelectedPermissions([])
     setShowPassword(false)
@@ -354,6 +398,7 @@ export function UserManagement() {
       permissions: selectedPermissions.length > 0 ? selectedPermissions : mergedDefaultPermissions,
       createdAt: new Date(),
       lastLogin: null,
+      approverInvoiceTypes: formData.roles.includes("approver") ? formData.approverInvoiceTypes : undefined,
     }
 
     setUsers([...users, newUser])
@@ -382,6 +427,7 @@ export function UserManagement() {
           lastName: formData.lastName,
           roles: formData.roles,
           status: formData.status,
+          approverInvoiceTypes: formData.roles.includes("approver") ? formData.approverInvoiceTypes : undefined,
         }
       }
       return user
@@ -441,6 +487,7 @@ export function UserManagement() {
       password: "",
       roles: user.roles,
       status: user.status,
+      approverInvoiceTypes: user.approverInvoiceTypes || [],
     })
     setIsEditDialogOpen(true)
   }
@@ -491,9 +538,9 @@ export function UserManagement() {
             case "admin":
               return <Badge key={role} className="bg-purple-100 text-purple-800">SuperAdmin</Badge>
             case "admin_accountant":
-              return <Badge key={role} className="bg-green-100 text-green-800">AdminAccountant</Badge>
+              return <Badge key={role} className="bg-green-100 text-green-800">Finance Admin</Badge>
             case "approver":
-              return <Badge key={role} className="bg-blue-100 text-blue-800">Approval</Badge>
+              return <Badge key={role} className="bg-blue-100 text-blue-800">Approver</Badge>
             case "viewer":
               return <Badge key={role} className="bg-gray-100 text-gray-800">View</Badge>
             default:
@@ -577,7 +624,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">AdminAccountant</CardTitle>
+            <CardTitle className="text-sm font-medium">Finance Admin</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.admin_accountant}</div>
@@ -586,7 +633,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approval</CardTitle>
+            <CardTitle className="text-sm font-medium">Approver</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.approver}</div>
@@ -699,8 +746,8 @@ export function UserManagement() {
                   <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                     {([
                       { id: "admin", label: "SuperAdmin" },
-                      { id: "admin_accountant", label: "AdminAccountant" },
-                      { id: "approver", label: "Approval" },
+                      { id: "admin_accountant", label: "Finance Admin" },
+                      { id: "approver", label: "Approver" },
                       { id: "viewer", label: "View" },
                     ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
                       <div key={role} className="flex items-center space-x-2">
@@ -736,7 +783,29 @@ export function UserManagement() {
                 </div>
               </div>
 
-
+              {formData.roles.includes("approver") && (
+                <div className="space-y-2">
+                  <Label>Invoice Categories (Approval Queue)</Label>
+                  <p className="text-xs text-muted-foreground">ถ้าไม่เลือก = เห็นทุกประเภท</p>
+                  <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
+                    {INVOICE_CATEGORIES.map(({ id, label }) => (
+                      <div key={id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`create-cat-${id}`}
+                          checked={formData.approverInvoiceTypes.includes(id)}
+                          onCheckedChange={(checked) => {
+                            const next = checked
+                              ? [...formData.approverInvoiceTypes, id]
+                              : formData.approverInvoiceTypes.filter(c => c !== id)
+                            setFormData({ ...formData, approverInvoiceTypes: next })
+                          }}
+                        />
+                        <Label htmlFor={`create-cat-${id}`} className="text-sm cursor-pointer">{label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>{t("common.cancel")}</Button>
@@ -783,8 +852,8 @@ export function UserManagement() {
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="admin">SuperAdmin</SelectItem>
-                  <SelectItem value="admin_accountant">AdminAccountant</SelectItem>
-                  <SelectItem value="approver">Approval</SelectItem>
+                  <SelectItem value="admin_accountant">Finance Admin</SelectItem>
+                  <SelectItem value="approver">Approver</SelectItem>
                   <SelectItem value="viewer">View</SelectItem>
                 </SelectContent>
               </Select>
@@ -998,8 +1067,8 @@ export function UserManagement() {
                 <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                   {([
                     { id: "admin", label: "SuperAdmin" },
-                    { id: "admin_accountant", label: "AdminAccountant" },
-                    { id: "approver", label: "Approval" },
+                    { id: "admin_accountant", label: "Finance Admin" },
+                    { id: "approver", label: "Approver" },
                     { id: "viewer", label: "View" },
                   ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
                     <div key={role} className="flex items-center space-x-2">
@@ -1036,6 +1105,29 @@ export function UserManagement() {
               </div>
             </div>
 
+            {formData.roles.includes("approver") && (
+              <div className="space-y-2">
+                <Label>Invoice Categories (Approval Queue)</Label>
+                <p className="text-xs text-muted-foreground">ถ้าไม่เลือก = เห็นทุกประเภท</p>
+                <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
+                  {INVOICE_CATEGORIES.map(({ id, label }) => (
+                    <div key={id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-cat-${id}`}
+                        checked={formData.approverInvoiceTypes.includes(id)}
+                        onCheckedChange={(checked) => {
+                          const next = checked
+                            ? [...formData.approverInvoiceTypes, id]
+                            : formData.approverInvoiceTypes.filter(c => c !== id)
+                          setFormData({ ...formData, approverInvoiceTypes: next })
+                        }}
+                      />
+                      <Label htmlFor={`edit-cat-${id}`} className="text-sm cursor-pointer">{label}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>{t("common.cancel")}</Button>

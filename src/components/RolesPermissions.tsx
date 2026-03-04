@@ -147,7 +147,7 @@ const initialRoles: Role[] = [
   },
   {
     id: "role_admin_accountant",
-    name: "AdminAccountant",
+    name: "Finance Admin",
     description: "Administrative and financial operations - full access to invoices, payments, settings, and reports",
     permissions: permissionModules
       .filter(m => m.id !== "roles")

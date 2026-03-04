@@ -25,18 +25,20 @@ const ROLE_SELECTION_KEY = "needsRoleSelection"
 // Display names for roles (for UI only)
 const roleDisplayNames: Record<string, string> = {
   super_admin: "Admin",
-  admin_accountant: "AdminAccountant",
+  admin_accountant: "Finance Admin",
   admin: "Admin",
   accountant: "Accountant",
   viewer: "Viewver",
-  approver: "Approvalver"
+  approver: "Approver"
 }
 
 // Migration map: old display names -> new role IDs
 const roleMigrationMap: Record<string, string> = {
   "Admin": "super_admin",
   "AdminAccountant": "admin_accountant",
+  "Finance Admin": "admin_accountant",
   "Approvalver": "approver",
+  "Approver": "approver",
   "Viewver": "viewer",
   "Accountant": "accountant"
 }

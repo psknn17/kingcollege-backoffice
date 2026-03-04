@@ -24,7 +24,7 @@ const roles: Role[] = [
   },
   {
     id: "admin_accountant",
-    name: "AdminAccountant",
+    name: "Finance Admin",
     badge: "ADMINISTRATIVE & FINANCIAL",
     subtitle: "For school administrators and accounting staff",
     permissions: [

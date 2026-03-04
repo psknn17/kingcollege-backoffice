@@ -2401,7 +2401,7 @@ const en: Record<string, string> = {
 
   // User Roles
   "role.admin": "Admin",
-  "role.approver": "Approvalver",
+  "role.approver": "Approver",
   "role.accounting": "Accounting",
   "role.viewer": "Viewver",
 
@@ -5467,7 +5467,7 @@ const th: Record<string, string> = {
 
   // User Roles
   "role.admin": "ผู้ดูแลระบบ",
-  "role.approver": "Approvalver",
+  "role.approver": "Approver",
   "role.accounting": "บัญชี",
   "role.viewer": "Viewver",
 

@@ -5121,7 +5121,7 @@ export function InvoiceManagement({
                     )}
                   </Button>
                   {(() => {
-                    const canCancelInvoice = user?.role !== "Approvalver"
+                    const canCancelInvoice = user?.role !== "approver" && user?.role !== "Approver" && user?.role !== "Approvalver"
                     const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
 
                     return shouldShowCancelButton ? (

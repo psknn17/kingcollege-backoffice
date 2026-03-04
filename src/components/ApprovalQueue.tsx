@@ -21,7 +21,7 @@ import { normalizeAcademicYear, formatAcademicYear, downloadAsXlsx } from "@/uti
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
-import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail } from "lucide-react"
+import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail, Pencil } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { formatCurrency, numberToWords, getAcademicYear, generateNextInvoiceNumber } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
@@ -224,6 +224,23 @@ export function ApprovalQueue() {
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [isEditingDueDate, setIsEditingDueDate] = useState(false)
+  const [editDueDateValue, setEditDueDateValue] = useState<Date | undefined>(undefined)
+  const [isBulkDueDateOpen, setIsBulkDueDateOpen] = useState(false)
+  const [bulkDueDateValue, setBulkDueDateValue] = useState<Date | undefined>(undefined)
+
+  // Load approver's allowed invoice categories from UserManagement persisted users
+  const approverAllowedCategories = useMemo(() => {
+    if (user?.role !== "approver") return null
+    try {
+      const stored = localStorage.getItem("users")
+      if (!stored) return null
+      const managedUsers = JSON.parse(stored)
+      const match = managedUsers.find((u: any) => u.email === user?.email || u.username === user?.name)
+      const types: string[] = match?.approverInvoiceTypes || []
+      return types.length > 0 ? types : null // null = no restriction
+    } catch { return null }
+  }, [user?.role, user?.email, user?.name])
 
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
@@ -327,6 +344,11 @@ export function ApprovalQueue() {
 
     if (paymentStatusFilter !== "all") {
       filtered = filtered.filter(inv => getPaymentStatus(inv) === paymentStatusFilter)
+    }
+
+    // Approver category restriction
+    if (approverAllowedCategories) {
+      filtered = filtered.filter(inv => approverAllowedCategories.includes(inv.category || "tuition"))
     }
 
     setFilteredInvoices(filtered)
@@ -805,17 +827,6 @@ export function ApprovalQueue() {
         </Card>
       </div>
 
-      {canApproveInvoices && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Selected {selectedInvoiceIds.size}
-          </div>
-          <Button size="sm" onClick={approveSelectedInvoices} disabled={selectedInvoiceIds.size === 0}>
-            Approve Selected
-          </Button>
-        </div>
-      )}
-
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
@@ -1036,6 +1047,70 @@ export function ApprovalQueue() {
           </div>
         </CardContent>
       </Card>
+
+      {canApproveInvoices && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Selected {selectedInvoiceIds.size}
+          </div>
+          <div className="flex gap-2">
+            <Popover open={isBulkDueDateOpen} onOpenChange={setIsBulkDueDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={selectedInvoiceIds.size === 0}
+                  className="gap-1.5"
+                >
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  Set Due Date
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="p-3 border-b">
+                  <p className="text-sm font-medium">Set due date for {selectedInvoiceIds.size} invoice{selectedInvoiceIds.size !== 1 ? "s" : ""}</p>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={bulkDueDateValue}
+                  onSelect={setBulkDueDateValue}
+                  initialFocus
+                />
+                <div className="p-3 border-t flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { setIsBulkDueDateOpen(false); setBulkDueDateValue(undefined) }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!bulkDueDateValue}
+                    onClick={() => {
+                      if (!bulkDueDateValue) return
+                      const day = bulkDueDateValue
+                      const updated = invoices.map(inv =>
+                        selectedInvoiceIds.has(inv.id) ? { ...inv, dueDate: day } : inv
+                      )
+                      setInvoices(updated)
+                      invoices.forEach(inv => {
+                        if (selectedInvoiceIds.has(inv.id)) {
+                          updateLocalStorage(inv, { dueDate: day.toISOString() })
+                        }
+                      })
+                      toast.success(`Due date updated for ${selectedInvoiceIds.size} invoice${selectedInvoiceIds.size !== 1 ? "s" : ""}`)
+                      setIsBulkDueDateOpen(false)
+                      setBulkDueDateValue(undefined)
+                    }}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button size="sm" onClick={approveSelectedInvoices} disabled={selectedInvoiceIds.size === 0}>
+              Approve Selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">
@@ -1320,9 +1395,56 @@ export function ApprovalQueue() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">Due Date</span>
-                          <span className="text-sm font-medium text-red-600">
-                            {selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            {isEditingDueDate ? (
+                              <Popover open={isEditingDueDate} onOpenChange={(open) => { if (!open) setIsEditingDueDate(false) }}>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs text-red-600 font-medium">
+                                    {editDueDateValue ? format(editDueDateValue, "dd MMM yyyy") : "Pick date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                  <Calendar
+                                    mode="single"
+                                    selected={editDueDateValue}
+                                    onSelect={(day) => {
+                                      if (!day) return
+                                      setEditDueDateValue(day)
+                                      // Save
+                                      const updated = invoices.map(inv =>
+                                        inv.id === selectedInvoice.id ? { ...inv, dueDate: day } : inv
+                                      )
+                                      setInvoices(updated)
+                                      setSelectedInvoice(prev => prev ? { ...prev, dueDate: day } : prev)
+                                      updateLocalStorage(selectedInvoice, { dueDate: day.toISOString() })
+                                      setIsEditingDueDate(false)
+                                      toast.success("Due date updated")
+                                    }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <>
+                                <span className="text-sm font-medium text-red-600">
+                                  {selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}
+                                </span>
+                                {canApproveInvoices && selectedInvoice.approvalStatus !== "approved" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
+                                    onClick={() => {
+                                      setEditDueDateValue(selectedInvoice.dueDate instanceof Date ? selectedInvoice.dueDate : new Date(selectedInvoice.dueDate))
+                                      setIsEditingDueDate(true)
+                                    }}
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">School Year</span>
