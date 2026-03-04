@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Users, Edit, Search, UserPlus, Trash2, Mail, Upload, Download, FileSpreadsheet, ArrowUpDown } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { PaginationBar } from "./ui/pagination-bar"
 
 interface InternalEmail {
   id: string
@@ -96,6 +97,8 @@ export function InternalEmailManagement({
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Internal Email Management Functions
   const handleAddEmail = () => {
@@ -320,6 +323,11 @@ export function InternalEmailManagement({
   ))
 
   const totalEmails = internalEmails.length
+
+  const paginatedEmails = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredInternalEmails.slice(start, start + pageSize)
+  }, [filteredInternalEmails, currentPage, pageSize])
 
   return (
     <div className="space-y-6">
@@ -654,7 +662,7 @@ export function InternalEmailManagement({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInternalEmails.map((email) => (
+                {paginatedEmails.map((email) => (
                   <TableRow key={email.id}>
                     <TableCell>
                       <div className="font-medium">
@@ -714,6 +722,13 @@ export function InternalEmailManagement({
               </TableBody>
             </Table>
           )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredInternalEmails.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
     </div>

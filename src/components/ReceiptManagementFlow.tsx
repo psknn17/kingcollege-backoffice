@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -39,6 +39,9 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import SchoolLogo from "@/assets/Logo.png"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { BANKS, PAYMENT_SOURCES } from "@/constants/paymentConstants"
+import { PaginationBar } from "@/components/ui/pagination-bar"
+import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
+import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
 
 // ========================
 // TYPE DEFINITIONS
@@ -288,6 +291,10 @@ export function ReceiptManagementFlow({
   // View receipt state
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptRecord | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
+  const [templateToEdit, setTemplateToEdit] = useState<EmailTemplate | null>(null)
 
   // Auto-open form if autoOpenForm is true
   useEffect(() => {
@@ -665,6 +672,11 @@ export function ReceiptManagementFlow({
     return matchesSearch && matchesFilter && matchesYearGroup && matchesDateFrom && matchesDateTo
   })
 
+  const paginatedReceipts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredReceipts.slice(start, start + pageSize)
+  }, [filteredReceipts, currentPage, pageSize])
+
   // ========================
   // RENDER RECEIPT PREVIEW
   // ========================
@@ -982,10 +994,25 @@ export function ReceiptManagementFlow({
               <h2 className="text-xl font-semibold">{title}</h2>
               <p className="text-muted-foreground">{description}</p>
             </div>
-            <Button onClick={handleOpenForm} className="flex items-center gap-2" disabled={!userCanEdit}>
-              <Plus className="w-4 h-4" />
-              Create Receipt
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  const allTpl = migrateTemplates()
+                  const rcptTpl = allTpl.filter(t => t.type === "receipt")
+                  setTemplateToEdit(rcptTpl.find(t => t.isDefault) || rcptTpl[0] || null)
+                  setIsTemplateDialogOpen(true)
+                }}
+              >
+                <FileText className="w-4 h-4" />
+                Receipt Template
+              </Button>
+              <Button onClick={handleOpenForm} className="flex items-center gap-2" disabled={!userCanEdit}>
+                <Plus className="w-4 h-4" />
+                Create Receipt
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -1112,7 +1139,7 @@ export function ReceiptManagementFlow({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredReceipts.map((receipt) => (
+                    {paginatedReceipts.map((receipt) => (
                       <TableRow key={receipt.id}>
                         {/* Receipt Number - text/ID */}
                         <TableCell align="left" className="font-medium">{receipt.receiptNo}</TableCell>
@@ -1180,6 +1207,13 @@ export function ReceiptManagementFlow({
                   </TableBody>
                 </Table>
               )}
+              <PaginationBar
+                total={filteredReceipts.length}
+                page={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
         </>
@@ -1908,6 +1942,42 @@ export function ReceiptManagementFlow({
         descriptionKey="Are you sure you want to remove this invoice row? This action cannot be undone."
         confirmTextKey="common.delete"
         variant="destructive"
+      />
+
+      {/* Receipt Email Template Dialog */}
+      <EditTemplateDialog
+        open={isTemplateDialogOpen}
+        onClose={() => setIsTemplateDialogOpen(false)}
+        template={templateToEdit}
+        templateType="receipt"
+        onSave={(form) => {
+          const allTpl = migrateTemplates()
+          const now = new Date().toISOString()
+          const createdBy = user?.username || user?.name || "Staff"
+          let updated: EmailTemplate[]
+          if (templateToEdit) {
+            updated = allTpl.map(t =>
+              t.id === templateToEdit.id ? { ...t, ...form, updatedAt: now } : t
+            )
+          } else {
+            const isFirst = allTpl.filter(t => t.type === "receipt").length === 0
+            updated = [...allTpl, {
+              id: `tpl-${Date.now()}`,
+              ...form,
+              type: "receipt" as const,
+              language: "en" as const,
+              isDefault: isFirst,
+              status: "active" as const,
+              createdAt: now,
+              updatedAt: now,
+              createdBy,
+              version: 1,
+            }]
+          }
+          saveTemplates(updated)
+          setIsTemplateDialogOpen(false)
+          toast.success(templateToEdit ? "Template updated" : "Template created")
+        }}
       />
     </div>
   )

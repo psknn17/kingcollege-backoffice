@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import * as XLSX from "xlsx"
 import { downloadAsXlsx, normalizeAcademicYear, formatAcademicYear } from "@/utils/xlsxUtils"
+import { PAYMENT_SOURCES } from "@/constants/paymentConstants"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -13,8 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
-import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer } from "lucide-react"
-import { PaymentChannel } from "./StatusFilter"
+import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer, FileText } from "lucide-react"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Checkbox } from "./ui/checkbox"
 import { format } from "date-fns"
@@ -28,6 +28,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
+import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
 
 // Student data matching StudentContext
 const studentData = [
@@ -352,7 +354,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [academicYearFilter, setAcademicYearFilter] = usePersistedState("receipt-page:academicYear", "all")
   const [termFilter, setTermFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
-  const [paymentChannelFilter, setPaymentChannelFilter] = useState<PaymentChannel>("all")
+  const [paymentChannelFilter, setPaymentChannelFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all") // For Credit Notes
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
@@ -380,6 +382,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [importErrors, setImportErrors] = useState<string[]>([])
   const [importFileName, setImportFileName] = useState("")
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
+  const [templateToEdit, setTemplateToEdit] = useState<EmailTemplate | null>(null)
   const [creditNoteForm, setCreditNoteForm] = useState({
     creditNoteNumber: `CN-${new Date().getFullYear()}-${String(mockCreditNotes.length + 1).padStart(6, '0')}`,
     invoiceNumber: "",
@@ -410,6 +414,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     { id: "term2", name: "Term 2" },
     { id: "term3", name: "Term 3" }
   ]
+
+  // Payment method options from system's accepted payment channels
+  const paymentMethodOptions = PAYMENT_SOURCES
 
   // Reset filters and page when switching tabs
   useEffect(() => {
@@ -460,7 +467,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
 
     if (paymentChannelFilter !== "all") {
-      filtered = filtered.filter(receipt => receipt.paymentChannel === paymentChannelFilter)
+      filtered = filtered.filter(receipt => receipt.paymentMethod === paymentChannelFilter)
     }
 
     if (statusFilter !== "all") {
@@ -1186,6 +1193,19 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </Button>
             )}
             <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                const allTpl = migrateTemplates()
+                const rcptTpl = allTpl.filter(t => t.type === "receipt")
+                setTemplateToEdit(rcptTpl.find(t => t.isDefault) || rcptTpl[0] || null)
+                setIsTemplateDialogOpen(true)
+              }}
+            >
+              <FileText className="w-4 h-4" />
+              Receipt Template
+            </Button>
+            <Button
               className="flex items-center gap-2"
               disabled={!userCanEdit}
               onClick={() => {
@@ -1303,17 +1323,15 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("common.paymentChannel")}</label>
-                  <Select value={paymentChannelFilter} onValueChange={(value) => setPaymentChannelFilter(value as PaymentChannel)}>
+                  <Select value={paymentChannelFilter} onValueChange={setPaymentChannelFilter}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder={t("common.allChannels")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">{t("common.allChannels")}</SelectItem>
-                      <SelectItem value="credit_card">{t("common.creditCard")}</SelectItem>
-                      <SelectItem value="wechat_pay">{t("common.wechatPay")}</SelectItem>
-                      <SelectItem value="alipay">{t("common.alipay")}</SelectItem>
-                      <SelectItem value="qr_payment">{t("common.qrPayment")}</SelectItem>
-                      <SelectItem value="counter_bank">{t("common.counterBank")}</SelectItem>
+                      {paymentMethodOptions.map(method => (
+                        <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -2635,6 +2653,41 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Email Template Dialog */}
+      <EditTemplateDialog
+        open={isTemplateDialogOpen}
+        onClose={() => setIsTemplateDialogOpen(false)}
+        template={templateToEdit}
+        templateType="receipt"
+        onSave={(form) => {
+          const allTpl = migrateTemplates()
+          const now = new Date().toISOString()
+          const createdBy = user?.username || user?.name || "Staff"
+          let updated: EmailTemplate[]
+          if (templateToEdit) {
+            updated = allTpl.map(t =>
+              t.id === templateToEdit.id ? { ...t, ...form, updatedAt: now } : t
+            )
+          } else {
+            const isFirst = allTpl.filter(t => t.type === "receipt").length === 0
+            updated = [...allTpl, {
+              id: `tpl-${Date.now()}`,
+              ...form,
+              type: "receipt" as const,
+              language: "en" as const,
+              isDefault: isFirst,
+              status: "active" as const,
+              createdAt: now,
+              updatedAt: now,
+              createdBy,
+              version: 1,
+            }]
+          }
+          saveTemplates(updated)
+          setIsTemplateDialogOpen(false)
+        }}
+      />
 
     </div >
   )

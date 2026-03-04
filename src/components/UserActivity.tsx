@@ -10,6 +10,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { useAuth } from "@/contexts/AuthContext"
 import { Activity, Search, Filter, Calendar, Clock } from "lucide-react"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { PaginationBar } from "./ui/pagination-bar"
 
 export function UserActivity() {
   const { user } = useAuth()
@@ -46,6 +47,14 @@ export function UserActivity() {
     const uniqueModules = new Set(userActivities.map(log => log.module))
     return Array.from(uniqueModules)
   }, [userActivities])
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredLogs.slice(start, start + pageSize)
+  }, [filteredLogs, currentPage, pageSize])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -234,7 +243,7 @@ export function UserActivity() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredLogs.map((log) => (
+                  paginatedLogs.map((log) => (
                     <TableRow key={log.id}>
                       {/* Timestamp - date column, left aligned */}
                       <TableCell align="left" className="font-mono text-xs">
@@ -271,13 +280,13 @@ export function UserActivity() {
               </TableBody>
             </Table>
           </div>
-
-          {/* Results Summary */}
-          {filteredLogs.length > 0 && (
-            <div className="text-sm text-gray-500 text-center">
-              Showing {filteredLogs.length} of {userActivities.length} activities
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredLogs.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
     </div>

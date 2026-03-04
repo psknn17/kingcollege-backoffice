@@ -25,5 +25,6 @@ export const PAYMENT_SOURCES = [
     { value: "Cashier's cheque", label: "Cashier's cheque" },
     { value: "Bank Transfer", label: "Bank Transfer" },
     { value: "Partial", label: "Partial" },
-    { value: "EDC", label: "EDC" }
+    { value: "EDC", label: "EDC" },
+    { value: "Thai QR", label: "Thai QR" }
 ]

@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -21,6 +22,8 @@ import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 interface DebtReminderTemplate {
   id: string
@@ -223,6 +226,7 @@ export function DebtReminderSettings() {
   const { academicYears } = useAcademicYears()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const cancelConfirm = useConfirmDialog()
   const [reminders, setReminders] = usePersistedState<ReminderConfig[]>("debt-reminder:reminders-v2", initialReminders)
   const [globalSettings, setGlobalSettings] = usePersistedState("debt-reminder:globalSettings", {
     enableReminders: true,
@@ -291,6 +295,7 @@ export function DebtReminderSettings() {
     }
   }
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", subject: "", emailTitle: "", message: "" })
+  const templateMessageRef = useRef<HTMLTextAreaElement>(null)
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -356,8 +361,8 @@ export function DebtReminderSettings() {
   }
 
   const saveTemplateForm = () => {
-    if (!templateForm.name.trim() || !templateForm.subject.trim() || !templateForm.message.trim()) {
-      toast.error("Name, subject, and message are required")
+    if (!templateForm.name.trim() || !templateForm.message.trim()) {
+      toast.error("Name and message are required")
       return
     }
     if (templateManageDialog.editing) {
@@ -618,12 +623,14 @@ export function DebtReminderSettings() {
       return
     }
 
-    // Update to draft status
-    updateReminder(reminder.id, "status", "draft")
-    updateReminder(reminder.id, "scheduledAt", undefined)
+    cancelConfirm.confirm(() => {
+      // Update to draft status
+      updateReminder(reminder.id, "status", "draft")
+      updateReminder(reminder.id, "scheduledAt", undefined)
 
-    toast.success("Schedule cancelled", {
-      description: `${reminder.name} has been moved back to draft`
+      toast.success("Schedule cancelled", {
+        description: `${reminder.name} has been moved back to draft`
+      })
     })
   }
 
@@ -686,8 +693,8 @@ export function DebtReminderSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex-1">
-          <h2 className="text-xl font-semibold">{t("debt.reminderSettings")}</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h2 className="text-2xl font-semibold">{t("debt.reminderSettings")}</h2>
+          <p className="text-base text-muted-foreground mt-1">
             {t("debt.reminderSettingsDesc")}
           </p>
         </div>
@@ -697,7 +704,7 @@ export function DebtReminderSettings() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Recipients</CardTitle>
+            <CardTitle className="text-base font-medium text-muted-foreground">Total Recipients</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.totalRecipients}</div>
@@ -707,7 +714,7 @@ export function DebtReminderSettings() {
 
         <Card className="border-blue-300 bg-blue-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">Scheduled</CardTitle>
+            <CardTitle className="text-base font-medium text-blue-700">Scheduled</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">{summaryStats.scheduledCount}</div>
@@ -720,7 +727,7 @@ export function DebtReminderSettings() {
           onClick={handleOpenHistory}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 flex items-center gap-1">
+            <CardTitle className="text-base font-medium text-green-700 flex items-center gap-1">
               Remind History
               <span className="text-xs font-normal text-green-600 ml-1">(click to view)</span>
             </CardTitle>
@@ -733,7 +740,7 @@ export function DebtReminderSettings() {
 
         <Card className="border-amber-300 bg-amber-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-amber-700">Next Scheduled</CardTitle>
+            <CardTitle className="text-base font-medium text-amber-700">Next Scheduled</CardTitle>
           </CardHeader>
           <CardContent>
             {summaryStats.nextScheduled ? (
@@ -760,47 +767,10 @@ export function DebtReminderSettings() {
           </Button>
         </div>
 
-        {/* Global Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              {t("debt.globalReminderSettings")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>{t("debt.enableAutoReminders")}</Label>
-                <p className="text-sm text-muted-foreground">{t("debt.enableAutoRemindersDesc")}</p>
-              </div>
-              <Switch
-                checked={globalSettings.enableReminders}
-                onCheckedChange={(checked) =>
-                  setGlobalSettings({ ...globalSettings, enableReminders: checked })
-                }
-                disabled={!userCanEdit}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("debt.fromEmailAddress")}</Label>
-              <Input
-                value={globalSettings.fromEmail}
-                onChange={(e) =>
-                  setGlobalSettings({ ...globalSettings, fromEmail: e.target.value })
-                }
-                placeholder="noreply@example.com"
-                disabled={!userCanEdit}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Email Templates */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-xl font-semibold">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
                 Email Templates
@@ -819,9 +789,9 @@ export function DebtReminderSettings() {
                 {(reminderTemplates || []).map((template) => (
                   <div key={template.id} className="flex items-start justify-between py-3 gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">{template.name}</div>
-                      {template.description && <div className="text-xs text-muted-foreground mt-0.5">{template.description}</div>}
-                      <div className="text-xs text-muted-foreground mt-1 space-x-3">
+                      <div className="font-medium text-base">{template.name}</div>
+                      {template.description && <div className="text-sm text-muted-foreground mt-0.5">{template.description}</div>}
+                      <div className="text-sm text-muted-foreground mt-1 space-x-3">
                         <span><span className="text-foreground font-medium">Subject:</span> {template.subject}</span>
                         <span><span className="text-foreground font-medium">Title:</span> {template.emailTitle}</span>
                       </div>
@@ -1535,9 +1505,7 @@ export function DebtReminderSettings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-blue-900">Recipient Count</h3>
-                      <p className="text-sm text-blue-700">
-                        This reminder will be sent to approximately
-                      </p>
+                      <p className="text-sm text-blue-700">This reminder will be sent to approximately</p>
                     </div>
                     <div className="text-3xl font-bold text-blue-700">
                       {previewReminder.recipientCount || 0}
@@ -1558,26 +1526,17 @@ export function DebtReminderSettings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Subject</Label>
-                    <div className="p-3 bg-muted rounded border font-medium">
-                      {previewReminder.subject}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Email Title</Label>
                     <div className="p-3 bg-muted rounded border font-semibold text-lg">
                       {previewReminder.emailTitle}
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Message Body</Label>
                     <div className="p-4 bg-muted rounded border whitespace-pre-wrap">
                       {previewReminder.message}
                     </div>
                   </div>
-
                   <div className="text-xs text-muted-foreground p-3 bg-amber-50 border border-amber-200 rounded">
                     <p className="font-medium text-amber-900 mb-1">Variable Placeholders:</p>
                     <p>Variables like {"{parent_name}"}, {"{student_name}"}, {"{amount}"} will be replaced with actual values when sent.</p>
@@ -1605,12 +1564,7 @@ export function DebtReminderSettings() {
           )}
 
           <DialogFooter className="border-t pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsPreviewModalOpen(false)}
-            >
-              Close
-            </Button>
+            <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
             {(!previewReminder?.status || previewReminder?.status === "draft") && (
               <Button
                 onClick={handleScheduleReminder}
@@ -1622,11 +1576,7 @@ export function DebtReminderSettings() {
               </Button>
             )}
             {previewReminder?.status === "scheduled" && (
-              <Button
-                onClick={() => handleEditScheduled(previewReminder)}
-                disabled={!userCanEdit}
-                className="gap-2"
-              >
+              <Button onClick={() => handleEditScheduled(previewReminder)} disabled={!userCanEdit} className="gap-2">
                 <Edit className="w-4 h-4" />
                 Edit
               </Button>
@@ -1637,7 +1587,7 @@ export function DebtReminderSettings() {
 
       {/* Remind History Modal */}
       <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
-        <DialogContent className="max-w-4xl w-full max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-4xl w-full flex flex-col p-0 gap-0">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b">
             <div className="flex items-center gap-3">
@@ -1655,7 +1605,7 @@ export function DebtReminderSettings() {
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-6 py-2">
+          <div className="px-6 py-2">
             {reminderHistory.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <Mail className="w-12 h-12 mb-4 opacity-20" />
@@ -1663,40 +1613,46 @@ export function DebtReminderSettings() {
                 <p className="text-xs mt-1">Sent reminders will appear here</p>
               </div>
             ) : (
-              <table className="w-full text-sm rounded-lg overflow-hidden border">
-                <thead className="sticky top-0 bg-muted/60 backdrop-blur border-b">
-                  <tr>
-                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date Sent</th>
-                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subject</th>
-                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Academic Year</th>
-                    <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Term</th>
-                    <th className="text-right py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recipients</th>
-                    <th className="text-center py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {[...reminderHistory].reverse().map((entry, idx) => (
-                    <tr key={entry.id ?? idx} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3.5 px-5 text-muted-foreground whitespace-nowrap text-sm">
-                        {entry.sentDate ? formatDisplayDate(entry.sentDate) : "-"}
-                      </td>
-                      <td className="py-3.5 px-5 font-medium text-sm">{entry.subject}</td>
-                      <td className="py-3.5 px-5 text-muted-foreground text-sm">{formatAcademicYear(entry.academicYear) || "-"}</td>
-                      <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.term || "-"}</td>
-                      <td className="py-3.5 px-5 text-right">
-                        <span className="font-semibold text-sm">{entry.recipients?.toLocaleString() ?? "-"}</span>
-                        <span className="text-xs text-muted-foreground ml-1">recipients</span>
-                      </td>
-                      <td className="py-3.5 px-5 text-center">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Sent
-                        </span>
-                      </td>
+              <div className="rounded-lg border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/60 border-b">
+                    <tr>
+                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date Sent</th>
+                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subject</th>
+                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Academic Year</th>
+                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Term</th>
+                      <th className="text-right py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recipients</th>
+                      <th className="text-center py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                </table>
+                <div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y">
+                      {[...reminderHistory].reverse().slice(0, 10).map((entry, idx) => (
+                        <tr key={entry.id ?? idx} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-3.5 px-5 text-muted-foreground whitespace-nowrap text-sm">
+                            {entry.sentDate ? formatDisplayDate(entry.sentDate) : "-"}
+                          </td>
+                          <td className="py-3.5 px-5 font-medium text-sm">{entry.subject}</td>
+                          <td className="py-3.5 px-5 text-muted-foreground text-sm">{formatAcademicYear(entry.academicYear) || "-"}</td>
+                          <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.term || "-"}</td>
+                          <td className="py-3.5 px-5 text-right">
+                            <span className="font-semibold text-sm">{entry.recipients?.toLocaleString() ?? "-"}</span>
+                            <span className="text-xs text-muted-foreground ml-1">recipients</span>
+                          </td>
+                          <td className="py-3.5 px-5 text-center">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Sent
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
           </div>
 
@@ -1715,32 +1671,55 @@ export function DebtReminderSettings() {
           <DialogHeader className="mb-4">
             <DialogTitle>{templateManageDialog.editing ? "Edit Template" : "New Template"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label>Template Name <span className="text-destructive">*</span></Label>
               <Input value={templateForm.name} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. First Reminder" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>Description</Label>
               <Input value={templateForm.description} onChange={(e) => setTemplateForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Email Subject <span className="text-destructive">*</span></Label>
-              <Select value={templateForm.subject} onValueChange={(v) => setTemplateForm(f => ({ ...f, subject: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
-                <SelectContent>
-                  {PRESET_EMAIL_SUBJECTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>Email Title</Label>
               <Input value={templateForm.emailTitle} onChange={(e) => setTemplateForm(f => ({ ...f, emailTitle: e.target.value }))} placeholder="e.g. Friendly Payment Reminder" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>Message <span className="text-destructive">*</span></Label>
-              <Textarea value={templateForm.message} onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))} placeholder="Enter message template..." rows={4} />
-              <p className="text-xs text-muted-foreground">Variables: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}</p>
+              <Textarea
+                ref={templateMessageRef}
+                value={templateForm.message}
+                onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))}
+                placeholder="Enter message template..."
+                rows={4}
+              />
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Variables:</span>
+                {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
+                  <Badge
+                    key={v}
+                    variant="outline"
+                    className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
+                    onClick={() => {
+                      const el = templateMessageRef.current
+                      if (el) {
+                        const start = el.selectionStart ?? el.value.length
+                        const end = el.selectionEnd ?? el.value.length
+                        const newVal = el.value.slice(0, start) + v + el.value.slice(end)
+                        setTemplateForm(f => ({ ...f, message: newVal }))
+                        requestAnimationFrame(() => {
+                          el.focus()
+                          el.setSelectionRange(start + v.length, start + v.length)
+                        })
+                      } else {
+                        setTemplateForm(f => ({ ...f, message: f.message + v }))
+                      }
+                    }}
+                  >
+                    {v}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
@@ -1794,6 +1773,15 @@ export function DebtReminderSettings() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={cancelConfirm.isOpen}
+        onOpenChange={cancelConfirm.setIsOpen}
+        onConfirm={cancelConfirm.handleConfirm}
+        titleKey="Cancel Schedule"
+        descriptionKey="Are you sure you want to cancel this scheduled reminder? It will be moved back to draft status."
+        variant="destructive"
+      />
     </div>
   )
 }

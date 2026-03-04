@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -12,6 +12,7 @@ import { Search, Filter, Eye, CheckCircle, XCircle, Clock, Mail, Phone, User, Ca
 import { Textarea } from "./ui/textarea"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { PaginationBar } from "./ui/pagination-bar"
 
 interface ExternalParentApplication {
   id: string
@@ -129,6 +130,8 @@ export function ExternalParentsApproval() {
   const [actionReason, setActionReason] = useState("")
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -179,11 +182,18 @@ export function ExternalParentsApproval() {
     })
   }
 
+  const sortedApplications = useMemo(() => getSortedApplications(filteredApplications), [filteredApplications, sortColumn, sortDirection])
+
+  const paginatedApplications = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedApplications.slice(start, start + pageSize)
+  }, [sortedApplications, currentPage, pageSize])
+
   const applyFilters = () => {
     let filtered = applications
 
     if (searchTerm) {
-      filtered = filtered.filter(app => 
+      filtered = filtered.filter(app =>
         app.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -431,7 +441,7 @@ export function ExternalParentsApproval() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedApplications(filteredApplications).map((application) => (
+              {paginatedApplications.map((application) => (
                 <TableRow key={application.id}>
                   <TableCell>
                     <div>
@@ -480,6 +490,13 @@ export function ExternalParentsApproval() {
               ))}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedApplications.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

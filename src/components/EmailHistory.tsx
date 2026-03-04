@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
+import { PaginationBar } from "./ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
@@ -125,6 +126,8 @@ export function EmailHistory() {
   const [allHistory, setAllHistory] = useState<any[]>([])
   const [dateFilterOpen, setDateFilterOpen] = useState(false)
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     const loadHistory = () => {
@@ -234,6 +237,10 @@ export function EmailHistory() {
   }
 
   const filteredHistory = allHistory.filter(filterHistory)
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredHistory.slice(start, start + pageSize)
+  }, [filteredHistory, currentPage, pageSize])
 
   return (
     <div className="space-y-6">
@@ -374,7 +381,7 @@ export function EmailHistory() {
                 </tr>
               </thead>
               <tbody>
-                {filteredHistory.map((item) => (
+                {paginatedHistory.map((item) => (
                   <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -440,6 +447,13 @@ export function EmailHistory() {
               </div>
             )}
           </div>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredHistory.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -134,7 +134,7 @@ function PreviewDialog({
 
 // ─── Edit / New Template Dialog ──────────────────────────────────────────────
 
-function EditTemplateDialog({
+export function EditTemplateDialog({
   open,
   onClose,
   template,
@@ -153,6 +153,9 @@ function EditTemplateDialog({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [editTab, setEditTab] = useState<"edit" | "preview">("edit")
 
+  const subjectRef = useRef<HTMLInputElement>(null)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+
   const isInvoice = templateType === "invoice"
   const variables = getVariablesForType(templateType)
   const sample = getSampleForType(templateType)
@@ -167,8 +170,29 @@ function EditTemplateDialog({
   }
 
   const insertVariable = (key: string, target: "subject" | "body") => {
-    if (target === "subject") setSubject(prev => prev + key)
-    else setBody(prev => prev + key)
+    if (target === "subject") {
+      const el = subjectRef.current
+      if (el) {
+        const start = el.selectionStart ?? el.value.length
+        const end = el.selectionEnd ?? el.value.length
+        const newVal = el.value.slice(0, start) + key + el.value.slice(end)
+        setSubject(newVal)
+        requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + key.length, start + key.length) })
+      } else {
+        setSubject(prev => prev + key)
+      }
+    } else {
+      const el = bodyRef.current
+      if (el) {
+        const start = el.selectionStart ?? el.value.length
+        const end = el.selectionEnd ?? el.value.length
+        const newVal = el.value.slice(0, start) + key + el.value.slice(end)
+        setBody(newVal)
+        requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + key.length, start + key.length) })
+      } else {
+        setBody(prev => prev + key)
+      }
+    }
   }
 
   // Sync form when dialog opens
@@ -206,14 +230,14 @@ function EditTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) onClose() }}>
-      <DialogContent style={{ maxWidth: "700px" }} className="p-8">
+      <DialogContent style={{ maxWidth: "580px" }} className="p-8">
         <DialogHeader>
-          <DialogTitle>{template ? "Edit Template" : "New Template"}</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{template ? "Edit Template" : "New Template"}</DialogTitle>
         </DialogHeader>
 
         {/* Name — always visible */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">
+          <Label className="text-sm font-semibold">
             Template Name <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -246,13 +270,14 @@ function EditTemplateDialog({
 
         <div className="max-h-[55vh] overflow-y-auto pr-1">
           {editTab === "edit" ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Subject */}
               <div className="rounded-lg border p-4 space-y-3">
-                <Label className="text-sm font-medium">
+                <Label className="text-sm font-semibold">
                   Email Subject <span className="text-red-500">*</span>
                 </Label>
                 <Input
+                  ref={subjectRef}
                   placeholder={placeholders.subject}
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
@@ -261,13 +286,13 @@ function EditTemplateDialog({
                 />
                 {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
                 <div>
-                  <p className="text-[11px] text-muted-foreground mb-1.5">Click to insert variable</p>
+                  <p className="text-xs text-muted-foreground mb-2">Click to insert variable</p>
                   <div className="flex flex-wrap gap-1.5">
                     {variables.map(v => (
                       <button
                         key={v.key}
                         type="button"
-                        className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => insertVariable(v.key, "subject")}
                         title={`Insert ${v.label} (e.g. ${v.example})`}
                       >
@@ -280,10 +305,11 @@ function EditTemplateDialog({
 
               {/* Body */}
               <div className="rounded-lg border p-4 space-y-3">
-                <Label className="text-sm font-medium">
+                <Label className="text-sm font-semibold">
                   Email Body <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
+                  ref={bodyRef}
                   placeholder={placeholders.body}
                   value={body}
                   onChange={e => setBody(e.target.value)}
@@ -292,13 +318,13 @@ function EditTemplateDialog({
                 />
                 {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
                 <div>
-                  <p className="text-[11px] text-muted-foreground mb-1.5">Click to insert variable</p>
+                  <p className="text-xs text-muted-foreground mb-2">Click to insert variable</p>
                   <div className="flex flex-wrap gap-1.5">
                     {variables.map(v => (
                       <button
                         key={v.key}
                         type="button"
-                        className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => insertVariable(v.key, "body")}
                         title={`Insert ${v.label} (e.g. ${v.example})`}
                       >

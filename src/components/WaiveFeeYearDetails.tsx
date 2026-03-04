@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
+import { PaginationBar } from "./ui/pagination-bar"
 
 interface FamilyDetail {
   familyCode: string
@@ -65,6 +66,8 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
   // Sorting states
   const [sortColumn, setSortColumn] = usePersistedState("waive-fee-year:sortColumn", "")
   const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("waive-fee-year:sortDirection", "asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Generate mock family data for the specific year
   const generateFamilyDetails = (year: string): FamilyDetail[] => {
@@ -222,6 +225,11 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
       return sortDirection === "asc" ? aValue - bValue : bValue - aValue
     }
   })
+
+  const paginatedFamilies = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedFamilies.slice(start, start + pageSize)
+  }, [sortedFamilies, currentPage, pageSize])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('th-TH', {
@@ -443,7 +451,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedFamilies.map((family) => (
+                {paginatedFamilies.map((family) => (
                   <TableRow key={family.familyCode}>
                     <TableCell className="font-medium">
                       {family.familyCode}
@@ -527,6 +535,13 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
               </TableBody>
             </Table>
           </div>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedFamilies.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
 
           {filteredFamilies.length === 0 && (
             <div className="text-center py-8">

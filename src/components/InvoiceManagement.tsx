@@ -42,6 +42,8 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
+import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
 import * as XLSX from "xlsx"
 
 type ApprovalStatus = "wait" | "approved" | "rejected"
@@ -469,6 +471,8 @@ export function InvoiceManagement({
   const [dueDateFrom, setDueDateFrom] = usePersistedState<Date | null>("invoice-management:dueDateFrom", null)
   const [dueDateTo, setDueDateTo] = usePersistedState<Date | null>("invoice-management:dueDateTo", null)
   const [isExportingAll, setIsExportingAll] = useState(false)
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [templateToEdit, setTemplateToEdit] = useState<EmailTemplate | null>(null)
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
   const [isImportInterfaceUploadOpen, setIsImportInterfaceUploadOpen] = useState(false)
   const [isImportInterfaceOpen, setIsImportInterfaceOpen] = useState(false)
@@ -3545,20 +3549,39 @@ export function InvoiceManagement({
             className="hidden"
             onChange={handleImportInterfaceFile}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2" disabled={isExportingAll}>
+                <Download className="w-4 h-4" />
+                {isExportingAll
+                  ? `${t("invoice.exporting")} ${exportProgress?.current ?? 0}/${exportProgress?.total ?? 0}`
+                  : "Export"}
+                <ChevronDown className="w-3 h-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportAllInvoicesZip} disabled={isExportingAll}>
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportInvoiceReport}>
+                <Download className="w-4 h-4 mr-2" />
+                Export .xlsx
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={exportAllInvoicesZip}
-            disabled={isExportingAll}
+            onClick={() => {
+              const allTpl = migrateTemplates()
+              const inv = allTpl.filter(t => t.type === "invoice")
+              setTemplateToEdit(inv.find(t => t.isDefault) || inv[0] || null)
+              setIsTemplateModalOpen(true)
+            }}
           >
-            <Download className="w-4 h-4" />
-            {isExportingAll
-              ? `${t("invoice.exporting")} ${exportProgress?.current ?? 0}/${exportProgress?.total ?? 0}`
-              : t("invoice.exportAll")}
-          </Button>
-          <Button variant="outline" className="flex items-center gap-2" onClick={exportInvoiceReport}>
-            <Download className="w-4 h-4" />
-            {t("invoice.exportReport")}
+            <FileText className="w-4 h-4" />
+            Invoice Template
           </Button>
           <Button
             onClick={() => onNavigateToSubPage(category === 'external' ? 'external-invoice-creation' : 'invoice-creation', { category, invoiceType: category === 'tuition' ? 'student' : category })}
@@ -4087,7 +4110,11 @@ export function InvoiceManagement({
                       {/* Term - LEFT (hidden for external) */}
                       {category !== "external" && (
                         <TableCell align="left" className="text-sm text-muted-foreground whitespace-nowrap">
-                          {invoice.term || "-"}
+                          {(() => {
+                            const raw = invoice.term || ""
+                            const match = raw.match(/Term\s*\d+/i)
+                            return match ? match[0] : (raw || "-")
+                          })()}
                         </TableCell>
                       )}
                       {/* Amount - RIGHT */}
@@ -7332,6 +7359,42 @@ export function InvoiceManagement({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Invoice Email Template Dialog */}
+      <EditTemplateDialog
+        open={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        template={templateToEdit}
+        templateType="invoice"
+        onSave={(form) => {
+          const allTpl = migrateTemplates()
+          const now = new Date().toISOString()
+          const createdBy = user?.username || user?.name || "Staff"
+          let updated: EmailTemplate[]
+          if (templateToEdit) {
+            updated = allTpl.map(t =>
+              t.id === templateToEdit.id ? { ...t, ...form, updatedAt: now } : t
+            )
+          } else {
+            const isFirst = allTpl.filter(t => t.type === "invoice").length === 0
+            updated = [...allTpl, {
+              id: `tpl-${Date.now()}`,
+              ...form,
+              type: "invoice" as const,
+              language: "en" as const,
+              isDefault: isFirst,
+              status: "active" as const,
+              createdAt: now,
+              updatedAt: now,
+              createdBy,
+              version: 1,
+            }]
+          }
+          saveTemplates(updated)
+          setIsTemplateModalOpen(false)
+          toast.success(templateToEdit ? "Template updated" : "Template created")
+        }}
+      />
     </div>
   )
 }

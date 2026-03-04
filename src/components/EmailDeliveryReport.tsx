@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { PaginationBar } from "./ui/pagination-bar"
 
 interface EmailDeliveryRecord {
   id: string
@@ -184,6 +185,8 @@ export function EmailDeliveryReport() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -237,6 +240,13 @@ export function EmailDeliveryReport() {
       return sortDirection === "asc" ? aVal - bVal : bVal - aVal
     })
   }
+
+  const sortedRecords = useMemo(() => getSortedRecords(filteredRecords), [filteredRecords, sortColumn, sortDirection])
+
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedRecords.slice(start, start + pageSize)
+  }, [sortedRecords, currentPage, pageSize])
 
   const applyFilters = () => {
     let filtered = records
@@ -611,7 +621,7 @@ export function EmailDeliveryReport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedRecords(filteredRecords).map((record) => (
+              {paginatedRecords.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>
                     <div>
@@ -674,6 +684,13 @@ export function EmailDeliveryReport() {
               ))}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedRecords.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

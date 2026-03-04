@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { PaginationBar } from "./ui/pagination-bar"
 import {
   Search,
   Plus,
@@ -856,81 +857,13 @@ export function FamilyGroups() {
         )}
       </div>
 
-      {/* Pagination Controls */}
-      {
-        sortedFamilies.length > 0 && (
-          <div className="flex items-center justify-between border rounded-lg p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{t("familyGroups.show")}</span>
-              <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))} disabled={!userCanEdit}>
-                <SelectTrigger className="w-[70px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-              <span>{t("familyGroups.entries")}</span>
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              {t("familyGroups.showingOf")
-                .replace("{from}", String(((currentPage - 1) * pageSize) + 1))
-                .replace("{to}", String(Math.min(currentPage * pageSize, sortedFamilies.length)))
-                .replace("{total}", String(sortedFamilies.length))}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                {t("familyGroups.previous")}
-              </Button>
-              <div className="flex items-center gap-1 mx-2">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
-                  }
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      className="w-8 h-8 p-0"
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                })}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                {t("familyGroups.next")}
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )
-      }
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={sortedFamilies.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+      />
 
       {/* Students without family */}
       {

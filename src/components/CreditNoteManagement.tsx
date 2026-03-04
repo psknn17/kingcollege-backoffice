@@ -23,6 +23,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { PaginationBar } from "./ui/pagination-bar"
 
 interface CreditNote {
   id: string
@@ -1079,76 +1080,13 @@ export function CreditNoteManagement() {
                   </TableBody>
                 </Table>
 
-                {/* Pagination Controls */}
-                {sortedCreditNotes.length > 0 && (
-                  <div className="flex items-center justify-between border-t p-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Show</span>
-                      <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-                        <SelectTrigger className="w-[70px] h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="25">25</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
-                          <SelectItem value="100">100</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <span>entries</span>
-                    </div>
-
-                    <div className="text-sm text-muted-foreground">
-                      Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedCreditNotes.length)} of {sortedCreditNotes.length} credit notes
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                      <div className="flex items-center gap-1 mx-2">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum: number
-                          if (totalPages <= 5) {
-                            pageNum = i + 1
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i
-                          } else {
-                            pageNum = currentPage - 2 + i
-                          }
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "outline"}
-                              size="sm"
-                              className="w-8 h-8 p-0"
-                              onClick={() => setCurrentPage(pageNum)}
-                            >
-                              {pageNum}
-                            </Button>
-                          )
-                        })}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <PaginationBar
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalCount={sortedCreditNotes.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                />
               </CardContent>
             </Card>
           </TabsContent>

@@ -33,8 +33,8 @@ const STANDARD_YEAR_GROUPS = [
   "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
-// Storage keys - Use Tuition-specific key since Reports are only in Tuition menu
-const STUDENT_GROUPS_STORAGE_KEY = "studentGroups_tuition"
+// Storage keys - Use same key as DiscountManagement for tuition
+const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
 const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
 const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
 const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
@@ -162,270 +162,6 @@ interface StudentDiscount {
   status: "active" | "graduated" | "withdrawn" | "on_leave"
 }
 
-// Mock data for student discounts - only Sibling and Fee Waiver types
-const mockStudentDiscounts: StudentDiscount[] = [
-  // Oliver Brown - Sibling (Second Child) across all terms
-  { id: "mock-1", studentId: "KC2025001", studentName: "Oliver Brown", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-2", studentId: "KC2025001", studentName: "Oliver Brown", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-3", studentId: "KC2025001", studentName: "Oliver Brown", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-
-  // Emma Brown - Sibling (Third Child)
-  { id: "mock-4", studentId: "KC2025002", studentName: "Emma Brown", yearGroup: "Year 3", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 67500, status: "active" },
-  { id: "mock-5", studentId: "KC2025002", studentName: "Emma Brown", yearGroup: "Year 3", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 67500, status: "active" },
-  { id: "mock-6", studentId: "KC2025002", studentName: "Emma Brown", yearGroup: "Year 3", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 67500, status: "active" },
-
-  // James Wilson - Fee Waiver (across years)
-  { id: "mock-7", studentId: "KC2024010", studentName: "James Wilson", yearGroup: "Year 7", academicYear: "2024/2025", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-8", studentId: "KC2024010", studentName: "James Wilson", yearGroup: "Year 7", academicYear: "2024/2025", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-9", studentId: "KC2024010", studentName: "James Wilson", yearGroup: "Year 7", academicYear: "2024/2025", term: "Term 3", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-10", studentId: "KC2024010", studentName: "James Wilson", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-11", studentId: "KC2024010", studentName: "James Wilson", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-
-  // Sophia Chen - Sibling + Fee Waiver
-  { id: "mock-12", studentId: "KC2025015", studentName: "Sophia Chen", yearGroup: "Year 10", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-  { id: "mock-13", studentId: "KC2025015", studentName: "Sophia Chen", yearGroup: "Year 10", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-  { id: "mock-14", studentId: "KC2025015", studentName: "Sophia Chen", yearGroup: "Year 10", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-
-  // Liam Taylor - Sibling (Second Child)
-  { id: "mock-15", studentId: "KC2025020", studentName: "Liam Taylor", yearGroup: "Year 2", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-16", studentId: "KC2025020", studentName: "Liam Taylor", yearGroup: "Year 2", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-17", studentId: "KC2025020", studentName: "Liam Taylor", yearGroup: "Year 2", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-
-  // Mia Johnson - Fee Waiver + Sibling (Third Child)
-  { id: "mock-18", studentId: "KC2023005", studentName: "Mia Johnson", yearGroup: "Year 9", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "active" },
-  { id: "mock-19", studentId: "KC2023005", studentName: "Mia Johnson", yearGroup: "Year 9", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "active" },
-  { id: "mock-20", studentId: "KC2023005", studentName: "Mia Johnson", yearGroup: "Year 9", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "active" },
-
-  // Ava Martinez - Fee Waiver only
-  { id: "mock-21", studentId: "KC2025021", studentName: "Ava Martinez", yearGroup: "Year 4", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-
-  // Noah Garcia - Sibling + Fee Waiver
-  { id: "mock-22", studentId: "KC2025022", studentName: "Noah Garcia", yearGroup: "Year 6", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-  { id: "mock-23", studentId: "KC2025022", studentName: "Noah Garcia", yearGroup: "Year 6", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-  { id: "mock-24", studentId: "KC2025022", studentName: "Noah Garcia", yearGroup: "Year 6", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-
-  // Ethan Kim - Fourth Child Discount
-  { id: "mock-25", studentId: "KC2025040", studentName: "Ethan Kim", yearGroup: "Year 11", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 20, amount: 90000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 90000, status: "active" },
-  { id: "mock-26", studentId: "KC2025040", studentName: "Ethan Kim", yearGroup: "Year 11", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 20, amount: 90000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 90000, status: "active" },
-
-  // Grace Kim - Sibling (Second Child)
-  { id: "mock-27", studentId: "KC2025041", studentName: "Grace Kim", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-28", studentId: "KC2025041", studentName: "Grace Kim", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-
-  // Lucas Anderson - Historical 2024-2025 Sibling
-  { id: "mock-29", studentId: "KC2024050", studentName: "Lucas Anderson", yearGroup: "Year 6", academicYear: "2024/2025", term: "Term 1", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 67500, status: "graduated" },
-  { id: "mock-30", studentId: "KC2024050", studentName: "Lucas Anderson", yearGroup: "Year 6", academicYear: "2024/2025", term: "Term 2", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 67500, status: "graduated" },
-  { id: "mock-31", studentId: "KC2024050", studentName: "Lucas Anderson", yearGroup: "Year 6", academicYear: "2024/2025", term: "Term 3", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 67500, status: "graduated" },
-
-  // Charlotte Davis - Nursery with Fourth Child
-  { id: "mock-32", studentId: "KC2025060", studentName: "Charlotte Davis", yearGroup: "Nursery", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 20, amount: 90000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 90000, status: "active" },
-  { id: "mock-33", studentId: "KC2025060", studentName: "Charlotte Davis", yearGroup: "Nursery", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 20, amount: 90000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 90000, status: "active" },
-
-  // Benjamin White - Reception with Fee Waiver
-  { id: "mock-34", studentId: "KC2025061", studentName: "Benjamin White", yearGroup: "Reception", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-  { id: "mock-35", studentId: "KC2025061", studentName: "Benjamin White", yearGroup: "Reception", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-
-  // Harper Thompson - Year 12 Sibling + Fee Waiver
-  { id: "mock-36", studentId: "KC2024070", studentName: "Harper Thompson", yearGroup: "Year 12", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-  { id: "mock-37", studentId: "KC2024070", studentName: "Harper Thompson", yearGroup: "Year 12", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 120000, status: "active" },
-
-  // Isabella Lee - Pre-Nursery with Sibling
-  { id: "mock-38", studentId: "KC2025070", studentName: "Isabella Lee", yearGroup: "Pre-Nursery", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-39", studentId: "KC2025070", studentName: "Isabella Lee", yearGroup: "Pre-Nursery", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-
-  // === Fee Waiver Students with different termsUsed stages ===
-
-  // Daniel Park - Fee Waiver คืนครบ 3 เทอมแล้ว (completed)
-  { id: "mock-40", studentId: "KC2022001", studentName: "Daniel Park", yearGroup: "Year 7", academicYear: "2024/2025", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-41", studentId: "KC2022001", studentName: "Daniel Park", yearGroup: "Year 7", academicYear: "2024/2025", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-42", studentId: "KC2022001", studentName: "Daniel Park", yearGroup: "Year 7", academicYear: "2024/2025", term: "Term 3", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-
-  // Sophie Williams - Fee Waiver คืนไป 2 เทอม + Sibling
-  { id: "mock-43", studentId: "KC2022015", studentName: "Sophie Williams", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 },
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 120000, status: "active" },
-  { id: "mock-44", studentId: "KC2022015", studentName: "Sophie Williams", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 },
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 120000, status: "active" },
-
-  // Ryan Mitchell - Fee Waiver เพิ่งเริ่ม คืนไป 1 เทอม
-  { id: "mock-45", studentId: "KC2022020", studentName: "Ryan Mitchell", yearGroup: "Year 4", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-
-  // Emily Chen - Fee Waiver + Sibling (historical)
-  { id: "mock-46", studentId: "KC2021005", studentName: "Emily Chen", yearGroup: "Year 9", academicYear: "2024/2025", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "graduated" },
-  { id: "mock-47", studentId: "KC2021005", studentName: "Emily Chen", yearGroup: "Year 9", academicYear: "2024/2025", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "graduated" },
-  { id: "mock-48", studentId: "KC2021005", studentName: "Emily Chen", yearGroup: "Year 9", academicYear: "2024/2025", term: "Term 3", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "graduated" },
-
-  // Jack Thompson - Fee Waiver ต่อเนื่องข้ามปี
-  { id: "mock-49", studentId: "KC2021010", studentName: "Jack Thompson", yearGroup: "Year 6", academicYear: "2024/2025", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-50", studentId: "KC2021010", studentName: "Jack Thompson", yearGroup: "Year 6", academicYear: "2024/2025", term: "Term 3", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "graduated" },
-  { id: "mock-51", studentId: "KC2021010", studentName: "Jack Thompson", yearGroup: "Year 7", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-
-  // === Year 13 Students ===
-
-  // Alexander Wright - Year 13 Sibling
-  { id: "mock-52", studentId: "KC2023080", studentName: "Alexander Wright", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-  { id: "mock-53", studentId: "KC2023080", studentName: "Alexander Wright", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Second Child Discount", mode: "percentage", value: 10, amount: 45000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 45000, status: "active" },
-
-  // Victoria Chen - Year 13 Sibling + Fee Waiver
-  { id: "mock-54", studentId: "KC2023081", studentName: "Victoria Chen", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 142500, status: "active" },
-  { id: "mock-55", studentId: "KC2023081", studentName: "Victoria Chen", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 142500, status: "active" },
-  { id: "mock-56", studentId: "KC2023081", studentName: "Victoria Chen", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 3", discounts: [
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] },
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 }
-  ], totalDiscountAmount: 142500, status: "active" },
-
-  // Marcus Johnson - Year 13 Fee Waiver only
-  { id: "mock-57", studentId: "KC2023082", studentName: "Marcus Johnson", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 1, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-  { id: "mock-58", studentId: "KC2023082", studentName: "Marcus Johnson", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 }
-  ], totalDiscountAmount: 75000, status: "active" },
-
-  // Olivia Park - Year 13 Fourth Child
-  { id: "mock-59", studentId: "KC2023083", studentName: "Olivia Park", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 20, amount: 90000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 90000, status: "active" },
-  { id: "mock-60", studentId: "KC2023083", studentName: "Olivia Park", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "sibling", name: "Fourth Child Discount", mode: "percentage", value: 20, amount: 90000, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 90000, status: "active" },
-
-  // William Lee - Year 13 Fee Waiver + Sibling (completing waiver)
-  { id: "mock-61", studentId: "KC2020090", studentName: "William Lee", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 1", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 2, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "active" },
-  { id: "mock-62", studentId: "KC2020090", studentName: "William Lee", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 2", discounts: [
-    { type: "fee_waiver", name: "Registration Fee Waiver", mode: "fixed", value: 75000, amount: 75000, appliedTo: ["Registration Fee"], termsUsed: 3, totalTerms: 3 },
-    { type: "sibling", name: "Third Child Discount", mode: "percentage", value: 15, amount: 67500, appliedTo: ["Tuition"] }
-  ], totalDiscountAmount: 142500, status: "active" },
-]
-
 const discountTypeStyles: Record<string, React.CSSProperties> = {
   sibling: { backgroundColor: "#dbeafe", color: "#1e40af", borderColor: "#bfdbfe" },
   scholarship: { backgroundColor: "#f3e8ff", color: "#6b21a8", borderColor: "#e9d5ff" },
@@ -461,6 +197,18 @@ export function DiscountReports() {
 
   const [searchTerm, setSearchTerm] = usePersistedState("discount-reports:search", "")
   const [filterType, setFilterType] = useState<string>("all")
+
+  // Load discount group names from sub-menu (studentGroups localStorage)
+  const discountGroupNames = useMemo(() => {
+    try {
+      const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+      if (!stored) return []
+      const groups: { name: string; isActive?: boolean }[] = JSON.parse(stored)
+      return groups.filter(g => g.isActive !== false).map(g => g.name)
+    } catch {
+      return []
+    }
+  }, [])
   const [filterYearGroup, setFilterYearGroup] = useState<string>("all")
   const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
   const [filterTerm, setFilterTerm] = useState<string>("all")
@@ -480,54 +228,51 @@ export function DiscountReports() {
     setCurrentPage(1)
   }, [searchTerm, filterType, filterYearGroup, filterAcademicYear, filterTerm, filterStatus])
 
-  // Transform students to StudentDiscount format (same logic as StudentList)
+  // Build discount entries directly from discount groups (iterate groups → students)
   const studentDiscounts: StudentDiscount[] = useMemo(() => {
-    const realStudentDiscounts = students.map(student => {
-      // Get sibling discount percentage using the same method as StudentList
-      const siblingDiscountPercent = getSiblingDiscountPercentage(
-        student.childOrder || 1,
-        student.academicYear || "2025/2026",
-        student.enrollmentTerm || "term1"
-      )
+    const TERMS = ["Term 1", "Term 2", "Term 3"]
+    const baseTuition = 450000
 
-      // Calculate amounts (assuming base tuition of 450,000 THB)
-      const baseTuition = 450000
+    // Read groups directly from localStorage
+    let groups: any[] = []
+    try {
+      const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+      if (stored) groups = JSON.parse(stored).filter((g: any) => g.isActive !== false)
+    } catch { groups = [] }
 
-      // Build discounts array
-      const discounts: DiscountItem[] = []
+    if (groups.length === 0) return []
 
-      // 1. Sibling Discount (same as StudentList)
-      if (siblingDiscountPercent > 0) {
-        const childOrderLabel = student.childOrder === 2 ? "Second" :
-                               student.childOrder === 3 ? "Third" :
-                               student.childOrder === 4 ? "Fourth" :
-                               student.childOrder >= 5 ? "Fifth+" : ""
-        const discountAmount = Math.round(baseTuition * siblingDiscountPercent / 100)
-        discounts.push({
-          type: "sibling",
-          name: `${childOrderLabel} Child Discount`,
-          mode: "percentage",
-          value: siblingDiscountPercent,
-          amount: discountAmount,
-          appliedTo: ["Tuition"]
-        })
-      }
+    // Merge discounts per student (a student may be in multiple groups)
+    const studentMap = new Map<string, {
+      info: any
+      discounts: DiscountItem[]
+      contextStudent: any
+    }>()
 
-      // 2. Group Discount (from Student Groups - same logic as StudentList)
-      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-      groupDiscounts.forEach((group) => {
-        if (group.discountType === "percentage" && group.discountPercentage > 0) {
-          const discountAmount = Math.round(baseTuition * group.discountPercentage / 100)
-          discounts.push({
+    groups.forEach(group => {
+      const groupStudents: any[] = group.students || []
+      groupStudents.forEach(gs => {
+        const sid: string = gs.id || gs.studentId || ""
+        if (!sid) return
+
+        if (!studentMap.has(sid)) {
+          const ctx = students.find(s => s.studentId === sid)
+          studentMap.set(sid, { info: gs, discounts: [], contextStudent: ctx })
+        }
+
+        const entry = studentMap.get(sid)!
+        if (group.discountType === "percentage" && (group.discountPercentage || 0) > 0) {
+          const amount = Math.round(baseTuition * group.discountPercentage / 100)
+          entry.discounts.push({
             type: "group",
             name: group.name,
             mode: "percentage",
             value: group.discountPercentage,
-            amount: discountAmount,
+            amount,
             appliedTo: ["Tuition"]
           })
-        } else if (group.discountType === "fixed" && group.fixedAmount > 0) {
-          discounts.push({
+        } else if (group.discountType === "fixed" && (group.fixedAmount || 0) > 0) {
+          entry.discounts.push({
             type: "group",
             name: group.name,
             mode: "fixed",
@@ -537,109 +282,33 @@ export function DiscountReports() {
           })
         }
       })
+    })
 
-      // 3. Staff Child Discount (same as StudentList)
-      const staffChild = isStaffChildStudent(student.studentId) || student.notes?.toLowerCase().includes('staff')
-      if (staffChild) {
-        const staffPercent = 50 // Default 50%
-        const discountAmount = Math.round(baseTuition * staffPercent / 100)
-        discounts.push({
-          type: "staff",
-          name: "Staff Child Discount",
-          mode: "percentage",
-          value: staffPercent,
-          amount: discountAmount,
-          appliedTo: ["Tuition"]
+    // Expand each student × 3 terms
+    const result: StudentDiscount[] = []
+    studentMap.forEach((data, sid) => {
+      if (data.discounts.length === 0) return
+      const ctx = data.contextStudent
+      const gs = data.info
+      const totalDiscountAmount = data.discounts.reduce((sum, d) => sum + d.amount, 0)
+
+      TERMS.forEach((term, idx) => {
+        result.push({
+          id: `grp-${sid}-${idx}`,
+          studentId: sid,
+          studentName: gs.name || (ctx ? `${ctx.firstName} ${ctx.lastName}` : sid),
+          yearGroup: gs.yearGroup || ctx?.gradeLevel || "",
+          academicYear: ctx?.academicYear || "2025/2026",
+          term,
+          discounts: data.discounts,
+          totalDiscountAmount,
+          status: (ctx?.status || gs.isActive === false ? "withdrawn" : "active") as StudentDiscount["status"]
         })
-      }
+      })
+    })
 
-      // 4. Scholarship Discount (same as StudentList)
-      const scholarship = hasScholarshipDiscount(student.studentId) || student.notes?.toLowerCase().includes('scholarship')
-      if (scholarship) {
-        const scholarshipPercent = 50 // Default 50%
-        const discountAmount = Math.round(baseTuition * scholarshipPercent / 100)
-        discounts.push({
-          type: "scholarship",
-          name: "Scholarship Discount",
-          mode: "percentage",
-          value: scholarshipPercent,
-          amount: discountAmount,
-          appliedTo: ["Tuition"]
-        })
-      }
-
-      // 5. Early Bird Discount (same as StudentList)
-      const earlyBird = hasEarlyBirdDiscount(student.studentId) || student.notes?.toLowerCase().includes('early bird')
-      if (earlyBird) {
-        const earlyBirdPercent = 5 // Default 5%
-        const discountAmount = Math.round(baseTuition * earlyBirdPercent / 100)
-        discounts.push({
-          type: "early_bird",
-          name: "Early Bird Discount",
-          mode: "percentage",
-          value: earlyBirdPercent,
-          amount: discountAmount,
-          appliedTo: ["Tuition"]
-        })
-      }
-
-      // 6. School Bus Discount
-      const schoolBus = hasSchoolBusDiscount(student.studentId) || student.notes?.toLowerCase().includes('school bus')
-      if (schoolBus) {
-        const schoolBusAmount = 15000 // Fixed amount per term
-        discounts.push({
-          type: "school_bus",
-          name: "School Bus Discount",
-          mode: "fixed",
-          value: schoolBusAmount,
-          amount: schoolBusAmount,
-          appliedTo: ["School Bus Fee"]
-        })
-      }
-
-      // 7. Fee Waiver (Registration Fee Waiver - from checkFeePrivilegeEligibility)
-      const feeWaiverEligibility = checkFeePrivilegeEligibility(
-        student,
-        student.academicYear || "2025/2026",
-        student.enrollmentTerm || "term1"
-      )
-      if (feeWaiverEligibility.eligible) {
-        const waiverAmount = feeWaiverEligibility.creditPerTerm || 75000
-        const totalTerms = 3 // จำนวนเทอมทั้งหมดที่มีสิทธิ์ได้รับ
-
-        // ดึงจำนวนเทอมที่ได้รับคืนไปแล้วจาก Invoice จริง
-        const termsUsed = getFeeWaiverTermsFromInvoices(student.studentId)
-
-        discounts.push({
-          type: "fee_waiver",
-          name: "Registration Fee Waiver",
-          mode: "fixed",
-          value: waiverAmount,
-          amount: waiverAmount,
-          appliedTo: ["Registration Fee"],
-          termsUsed,
-          totalTerms
-        })
-      }
-
-      const totalDiscountAmount = discounts.reduce((sum, d) => sum + d.amount, 0)
-
-      return {
-        id: student.id,
-        studentId: student.studentId,
-        studentName: `${student.firstName} ${student.lastName}`,
-        yearGroup: student.gradeLevel,
-        academicYear: student.academicYear || "2025/2026",
-        term: student.enrollmentTerm === "term1" ? "Term 1" : student.enrollmentTerm === "term2" ? "Term 2" : student.enrollmentTerm === "term3" ? "Term 3" : "All Terms",
-        discounts,
-        totalDiscountAmount,
-        status: student.status as "active" | "graduated" | "withdrawn" | "on_leave"
-      } as StudentDiscount
-    }).filter(s => s.discounts.length > 0) // Only show students with discounts
-
-    // Combine with mock data
-    return [...mockStudentDiscounts, ...realStudentDiscounts]
-  }, [students, getSiblingDiscountPercentage, checkFeePrivilegeEligibility])
+    return result
+  }, [students])
 
   // Clear all filters
   const clearFilters = () => {
@@ -666,7 +335,7 @@ export function DiscountReports() {
       student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesType = filterType === "all" || student.discounts.some(d => d.type === filterType)
+    const matchesType = filterType === "all" || student.discounts.some(d => d.name === filterType)
     const matchesYearGroup = filterYearGroup === "all" || student.yearGroup === filterYearGroup
     const matchesAcademicYear = filterAcademicYear === "all" || student.academicYear === filterAcademicYear
     const matchesTerm = filterTerm === "all" || student.term === filterTerm
@@ -809,7 +478,7 @@ export function DiscountReports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("discountReports.totalStudents")}</CardTitle>
@@ -832,27 +501,6 @@ export function DiscountReports() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("discountReports.averageDiscount")}</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averagePercentage}%</div>
-            <p className="text-xs text-muted-foreground">{t("discountReports.avgPercentageDiscount")}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("discountReports.yearGroups")}</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{yearGroups.length}</div>
-            <p className="text-xs text-muted-foreground">{t("discountReports.withDiscountStudents")}</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters */}
@@ -934,9 +582,9 @@ export function DiscountReports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
-                  <SelectItem value="sibling">{t("discountReports.sibling")}</SelectItem>
-                  <SelectItem value="fee_waiver">{t("discountReports.feeWaiver")}</SelectItem>
-                  <SelectItem value="school_bus">School Bus</SelectItem>
+                  {discountGroupNames.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1012,13 +660,6 @@ export function DiscountReports() {
                   <TableHead align="left">{t("discountReports.discountTypes")}</TableHead>
                   {/* Discount Details - LEFT aligned (text) */}
                   <TableHead align="left">{t("discountReports.discountsDetail")}</TableHead>
-                  {/* Discount Amount - RIGHT aligned (currency) */}
-                  <TableHead align="right" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("totalDiscountAmount")}>
-                    <div className="flex items-center justify-end gap-1">
-                      {t("discountReports.discount")}
-                      <ArrowUpDown className="h-4 w-4" />
-                    </div>
-                  </TableHead>
                   {/* Status - CENTER aligned (badge) */}
                   <TableHead align="center" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("status")}>
                     <div className="flex items-center justify-center gap-1">
@@ -1053,7 +694,7 @@ export function DiscountReports() {
                         <div className="flex gap-1 flex-wrap">
                           {student.discounts.map((d, idx) => (
                             <Badge key={idx} variant="outline" style={discountTypeStyles[d.type]}>
-                              {getDiscountTypeLabel(d.type)}
+                              {d.name}
                             </Badge>
                           ))}
                         </div>
@@ -1075,10 +716,6 @@ export function DiscountReports() {
                             </div>
                           ))}
                         </div>
-                      </TableCell>
-                      {/* Discount Amount - RIGHT aligned (matches header) */}
-                      <TableCell align="right" className="font-mono text-sm text-green-600">
-                        {student.totalDiscountAmount > 0 ? `-${formatCurrency(student.totalDiscountAmount)}` : "-"}
                       </TableCell>
                       {/* Status - CENTER aligned (matches header) */}
                       <TableCell align="center">

@@ -138,7 +138,6 @@ const menuItems = {
   ],
   debtReminder: [
     { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
-    { id: "invoice-receipt-template", labelKey: "menu.invoiceReceiptTemplate", icon: FileText },
     { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
     { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
   ],

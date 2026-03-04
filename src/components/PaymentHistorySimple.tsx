@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Download, Search, Filter, Eye, CalendarIcon, X } from "lucide-react"
+import { PaginationBar } from "./ui/pagination-bar"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
@@ -90,6 +91,8 @@ export function PaymentHistorySimple() {
   const [dateFrom, setDateFrom] = usePersistedState<Date | undefined>("payment-history:dateFrom", undefined)
   const [dateTo, setDateTo] = usePersistedState<Date | undefined>("payment-history:dateTo", undefined)
   const [viewingPaymentProof, setViewingPaymentProof] = useState<PaymentRecord | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     const loadPayments = () => {
@@ -157,6 +160,11 @@ export function PaymentHistorySimple() {
 
     return matchesSearch && matchesStatus && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesDateFrom && matchesDateTo
   })
+
+  const paginatedPayments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredPayments.slice(start, start + pageSize)
+  }, [filteredPayments, currentPage, pageSize])
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -454,10 +462,7 @@ export function PaymentHistorySimple() {
       </Card>
 
       {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredPayments.length} of {payments.length} records
-        </p>
+      <div className="flex justify-end items-center">
         <div className="text-sm text-muted-foreground">
           {t("payment.totalAmount")}: ฿{filteredPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
         </div>
@@ -497,7 +502,7 @@ export function PaymentHistorySimple() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPayments.map((payment) => (
+                paginatedPayments.map((payment) => (
                   <TableRow key={payment.id}>
                     {/* Date alignment */}
                     <TableCell align="left" className="text-sm">{format(payment.transactionDate, "dd-MM-yyyy HH:mm:ss")}</TableCell>
@@ -540,6 +545,13 @@ export function PaymentHistorySimple() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredPayments.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
 

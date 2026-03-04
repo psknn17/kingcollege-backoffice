@@ -41,6 +41,7 @@ import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { PaginationBar } from "./ui/pagination-bar"
 
 interface Student {
   id: string
@@ -263,6 +264,10 @@ export function InvoiceEmailManagement() {
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
+  // Pagination states for email jobs table
+  const [jobsCurrentPage, setJobsCurrentPage] = useState(1)
+  const [jobsPageSize, setJobsPageSize] = useState(10)
+
   // Initialize filteredStudents when allStudents changes
   useEffect(() => {
     setFilteredStudents(allStudents)
@@ -468,6 +473,13 @@ export function InvoiceEmailManagement() {
       return sortDirection === "asc" ? aVal - bVal : bVal - aVal
     })
   }
+
+  const sortedJobs = useMemo(() => getSortedJobs(emailJobs), [emailJobs, sortColumn, sortDirection])
+
+  const paginatedJobs = useMemo(() => {
+    const start = (jobsCurrentPage - 1) * jobsPageSize
+    return sortedJobs.slice(start, start + jobsPageSize)
+  }, [sortedJobs, jobsCurrentPage, jobsPageSize])
 
   return (
     <div className="space-y-6">
@@ -849,7 +861,7 @@ export function InvoiceEmailManagement() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {getSortedJobs(emailJobs).map((job) => (
+                  {paginatedJobs.map((job) => (
                     <TableRow key={job.id}>
                       <TableCell className="font-medium">{job.name}</TableCell>
                       <TableCell>
@@ -882,6 +894,13 @@ export function InvoiceEmailManagement() {
                   ))}
                 </TableBody>
               </Table>
+              <PaginationBar
+                currentPage={jobsCurrentPage}
+                pageSize={jobsPageSize}
+                totalCount={sortedJobs.length}
+                onPageChange={setJobsCurrentPage}
+                onPageSizeChange={(size) => { setJobsPageSize(size); setJobsCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
         </TabsContent>

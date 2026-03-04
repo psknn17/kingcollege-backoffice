@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { format } from "date-fns"
+import { PaginationBar } from "./ui/pagination-bar"
 
 export interface Client {
   id: string
@@ -49,6 +50,8 @@ export function ClientList() {
   const [importPreview, setImportPreview] = useState<Record<string, string>[]>([])
   const [importError, setImportError] = useState("")
   const [showAllPreview, setShowAllPreview] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const filtered = useMemo(() => {
     const q = searchTerm.toLowerCase()
@@ -59,6 +62,11 @@ export function ClientList() {
         c.address.toLowerCase().includes(q)
     )
   }, [clients, searchTerm])
+
+  const paginatedClients = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage, pageSize])
 
   const openAdd = () => {
     setEditingClient(null)
@@ -291,9 +299,9 @@ export function ClientList() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((client, idx) => (
+                  paginatedClients.map((client, idx) => (
                     <TableRow key={client.id}>
-                      <TableCell className="text-left text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell className="text-left text-muted-foreground">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                       <TableCell className="text-left font-medium">{client.clientName}</TableCell>
                       <TableCell className="text-left">{client.contactName || "-"}</TableCell>
                       <TableCell className="text-left">{client.address || "-"}</TableCell>
@@ -315,6 +323,13 @@ export function ClientList() {
               </TableBody>
             </Table>
           </div>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filtered.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
           <p className="text-sm text-muted-foreground">
             {filtered.length} / {clients.length} clients
           </p>
