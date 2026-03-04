@@ -289,10 +289,6 @@ export function ReportOverview() {
               </Button>
             </div>
 
-            {/* Invoice count indicator */}
-            <div className="ml-auto text-sm text-muted-foreground">
-              {totals.totalInvoices} {t("report.invoicesFound")}
-            </div>
           </div>
         </CardContent>
       </Card>
