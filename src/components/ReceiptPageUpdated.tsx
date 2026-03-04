@@ -516,7 +516,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       link.download = `${receipt.receiptNumber}.pdf`
       // link.click()
 
-      toast.success(`Downloading receipt ${receipt.receiptNumber}`)
+      toast.success(t("receipt.downloadingReceipt").replace("{number}", receipt.receiptNumber))
 
       // Update download count
       const updatedReceipts = receipts.map(r =>
@@ -530,20 +530,20 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const resendReceipt = (receiptId: string) => {
     const receipt = receipts.find(r => r.id === receiptId)
     if (receipt) {
-      toast.success(`Email sent to parent of ${receipt.studentName}`)
+      toast.success(t("receipt.emailSentTo").replace("{name}", receipt.studentName))
     }
   }
 
   const bulkDownloadPDF = () => {
     if (selectedReceipts.size === 0) {
-      toast.error("Please select receipts to download")
+      toast.error(t("receipt.selectReceiptsToDownload"))
       return
     }
 
     const selectedReceiptsList = receipts.filter(r => selectedReceipts.has(r.id))
 
     // In production, this would call an API to generate a ZIP file with all PDFs
-    toast.success(`Downloading ${selectedReceipts.size} receipt(s)...`)
+    toast.success(t("receipt.downloadingReceipts").replace("{count}", String(selectedReceipts.size)))
 
     // Update download counts
     const updatedReceipts = receipts.map(r =>
@@ -556,17 +556,17 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
   const bulkResendEmail = () => {
     if (selectedReceipts.size === 0) {
-      toast.error("Please select receipts to resend")
+      toast.error(t("receipt.selectReceiptsToResend"))
       return
     }
 
-    toast.success(`Sending emails for ${selectedReceipts.size} receipt(s)...`)
+    toast.success(t("receipt.sendingEmails").replace("{count}", String(selectedReceipts.size)))
     setSelectedReceipts(new Set())
   }
 
   const downloadInterfaceFile = () => {
     if (filteredReceipts.length === 0) {
-      toast.error("No receipts to export")
+      toast.error(t("receipt.noReceiptsToExport"))
       return
     }
 
@@ -661,7 +661,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     XLSX.utils.book_append_sheet(wb, ws, "Receipts")
     XLSX.writeFile(wb, `interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
-    toast.success("Interface file downloaded successfully")
+    toast.success(t("receipt.interfaceFileDownloaded"))
   }
 
   const exportToExcel = () => {
@@ -682,7 +682,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         cn.status
       ])
       downloadAsXlsx(headers, rows, `credit-notes-export-${format(new Date(), 'dd-MM-yyyy')}`)
-      toast.success("Credit notes exported to Excel successfully")
+      toast.success(t("receipt.creditNotesExported"))
     } else {
       const headers = ['Receipt Number', 'Invoice Number', 'Student Name', 'Student ID', 'Grade', 'Amount', 'Payment Method', 'Date', 'Academic Year', 'Term']
       const rows = filteredReceipts.map(r => [
@@ -698,7 +698,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         r.term
       ])
       downloadAsXlsx(headers, rows, `receipts-export-${format(new Date(), 'dd-MM-yyyy')}`)
-      toast.success("Receipts exported to Excel successfully")
+      toast.success(t("receipt.receiptsExported"))
     }
   }
 
@@ -842,7 +842,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const downloadCreditNote = (creditNoteId: string) => {
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
-      toast.success(`Downloading credit note ${creditNote.creditNoteNumber}`)
+      toast.success(t("receipt.downloadingCreditNote").replace("{number}", creditNote.creditNoteNumber))
     }
   }
 
@@ -850,7 +850,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
       if (creditNote.status === "cancelled") {
-        toast.error("Credit note already cancelled")
+        toast.error(t("receipt.creditNoteAlreadyCancelled"))
         return
       }
       const updatedCreditNotes = creditNotes.map(cn =>
@@ -858,22 +858,22 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       )
       setCreditNotes(updatedCreditNotes)
       setFilteredCreditNotes(updatedCreditNotes)
-      toast.success(`Credit note ${creditNote.creditNoteNumber} cancelled`)
+      toast.success(t("receipt.creditNoteCancelled").replace("{number}", creditNote.creditNoteNumber))
     }
   }
 
   const bulkDownloadCreditNotes = () => {
     if (selectedCreditNotes.size === 0) {
-      toast.error("Please select credit notes to download")
+      toast.error(t("receipt.selectCreditNotesToDownload"))
       return
     }
-    toast.success(`Downloading ${selectedCreditNotes.size} credit note(s)...`)
+    toast.success(t("receipt.downloadingCreditNotes").replace("{count}", String(selectedCreditNotes.size)))
     setSelectedCreditNotes(new Set())
   }
 
   const bulkCancelCreditNotes = () => {
     if (selectedCreditNotes.size === 0) {
-      toast.error("Please select credit notes to cancel")
+      toast.error(t("receipt.selectCreditNotesToCancel"))
       return
     }
     const updatedCreditNotes = creditNotes.map(cn =>
@@ -883,7 +883,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     )
     setCreditNotes(updatedCreditNotes)
     setFilteredCreditNotes(updatedCreditNotes)
-    toast.success(`Cancelled ${selectedCreditNotes.size} credit note(s)`)
+    toast.success(t("receipt.cancelledCreditNotes").replace("{count}", String(selectedCreditNotes.size)))
     setSelectedCreditNotes(new Set())
   }
 
@@ -912,23 +912,23 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const handleCreateCreditNote = () => {
     // Validation
     if (!creditNoteForm.creditNoteNumber) {
-      toast.error("Credit Note Number is required")
+      toast.error(t("receipt.creditNoteNumberRequired"))
       return
     }
     if (!creditNoteForm.invoiceNumber) {
-      toast.error("Invoice Number is required")
+      toast.error(t("receipt.invoiceNumberRequired"))
       return
     }
     if (!creditNoteForm.studentName) {
-      toast.error("Student Name is required")
+      toast.error(t("receipt.studentNameRequired"))
       return
     }
     if (!creditNoteForm.amount || creditNoteForm.amount <= 0) {
-      toast.error("Amount must be greater than 0")
+      toast.error(t("receipt.amountMustBePositive"))
       return
     }
     if (!creditNoteForm.reason) {
-      toast.error("Reason is required")
+      toast.error(t("receipt.reasonRequired"))
       return
     }
 
@@ -965,7 +965,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     })
 
     setIsCreateCreditNoteOpen(false)
-    toast.success("Credit note created successfully")
+    toast.success(t("receipt.creditNoteCreated"))
   }
 
   // --- Import helpers ---
@@ -994,7 +994,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const file = event.target.files?.[0]
     if (!file) return
     if (!file.name.toLowerCase().endsWith(".xlsx") && !file.name.toLowerCase().endsWith(".xls")) {
-      toast.error("Please select an Excel file (.xlsx or .xls)")
+      toast.error(t("receipt.selectExcelFile"))
       return
     }
     setImportFileName(file.name)
@@ -1048,7 +1048,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         setImportErrors(errors)
       } catch (err) {
         console.error("Import error:", err)
-        toast.error("Failed to read Excel file")
+        toast.error(t("receipt.failedToReadExcel"))
       }
     }
     reader.readAsBinaryString(file)
@@ -1069,8 +1069,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     setImportErrors([])
     setImportFileName("")
     toast.success(duplicates > 0
-      ? `Imported ${newNotes.length} credit notes (${duplicates} duplicates skipped)`
-      : `Successfully imported ${newNotes.length} credit notes`)
+      ? t("receipt.importedCreditNotesWithDuplicates").replace("{count}", String(newNotes.length)).replace("{duplicates}", String(duplicates))
+      : t("receipt.importedCreditNotes").replace("{count}", String(newNotes.length)))
   }
 
   const downloadTemplate = () => {
@@ -1087,7 +1087,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       "FALSE", "TRUE", "", "1", "Course cancellation"
     ]
     downloadAsXlsx(headers, [exampleRow], "credit_note_import_template")
-    toast.success("Template downloaded")
+    toast.success(t("item.templateDownloaded"))
   }
 
   const getSortedCreditNotes = (creditNotesToSort: CreditNote[]) => {
@@ -1144,10 +1144,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     <div className="space-y-6">
       <div className="mb-4">
         <h3 className="text-lg font-medium">
-          {activeTab === "credit-notes" ? "Credit Notes" : "Receipts"}
+          {activeTab === "credit-notes" ? t("receipt.creditNotes") : t("receipt.receiptsTab")}
         </h3>
         <p className="text-sm text-muted-foreground">
-          {activeTab === "credit-notes" ? "View and manage credit notes" : "View and manage payment receipts"}
+          {activeTab === "credit-notes" ? t("receipt.viewManageCreditNotes") : t("receipt.viewManageReceipts")}
         </p>
       </div>
 
@@ -1156,8 +1156,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         <div className="flex items-center justify-between gap-4 mb-6">
           {viewMode === "both" && !hideCreditNotes && (
             <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="receipts">Receipts</TabsTrigger>
-              <TabsTrigger value="credit-notes">Credit Notes</TabsTrigger>
+              <TabsTrigger value="receipts">{t("receipt.receiptsTab")}</TabsTrigger>
+              <TabsTrigger value="credit-notes">{t("receipt.creditNotes")}</TabsTrigger>
             </TabsList>
           )}
 
@@ -1170,7 +1170,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 onClick={() => setIsImportDialogOpen(true)}
               >
                 <Upload className="w-4 h-4" />
-                Import
+                {t("common.import")}
               </Button>
             )}
             <Button
@@ -1180,7 +1180,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               onClick={exportToExcel}
             >
               <FileDown className="w-4 h-4" />
-              Export All
+              {t("common.exportAll")}
             </Button>
             {(activeTab !== "credit-notes" && viewMode !== "credit-notes") && (
               <Button
@@ -1189,7 +1189,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 onClick={downloadInterfaceFile}
               >
                 <Download className="w-4 h-4" />
-                Download Interface File
+                {t("receipt.downloadInterfaceFile")}
               </Button>
             )}
             <Button
@@ -1203,7 +1203,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               }}
             >
               <FileText className="w-4 h-4" />
-              Receipt Template
+              {t("receipt.receiptTemplate")}
             </Button>
             <Button
               className="flex items-center gap-2"
@@ -1230,7 +1230,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               }}
             >
               <Plus className="w-4 h-4" />
-              {(activeTab === "credit-notes" || viewMode === "credit-notes") ? "Create Credit Note" : "Create Receipt"}
+              {(activeTab === "credit-notes" || viewMode === "credit-notes") ? t("receipt.createCreditNote") : t("receipt.createReceipt")}
             </Button>
           </div>
         </div>
@@ -1340,13 +1340,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="All Statuses" />
+                      <SelectValue placeholder={t("receipt.allStatuses")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="issued">Issued</SelectItem>
-                      <SelectItem value="resent">Resent</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="all">{t("receipt.allStatuses")}</SelectItem>
+                      <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
+                      <SelectItem value="resent">{t("receipt.statusResent")}</SelectItem>
+                      <SelectItem value="failed">{t("receipt.statusFailed")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1401,7 +1401,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   <div className="flex items-center gap-3">
                     <CheckSquare className="w-5 h-5 text-blue-600" />
                     <span className="font-medium text-blue-900">
-                      {selectedReceipts.size} receipt(s) selected
+                      {t("receipt.receiptsSelected").replace("{count}", String(selectedReceipts.size))}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1413,7 +1413,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       className="bg-white hover:bg-blue-100 border-blue-300"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Download PDF
+                      {t("receipt.downloadPDF")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1423,7 +1423,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       className="bg-white hover:bg-blue-100 border-blue-300"
                     >
                       <Mail className="w-4 h-4 mr-2" />
-                      Resend Email
+                      {t("receipt.resendEmail")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1432,7 +1432,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       className="hover:bg-blue-100"
                     >
                       <X className="w-4 h-4 mr-2" />
-                      Clear
+                      {t("common.clear")}
                     </Button>
                   </div>
                 </div>
@@ -1481,7 +1481,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     {/* Student/Client - left aligned (text/name) */}
                     <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                       <div className="flex items-center gap-1">
-                        {category === "external" ? "Client" : t("common.student")}
+                        {category === "external" ? t("receipt.client") : t("common.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
@@ -1603,7 +1603,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>View Receipt</p>
+                                <p>{t("receipt.viewReceipt")}</p>
                               </TooltipContent>
                             </Tooltip>
 
@@ -1618,7 +1618,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Download PDF</p>
+                                <p>{t("receipt.downloadPDF")}</p>
                               </TooltipContent>
                             </Tooltip>
 
@@ -1634,7 +1634,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Resend Email</p>
+                                <p>{t("receipt.resendEmail")}</p>
                               </TooltipContent>
                             </Tooltip>
                           </div>
@@ -1846,7 +1846,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       className="flex items-center gap-2"
                     >
                       <Printer className="w-4 h-4" />
-                      Print
+                      {t("receipt.print")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1857,7 +1857,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       className="flex items-center gap-2"
                     >
                       <Download className="w-4 h-4" />
-                      Download PDF
+                      {t("receipt.downloadPDF")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1868,13 +1868,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       className="flex items-center gap-2"
                     >
                       <Mail className="w-4 h-4" />
-                      Resend Email
+                      {t("receipt.resendEmail")}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setIsViewDialogOpen(false)}
                     >
-                      Close
+                      {t("common.close")}
                     </Button>
                   </div>
                 </div>
@@ -1892,11 +1892,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Filter className="w-4 h-4" />
-                    Search & Filter
+                    {t("common.searchAndFilter")}
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button onClick={applyCreditNoteFilters} className="h-9">Apply</Button>
-                    <Button variant="outline" onClick={clearCreditNoteFilters} className="h-9">Clear</Button>
+                    <Button onClick={applyCreditNoteFilters} className="h-9">{t("common.apply")}</Button>
+                    <Button variant="outline" onClick={clearCreditNoteFilters} className="h-9">{t("common.clear")}</Button>
                   </div>
                 </div>
               </CardHeader>
@@ -1904,11 +1904,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 {/* Row 1: Search, Status, Year Group */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-sm font-medium text-muted-foreground">Search</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search by credit note, invoice, student, or reason..."
+                        placeholder={t("receipt.searchCreditNotePlaceholder")}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 h-9"
@@ -1917,28 +1917,28 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All Status" />
+                        <SelectValue placeholder={t("receipt.allStatus")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="issued">Issued</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="all">{t("receipt.allStatus")}</SelectItem>
+                        <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
+                        <SelectItem value="pending">{t("receipt.statusPending")}</SelectItem>
+                        <SelectItem value="cancelled">{t("receipt.statusCancelled")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">Year Group</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
                     <Select value={gradeFilter} onValueChange={setGradeFilter}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All Year Groups" />
+                        <SelectValue placeholder={t("common.allYearGroups")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Year Groups</SelectItem>
+                        <SelectItem value="all">{t("common.allYearGroups")}</SelectItem>
                         {gradeOptions.map(grade => (
                           <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                         ))}
@@ -1950,13 +1950,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 {/* Row 2: Term, Academic Year, Date From, Date To */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">Term</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
                     <Select value={termFilter} onValueChange={setTermFilter}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All Terms" />
+                        <SelectValue placeholder={t("common.allTerms")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Terms</SelectItem>
+                        <SelectItem value="all">{t("common.allTerms")}</SelectItem>
                         {termOptions.map(term => (
                           <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
                         ))}
@@ -1965,13 +1965,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
                     <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All Years" />
+                        <SelectValue placeholder={t("common.allYears")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Academic Years</SelectItem>
+                        <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
                         {academicYears && academicYears.length > 0 ? (
                           academicYears.map(year => (
                             <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
@@ -1982,13 +1982,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">Date Range</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("common.dateRange")}</label>
                     <div className="flex items-center gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
+                            {dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -2004,12 +2004,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground opacity-0">To</label>
+                    <label className="text-sm font-medium text-muted-foreground opacity-0">{t("common.to")}</label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start h-9 font-normal">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
+                          {dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -2034,7 +2034,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     <div className="flex items-center gap-3">
                       <CheckSquare className="w-5 h-5 text-blue-600" />
                       <span className="font-medium text-blue-900">
-                        {selectedCreditNotes.size} credit note(s) selected
+                        {t("receipt.creditNotesSelected").replace("{count}", String(selectedCreditNotes.size))}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2046,7 +2046,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         className="bg-white hover:bg-blue-100 border-blue-300"
                       >
                         <Download className="w-4 h-4 mr-2" />
-                        Download PDF
+                        {t("receipt.downloadPDF")}
                       </Button>
                       <Button
                         variant="outline"
@@ -2056,7 +2056,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         className="bg-white hover:bg-blue-100 border-blue-300"
                       >
                         <X className="w-4 h-4 mr-2" />
-                        Cancel Selected
+                        {t("receipt.cancelSelected")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -2065,7 +2065,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         className="hover:bg-blue-100"
                       >
                         <X className="w-4 h-4 mr-2" />
-                        Clear
+                        {t("common.clear")}
                       </Button>
                     </div>
                   </div>
@@ -2101,60 +2101,60 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       {/* Credit Note # - left aligned (ID/code) */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
                         <div className="flex items-center gap-1">
-                          Credit Note No.
+                          {t("receipt.creditNoteNo")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Student - left aligned (text/name) */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                         <div className="flex items-center gap-1">
-                          Student
+                          {t("common.student")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Grade - center aligned (badge) */}
                       <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                         <div className="flex items-center gap-1 justify-center">
-                          Year Group
+                          {t("common.yearGroup")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Amount - right aligned (currency) */}
                       <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                         <div className="flex items-center gap-1 justify-end">
-                          Amount
+                          {t("common.amount")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Remaining Balance - right aligned (currency) */}
                       <TableHead align="right">
                         <div className="flex items-center gap-1 justify-end">
-                          Remaining Balance
+                          {t("receipt.remainingBalance")}
                         </div>
                       </TableHead>
                       {/* Reason - left aligned (text) */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("reason")}>
                         <div className="flex items-center gap-1">
-                          Reason
+                          {t("receipt.reason")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Issue Date - left aligned (date) */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
                         <div className="flex items-center gap-1">
-                          Issue Date
+                          {t("receipt.issueDate")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Status - center aligned (badge) */}
                       <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                         <div className="flex items-center gap-1 justify-center">
-                          Status
+                          {t("common.status")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Actions - center aligned */}
-                      <TableHead align="center">Actions</TableHead>
+                      <TableHead align="center">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2217,7 +2217,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>View Credit Note</p>
+                                  <p>{t("receipt.viewCreditNote")}</p>
                                 </TooltipContent>
                               </Tooltip>
 
@@ -2232,7 +2232,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Download PDF</p>
+                                  <p>{t("receipt.downloadPDF")}</p>
                                 </TooltipContent>
                               </Tooltip>
 
@@ -2249,7 +2249,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Cancel Credit Note</p>
+                                    <p>{t("receipt.cancelCreditNote")}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -2276,7 +2276,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             <Dialog open={isViewDialogOpen && viewingCreditNote !== null} onOpenChange={setIsViewDialogOpen}>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
                 <DialogHeader className="px-6 pt-8 pb-6 border-b border-border/50">
-                  <DialogTitle className="text-2xl font-bold">Credit Note Details</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold">{t("receipt.creditNoteDetails")}</DialogTitle>
                 </DialogHeader>
                 {viewingCreditNote && (
                   <div className="px-6 py-6 space-y-10">
@@ -2284,11 +2284,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     <div className="bg-muted/30 rounded-lg p-5">
                       <div className="grid grid-cols-2 gap-6">
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Credit Note Number</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.creditNoteNumber")}</p>
                           <p className="font-mono font-bold text-lg">{viewingCreditNote.creditNoteNumber}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Invoice Number</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.invoiceNumber")}</p>
                           <p className="font-mono font-bold text-lg">{viewingCreditNote.invoiceNumber}</p>
                         </div>
                       </div>
@@ -2296,22 +2296,22 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
                     {/* Student Information */}
                     <div>
-                      <h3 className="text-base font-semibold text-foreground mb-5">Student Information</h3>
+                      <h3 className="text-base font-semibold text-foreground mb-5">{t("receipt.studentInformation")}</h3>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-8">
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Student Name</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.studentName")}</p>
                           <p className="text-base font-semibold">{viewingCreditNote.studentName}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Family Code</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.familyCode")}</p>
                           <p className="text-base font-semibold">{viewingCreditNote.familyCode || viewingCreditNote.studentId}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Year Group</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("common.yearGroup")}</p>
                           <p className="text-base font-semibold">{viewingCreditNote.studentGrade}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Academic Year</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("common.academicYear")}</p>
                           <p className="text-base font-semibold">{formatAcademicYear(viewingCreditNote.academicYear)}</p>
                         </div>
                       </div>
@@ -2319,30 +2319,30 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
                     {/* Credit Note Information */}
                     <div>
-                      <h3 className="text-base font-semibold text-foreground mb-5">Credit Note Information</h3>
+                      <h3 className="text-base font-semibold text-foreground mb-5">{t("receipt.creditNoteInformation")}</h3>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-8">
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Refund Amount</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.refundAmount")}</p>
                           <p className="text-4xl font-bold text-green-600">
                             ฿{viewingCreditNote.amount.toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Status</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("common.status")}</p>
                           <div className="mt-1">
                             {getStatusBadge(viewingCreditNote.status)}
                           </div>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Issue Date</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.issueDate")}</p>
                           <p className="text-base font-semibold">{format(viewingCreditNote.issueDate, "dd MMMM yyyy")}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Term</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("common.term")}</p>
                           <p className="text-base font-semibold">{viewingCreditNote.term}</p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-sm text-muted-foreground mb-2">Reason</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.reason")}</p>
                           <p className="text-base font-semibold">{viewingCreditNote.reason}</p>
                         </div>
                       </div>
@@ -2358,7 +2358,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         className="flex items-center gap-2"
                       >
                         <Download className="w-4 h-4" />
-                        Download PDF
+                        {t("receipt.downloadPDF")}
                       </Button>
                       {viewingCreditNote.status === "pending" && (
                         <Button
@@ -2370,14 +2370,14 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           className="flex items-center gap-2"
                         >
                           <X className="w-4 h-4" />
-                          Cancel Credit Note
+                          {t("receipt.cancelCreditNote")}
                         </Button>
                       )}
                       <Button
                         variant="ghost"
                         onClick={() => setIsViewDialogOpen(false)}
                       >
-                        Close
+                        {t("common.close")}
                       </Button>
                     </div>
                   </div>
@@ -2405,12 +2405,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         !hideCreditNotes && <Dialog open={isCreateCreditNoteOpen} onOpenChange={setIsCreateCreditNoteOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="px-6 pt-6">
-              <DialogTitle>Create Credit Note</DialogTitle>
+              <DialogTitle>{t("receipt.createCreditNote")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 px-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Credit Note Number <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.creditNoteNumber")} <span className="text-red-500">*</span></Label>
                   <Input
                     placeholder="CN-2025-000001"
                     value={creditNoteForm.creditNoteNumber}
@@ -2418,7 +2418,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Invoice Number <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.invoiceNumber")} <span className="text-red-500">*</span></Label>
                   <Input
                     placeholder="20250000001"
                     value={creditNoteForm.invoiceNumber}
@@ -2429,7 +2429,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Family Code</Label>
+                  <Label>{t("receipt.familyCode")}</Label>
                   <Input
                     placeholder="FAM001"
                     value={creditNoteForm.studentId}
@@ -2437,9 +2437,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Student Name <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.studentName")} <span className="text-red-500">*</span></Label>
                   <Input
-                    placeholder="Enter student name"
+                    placeholder={t("receipt.enterStudentName")}
                     value={creditNoteForm.studentName}
                     onChange={(e) => setCreditNoteForm({ ...creditNoteForm, studentName: e.target.value })}
                   />
@@ -2448,10 +2448,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Year Group</Label>
+                  <Label>{t("common.yearGroup")}</Label>
                   <Select value={creditNoteForm.yearGroup} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, yearGroup: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select year group" />
+                      <SelectValue placeholder={t("receipt.selectYearGroup")} />
                     </SelectTrigger>
                     <SelectContent>
                       {["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"].map(grade => (
@@ -2461,10 +2461,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Academic Year</Label>
+                  <Label>{t("common.academicYear")}</Label>
                   <Select value={creditNoteForm.academicYear} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, academicYear: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select academic year" />
+                      <SelectValue placeholder={t("receipt.selectAcademicYear")} />
                     </SelectTrigger>
                     <SelectContent>
                       {academicYears.map(year => (
@@ -2477,10 +2477,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Term</Label>
+                  <Label>{t("common.term")}</Label>
                   <Select value={creditNoteForm.term} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, term: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select term" />
+                      <SelectValue placeholder={t("receipt.selectTerm")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Term 1">Term 1</SelectItem>
@@ -2490,7 +2490,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Amount (THB) <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.amountTHB")} <span className="text-red-500">*</span></Label>
                   <Input
                     type="number"
                     placeholder="0.00"
@@ -2501,29 +2501,29 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               <div className="space-y-2">
-                <Label>Reason <span className="text-red-500">*</span></Label>
+                <Label>{t("receipt.reason")} <span className="text-red-500">*</span></Label>
                 <Select value={creditNoteForm.reason} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, reason: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select reason" />
+                    <SelectValue placeholder={t("receipt.selectReason")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Course cancellation">Course cancellation</SelectItem>
-                    <SelectItem value="Overpayment refund">Overpayment refund</SelectItem>
-                    <SelectItem value="Activity cancellation">Activity cancellation</SelectItem>
-                    <SelectItem value="Billing error">Billing error</SelectItem>
-                    <SelectItem value="Withdrawal">Withdrawal</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Course cancellation">{t("receipt.reasonCourseCancellation")}</SelectItem>
+                    <SelectItem value="Overpayment refund">{t("receipt.reasonOverpaymentRefund")}</SelectItem>
+                    <SelectItem value="Activity cancellation">{t("receipt.reasonActivityCancellation")}</SelectItem>
+                    <SelectItem value="Billing error">{t("receipt.reasonBillingError")}</SelectItem>
+                    <SelectItem value="Withdrawal">{t("receipt.reasonWithdrawal")}</SelectItem>
+                    <SelectItem value="Other">{t("receipt.reasonOther")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>Issue Date</Label>
+                <Label>{t("receipt.issueDate")}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {creditNoteForm.issueDate ? format(creditNoteForm.issueDate, "dd/MM/yyyy") : "Select date"}
+                      {creditNoteForm.issueDate ? format(creditNoteForm.issueDate, "dd/MM/yyyy") : t("receipt.selectDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -2539,10 +2539,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
             <div className="flex justify-end gap-2 px-6 pb-6 pt-4 border-t">
               <Button variant="outline" onClick={() => setIsCreateCreditNoteOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button disabled={!userCanEdit} onClick={handleCreateCreditNote}>
-                Create Credit Note
+                {t("receipt.createCreditNote")}
               </Button>
             </div>
           </DialogContent>
@@ -2556,9 +2556,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
           <div className="p-6 pb-0">
             <DialogHeader>
-              <DialogTitle>Import Credit Notes</DialogTitle>
+              <DialogTitle>{t("receipt.importCreditNotes")}</DialogTitle>
               <DialogDescription>
-                Upload an Excel file to import credit notes. Download the template for the correct format.
+                {t("receipt.importCreditNotesDesc")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -2567,18 +2567,18 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
-                <p className="font-medium">Excel Template</p>
-                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                <p className="font-medium">{t("student.excelTemplate")}</p>
+                <p className="text-sm text-muted-foreground">{t("receipt.downloadTemplateDesc")}</p>
               </div>
               <Button variant="outline" onClick={downloadTemplate}>
                 <FileDown className="w-4 h-4 mr-2" />
-                Download Template
+                {t("student.downloadTemplate")}
               </Button>
             </div>
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="creditNoteFile">Upload File</Label>
+              <Label htmlFor="creditNoteFile">{t("student.uploadFile")}</Label>
               <Input
                 id="creditNoteFile"
                 type="file"
@@ -2599,18 +2599,18 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             {/* Preview Table */}
             {importPreview.length > 0 && (
               <div className="space-y-2">
-                <Label>Preview ({importPreview.length} records)</Label>
+                <Label>{t("receipt.previewRecords").replace("{count}", String(importPreview.length))}</Label>
                 <div className="border rounded-lg overflow-x-auto">
                   <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead align="left" className="w-32">Credit Note No.</TableHead>
-                        <TableHead align="left">Student</TableHead>
-                        <TableHead align="left" className="w-24">Year Group</TableHead>
-                        <TableHead align="right" className="w-28">Amount</TableHead>
-                        <TableHead align="left" className="w-24">Date</TableHead>
-                        <TableHead align="left">Reason</TableHead>
-                        <TableHead align="center" className="w-20">Status</TableHead>
+                        <TableHead align="left" className="w-32">{t("receipt.creditNoteNo")}</TableHead>
+                        <TableHead align="left">{t("common.student")}</TableHead>
+                        <TableHead align="left" className="w-24">{t("common.yearGroup")}</TableHead>
+                        <TableHead align="right" className="w-28">{t("common.amount")}</TableHead>
+                        <TableHead align="left" className="w-24">{t("common.date")}</TableHead>
+                        <TableHead align="left">{t("receipt.reason")}</TableHead>
+                        <TableHead align="center" className="w-20">{t("common.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2641,14 +2641,14 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
           <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={performImport}
               disabled={!userCanEdit || importPreview.length === 0 || importErrors.length > 0}
             >
               <Upload className="w-4 h-4 mr-2" />
-              Import {importPreview.length > 0 ? `${importPreview.length} Records` : ""}
+              {importPreview.length > 0 ? t("receipt.importRecords").replace("{count}", String(importPreview.length)) : t("common.import")}
             </Button>
           </div>
         </DialogContent>

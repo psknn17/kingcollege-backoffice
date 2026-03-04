@@ -773,11 +773,11 @@ export function DebtReminderSettings() {
             <CardTitle className="flex items-center justify-between text-xl font-semibold">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Email Templates
+                {t("debtReminder.templates")}
               </div>
               <Button size="sm" onClick={openNewTemplate} disabled={!userCanEdit} className="flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
-                New Template
+                {t("debtReminder.addTemplate")}
               </Button>
             </CardTitle>
           </CardHeader>
@@ -841,7 +841,7 @@ export function DebtReminderSettings() {
                       className="flex items-center gap-1.5"
                     >
                       <FileText className="w-4 h-4" />
-                      Use Template
+                      {t("debtReminder.useTemplate")}
                     </Button>
                     <Switch
                       checked={reminder.enabled}
@@ -872,14 +872,14 @@ export function DebtReminderSettings() {
                 {/* Row 1: Academic Year & Term */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Academic Year</Label>
+                    <Label>{t("debtReminder.academicYear")}</Label>
                     <Select
                       value={reminder.academicYear}
                       onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
                       disabled={!userCanEdit || isReminderLocked(reminder)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select academic year" />
+                        <SelectValue placeholder={t("debtReminder.selectAcademicYear")} />
                       </SelectTrigger>
                       <SelectContent>
                         {academicYears.map(year => (
@@ -892,14 +892,14 @@ export function DebtReminderSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Term</Label>
+                    <Label>{t("debtReminder.term")}</Label>
                     <Select
                       value={reminder.term}
                       onValueChange={(value) => updateReminder(reminder.id, "term", value)}
                       disabled={!userCanEdit || isReminderLocked(reminder)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select term" />
+                        <SelectValue placeholder={t("debtReminder.selectTerm")} />
                       </SelectTrigger>
                       <SelectContent>
                         {academicYears
@@ -917,14 +917,14 @@ export function DebtReminderSettings() {
                 {/* Row 2: Email Subject, Invoice Status Filter & Due Date Filter */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Email Subject</Label>
+                    <Label>{t("debtReminder.emailSubject")}</Label>
                     <Select
                       value={reminder.subject}
                       onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
                       disabled={!userCanEdit || isReminderLocked(reminder)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select email subject" />
+                        <SelectValue placeholder={t("debtReminder.selectEmailSubject")} />
                       </SelectTrigger>
                       <SelectContent>
                         {PRESET_EMAIL_SUBJECTS.map(subject => (
@@ -937,7 +937,7 @@ export function DebtReminderSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Invoice Status Filter</Label>
+                    <Label>{t("debtReminder.invoiceStatusFilter")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
@@ -948,7 +948,7 @@ export function DebtReminderSettings() {
                           <span className="truncate">
                             {reminder.invoiceStatuses?.length
                               ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
-                              : "Select invoice statuses"}
+                              : t("debtReminder.selectInvoiceStatuses")}
                           </span>
                           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                         </button>
@@ -992,7 +992,7 @@ export function DebtReminderSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Due Date Filter</Label>
+                    <Label>{t("debtReminder.dueDateFilter")}</Label>
                     <Select
                       value={reminder.dueDateFilter || "all"}
                       onValueChange={(value) => updateReminder(reminder.id, "dueDateFilter", value)}
@@ -1015,7 +1015,7 @@ export function DebtReminderSettings() {
 
                 {/* Row 3: Email Title */}
                 <div className="space-y-2">
-                  <Label>Email Title</Label>
+                  <Label>{t("debtReminder.emailSubject")}</Label>
                   <Input
                     value={reminder.emailTitle}
                     onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
@@ -1029,7 +1029,7 @@ export function DebtReminderSettings() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4" />
-                      Send Date
+                      {t("debtReminder.sendDate")}
                     </Label>
                     <Popover open={openCalendarId === reminder.id} onOpenChange={(open) => setOpenCalendarId(open ? reminder.id : null)}>
                       <PopoverTrigger asChild>
@@ -1062,7 +1062,7 @@ export function DebtReminderSettings() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Settings className="w-4 h-4" />
-                      Send Time
+                      {t("debtReminder.sendTime")}
                     </Label>
                     <Input
                       type="time"
@@ -1074,7 +1074,7 @@ export function DebtReminderSettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Message Template</Label>
+                  <Label>{t("debtReminder.messageTemplate")}</Label>
                   <Textarea
                     value={reminder.message}
                     onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
@@ -1089,7 +1089,7 @@ export function DebtReminderSettings() {
 
                 {/* Preview */}
                 <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">Reminder Preview</h4>
+                  <h4 className="font-medium mb-2">{t("debtReminder.scheduledReminders")}</h4>
                   <div className="text-sm space-y-1">
                     <p><strong>Academic Year:</strong> {formatAcademicYear(reminder.academicYear) || "Not selected"}</p>
                     <p><strong>Term:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term || "Not selected"}</p>
@@ -1171,7 +1171,7 @@ export function DebtReminderSettings() {
                     <div className="flex items-center gap-2">
                       <ClockIcon className="w-5 h-5 text-blue-600" />
                       <CardTitle className="text-base">
-                        Scheduled Reminders ({(reminders || []).filter(r => r.status === "scheduled").length})
+                        {t("debtReminder.scheduledReminders")} ({(reminders || []).filter(r => r.status === "scheduled").length})
                       </CardTitle>
                     </div>
                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isScheduledCollapsed ? '' : 'rotate-180'}`} />
@@ -1214,7 +1214,7 @@ export function DebtReminderSettings() {
                               className="flex items-center gap-1.5 text-xs"
                             >
                               <FileText className="w-3 h-3" />
-                              Use Template
+                              {t("debtReminder.useTemplate")}
                             </Button>
                             <Switch
                               checked={reminder.enabled}
@@ -1564,7 +1564,7 @@ export function DebtReminderSettings() {
           )}
 
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>{t("common.close")}</Button>
             {(!previewReminder?.status || previewReminder?.status === "draft") && (
               <Button
                 onClick={handleScheduleReminder}
@@ -1595,8 +1595,8 @@ export function DebtReminderSettings() {
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <h2 className="text-base font-semibold">Remind History</h2>
-                <p className="text-xs text-muted-foreground">All reminder emails sent to parents</p>
+                <h2 className="text-base font-semibold">{t("debtReminder.sentReminders")}</h2>
+                <p className="text-xs text-muted-foreground">{t("debtReminder.sentReminders")}</p>
               </div>
             </div>
             <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
@@ -1659,7 +1659,7 @@ export function DebtReminderSettings() {
           {/* Footer */}
           <div className="flex items-center justify-end px-6 py-4 border-t bg-muted/20">
             <Button variant="outline" onClick={() => setIsHistoryModalOpen(false)}>
-              Close
+              {t("common.close")}
             </Button>
           </div>
         </DialogContent>
@@ -1669,7 +1669,7 @@ export function DebtReminderSettings() {
       <Dialog open={templateManageDialog.isOpen} onOpenChange={(open) => !open && setTemplateManageDialog({ isOpen: false, editing: null })}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader className="mb-4">
-            <DialogTitle>{templateManageDialog.editing ? "Edit Template" : "New Template"}</DialogTitle>
+            <DialogTitle>{templateManageDialog.editing ? t("debtReminder.editTemplate") : t("debtReminder.addTemplate")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -1723,8 +1723,8 @@ export function DebtReminderSettings() {
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setTemplateManageDialog({ isOpen: false, editing: null })}>Cancel</Button>
-            <Button onClick={saveTemplateForm}><Save className="w-4 h-4 mr-2" />{templateManageDialog.editing ? "Save Changes" : "Create Template"}</Button>
+            <Button variant="outline" onClick={() => setTemplateManageDialog({ isOpen: false, editing: null })}>{t("common.cancel")}</Button>
+            <Button onClick={saveTemplateForm}><Save className="w-4 h-4 mr-2" />{templateManageDialog.editing ? t("common.saveChanges") : t("debtReminder.addTemplate")}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1735,7 +1735,7 @@ export function DebtReminderSettings() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Select Email Template
+              {t("debtReminder.selectTemplate")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground -mt-2">
@@ -1768,7 +1768,7 @@ export function DebtReminderSettings() {
           </div>
           <div className="flex justify-end pt-2">
             <Button variant="outline" onClick={() => setTemplatePickerDialog({ isOpen: false, reminderId: null })}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </DialogContent>

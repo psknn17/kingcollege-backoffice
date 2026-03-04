@@ -531,7 +531,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     const { id, name, yearGroup, parentName } = individualStudentForm
 
     if (!id || !name || !yearGroup || !parentName) {
-      toast.error("Please fill in all fields")
+      toast.error(t("discount.fillInAllFields"))
       return
     }
 
@@ -542,7 +542,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         const existingStudent = updatedGroups[groupIndex].students.find(s => s.id === id)
 
         if (existingStudent) {
-          toast.error("Student with this ID already exists in the group")
+          toast.error(t("discount.studentAlreadyExists"))
           return
         }
 
@@ -550,7 +550,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         updatedGroups[groupIndex].students = [...updatedGroups[groupIndex].students, newStudent]
         setStudentGroups(updatedGroups)
 
-        toast.success("Student added successfully")
+        toast.success(t("discount.studentAdded"))
         setAddIndividualDialog({ isOpen: false, groupId: null })
         setIndividualStudentForm({ id: "", name: "", yearGroup: "", parentName: "" })
         clearStudentSearch()
@@ -598,7 +598,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const addStudentToGroup = () => {
     const studentId = studentInput.trim().toUpperCase()
     if (!studentId) {
-      toast.error("Please enter a student ID")
+      toast.error(t("discount.enterStudentID"))
       return
     }
 
@@ -667,7 +667,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size too large. Maximum size is 5MB.")
+      toast.error(t("discount.fileTooLarge"))
       return
     }
 
@@ -706,7 +706,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     }
 
     reader.onerror = () => {
-      toast.error("Failed to read file")
+      toast.error(t("discount.failedToReadFile"))
       setIsProcessingFile(false)
     }
 
@@ -719,7 +719,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       [["KC2024001"], ["KC2024002"], ["KC2024003"], ["KC2024004"], ["KC2024005"]],
       "student_ids_template"
     )
-    toast.success("Student ID template downloaded")
+    toast.success(t("discount.studentIDTemplateDownloaded"))
   }
 
   const removeStudentFromGroup = (studentId: string) => {
@@ -747,7 +747,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       : groupForm.fixedAmount > 0
 
     if (!groupForm.name || !hasValidDiscount) {
-      toast.error("Please fill in all required fields")
+      toast.error(t("discount.fillRequiredFields"))
       return
     }
 
@@ -765,7 +765,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       }
 
       setStudentGroups(prev => prev.map(g => g.id === editGroupDialog.group.id ? updatedGroup : g))
-      toast.success("Student group updated successfully")
+      toast.success(t("discount.groupUpdated"))
       setEditGroupDialog({ isOpen: false, group: null })
     } else {
       // Create new group
@@ -781,7 +781,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       }
 
       setStudentGroups(prev => [...prev, newGroup])
-      toast.success("Student group created successfully")
+      toast.success(t("discount.groupCreated"))
       setIsGroupDialogOpen(false)
     }
     resetGroupForm()
@@ -819,7 +819,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const confirmDeleteGroup = () => {
     if (deleteConfirmDialog.group) {
       setStudentGroups(prev => prev.filter(g => g.id !== deleteConfirmDialog.group.id))
-      toast.success("Student group deleted successfully")
+      toast.success(t("discount.groupDeleted"))
       setDeleteConfirmDialog({ isOpen: false, group: null })
     }
   }
@@ -842,7 +842,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           }
           : discount
       ))
-      toast.success("Discount code updated successfully")
+      toast.success(t("discount.discountCodeUpdated"))
     } else {
       const newDiscount: DiscountCode = {
         id: Date.now(),
@@ -854,7 +854,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         createdBy: "Admin"
       }
       setDiscountCodes(prev => [...prev, newDiscount])
-      toast.success("Discount code created successfully")
+      toast.success(t("discount.discountCodeCreated"))
     }
 
     setIsDialogOpen(false)
@@ -889,12 +889,12 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         ? { ...discount, isActive: !discount.isActive }
         : discount
     ))
-    toast.success("Discount status updated")
+    toast.success(t("discount.discountStatusUpdated"))
   }
 
   const copyDiscountCode = (code: string) => {
     navigator.clipboard.writeText(code)
-    toast.success("Discount code copied to clipboard")
+    toast.success(t("discount.discountCodeCopied"))
   }
 
   const getActiveTab = () => {
@@ -938,7 +938,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Student Groups</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("discount.studentGroupsCard")}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -946,20 +946,20 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   {studentGroups.length}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  active groups
+                  {t("discount.activeGroups")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("discount.totalSavings")}</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">฿127,500</div>
                 <p className="text-xs text-muted-foreground">
-                  provided to families
+                  {t("discount.providedToFamilies")}
                 </p>
               </CardContent>
             </Card>
@@ -969,8 +969,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           <div className="grid gap-6 md:grid-cols-3">
             <Card>
               <CardHeader>
-                <CardTitle>Top Student Groups</CardTitle>
-                <CardDescription>Groups with highest discount rates</CardDescription>
+                <CardTitle>{t("discount.topStudentGroups")}</CardTitle>
+                <CardDescription>{t("discount.groupsHighestDiscount")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -998,7 +998,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     ))}
                   {studentGroups.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      No student groups created yet
+                      {t("discount.noStudentGroupsYet")}
                     </p>
                   )}
                 </div>
@@ -1007,8 +1007,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
             <Card>
               <CardHeader>
-                <CardTitle>Groups by Department</CardTitle>
-                <CardDescription>Distribution across departments</CardDescription>
+                <CardTitle>{t("discount.groupsByDepartment")}</CardTitle>
+                <CardDescription>{t("discount.distributionAcrossDept")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -1033,8 +1033,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
             <Card>
               <CardHeader>
-                <CardTitle>Student Coverage</CardTitle>
-                <CardDescription>Students enrolled in targeted discounts</CardDescription>
+                <CardTitle>{t("discount.studentCoverage")}</CardTitle>
+                <CardDescription>{t("discount.studentsEnrolledTargeted")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -1071,7 +1071,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                   {studentGroups.length === 0 && discountCodes.filter(d => d.selectedStudents.length > 0).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      No student groups or targeted discounts available
+                      {t("discount.noGroupsOrTargeted")}
                     </p>
                   )}
                 </div>
@@ -1093,30 +1093,30 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
               <DialogTrigger asChild>
                 <Button onClick={() => resetGroupForm()} disabled={!userCanEdit}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Student Group
+                  {t("discount.createStudentGroup")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl p-6">
                 <DialogHeader>
-                  <DialogTitle>Create Student Group</DialogTitle>
+                  <DialogTitle>{t("discount.createStudentGroupTitle")}</DialogTitle>
                   <DialogDescription>
-                    Create a group of students with specific discount for selected departments
+                    {t("discount.createStudentGroupDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="group-name">Group Name</Label>
+                    <Label htmlFor="group-name">{t("discount.groupName")}</Label>
                     <Input
                       id="group-name"
                       value={groupForm.name}
                       onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                      placeholder="Year 7 Excellence Group"
+                      placeholder={t("discount.groupNamePlaceholder")}
                       disabled={!userCanEdit}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="group-discount-type">Discount Type</Label>
+                      <Label htmlFor="group-discount-type">{t("discount.discountTypeLabel")}</Label>
                       <Select
                         value={groupForm.discountType}
                         onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}
@@ -1126,14 +1126,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="percentage">Percentage (%)</SelectItem>
-                          <SelectItem value="fixed">Fixed Amount (฿)</SelectItem>
+                          <SelectItem value="percentage">{t("discount.percentageOption")}</SelectItem>
+                          <SelectItem value="fixed">{t("discount.fixedAmountOption")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     {groupForm.discountType === "percentage" ? (
                       <div className="space-y-2">
-                        <Label htmlFor="group-discount">Discount Percentage %</Label>
+                        <Label htmlFor="group-discount">{t("discount.discountPercentage")}</Label>
                         <Input
                           id="group-discount"
                           type="number"
@@ -1147,7 +1147,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Label htmlFor="group-fixed-amount">Fixed Amount ฿</Label>
+                        <Label htmlFor="group-fixed-amount">{t("discount.fixedAmountLabel")}</Label>
                         <Input
                           id="group-fixed-amount"
                           type="number"
@@ -1164,9 +1164,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   {/* Student ID Input Section */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label>Add Students to Whitelist</Label>
+                      <Label>{t("discount.addStudentsToWhitelist")}</Label>
                       <span className="text-sm text-muted-foreground">
-                        {groupForm.selectedStudents.length} students added
+                        {t("discount.studentsAdded").replace("{count}", String(groupForm.selectedStudents.length))}
                       </span>
                     </div>
 
@@ -1174,25 +1174,25 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                     <Tabs defaultValue="individual" className="space-y-4">
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="individual">Individual Input</TabsTrigger>
-                        <TabsTrigger value="csv-upload">CSV Upload</TabsTrigger>
+                        <TabsTrigger value="individual">{t("discount.individualInput")}</TabsTrigger>
+                        <TabsTrigger value="csv-upload">{t("discount.csvUpload")}</TabsTrigger>
                       </TabsList>
 
                       <TabsContent value="individual" className="space-y-3">
                         <div className="space-y-2">
-                          <Label>Filter by Year Group</Label>
+                          <Label>{t("discount.filterByYearGroup")}</Label>
                           <Select
                             value={selectedYearGroup}
                             onValueChange={setSelectedYearGroup}
                             disabled={!userCanEdit}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select Year Group" />
+                              <SelectValue placeholder={t("discount.filterByYearGroup")} />
                             </SelectTrigger>
                             <SelectContent>
                               {uniqueYearGroups.map(group => (
                                 <SelectItem key={group} value={group}>
-                                  {group === "All" ? "All Year Groups" : group}
+                                  {group === "All" ? t("discount.allYearGroups") : group}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1200,7 +1200,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="student-input">Search & Add Student</Label>
+                          <Label htmlFor="student-input">{t("discount.searchAddStudent")}</Label>
                           <div className="relative">
                             <div className="relative">
                               <Input
@@ -1273,7 +1273,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Select a year group or type to search, then click to add student
+                            {t("discount.selectYearGroupHint")}
                           </p>
                         </div>
                       </TabsContent>
@@ -1281,7 +1281,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       <TabsContent value="csv-upload" className="space-y-4">
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <Label>Upload Student CSV File</Label>
+                            <Label>{t("discount.uploadStudentCSV")}</Label>
                             <Button
                               type="button"
                               variant="outline"
@@ -1289,14 +1289,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               onClick={downloadStudentTemplate}
                             >
                               <Download className="w-4 h-4 mr-2" />
-                              Download Template
+                              {t("discount.downloadTemplate")}
                             </Button>
                           </div>
 
                           <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
                             <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                             <p className="text-sm text-muted-foreground mb-2">
-                              Upload CSV file with student IDs
+                              {t("discount.uploadCSVHint")}
                             </p>
                             <input
                               type="file"
@@ -1308,7 +1308,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             />
                             <Button asChild variant="outline" disabled={isProcessingFile || !userCanEdit}>
                               <label htmlFor="csv-file-upload" className="cursor-pointer">
-                                {isProcessingFile ? "Processing..." : "Choose CSV File"}
+                                {isProcessingFile ? t("discount.processingFile") : t("discount.chooseCSVFile")}
                               </label>
                             </Button>
                           </div>
@@ -1328,7 +1328,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               {fileParseErrors.length > 0 && (
                                 <div className="bg-destructive/10 border border-destructive/20 rounded p-3">
                                   <h4 className="text-sm font-medium text-destructive mb-2">
-                                    File Processing Errors ({fileParseErrors.length}):
+                                    {t("discount.fileProcessErrors").replace("{count}", String(fileParseErrors.length))}
                                   </h4>
                                   <div className="max-h-24 overflow-y-auto text-xs text-destructive space-y-1">
                                     {fileParseErrors.map((error, index) => (
@@ -1341,12 +1341,12 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           )}
 
                           <div className="text-xs text-muted-foreground space-y-1">
-                            <p><strong>File format requirements:</strong></p>
-                            <p>• CSV file with Student ID in the first column</p>
-                            <p>• Optional header row (will be automatically detected)</p>
-                            <p>• Student ID format: KC2024001, KC2024002, KC2024003, etc.</p>
-                            <p>• One student ID per row</p>
-                            <p>• Maximum file size: 5MB</p>
+                            <p><strong>{t("discount.fileFormatReq")}</strong></p>
+                            <p>• {t("discount.csvFileID")}</p>
+                            <p>• {t("discount.csvOptionalHeader")}</p>
+                            <p>• {t("discount.csvIDFormat")}</p>
+                            <p>• {t("discount.csvOnePerRow")}</p>
+                            <p>• {t("discount.csvMaxSize")}</p>
                           </div>
 
                           <div className="bg-muted/50 p-3 rounded text-xs">
@@ -1363,7 +1363,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     {groupForm.selectedStudents.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label>Selected Students ({groupForm.selectedStudents.length})</Label>
+                          <Label>{t("discount.selectedStudents").replace("{count}", String(groupForm.selectedStudents.length))}</Label>
                           <Button
                             type="button"
                             variant="outline"
@@ -1371,7 +1371,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             onClick={() => setGroupForm(prev => ({ ...prev, selectedStudents: [] }))}
                             disabled={!userCanEdit}
                           >
-                            Clear All
+                            {t("discount.clearAll")}
                           </Button>
                         </div>
                         <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
@@ -1393,7 +1393,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                       disabled={!userCanEdit}
                                     />
                                     <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
-                                      {student.isActive === false ? 'Inactive' : 'Active'}
+                                      {student.isActive === false ? t("discount.studentInactiveStatus") : t("discount.studentActiveStatus")}
                                     </span>
                                   </div>
                                   <button
@@ -1415,10 +1415,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>
-                      Cancel
+                      {t("discount.cancelBtn")}
                     </Button>
                     <Button onClick={handleSaveGroup} disabled={!userCanEdit}>
-                      Create Group
+                      {t("discount.createGroup")}
                     </Button>
                   </div>
                 </div>
@@ -1437,21 +1437,21 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         <h4 className="font-medium">{group.name}</h4>
                         <Badge variant={group.isActive === false ? "outline" : "secondary"} className={group.isActive === false ? "text-gray-500" : ""}>
                           {group.discountType === "fixed"
-                            ? `฿${group.fixedAmount?.toLocaleString() || 0} Discount`
-                            : `${group.discountPercentage}% Discount`
+                            ? `฿${group.fixedAmount?.toLocaleString() || 0} ${t("discount.discount")}`
+                            : `${group.discountPercentage}% ${t("discount.discount")}`
                           }
                         </Badge>
                         {group.departments.map(dept => (
                           <Badge key={dept} variant="outline" className="text-xs">{dept}</Badge>
                         ))}
                         {group.isActive === false && (
-                          <Badge variant="outline" className="text-red-500 border-red-300">Disabled</Badge>
+                          <Badge variant="outline" className="text-red-500 border-red-300">{t("discount.disabled")}</Badge>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                         <Users className="w-4 h-4" />
-                        <span>{group.students.length} students in whitelist</span>
+                        <span>{t("discount.studentsInWhitelist").replace("{count}", String(group.students.length))}</span>
                       </div>
 
                     </div>
@@ -1459,7 +1459,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => handleViewGroup(group)}>
                         <Eye className="w-4 h-4 mr-1" />
-                        View All
+                        {t("discount.viewAll")}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleEditGroup(group)} disabled={!userCanEdit}>
                         <Edit className="w-4 h-4" />
@@ -1482,13 +1482,13 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
               <Card>
                 <CardContent className="p-12 text-center">
                   <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="font-medium mb-2">No Student Groups</h3>
+                  <h3 className="font-medium mb-2">{t("discount.noStudentGroups")}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Create your first student group to manage discount whitelist
+                    {t("discount.noStudentGroupsDesc")}
                   </p>
                   <Button onClick={() => setIsGroupDialogOpen(true)} disabled={!userCanEdit}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Student Group
+                    {t("discount.createStudentGroup")}
                   </Button>
                 </CardContent>
               </Card>
@@ -1500,10 +1500,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
             <DialogContent className="max-w-4xl p-6">
               <DialogHeader>
                 <DialogTitle>
-                  {viewGroupDialog.group?.name} - Student List
+                  {t("discount.studentListTitle").replace("{name}", viewGroupDialog.group?.name ?? "")}
                 </DialogTitle>
                 <DialogDescription>
-                  Complete list of students in this discount group
+                  {t("discount.completeStudentList")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -1513,8 +1513,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">
                         {viewGroupDialog.group.discountType === "fixed"
-                          ? `฿${viewGroupDialog.group.fixedAmount?.toLocaleString() || 0} Discount`
-                          : `${viewGroupDialog.group.discountPercentage}% Discount`
+                          ? `฿${viewGroupDialog.group.fixedAmount?.toLocaleString() || 0} ${t("discount.discount")}`
+                          : `${viewGroupDialog.group.discountPercentage}% ${t("discount.discount")}`
                         }
                       </Badge>
                       {viewGroupDialog.group.departments.map((dept: string) => (
@@ -1522,7 +1522,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       ))}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {viewGroupDialog.group.students.length} students total
+                      {t("discount.studentsTotal").replace("{count}", String(viewGroupDialog.group.students.length))}
                     </div>
                   </div>
 
@@ -1554,7 +1554,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         }}
                       >
                         <Download className="w-4 h-4 mr-2" />
-                        Download List
+                        {t("discount.downloadList")}
                       </Button>
                       <Button
                         variant="outline"
@@ -1565,7 +1565,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         disabled={!userCanEdit}
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        Upload CSV
+                        {t("discount.uploadCSVBtn")}
                       </Button>
                       <Button
                         variant="outline"
@@ -1576,11 +1576,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         disabled={!userCanEdit}
                       >
                         <UserPlus className="w-4 h-4 mr-2" />
-                        Add Individual
+                        {t("discount.addIndividualBtn")}
                       </Button>
                     </div>
                     <Button onClick={() => setViewGroupDialog({ isOpen: false, group: null })}>
-                      Close
+                      {t("discount.close")}
                     </Button>
                   </div>
                 </div>
@@ -1598,9 +1598,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           }}>
             <DialogContent className="max-w-3xl p-6">
               <DialogHeader>
-                <DialogTitle>Edit Student Group</DialogTitle>
+                <DialogTitle>{t("discount.editStudentGroup")}</DialogTitle>
                 <DialogDescription>
-                  Update group information and manage student whitelist
+                  {t("discount.editStudentGroupDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -1608,8 +1608,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 {/* Enable/Disable Group Toggle */}
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                   <div>
-                    <Label className="text-base font-medium">Enable Group</Label>
-                    <p className="text-sm text-muted-foreground">Toggle to enable or disable this discount group</p>
+                    <Label className="text-base font-medium">{t("discount.enableGroup")}</Label>
+                    <p className="text-sm text-muted-foreground">{t("discount.enableGroupDesc")}</p>
                   </div>
                   <Switch
                     checked={groupForm.isActive}
@@ -1619,18 +1619,18 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-group-name">Group Name</Label>
+                  <Label htmlFor="edit-group-name">{t("discount.groupName")}</Label>
                   <Input
                     id="edit-group-name"
                     value={groupForm.name}
                     onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                    placeholder="Year 7 Excellence Group"
+                    placeholder={t("discount.groupNamePlaceholder")}
                     disabled={!userCanEdit}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-group-discount-type">Discount Type</Label>
+                    <Label htmlFor="edit-group-discount-type">{t("discount.discountTypeLabel")}</Label>
                     <Select
                       value={groupForm.discountType}
                       onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}
@@ -1640,14 +1640,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">Percentage (%)</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount (฿)</SelectItem>
+                        <SelectItem value="percentage">{t("discount.percentageOption")}</SelectItem>
+                        <SelectItem value="fixed">{t("discount.fixedAmountOption")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   {groupForm.discountType === "percentage" ? (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-group-discount">Discount Percentage %</Label>
+                      <Label htmlFor="edit-group-discount">{t("discount.discountPercentage")}</Label>
                       <Input
                         id="edit-group-discount"
                         type="number"
@@ -1661,7 +1661,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-group-fixed-amount">Fixed Amount ฿</Label>
+                      <Label htmlFor="edit-group-fixed-amount">{t("discount.fixedAmountLabel")}</Label>
                       <Input
                         id="edit-group-fixed-amount"
                         type="number"
@@ -1678,22 +1678,22 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 {/* Student Management Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label>Manage Students in Whitelist</Label>
+                    <Label>{t("discount.manageStudentsWhitelist")}</Label>
                     <span className="text-sm text-muted-foreground">
-                      {groupForm.selectedStudents.length} students
+                      {t("discount.studentsAdded").replace("{count}", String(groupForm.selectedStudents.length))}
                     </span>
                   </div>
 
                   <Tabs defaultValue="add-student" className="space-y-4">
                     <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="add-student">Add Individual</TabsTrigger>
-                      <TabsTrigger value="csv-upload">CSV Upload</TabsTrigger>
-                      <TabsTrigger value="current-students">Current Students ({groupForm.selectedStudents.length})</TabsTrigger>
+                      <TabsTrigger value="add-student">{t("discount.addIndividualTab")}</TabsTrigger>
+                      <TabsTrigger value="csv-upload">{t("discount.csvUpload")}</TabsTrigger>
+                      <TabsTrigger value="current-students">{t("discount.currentStudentsTab").replace("{count}", String(groupForm.selectedStudents.length))}</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="add-student" className="space-y-3">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-student-input">Search & Add Student</Label>
+                        <Label htmlFor="edit-student-input">{t("discount.searchAddStudent")}</Label>
                         <div className="relative">
                           <div className="relative">
                             <Input
@@ -1755,7 +1755,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Type to search, then click to add student
+                          {t("discount.typeToSearchStudent")}
                         </p>
                       </div>
                     </TabsContent>
@@ -1763,7 +1763,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     <TabsContent value="csv-upload" className="space-y-3">
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-csv-file">Upload Student CSV File</Label>
+                          <Label htmlFor="edit-csv-file">{t("discount.uploadStudentCSV")}</Label>
                           <div
                             className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary/50 transition-colors"
                             onDragOver={(e) => {
@@ -1839,13 +1839,13 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             {isProcessingFile && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                Processing file...
+                                {t("discount.processingFile")}
                               </div>
                             )}
 
                             {fileParseErrors.length > 0 && (
                               <div className="space-y-2">
-                                <Label>Import Errors:</Label>
+                                <Label>{t("discount.importErrors")}</Label>
                                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 max-h-32 overflow-y-auto">
                                   {fileParseErrors.map((error, index) => (
                                     <div key={index} className="text-sm text-destructive">
@@ -1866,10 +1866,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             className="flex items-center gap-2"
                           >
                             <Download className="h-4 w-4" />
-                            Download Template
+                            {t("discount.downloadTemplate")}
                           </Button>
                           <span className="text-xs text-muted-foreground">
-                            Need a template? Download the CSV format.
+                            {t("discount.needTemplate")}
                           </span>
                         </div>
                       </div>
@@ -1884,7 +1884,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             <Input
                               value={currentStudentsSearch}
                               onChange={(e) => setCurrentStudentsSearch(e.target.value)}
-                              placeholder="Search students by name or ID..."
+                              placeholder={t("discount.searchStudentsPlaceholder")}
                               className="pl-10"
                             />
                           </div>
@@ -1914,7 +1914,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                           disabled={!userCanEdit}
                                         />
                                         <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
-                                          {student.isActive === false ? 'Inactive' : 'Active'}
+                                          {student.isActive === false ? t("discount.studentInactiveStatus") : t("discount.studentActiveStatus")}
                                         </span>
                                       </div>
                                       <button
@@ -1941,7 +1941,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                         </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
-                          No students in this group
+                          {t("discount.noStudentsInGroup")}
                         </div>
                       )}
                     </TabsContent>
@@ -1953,10 +1953,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     setEditGroupDialog({ isOpen: false, group: null })
                     resetGroupForm()
                   }}>
-                    Cancel
+                    {t("discount.cancelBtn")}
                   </Button>
                   <Button onClick={handleSaveGroup} disabled={!userCanEdit}>
-                    Update Group
+                    {t("discount.updateGroup")}
                   </Button>
                 </div>
               </div>
@@ -1969,9 +1969,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           }}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Student Group</AlertDialogTitle>
+                <AlertDialogTitle>{t("discount.deleteStudentGroup")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this student group? This action cannot be undone.
+                  {t("discount.deleteGroupConfirm")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
@@ -1979,20 +1979,20 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 <div className="p-4 bg-muted/50 rounded-lg my-4">
                   <div className="font-medium mb-1">{deleteConfirmDialog.group.name}</div>
                   <div className="text-sm text-muted-foreground">
-                    {deleteConfirmDialog.group.students.length} students • {deleteConfirmDialog.group.discountType === "fixed" ? `฿${deleteConfirmDialog.group.fixedAmount?.toLocaleString() || 0}` : `${deleteConfirmDialog.group.discountPercentage}%`} discount
+                    {deleteConfirmDialog.group.students.length} students • {deleteConfirmDialog.group.discountType === "fixed" ? `฿${deleteConfirmDialog.group.fixedAmount?.toLocaleString() || 0}` : `${deleteConfirmDialog.group.discountPercentage}%`} {t("discount.discount")}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Departments: {deleteConfirmDialog.group.departments.join(", ")}
+                    {t("discount.departments")} {deleteConfirmDialog.group.departments.join(", ")}
                   </div>
                 </div>
               )}
 
               <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setDeleteConfirmDialog({ isOpen: false, group: null })}>
-                  Cancel
+                  {t("discount.cancelBtn")}
                 </AlertDialogCancel>
                 <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" style={{ backgroundColor: '#dc2626', color: '#ffffff' }}>
-                  Delete Group
+                  {t("discount.deleteGroup")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -2016,9 +2016,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       }}>
         <DialogContent className="max-w-4xl p-6">
           <DialogHeader>
-            <DialogTitle>Upload Students via CSV</DialogTitle>
+            <DialogTitle>{t("discount.uploadStudentsCSV")}</DialogTitle>
             <DialogDescription>
-              Upload a CSV file to add multiple students to the group. Required columns: id, name, year_group, parent_name
+              {t("discount.uploadCSVDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -2047,9 +2047,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
               >
                 <div className="text-center">
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Upload CSV File</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("discount.uploadCSVFile")}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Drag and drop your CSV file here, or click to browse
+                    {t("discount.dragDropCSV")}
                   </p>
                   <input
                     type="file"
@@ -2063,7 +2063,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   />
                   <Button variant="outline" asChild className="cursor-pointer">
                     <label htmlFor="csv-upload">
-                      Select CSV File
+                      {t("discount.selectCSVFile")}
                     </label>
                   </Button>
                 </div>
@@ -2073,14 +2073,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
             {isPreviewingCsv && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-sm text-muted-foreground">Processing CSV file...</p>
+                <p className="text-sm text-muted-foreground">{t("discount.processingCSV")}</p>
               </div>
             )}
 
             {csvFile && csvPreviewData.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Preview: {csvPreviewData.length} students found</h4>
+                  <h4 className="font-medium">{t("discount.previewStudentsFound").replace("{count}", String(csvPreviewData.length))}</h4>
                   <Button
                     variant="outline"
                     size="sm"
@@ -2111,13 +2111,13 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCsvUploadDialog({ isOpen: false, groupId: null })}>
-                Cancel
+                {t("discount.cancelBtn")}
               </Button>
               <Button
                 onClick={handleConfirmCsvUpload}
                 disabled={!csvFile || csvPreviewData.length === 0 || !userCanEdit}
               >
-                Add {csvPreviewData.length} Students
+                {t("discount.addStudentsBtn").replace("{count}", String(csvPreviewData.length))}
               </Button>
             </div>
           </div>
@@ -2135,22 +2135,22 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       }}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Add Individual Student</DialogTitle>
+            <DialogTitle>{t("discount.addIndividualStudent")}</DialogTitle>
             <DialogDescription>
-              Add a single student to the group manually
+              {t("discount.addIndividualStudentDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Student Search */}
             <div className="space-y-2">
-              <Label htmlFor="student-search">Search Student</Label>
+              <Label htmlFor="student-search">{t("discount.searchStudentLabel")}</Label>
               <div className="relative">
                 <Input
                   id="student-search"
                   value={studentSearchQuery}
                   onChange={(e) => handleStudentSearch(e.target.value)}
-                  placeholder="Search by Student ID or Name..."
+                  placeholder={t("discount.searchStudentPlaceholder")}
                   className="pl-10 pr-10"
                 />
                 {studentSearchQuery && (
@@ -2170,7 +2170,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     {isSearching ? (
                       <div className="p-3 text-center text-muted-foreground">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto mb-2"></div>
-                        Searching...
+                        {t("discount.searching")}
                       </div>
                     ) : studentSearchResults.length > 0 ? (
                       <div className="py-1">
@@ -2203,7 +2203,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
             {/* Manual Form Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="student-id">Student ID</Label>
+                <Label htmlFor="student-id">{t("discount.studentIDLabel")}</Label>
                 <Input
                   id="student-id"
                   value={individualStudentForm.id}
@@ -2213,7 +2213,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="student-name">Student Name</Label>
+                <Label htmlFor="student-name">{t("discount.studentNameLabel")}</Label>
                 <Input
                   id="student-name"
                   value={individualStudentForm.name}
@@ -2226,14 +2226,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="year-group">Year Group</Label>
+                <Label htmlFor="year-group">{t("discount.yearGroupLabel")}</Label>
                 <Select
                   value={individualStudentForm.yearGroup}
                   onValueChange={(value) => setIndividualStudentForm({ ...individualStudentForm, yearGroup: value })}
                   disabled={!userCanEdit}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select year group" />
+                    <SelectValue placeholder={t("discount.filterByYearGroup")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Pre-Nursery">Pre-Nursery</SelectItem>
@@ -2246,7 +2246,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="parent-name">Parent Name</Label>
+                <Label htmlFor="parent-name">{t("discount.parentNameLabel")}</Label>
                 <Input
                   id="parent-name"
                   disabled={!userCanEdit}
@@ -2259,10 +2259,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setAddIndividualDialog({ isOpen: false, groupId: null })}>
-                Cancel
+                {t("discount.cancelBtn")}
               </Button>
               <Button onClick={handleAddIndividualStudent} disabled={!userCanEdit}>
-                Add Student
+                {t("discount.addStudentBtn")}
               </Button>
             </div>
           </div>

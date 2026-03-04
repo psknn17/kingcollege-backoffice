@@ -757,14 +757,14 @@ export function ApprovalQueue() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Approval Queue</h2>
+          <h2 className="text-xl font-semibold">{t("approvalQueue.title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Review and approve pending invoices.
+            {t("approvalQueue.subtitle")}
           </p>
         </div>
         <Button variant="outline" onClick={handleExportExcel} className="gap-2">
           <Download className="w-4 h-4" />
-          Export Excel
+          {t("approvalQueue.exportExcel")}
         </Button>
       </div>
 
@@ -774,7 +774,7 @@ export function ApprovalQueue() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Invoices</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.totalInvoices")}</p>
                 <p className="text-2xl font-bold">{totalInvoices}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
@@ -788,7 +788,7 @@ export function ApprovalQueue() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Wait</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.wait")}</p>
                 <p className="text-2xl font-bold">{waitCount}</p>
               </div>
               <div className="p-3 bg-yellow-100 rounded-full">
@@ -802,7 +802,7 @@ export function ApprovalQueue() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.approved")}</p>
                 <p className="text-2xl font-bold">{approvedCount}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
@@ -816,7 +816,7 @@ export function ApprovalQueue() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.rejected")}</p>
                 <p className="text-2xl font-bold">{rejectedCount}</p>
               </div>
               <div className="p-3 bg-red-100 rounded-full">
@@ -910,7 +910,7 @@ export function ApprovalQueue() {
 
             {/* Approval Status */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.approvalStatus")}</label>
               <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("invoice.allStatus")} />
@@ -918,13 +918,13 @@ export function ApprovalQueue() {
                 <SelectContent>
                   <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
                   <SelectItem value="wait">
-                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Wait</Badge>
+                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("approvalQueue.wait")}</Badge>
                   </SelectItem>
                   <SelectItem value="approved">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approve</Badge>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("approvalQueue.approve")}</Badge>
                   </SelectItem>
                   <SelectItem value="rejected">
-                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Reject</Badge>
+                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("approvalQueue.reject")}</Badge>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -932,7 +932,7 @@ export function ApprovalQueue() {
 
             {/* Issue Date */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Issue Date</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.issueDate")}</label>
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -975,39 +975,39 @@ export function ApprovalQueue() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Email Status */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Email Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.emailStatus")}</label>
               <Select value={emailStatusFilter} onValueChange={setEmailStatusFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Email Status" />
+                  <SelectValue placeholder={t("approvalQueue.allEmailStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Email Status</SelectItem>
-                  <SelectItem value="wait">Wait</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">{t("approvalQueue.allEmailStatus")}</SelectItem>
+                  <SelectItem value="wait">{t("approvalQueue.wait")}</SelectItem>
+                  <SelectItem value="sent">{t("approvalQueue.sent")}</SelectItem>
+                  <SelectItem value="cancelled">{t("approvalQueue.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Invoice Status (Payment) */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.invoiceStatus")}</label>
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Invoice Status" />
+                  <SelectValue placeholder={t("approvalQueue.allInvoiceStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Invoice Status</SelectItem>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="all">{t("approvalQueue.allInvoiceStatus")}</SelectItem>
+                  <SelectItem value="unpaid">{t("approvalQueue.unpaid")}</SelectItem>
+                  <SelectItem value="paid">{t("approvalQueue.paid")}</SelectItem>
+                  <SelectItem value="overdue">{t("approvalQueue.overdue")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Due Date Range */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Due Date</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.dueDate")}</label>
               <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -1051,7 +1051,7 @@ export function ApprovalQueue() {
       {canApproveInvoices && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Selected {selectedInvoiceIds.size}
+            {t("approvalQueue.selectedCount").replace("{count}", String(selectedInvoiceIds.size))}
           </div>
           <div className="flex gap-2">
             <Popover open={isBulkDueDateOpen} onOpenChange={setIsBulkDueDateOpen}>
@@ -1063,12 +1063,12 @@ export function ApprovalQueue() {
                   className="gap-1.5"
                 >
                   <CalendarIcon className="w-3.5 h-3.5" />
-                  Set Due Date
+                  {t("approvalQueue.setDueDate")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <div className="p-3 border-b">
-                  <p className="text-sm font-medium">Set due date for {selectedInvoiceIds.size} invoice{selectedInvoiceIds.size !== 1 ? "s" : ""}</p>
+                  <p className="text-sm font-medium">{t("approvalQueue.setDueDateFor").replace("{count}", String(selectedInvoiceIds.size))}</p>
                 </div>
                 <Calendar
                   mode="single"
@@ -1078,7 +1078,7 @@ export function ApprovalQueue() {
                 />
                 <div className="p-3 border-t flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => { setIsBulkDueDateOpen(false); setBulkDueDateValue(undefined) }}>
-                    Cancel
+                    {t("approvalQueue.cancel")}
                   </Button>
                   <Button
                     size="sm"
@@ -1100,13 +1100,13 @@ export function ApprovalQueue() {
                       setBulkDueDateValue(undefined)
                     }}
                   >
-                    Apply
+                    {t("approvalQueue.apply")}
                   </Button>
                 </div>
               </PopoverContent>
             </Popover>
             <Button size="sm" onClick={approveSelectedInvoices} disabled={selectedInvoiceIds.size === 0}>
-              Approve Selected
+              {t("approvalQueue.approveSelected")}
             </Button>
           </div>
         </div>
@@ -1125,29 +1125,29 @@ export function ApprovalQueue() {
                   />
                 </TableHead>
                 {/* Invoice No - left aligned */}
-                <TableHead align="left">{renderSortHeader("Invoice No.", "invoiceNumber")}</TableHead>
+                <TableHead align="left">{renderSortHeader(t("approvalQueue.invoiceNo"), "invoiceNumber")}</TableHead>
                 {/* Student - left aligned */}
-                <TableHead align="left">{renderSortHeader("Student", "studentName")}</TableHead>
+                <TableHead align="left">{renderSortHeader(t("approvalQueue.student"), "studentName")}</TableHead>
                 {/* Academic Year - left aligned */}
-                <TableHead align="left">{renderSortHeader("Academic Year", "academicYear")}</TableHead>
+                <TableHead align="left">{renderSortHeader(t("invoice.academicYear"), "academicYear")}</TableHead>
                 {/* Term - left aligned */}
-                <TableHead align="left">{renderSortHeader("Term", "term")}</TableHead>
+                <TableHead align="left">{renderSortHeader(t("invoice.term"), "term")}</TableHead>
                 {/* Year Group - center aligned */}
                 <TableHead align="center">{renderSortHeader(t("student.yearGroup"), "studentGrade")}</TableHead>
                 {/* Amount - right aligned */}
-                <TableHead align="right">{renderSortHeader("Amount", "finalAmount")}</TableHead>
+                <TableHead align="right">{renderSortHeader(t("approvalQueue.amount"), "finalAmount")}</TableHead>
                 {/* Approval Status - center */}
-                <TableHead align="center">{renderSortHeader("Approval Status", "approvalStatus")}</TableHead>
+                <TableHead align="center">{renderSortHeader(t("approvalQueue.approvalStatus"), "approvalStatus")}</TableHead>
                 {/* Email Status - center */}
-                <TableHead align="center">Email Status</TableHead>
+                <TableHead align="center">{t("approvalQueue.emailStatus")}</TableHead>
                 {/* Invoice Status - center */}
-                <TableHead align="center">Invoice Status</TableHead>
+                <TableHead align="center">{t("approvalQueue.invoiceStatus")}</TableHead>
                 {/* Issue Date - left aligned */}
-                <TableHead align="left">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
+                <TableHead align="left">{renderSortHeader(t("approvalQueue.issueDate"), "issueDate")}</TableHead>
                 {/* Due Date - left aligned */}
-                <TableHead align="left">{renderSortHeader("Due Date", "dueDate")}</TableHead>
+                <TableHead align="left">{renderSortHeader(t("approvalQueue.dueDate"), "dueDate")}</TableHead>
                 {/* Actions - center aligned */}
-                <TableHead align="center">Actions</TableHead>
+                <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1190,31 +1190,31 @@ export function ApprovalQueue() {
                   {/* Approval Status - center */}
                   <TableCell align="center">
                     {invoice.status === "cancelled" ? (
-                      <Badge className="bg-red-100 text-red-800 border-red-300">Cancelled</Badge>
+                      <Badge className="bg-red-100 text-red-800 border-red-300">{t("approvalQueue.cancelled")}</Badge>
                     ) : getApprovalStatus(invoice) === "approved" ? (
-                      <Badge className="bg-green-100 text-green-800">Approve</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t("approvalQueue.approve")}</Badge>
                     ) : getApprovalStatus(invoice) === "rejected" ? (
-                      <Badge className="bg-red-100 text-red-800">Reject</Badge>
+                      <Badge className="bg-red-100 text-red-800">{t("approvalQueue.reject")}</Badge>
                     ) : (
-                      <Badge className="bg-yellow-100 text-yellow-800">Wait</Badge>
+                      <Badge className="bg-yellow-100 text-yellow-800">{t("approvalQueue.wait")}</Badge>
                     )}
                   </TableCell>
                   {/* Email Status - center */}
                   <TableCell align="center">
                     {(() => {
                       const es = getEmailStatus(invoice)
-                      if (es === "sent") return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
+                      if (es === "sent") return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />{t("approvalQueue.sent")}</Badge>
                       if (es === "cancelled") return <span className="text-muted-foreground text-sm">—</span>
-                      return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
+                      return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />{t("approvalQueue.wait")}</Badge>
                     })()}
                   </TableCell>
                   {/* Invoice Status - center */}
                   <TableCell align="center">
                     {(() => {
                       const ps = getPaymentStatus(invoice)
-                      if (ps === "paid") return <Badge className="bg-green-100 text-green-800">Paid</Badge>
-                      if (ps === "overdue") return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
-                      return <Badge className="bg-gray-100 text-gray-800">Unpaid</Badge>
+                      if (ps === "paid") return <Badge className="bg-green-100 text-green-800">{t("approvalQueue.paid")}</Badge>
+                      if (ps === "overdue") return <Badge className="bg-red-100 text-red-800">{t("approvalQueue.overdue")}</Badge>
+                      return <Badge className="bg-gray-100 text-gray-800">{t("approvalQueue.unpaid")}</Badge>
                     })()}
                   </TableCell>
                   {/* Issue Date - left aligned */}
@@ -1261,7 +1261,7 @@ export function ApprovalQueue() {
               {filteredInvoices.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={13} className="text-center text-sm text-muted-foreground">
-                    No invoices found.
+                    {t("approvalQueue.noInvoicesFound")}
                   </TableCell>
                 </TableRow>
               )}
@@ -1281,17 +1281,17 @@ export function ApprovalQueue() {
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent className="p-6 bg-white" style={{ width: "50vw", maxWidth: "600px", backgroundColor: "white", opacity: 1 }}>
           <DialogHeader>
-            <DialogTitle>Confirm Approval</DialogTitle>
+            <DialogTitle>{t("approvalQueue.confirmApproval")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to approve invoice {selectedInvoice?.invoiceNumber}?
+              {t("approvalQueue.confirmApprovalDesc").replace("{number}", selectedInvoice?.invoiceNumber ?? "")}
             </DialogDescription>
           </DialogHeader>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
             <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
-              Cancel
+              {t("approvalQueue.cancel")}
             </Button>
             <Button style={{ backgroundColor: "#16a34a", color: "white" }} onClick={confirmApprove}>
-              Confirm
+              {t("approvalQueue.confirm")}
             </Button>
           </div>
         </DialogContent>
@@ -1300,23 +1300,23 @@ export function ApprovalQueue() {
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent className="p-6 bg-white" style={{ width: "50vw", maxWidth: "600px", backgroundColor: "white", opacity: 1 }}>
           <DialogHeader>
-            <DialogTitle>Reject Invoice</DialogTitle>
+            <DialogTitle>{t("approvalQueue.rejectInvoice")}</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejection.
+              {t("approvalQueue.rejectReasonDesc")}
             </DialogDescription>
           </DialogHeader>
           <Textarea
             value={rejectReason}
             onChange={(event) => setRejectReason(event.target.value)}
-            placeholder="Rejection reason..."
+            placeholder={t("approvalQueue.rejectionReasonPlaceholder")}
             rows={4}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
-              Cancel
+              {t("approvalQueue.cancel")}
             </Button>
             <Button variant="destructive" onClick={confirmReject}>
-              Reject
+              {t("approvalQueue.reject")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1346,7 +1346,7 @@ export function ApprovalQueue() {
                   <h1 className="text-2xl font-bold tracking-wider">INVOICE</h1>
                   <Badge variant="outline" className="mt-2">
                     <Eye className="w-3 h-3 mr-1" />
-                    View Only
+                    {t("approvalQueue.viewOnly")}
                   </Badge>
                 </div>
 
@@ -1355,52 +1355,52 @@ export function ApprovalQueue() {
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
                     {/* Left - Student Info */}
                     <div className="p-6 pr-8">
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Student Information</h3>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">{t("approvalQueue.studentInformation")}</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Student ID</span>
+                          <span className="text-sm text-gray-500">{t("invoice.studentId")}</span>
                           <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentId}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Student Name</span>
+                          <span className="text-sm text-gray-500">{t("invoice.studentName")}</span>
                           <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentName}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Year Group</span>
+                          <span className="text-sm text-gray-500">{t("student.yearGroup")}</span>
                           <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Contact Name</span>
+                          <span className="text-sm text-gray-500">{t("approvalQueue.contactName")}</span>
                           <span className="text-sm font-medium text-gray-800">{selectedInvoice.parentName}</span>
                         </div>
                       </div>
                     </div>
                     {/* Right - Invoice Info */}
                     <div className="p-6 pl-8">
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">{t("approvalQueue.invoiceDetails")}</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Invoice No.</span>
+                          <span className="text-sm text-gray-500">{t("approvalQueue.invoiceNo")}</span>
                           <span className="text-sm font-medium text-gray-800">
                             {selectedInvoice.approvalStatus === 'approved'
                               ? selectedInvoice.invoiceNumber
-                              : 'Pending Approval'}
+                              : t("approvalQueue.pendingApproval")}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Invoice Date</span>
+                          <span className="text-sm text-gray-500">{t("approvalQueue.invoiceDate")}</span>
                           <span className="text-sm font-medium text-gray-800">
-                            {selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}
+                            {selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : t("approvalQueue.pendingApproval")}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Due Date</span>
+                          <span className="text-sm text-gray-500">{t("approvalQueue.dueDate")}</span>
                           <div className="flex items-center gap-1">
                             {isEditingDueDate ? (
                               <Popover open={isEditingDueDate} onOpenChange={(open) => { if (!open) setIsEditingDueDate(false) }}>
                                 <PopoverTrigger asChild>
                                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs text-red-600 font-medium">
-                                    {editDueDateValue ? format(editDueDateValue, "dd MMM yyyy") : "Pick date"}
+                                    {editDueDateValue ? format(editDueDateValue, "dd MMM yyyy") : t("approvalQueue.pickDate")}
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="end">
@@ -1447,7 +1447,7 @@ export function ApprovalQueue() {
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">School Year</span>
+                          <span className="text-sm text-gray-500">{t("approvalQueue.schoolYear")}</span>
                           <span className="text-sm font-medium text-gray-800">
                             {selectedInvoice.issueDate ? getAcademicYear(selectedInvoice.issueDate) : "-"}
                           </span>
@@ -1466,15 +1466,15 @@ export function ApprovalQueue() {
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-orange-800 mb-1">Invoice Rejected</p>
+                          <p className="text-sm font-semibold text-orange-800 mb-1">{t("approvalQueue.invoiceRejected")}</p>
                           <p className="text-sm text-orange-700">
-                            <span className="font-medium">Reason:</span> {selectedInvoice.rejectedReason || "No reason recorded"}
+                            <span className="font-medium">{t("approvalQueue.reason")}:</span> {selectedInvoice.rejectedReason || t("approvalQueue.noReasonRecorded")}
                           </p>
                           <p className="text-xs text-orange-600 mt-1">
-                            {selectedInvoice.rejectedBy && <>Rejected by {selectedInvoice.rejectedBy}</>}
+                            {selectedInvoice.rejectedBy && <>{t("approvalQueue.rejectedBy").replace("{name}", selectedInvoice.rejectedBy)}</>}
                             {selectedInvoice.rejectedAt && (
                               <>
-                                {selectedInvoice.rejectedBy && <> on </>}
+                                {selectedInvoice.rejectedBy && <> {t("approvalQueue.rejectedOn")} </>}
                                 {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', {
                                   day: 'numeric',
                                   month: 'short',
@@ -1527,7 +1527,7 @@ export function ApprovalQueue() {
                     <div className="border-t bg-gray-50 p-4">
                       <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
                       <div className="flex justify-between items-center font-bold text-base">
-                        <span>TOTAL</span>
+                        <span>{t("approvalQueue.total")}</span>
                         <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
                       </div>
                     </div>
@@ -1537,8 +1537,8 @@ export function ApprovalQueue() {
                 {/* Payment Methods */}
                 <div className="px-8 pb-6">
                   <p className="text-sm">
-                    <span className="font-medium text-gray-700">Payment methods: </span>
-                    <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
+                    <span className="font-medium text-gray-700">{t("approvalQueue.paymentMethodsLabel")} </span>
+                    <span className="text-gray-500">{t("approvalQueue.paymentMethodsList")}</span>
                   </p>
                 </div>
               </div>
@@ -1547,7 +1547,7 @@ export function ApprovalQueue() {
               <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={closeInvoiceModal}>
-                    Close
+                    {t("approvalQueue.close")}
                   </Button>
                   <Button
                     onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
@@ -1557,12 +1557,12 @@ export function ApprovalQueue() {
                     {isDownloadingPDF ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Generating PDF...
+                        {t("approvalQueue.generatingPdf")}
                       </>
                     ) : (
                       <>
                         <Download className="w-4 h-4 mr-2" />
-                        Download PDF
+                        {t("approvalQueue.downloadPdf")}
                       </>
                     )}
                   </Button>

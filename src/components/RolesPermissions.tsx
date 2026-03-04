@@ -364,11 +364,11 @@ export function RolesPermissions() {
 
   const handleDeleteRole = (role: Role) => {
     if (role.isSystem) {
-      toast.error("System roles cannot be deleted")
+      toast.error(t("roles.cannotDeleteSystem"))
       return
     }
     if (role.userCount > 0) {
-      toast.error(`Cannot delete role with ${role.userCount} assigned users`)
+      toast.error(t("roles.cannotDeleteAssigned").replace("{count}", String(role.userCount)))
       return
     }
     setSelectedRole(role)
@@ -377,12 +377,12 @@ export function RolesPermissions() {
 
   const performSaveNewRole = () => {
     if (!formData.name.trim()) {
-      toast.error("Role name is required")
+      toast.error(t("roles.roleNameRequired"))
       return
     }
 
     if (roles.some(r => r.name.toLowerCase() === formData.name.toLowerCase())) {
-      toast.error("Role name already exists")
+      toast.error(t("roles.roleNameExists"))
       return
     }
 
@@ -396,7 +396,7 @@ export function RolesPermissions() {
 
     setRoles(prev => [...prev, newRole])
     setIsAddDialogOpen(false)
-    toast.success(`Role "${formData.name}" created`)
+    toast.success(t("roles.roleCreatedMsg").replace("{name}", formData.name))
   }
 
   const handleSaveNewRole = () => {
@@ -409,12 +409,12 @@ export function RolesPermissions() {
     if (!selectedRole) return
 
     if (!formData.name.trim()) {
-      toast.error("Role name is required")
+      toast.error(t("roles.roleNameRequired"))
       return
     }
 
     if (roles.some(r => r.id !== selectedRole.id && r.name.toLowerCase() === formData.name.toLowerCase())) {
-      toast.error("Role name already exists")
+      toast.error(t("roles.roleNameExists"))
       return
     }
 
@@ -426,7 +426,7 @@ export function RolesPermissions() {
       )
     )
     setIsEditDialogOpen(false)
-    toast.success(`Role "${formData.name}" updated`)
+    toast.success(t("roles.roleUpdatedMsg").replace("{name}", formData.name))
   }
 
   const handleSaveEditRole = () => {
@@ -440,7 +440,7 @@ export function RolesPermissions() {
 
     setRoles(prev => prev.filter(r => r.id !== selectedRole.id))
     setIsDeleteDialogOpen(false)
-    toast.success(`Role "${selectedRole.name}" deleted`)
+    toast.success(t("roles.roleDeletedMsg").replace("{name}", selectedRole.name))
   }
 
   // Count permissions for a role
@@ -455,11 +455,11 @@ export function RolesPermissions() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={selectAllPermissions}>
             <CheckCircle2 className="w-4 h-4 mr-2" />
-            Select All
+            {t("roles.selectAll")}
           </Button>
           <Button variant="outline" size="sm" onClick={clearAllPermissions}>
             <XCircle className="w-4 h-4 mr-2" />
-            Clear All
+            {t("roles.clearAll")}
           </Button>
         </div>
       )}
@@ -581,7 +581,7 @@ export function RolesPermissions() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{roles.length}</p>
-                <p className="text-muted-foreground text-sm">Total Roles</p>
+                <p className="text-muted-foreground text-sm">{t("roles.totalRoles")}</p>
               </div>
             </div>
           </CardContent>
@@ -594,7 +594,7 @@ export function RolesPermissions() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{roles.reduce((sum, r) => sum + r.userCount, 0)}</p>
-                <p className="text-muted-foreground text-sm">Users Assigned</p>
+                <p className="text-muted-foreground text-sm">{t("roles.usersAssigned")}</p>
               </div>
             </div>
           </CardContent>
@@ -607,7 +607,7 @@ export function RolesPermissions() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{roles.filter(r => r.isSystem).length}</p>
-                <p className="text-muted-foreground text-sm">System Roles</p>
+                <p className="text-muted-foreground text-sm">{t("roles.systemRoles")}</p>
               </div>
             </div>
           </CardContent>
@@ -620,7 +620,7 @@ export function RolesPermissions() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{permissionModules.length}</p>
-                <p className="text-muted-foreground text-sm">Permission Modules</p>
+                <p className="text-muted-foreground text-sm">{t("roles.permissionModulesCount")}</p>
               </div>
             </div>
           </CardContent>
@@ -630,15 +630,15 @@ export function RolesPermissions() {
       {/* Roles Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Roles</CardTitle>
-          <CardDescription>Click on a role to view or edit its permissions</CardDescription>
+          <CardTitle>{t("roles.allRoles")}</CardTitle>
+          <CardDescription>{t("roles.clickToViewEdit")}</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Search */}
           <div className="flex gap-4 mb-4">
             <div className="relative flex-1 max-w-sm">
               <Input
-                placeholder="Search roles..."
+                placeholder={t("roles.searchRolesPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className=""
@@ -651,42 +651,42 @@ export function RolesPermissions() {
               <TableRow>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                   <div className="flex items-center gap-1">
-                    Role Name
+                    {t("roles.roleName")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
                   <div className="flex items-center gap-1">
-                    Description
+                    {t("roles.description")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("permissions")}>
                   <div className="flex items-center justify-center gap-1">
-                    Permissions
+                    {t("roles.permissionsLabel")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("userCount")}>
                   <div className="flex items-center justify-center gap-1">
-                    Users
+                    {t("roles.users")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("type")}>
                   <div className="flex items-center justify-center gap-1">
-                    Type
+                    {t("roles.type")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">{t("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRoles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No roles found
+                    {t("roles.noRolesFound")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -709,9 +709,9 @@ export function RolesPermissions() {
                     </TableCell>
                     <TableCell className="text-center">
                       {role.isSystem ? (
-                        <Badge className="bg-blue-100 text-blue-800">System</Badge>
+                        <Badge className="bg-blue-100 text-blue-800">{t("roles.system")}</Badge>
                       ) : (
-                        <Badge variant="outline">Custom</Badge>
+                        <Badge variant="outline">{t("roles.custom")}</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -745,45 +745,45 @@ export function RolesPermissions() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Create New Role</DialogTitle>
-            <DialogDescription>Define a new role with specific permissions</DialogDescription>
+            <DialogTitle>{t("roles.createNewRole")}</DialogTitle>
+            <DialogDescription>{t("roles.createNewRoleDesc")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Role Name *</Label>
+                <Label htmlFor="name">{t("roles.roleNameLabel")}</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Finance Manager"
+                  placeholder={t("roles.rolePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t("roles.description")}</Label>
                 <Input
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of this role"
+                  placeholder={t("roles.descPlaceholder")}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Permissions</Label>
+              <Label>{t("roles.permissionsLabel")}</Label>
               <PermissionMatrix />
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveNewRole} disabled={!userCanEdit}>
               <Plus className="w-4 h-4 mr-2" />
-              Create Role
+              {t("roles.createRole")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -793,34 +793,34 @@ export function RolesPermissions() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b bg-muted/30">
-            <DialogTitle className="text-xl">Edit Role</DialogTitle>
-            <DialogDescription>Modify role settings and permissions</DialogDescription>
+            <DialogTitle className="text-xl">{t("roles.editRole")}</DialogTitle>
+            <DialogDescription>{t("roles.modifyRoleDesc")}</DialogDescription>
           </DialogHeader>
 
           <div className="px-6 py-6 space-y-6">
             {/* Role Info Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-sm font-medium">Role Name *</Label>
+                <Label htmlFor="edit-name" className="text-sm font-medium">{t("roles.roleNameLabel")}</Label>
                 <Input
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Finance Manager"
+                  placeholder={t("roles.rolePlaceholder")}
                   disabled={selectedRole?.isSystem}
                   className="h-10"
                 />
                 {selectedRole?.isSystem && (
-                  <p className="text-xs text-muted-foreground">System role names cannot be changed</p>
+                  <p className="text-xs text-muted-foreground">{t("roles.systemRoleNameLocked")}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-description" className="text-sm font-medium">Description</Label>
+                <Label htmlFor="edit-description" className="text-sm font-medium">{t("roles.description")}</Label>
                 <Input
                   id="edit-description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of this role"
+                  placeholder={t("roles.descPlaceholder")}
                   className="h-10"
                 />
               </div>
@@ -829,15 +829,15 @@ export function RolesPermissions() {
             {/* Permissions Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Permissions</Label>
+                <Label className="text-sm font-medium">{t("roles.permissionsLabel")}</Label>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={selectAllPermissions} className="h-8 text-xs">
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                    Select All
+                    {t("roles.selectAll")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={clearAllPermissions} className="h-8 text-xs">
                     <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                    Clear All
+                    {t("roles.clearAll")}
                   </Button>
                 </div>
               </div>
@@ -921,10 +921,10 @@ export function RolesPermissions() {
 
           <DialogFooter className="px-6 py-4 border-t bg-muted/30">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveEditRole}>
-              Save Changes
+              {t("roles.saveChanges")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -938,7 +938,7 @@ export function RolesPermissions() {
               <Shield className="w-5 h-5" />
               {selectedRole?.name}
               {selectedRole?.isSystem && (
-                <Badge className="bg-blue-100 text-blue-800 ml-2">System</Badge>
+                <Badge className="bg-blue-100 text-blue-800 ml-2">{t("roles.system")}</Badge>
               )}
             </DialogTitle>
             <DialogDescription>{selectedRole?.description}</DialogDescription>
@@ -948,21 +948,21 @@ export function RolesPermissions() {
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Total Permissions</p>
+                  <p className="text-sm text-muted-foreground">{t("roles.totalPermissions")}</p>
                   <p className="text-2xl font-bold">{countPermissions(selectedRole)}</p>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Assigned Users</p>
+                  <p className="text-sm text-muted-foreground">{t("roles.usersAssigned")}</p>
                   <p className="text-2xl font-bold">{selectedRole.userCount}</p>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Modules Access</p>
+                  <p className="text-sm text-muted-foreground">{t("roles.modulesAccess")}</p>
                   <p className="text-2xl font-bold">{selectedRole.permissions.length}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Permission Details</Label>
+                <Label>{t("roles.permissionDetails")}</Label>
                 <PermissionMatrix readOnly />
               </div>
             </div>
@@ -970,7 +970,7 @@ export function RolesPermissions() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-              Close
+              {t("roles.close")}
             </Button>
             <Button
               onClick={() => {
@@ -980,7 +980,7 @@ export function RolesPermissions() {
               disabled={!userCanEdit}
             >
               <Edit className="w-4 h-4 mr-2" />
-              Edit Role
+              {t("roles.editRole")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -990,20 +990,19 @@ export function RolesPermissions() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Delete Role</DialogTitle>
+            <DialogTitle>{t("roles.deleteRole")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-muted-foreground">
-              Are you sure you want to delete the role <strong>{selectedRole?.name}</strong>?
-              This action cannot be undone.
+              {t("roles.deleteRoleConfirm").replace("{name}", selectedRole?.name ?? "")}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete
+              {t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -39,6 +39,7 @@ function EmailPreviewContent({
   body: string
   sample: Record<string, string>
 }) {
+  const { t } = useLanguage()
   const subjectResult = renderTemplate(subject, sample)
   const bodyResult = renderTemplate(body, sample)
 
@@ -55,7 +56,7 @@ function EmailPreviewContent({
             {subject ? (
               <span dangerouslySetInnerHTML={{ __html: highlightMissing(subjectResult) }} />
             ) : (
-              <span className="text-gray-300 font-normal">No subject</span>
+              <span className="text-gray-300 font-normal">{t("invoiceReceiptTemplate.noSubject")}</span>
             )}
           </span>
         </div>
@@ -67,7 +68,7 @@ function EmailPreviewContent({
             dangerouslySetInnerHTML={{ __html: highlightMissing(bodyResult) }}
           />
         ) : (
-          <p className="text-muted-foreground italic text-sm">No content yet.</p>
+          <p className="text-muted-foreground italic text-sm">{t("invoiceReceiptTemplate.noContent")}</p>
         )}
       </div>
     </div>
@@ -109,6 +110,7 @@ function PreviewDialog({
   onClose: () => void
   template: EmailTemplate | null
 }) {
+  const { t } = useLanguage()
   if (!template) return null
   const sample = getSampleForType(template.type)
 
@@ -116,16 +118,16 @@ function PreviewDialog({
     <Dialog open={open} onOpenChange={o => { if (!o) onClose() }}>
       <DialogContent style={{ maxWidth: "780px" }} className="p-8">
         <DialogHeader>
-          <DialogTitle>Email Preview — {template.name}</DialogTitle>
+          <DialogTitle>{t("invoiceReceiptTemplate.emailPreviewTitle").replace("{name}", template.name)}</DialogTitle>
           <DialogDescription>
-            This is how the email will appear to parents (using sample data).
+            {t("invoiceReceiptTemplate.emailPreviewDesc")}
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto pr-1">
           <EmailPreviewContent subject={template.subject} body={template.body} sample={sample} />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -147,6 +149,7 @@ export function EditTemplateDialog({
   templateType: "invoice" | "receipt"
   onSave: (form: { name: string; subject: string; body: string }) => void
 }) {
+  const { t } = useLanguage()
   const [name, setName] = useState("")
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
@@ -214,9 +217,9 @@ export function EditTemplateDialog({
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!name.trim()) errs.name = "Template name is required"
-    if (!subject.trim()) errs.subject = "Subject is required"
-    if (!body.trim()) errs.body = "Email body is required"
+    if (!name.trim()) errs.name = t("invoiceReceiptTemplate.templateNameRequired")
+    if (!subject.trim()) errs.subject = t("invoiceReceiptTemplate.subjectRequired")
+    if (!body.trim()) errs.body = t("invoiceReceiptTemplate.bodyRequired")
     setErrors(errs)
     const valid = Object.keys(errs).length === 0
     if (!valid) setEditTab("edit")
@@ -232,13 +235,13 @@ export function EditTemplateDialog({
     <Dialog open={open} onOpenChange={o => { if (!o) onClose() }}>
       <DialogContent style={{ maxWidth: "580px" }} className="p-8">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{template ? "Edit Template" : "New Template"}</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{template ? t("invoiceReceiptTemplate.editTemplateTitle") : t("invoiceReceiptTemplate.newTemplateTitle")}</DialogTitle>
         </DialogHeader>
 
         {/* Name — always visible */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold">
-            Template Name <span className="text-red-500">*</span>
+            {t("invoiceReceiptTemplate.templateName")} <span className="text-red-500">*</span>
           </Label>
           <Input
             placeholder={placeholders.name}
@@ -257,14 +260,14 @@ export function EditTemplateDialog({
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${editTab === "edit" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             onClick={() => setEditTab("edit")}
           >
-            Edit
+            {t("invoiceReceiptTemplate.editTab")}
           </button>
           <button
             type="button"
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${editTab === "preview" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             onClick={() => setEditTab("preview")}
           >
-            Preview
+            {t("invoiceReceiptTemplate.previewTab")}
           </button>
         </div>
 
@@ -274,7 +277,7 @@ export function EditTemplateDialog({
               {/* Subject */}
               <div className="rounded-lg border p-4 space-y-3">
                 <Label className="text-sm font-semibold">
-                  Email Subject <span className="text-red-500">*</span>
+                  {t("invoiceReceiptTemplate.emailSubject")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   ref={subjectRef}
@@ -286,7 +289,7 @@ export function EditTemplateDialog({
                 />
                 {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Click to insert variable</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t("invoiceReceiptTemplate.clickToInsert")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {variables.map(v => (
                       <button
@@ -306,7 +309,7 @@ export function EditTemplateDialog({
               {/* Body */}
               <div className="rounded-lg border p-4 space-y-3">
                 <Label className="text-sm font-semibold">
-                  Email Body <span className="text-red-500">*</span>
+                  {t("invoiceReceiptTemplate.emailBody")} <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   ref={bodyRef}
@@ -318,7 +321,7 @@ export function EditTemplateDialog({
                 />
                 {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Click to insert variable</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t("invoiceReceiptTemplate.clickToInsert")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {variables.map(v => (
                       <button
@@ -341,8 +344,8 @@ export function EditTemplateDialog({
         </div>
 
         <DialogFooter className="mt-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>{template ? "Save Changes" : "Create Template"}</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button onClick={handleSave}>{template ? t("invoiceReceiptTemplate.saveChanges") : t("invoiceReceiptTemplate.createTemplate")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -366,51 +369,52 @@ function TemplatePanel({
   userCanEdit,
   confirmDialog,
 }: TemplatePanelProps) {
+  const { t } = useLanguage()
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
 
   const { user } = useAuth()
   const currentUser = user?.username || user?.name || "Staff"
-  const filtered = templates.filter(t => t.type === type)
+  const filtered = templates.filter(tpl => tpl.type === type)
 
   const openNew = () => { setEditingTemplate(null); setEditDialogOpen(true) }
-  const openEdit = (t: EmailTemplate) => { setEditingTemplate(t); setEditDialogOpen(true) }
+  const openEdit = (tpl: EmailTemplate) => { setEditingTemplate(tpl); setEditDialogOpen(true) }
 
-  const handleSetDefault = (t: EmailTemplate) => {
+  const handleSetDefault = (tpl: EmailTemplate) => {
     setTemplates(prev =>
       prev.map(x => {
         if (x.type === type) {
-          return { ...x, isDefault: x.id === t.id }
+          return { ...x, isDefault: x.id === tpl.id }
         }
         return x
       })
     )
-    toast.success("Default template updated")
+    toast.success(t("invoiceReceiptTemplate.defaultUpdated"))
   }
 
-  const handleDuplicate = (t: EmailTemplate) => {
+  const handleDuplicate = (tpl: EmailTemplate) => {
     const now = new Date().toISOString()
     setTemplates(prev => [...prev, {
-      ...t,
+      ...tpl,
       id: `tpl-${Date.now()}`,
-      name: `${t.name} (Copy)`,
+      name: `${tpl.name} (Copy)`,
       isDefault: false,
       status: "active" as const,
       createdAt: now,
       updatedAt: now,
       version: 1,
     }])
-    toast.success("Template duplicated")
+    toast.success(t("invoiceReceiptTemplate.templateDuplicated"))
   }
 
-  const handleDelete = (t: EmailTemplate) => {
+  const handleDelete = (tpl: EmailTemplate) => {
     confirmDialog.confirm(() => {
       setTemplates(prev => {
-        const updated = prev.filter(x => x.id !== t.id)
+        const updated = prev.filter(x => x.id !== tpl.id)
         // Auto-promote if the deleted one was default
-        if (t.isDefault) {
-          const sameType = updated.filter(x => x.type === t.type && x.status === "active")
+        if (tpl.isDefault) {
+          const sameType = updated.filter(x => x.type === tpl.type && x.status === "active")
           if (sameType.length > 0) {
             const idx = updated.findIndex(x => x.id === sameType[0].id)
             if (idx >= 0) updated[idx] = { ...updated[idx], isDefault: true }
@@ -418,24 +422,24 @@ function TemplatePanel({
         }
         return updated
       })
-      toast.success("Template deleted")
+      toast.success(t("invoiceReceiptTemplate.templateDeleted"))
     })
   }
 
   const handleSave = (form: { name: string; subject: string; body: string }) => {
     const now = new Date().toISOString()
     if (editingTemplate) {
-      setTemplates(prev => prev.map(t => {
-        if (t.id !== editingTemplate.id) return t
+      setTemplates(prev => prev.map(tpl => {
+        if (tpl.id !== editingTemplate.id) return tpl
         return {
-          ...t,
+          ...tpl,
           ...form,
           updatedAt: now,
           createdBy: currentUser,
-          version: t.version + 1,
+          version: tpl.version + 1,
         }
       }))
-      toast.success("Template updated")
+      toast.success(t("invoiceReceiptTemplate.templateUpdated"))
     } else {
       const isFirst = filtered.length === 0
       setTemplates(prev => [...prev, {
@@ -450,7 +454,7 @@ function TemplatePanel({
         createdBy: currentUser,
         version: 1,
       }])
-      toast.success("Template created")
+      toast.success(t("invoiceReceiptTemplate.templateCreated"))
     }
     setEditDialogOpen(false)
   }
@@ -460,12 +464,12 @@ function TemplatePanel({
       {/* Header row */}
       <div className="flex justify-between items-center mb-5">
         <p className="text-sm text-muted-foreground">
-          {filtered.length} template{filtered.length !== 1 ? "s" : ""}
+          {t("invoiceReceiptTemplate.templateCount").replace("{count}", String(filtered.length))}
         </p>
         {userCanEdit && (
           <Button size="sm" onClick={openNew} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            New Template
+            {t("invoiceReceiptTemplate.newTemplate")}
           </Button>
         )}
       </div>
@@ -474,24 +478,24 @@ function TemplatePanel({
       <div className="rounded-lg border divide-y">
         {filtered.length === 0 ? (
           <div className="text-center py-12 px-6 text-sm text-muted-foreground">
-            No templates yet — click "New Template" to create one.
+            {t("invoiceReceiptTemplate.noTemplates")}
           </div>
         ) : (
-          filtered.map(t => {
+          filtered.map(tpl => {
             const sample = getSampleForType(type)
-            const renderedSubject = renderTemplate(t.subject, sample).rendered
-            const updatedDate = new Date(t.updatedAt)
+            const renderedSubject = renderTemplate(tpl.subject, sample).rendered
+            const updatedDate = new Date(tpl.updatedAt)
             const formattedDate = updatedDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 
             return (
-              <div key={t.id} className="px-6 py-4 space-y-1.5">
+              <div key={tpl.id} className="px-6 py-4 space-y-1.5">
                 {/* Row 1: name + badge */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold truncate">{t.name}</span>
-                  {t.isDefault && (
+                  <span className="text-sm font-semibold truncate">{tpl.name}</span>
+                  {tpl.isDefault && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800 shrink-0">
                       <Star className="w-3 h-3 fill-yellow-500" />
-                      Default
+                      {t("invoiceReceiptTemplate.default")}
                     </span>
                   )}
                 </div>
@@ -502,18 +506,18 @@ function TemplatePanel({
                 {/* Row 3: metadata + actions */}
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] text-muted-foreground/70">
-                    Last updated {formattedDate}
+                    {t("invoiceReceiptTemplate.lastUpdated").replace("{date}", formattedDate)}
                   </p>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setPreviewTemplate(t)}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setPreviewTemplate(tpl)}>
                       <Eye className="w-3.5 h-3.5 mr-1" />
-                      Preview
+                      {t("invoiceReceiptTemplate.preview")}
                     </Button>
                     {userCanEdit && (
                       <>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => openEdit(t)}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => openEdit(tpl)}>
                           <Edit className="w-3.5 h-3.5 mr-1" />
-                          Edit
+                          {t("invoiceReceiptTemplate.editTemplate")}
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -522,20 +526,20 @@ function TemplatePanel({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleDuplicate(t)}>
+                            <DropdownMenuItem onClick={() => handleDuplicate(tpl)}>
                               <Copy className="w-4 h-4 mr-2" />
-                              Duplicate
+                              {t("invoiceReceiptTemplate.duplicate")}
                             </DropdownMenuItem>
-                            {!t.isDefault && (
-                              <DropdownMenuItem onClick={() => handleSetDefault(t)}>
+                            {!tpl.isDefault && (
+                              <DropdownMenuItem onClick={() => handleSetDefault(tpl)}>
                                 <Star className="w-4 h-4 mr-2" />
-                                Set as Default
+                                {t("invoiceReceiptTemplate.setAsDefault")}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDelete(t)}>
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDelete(tpl)}>
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
+                              {t("common.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -595,15 +599,15 @@ export function InvoiceReceiptTemplate() {
         open={confirmDialog.isOpen}
         onOpenChange={confirmDialog.setIsOpen}
         onConfirm={confirmDialog.handleConfirm}
-        titleKey="Delete Template"
-        descriptionKey="Are you sure you want to delete this template? This action cannot be undone."
+        titleKey={t("invoiceReceiptTemplate.deleteTemplateTitle")}
+        descriptionKey={t("invoiceReceiptTemplate.deleteTemplateDesc")}
         variant="destructive"
       />
 
       <div>
         <h1 className="text-2xl font-bold">{t("menu.invoiceReceiptTemplate")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage email templates sent to parents with invoices and receipts
+          {t("invoiceReceiptTemplate.subtitle")}
         </p>
       </div>
 
@@ -611,19 +615,19 @@ export function InvoiceReceiptTemplate() {
         <TabsList>
           <TabsTrigger value="invoice" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Invoice Templates
+            {t("invoiceReceiptTemplate.invoiceTemplates")}
           </TabsTrigger>
           <TabsTrigger value="receipt" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
-            Receipt Templates
+            {t("invoiceReceiptTemplate.receiptTemplates")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="invoice" className="mt-6">
           <Card>
             <CardHeader className="!px-8 !py-5">
-              <CardTitle>Invoice Email Templates</CardTitle>
-              <CardDescription>Templates used when sending invoices to parents by email</CardDescription>
+              <CardTitle>{t("invoiceReceiptTemplate.invoiceEmailTemplates")}</CardTitle>
+              <CardDescription>{t("invoiceReceiptTemplate.invoiceEmailDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="!px-8 !pb-8">
               <TemplatePanel
@@ -640,8 +644,8 @@ export function InvoiceReceiptTemplate() {
         <TabsContent value="receipt" className="mt-6">
           <Card>
             <CardHeader className="!px-8 !py-5">
-              <CardTitle>Receipt Email Templates</CardTitle>
-              <CardDescription>Templates used when sending receipts to parents by email</CardDescription>
+              <CardTitle>{t("invoiceReceiptTemplate.receiptEmailTemplates")}</CardTitle>
+              <CardDescription>{t("invoiceReceiptTemplate.receiptEmailDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="!px-8 !pb-8">
               <TemplatePanel

@@ -190,7 +190,7 @@ export function CreditNoteManagement() {
   // Manual save function
   const handleSaveChanges = () => {
     saveCreditNotesToStorage(creditNotes)
-    toast.success("Credit notes saved successfully")
+    toast.success(t("creditNote.savedSuccess"))
   }
 
   // Create new credit note form state
@@ -312,18 +312,18 @@ export function CreditNoteManagement() {
 
   const performCreateCreditNote = () => {
     if (!newCreditNote.selectedInvoiceId || !newCreditNote.creditAmount || !newCreditNote.reason) {
-      toast.error("Please select an invoice and fill in all required fields")
+      toast.error(t("creditNote.selectInvoiceAndFill"))
       return
     }
 
     const creditAmount = parseFloat(newCreditNote.creditAmount)
     if (isNaN(creditAmount) || creditAmount <= 0) {
-      toast.error("Please enter a valid credit amount")
+      toast.error(t("creditNote.enterValidAmount"))
       return
     }
 
     if (creditAmount > newCreditNote.originalAmount) {
-      toast.error("Credit amount cannot exceed original invoice amount")
+      toast.error(t("creditNote.cannotExceed"))
       return
     }
 
@@ -346,7 +346,7 @@ export function CreditNoteManagement() {
     }
 
     setCreditNotes([newNote, ...creditNotes])
-    toast.success(`Credit note ${newNote.creditNoteNumber} created successfully`)
+    toast.success(t("creditNote.createdSuccess").replace("{number}", newNote.creditNoteNumber))
     closeCreateModal()
   }
 
@@ -359,14 +359,14 @@ export function CreditNoteManagement() {
   const downloadCreditNote = (creditNoteId: string) => {
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
-      toast.success(`Credit note ${creditNote.creditNoteNumber} downloaded`)
+      toast.success(t("creditNote.downloaded").replace("{number}", creditNote.creditNoteNumber))
     }
   }
 
   const sendCreditNote = (creditNoteId: string) => {
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
-      toast.success(`Credit note sent to ${creditNote.parentName}`)
+      toast.success(t("creditNote.sentTo").replace("{name}", creditNote.parentName))
     }
   }
 
@@ -524,7 +524,7 @@ export function CreditNoteManagement() {
 
     const ext = file.name.toLowerCase()
     if (!ext.endsWith(".xlsx") && !ext.endsWith(".xls")) {
-      toast.error("Please select an Excel file (.xlsx or .xls)")
+      toast.error(t("creditNote.selectExcelFile"))
       return
     }
 
@@ -605,7 +605,7 @@ export function CreditNoteManagement() {
         setIsImportModalOpen(true)
       } catch (error) {
         console.error("Import error:", error)
-        toast.error("Failed to read Excel file")
+        toast.error(t("creditNote.failedToRead"))
       }
     }
     reader.readAsBinaryString(file)
@@ -627,9 +627,9 @@ export function CreditNoteManagement() {
     setImportErrors([])
 
     if (duplicates > 0) {
-      toast.success(`Imported ${newNotes.length} credit notes (${duplicates} duplicates skipped)`)
+      toast.success(t("creditNote.importedWithDups").replace("{count}", String(newNotes.length)).replace("{dups}", String(duplicates)))
     } else {
-      toast.success(`Successfully imported ${newNotes.length} credit notes`)
+      toast.success(t("creditNote.importedSuccess").replace("{count}", String(newNotes.length)))
     }
   }
 
@@ -647,8 +647,8 @@ export function CreditNoteManagement() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle>Credit Notes</CardTitle>
-              <p className="text-sm text-muted-foreground">View and manage credit notes</p>
+              <CardTitle>{t("creditNote.creditNotesTitle")}</CardTitle>
+              <p className="text-sm text-muted-foreground">{t("creditNote.viewManageCreditNotes")}</p>
             </div>
           </CardHeader>
         </Card>
@@ -659,18 +659,18 @@ export function CreditNoteManagement() {
             <TabsList>
               <TabsTrigger value="receipts" className="flex items-center gap-2">
                 <Receipt className="w-4 h-4" />
-                Receipts
+                {t("creditNote.receiptsTab")}
               </TabsTrigger>
               <TabsTrigger value="credit-notes" className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4" />
-                Credit Notes
+                {t("creditNote.creditNotesTab")}
               </TabsTrigger>
             </TabsList>
 
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
                 <Save className="w-4 h-4" />
-                Save Changes
+                {t("creditNote.saveChanges")}
               </Button>
               <Button variant="outline" className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
@@ -690,12 +690,12 @@ export function CreditNoteManagement() {
                 onClick={() => importFileInputRef.current?.click()}
               >
                 <Upload className="w-4 h-4" />
-                Import
+                {t("creditNote.import")}
               </Button>
               {activeTab === "receipts" ? (
                 <Button onClick={() => setIsCreateReceiptModalOpen(true)} className="flex items-center gap-2" disabled={!userCanEdit}>
                   <Plus className="w-4 h-4" />
-                  Create Receipt
+                  {t("creditNote.createReceipt")}
                 </Button>
               ) : (
                 <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!userCanEdit}>
@@ -713,25 +713,25 @@ export function CreditNoteManagement() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Filter className="w-4 h-4" />
-                    Search & Filter
+                    {t("invoiceOverview.searchFilter")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <Input placeholder="Search by receipt number, student name..." />
+                    <Input placeholder={t("creditNote.searchReceiptPlaceholder")} />
                   </div>
                   <Select defaultValue="all">
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder={t("paymentMethod.label")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Methods</SelectItem>
+                      <SelectItem value="all">{t("creditNote.allMethods")}</SelectItem>
                       <SelectItem value="bank_transfer">{t("paymentMethod.bankTransfer")}</SelectItem>
                       <SelectItem value="credit_card">{t("paymentMethod.creditCard")}</SelectItem>
                       <SelectItem value="cash">{t("paymentMethod.cash")}</SelectItem>
-                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="cheque">{t("creditNote.cheque")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -741,7 +741,7 @@ export function CreditNoteManagement() {
             {/* Receipts Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Receipt List</CardTitle>
+                <CardTitle>{t("creditNote.receiptList")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {/* Receipts Table - Standard Alignment */}
@@ -925,13 +925,13 @@ export function CreditNoteManagement() {
                   </div>
 
                   <div className="space-y-1.5 lg:col-span-2">
-                    <label className="text-sm font-medium text-muted-foreground">Date Range</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("creditNote.dateRange")}</label>
                     <div className="flex items-center gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFrom ? format(dateFrom, "dd/MM/yy") : "From"}
+                            {dateFrom ? format(dateFrom, "dd/MM/yy") : t("creditNote.from")}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -948,7 +948,7 @@ export function CreditNoteManagement() {
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateTo ? format(dateTo, "dd/MM/yy") : "To"}
+                            {dateTo ? format(dateTo, "dd/MM/yy") : t("creditNote.to")}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -969,7 +969,7 @@ export function CreditNoteManagement() {
             {/* Results Summary */}
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
-                Showing {filteredCreditNotes.length} of {creditNotes.length} credit notes
+                {t("creditNote.showingOf2").replace("{filtered}", String(filteredCreditNotes.length)).replace("{total}", String(creditNotes.length))}
               </p>
             </div>
 
@@ -982,33 +982,33 @@ export function CreditNoteManagement() {
                       {/* Credit Note # - text/left */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
                         <div className="flex items-center gap-1">
-                          Credit Note Number
+                          {t("creditNote.creditNoteNumberHeader")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Date - date/left */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
                         <div className="flex items-center gap-1">
-                          Date
+                          {t("creditNote.dateHeader")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Student - text/left */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
                         <div className="flex items-center gap-1">
-                          Student
+                          {t("creditNote.studentHeader")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Amount - currency/right */}
                       <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditAmount")}>
                         <div className="flex items-center gap-1 justify-end">
-                          Amount
+                          {t("creditNote.amountHeader")}
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
                       {/* Reason - text/left */}
-                      <TableHead align="left">Reason</TableHead>
+                      <TableHead align="left">{t("creditNote.reasonHeader")}</TableHead>
                       {/* Status - badge/center */}
                       <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                         <div className="flex items-center gap-1 justify-center">
@@ -1017,7 +1017,7 @@ export function CreditNoteManagement() {
                         </div>
                       </TableHead>
                       {/* Actions - actions/center */}
-                      <TableHead align="center">Actions</TableHead>
+                      <TableHead align="center">{t("table.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1099,10 +1099,10 @@ export function CreditNoteManagement() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              Credit Note Details
+              {t("creditNote.creditNoteDetails")}
             </DialogTitle>
             <DialogDescription>
-              View and manage credit note information and processing details
+              {t("creditNote.creditNoteDetailsDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -1111,7 +1111,7 @@ export function CreditNoteManagement() {
               {/* Credit Note Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Credit Note Number</p>
+                  <p className="text-sm text-muted-foreground">{t("creditNote.creditNoteNumberLabel")}</p>
                   <p className="font-mono text-lg font-medium">{selectedCreditNote.creditNoteNumber}</p>
                 </div>
                 <div className="flex gap-2">
@@ -1125,40 +1125,40 @@ export function CreditNoteManagement() {
               {/* Student & Invoice Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <h3 className="font-medium">Student Information</h3>
+                  <h3 className="font-medium">{t("creditNote.studentInfoLabel")}</h3>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Student Name</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.studentName")}</p>
                       <p className="font-medium">{selectedCreditNote.studentName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Student ID</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.studentIdLabel2")}</p>
                       <p className="font-mono">{selectedCreditNote.studentId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Year Group</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.yearGroupLabel")}</p>
                       <Badge variant="secondary">{selectedCreditNote.studentGrade}</Badge>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Parent/Guardian</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.parentGuardian")}</p>
                       <p className="font-medium">{selectedCreditNote.parentName}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="font-medium">Credit Information</h3>
+                  <h3 className="font-medium">{t("creditNote.creditInfoLabel")}</h3>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Related Invoice</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.relatedInvoice")}</p>
                       <p className="font-mono">{selectedCreditNote.invoiceNumber}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Original Amount</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.originalAmount")}</p>
                       <p className="font-medium">₿{selectedCreditNote.originalAmount.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Credit Amount</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.creditAmount")}</p>
                       <p className="text-xl font-bold text-red-600">-₿{selectedCreditNote.creditAmount.toLocaleString()}</p>
                     </div>
                   </div>
@@ -1169,25 +1169,25 @@ export function CreditNoteManagement() {
 
               {/* Credit Details */}
               <div className="space-y-3">
-                <h3 className="font-medium">Credit Details</h3>
+                <h3 className="font-medium">{t("creditNote.creditDetailsLabel")}</h3>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Reason</p>
+                    <p className="text-sm text-muted-foreground">{t("creditNote.reason")}</p>
                     <p className="font-medium">{selectedCreditNote.reason}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Issue Date</p>
+                    <p className="text-sm text-muted-foreground">{t("creditNote.issueDateLabel")}</p>
                     <p className="font-medium">{format(selectedCreditNote.issueDate, "dd MMM yyyy")}</p>
                   </div>
                   {selectedCreditNote.dueDate && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Due Date</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.dueDateLabel")}</p>
                       <p className="font-medium">{format(selectedCreditNote.dueDate, "dd MMM yyyy")}</p>
                     </div>
                   )}
                   {selectedCreditNote.appliedDate && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Applied Date</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.appliedDateLabel")}</p>
                       <p className="font-medium">{format(selectedCreditNote.appliedDate, "dd MMM yyyy")}</p>
                     </div>
                   )}
@@ -1198,15 +1198,15 @@ export function CreditNoteManagement() {
 
               {/* Processing Information */}
               <div className="space-y-3">
-                <h3 className="font-medium">Processing Information</h3>
+                <h3 className="font-medium">{t("creditNote.processingInfoLabel")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Issued By</p>
+                    <p className="text-sm text-muted-foreground">{t("creditNote.issuedBy")}</p>
                     <p className="font-medium">{selectedCreditNote.issuedBy}</p>
                   </div>
                   {selectedCreditNote.approvedBy && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Approved By</p>
+                      <p className="text-sm text-muted-foreground">{t("creditNote.approvedBy")}</p>
                       <p className="font-medium">{selectedCreditNote.approvedBy}</p>
                     </div>
                   )}
@@ -1217,7 +1217,7 @@ export function CreditNoteManagement() {
                 <>
                   <Separator />
                   <div className="space-y-3">
-                    <h3 className="font-medium">Notes</h3>
+                    <h3 className="font-medium">{t("creditNote.notesLabel")}</h3>
                     <div className="bg-muted/50 rounded-lg p-4">
                       <p className="text-sm">{selectedCreditNote.notes}</p>
                     </div>
@@ -1235,7 +1235,7 @@ export function CreditNoteManagement() {
                   }}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download
+                  {t("creditNote.download")}
                 </Button>
 
                 <Button
@@ -1247,11 +1247,11 @@ export function CreditNoteManagement() {
                   }}
                 >
                   <Mail className="w-4 h-4 mr-2" />
-                  Send to Parent
+                  {t("creditNote.sendToParentBtn")}
                 </Button>
 
                 <Button variant="ghost" onClick={closeCreditNoteModal}>
-                  Close
+                  {t("creditNote.close")}
                 </Button>
               </div>
             </div>
@@ -1265,28 +1265,28 @@ export function CreditNoteManagement() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
-              Create New Credit Note
+              {t("creditNote.createNewCreditNote")}
             </DialogTitle>
             <DialogDescription>
-              Create a new credit note for refunds, adjustments, or cancellations
+              {t("creditNote.createNewDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Invoice Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Invoice *</label>
+              <label className="text-sm font-medium">{t("creditNote.selectInvoiceLabel")}</label>
               <Select
                 value={newCreditNote.selectedInvoiceId}
                 onValueChange={handleInvoiceSelect}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an invoice..." />
+                  <SelectValue placeholder={t("creditNote.selectAnInvoice")} />
                 </SelectTrigger>
                 <SelectContent>
                   {invoices.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
-                      No invoices found. Create invoices first.
+                      {t("creditNote.noInvoicesFound")}
                     </div>
                   ) : (
                     invoices.map((invoice: any) => (
@@ -1302,30 +1302,30 @@ export function CreditNoteManagement() {
             {/* Auto-populated Student Info */}
             {newCreditNote.selectedInvoiceId && (
               <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                <h4 className="font-medium text-sm">Invoice Details</h4>
+                <h4 className="font-medium text-sm">{t("creditNote.invoiceDetailsLabel")}</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Invoice:</span>
+                    <span className="text-muted-foreground">{t("creditNote.invoiceLabel")}</span>
                     <span className="ml-2 font-medium">{newCreditNote.invoiceNumber}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Student:</span>
+                    <span className="text-muted-foreground">{t("creditNote.studentLabel")}</span>
                     <span className="ml-2 font-medium">{newCreditNote.studentName}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Student ID:</span>
+                    <span className="text-muted-foreground">{t("creditNote.studentIdLabel")}</span>
                     <span className="ml-2 font-medium">{newCreditNote.studentId}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Grade:</span>
+                    <span className="text-muted-foreground">{t("creditNote.gradeLabel")}</span>
                     <span className="ml-2 font-medium">{newCreditNote.studentGrade}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Parent:</span>
+                    <span className="text-muted-foreground">{t("creditNote.parentLabel")}</span>
                     <span className="ml-2 font-medium">{newCreditNote.parentName}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Original Amount:</span>
+                    <span className="text-muted-foreground">{t("creditNote.originalAmountLabel")}</span>
                     <span className="ml-2 font-medium text-blue-600">฿{newCreditNote.originalAmount.toLocaleString()}</span>
                   </div>
                 </div>
@@ -1334,7 +1334,7 @@ export function CreditNoteManagement() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Credit Amount *</label>
+                <label className="text-sm font-medium">{t("creditNote.creditAmountLabel")}</label>
                 <Input
                   type="number"
                   placeholder="0.00"
@@ -1344,13 +1344,13 @@ export function CreditNoteManagement() {
                 />
                 {newCreditNote.originalAmount > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Max: ฿{newCreditNote.originalAmount.toLocaleString()}
+                    {t("creditNote.maxLabel")} ฿{newCreditNote.originalAmount.toLocaleString()}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Credit Type *</label>
+                <label className="text-sm font-medium">{t("creditNote.creditTypeLabel")}</label>
                 <Select
                   value={newCreditNote.type}
                   onValueChange={(value: CreditNote["type"]) => setNewCreditNote({ ...newCreditNote, type: value })}
@@ -1369,18 +1369,18 @@ export function CreditNoteManagement() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Reason *</label>
+              <label className="text-sm font-medium">{t("creditNote.reasonLabel")}</label>
               <Input
-                placeholder="Enter reason for credit note"
+                placeholder={t("creditNote.enterReason")}
                 value={newCreditNote.reason}
                 onChange={(e) => setNewCreditNote({ ...newCreditNote, reason: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Additional Notes</label>
+              <label className="text-sm font-medium">{t("creditNote.additionalNotes")}</label>
               <Textarea
-                placeholder="Enter any additional notes or comments"
+                placeholder={t("creditNote.enterAdditionalNotes")}
                 value={newCreditNote.notes}
                 onChange={(e) => setNewCreditNote({ ...newCreditNote, notes: e.target.value })}
                 className="min-h-20"
@@ -1389,10 +1389,10 @@ export function CreditNoteManagement() {
 
             <div className="flex gap-3 pt-4">
               <Button onClick={handleCreateCreditNote} className="flex-1">
-                Create Credit Note
+                {t("creditNote.createCreditNote")}
               </Button>
               <Button variant="outline" onClick={closeCreateModal}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
@@ -1405,20 +1405,20 @@ export function CreditNoteManagement() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5" />
-              Create Receipt
+              {t("creditNote.createReceiptTitle")}
             </DialogTitle>
             <DialogDescription>
-              Generate a receipt for a paid invoice
+              {t("creditNote.generateReceiptDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Invoice Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Paid Invoice</label>
+              <label className="text-sm font-medium">{t("creditNote.selectPaidInvoice")}</label>
               <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an invoice..." />
+                  <SelectValue placeholder={t("creditNote.selectAnInvoice")} />
                 </SelectTrigger>
                 <SelectContent>
                   {invoices
@@ -1435,7 +1435,7 @@ export function CreditNoteManagement() {
             {/* Receipt Details */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Receipt Date</label>
+                <label className="text-sm font-medium">{t("creditNote.receiptDate")}</label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -1459,7 +1459,7 @@ export function CreditNoteManagement() {
                     <SelectItem value="bank_transfer">{t("paymentMethod.bankTransfer")}</SelectItem>
                     <SelectItem value="credit_card">{t("paymentMethod.creditCard")}</SelectItem>
                     <SelectItem value="cash">{t("paymentMethod.cash")}</SelectItem>
-                    <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="cheque">{t("creditNote.cheque")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1467,9 +1467,9 @@ export function CreditNoteManagement() {
 
             {/* Notes */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Notes (Optional)</label>
+              <label className="text-sm font-medium">{t("creditNote.notesOptional")}</label>
               <Textarea
-                placeholder="Additional notes for the receipt..."
+                placeholder={t("creditNote.additionalReceiptNotes")}
                 className="min-h-20"
               />
             </div>
@@ -1477,16 +1477,16 @@ export function CreditNoteManagement() {
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={() => {
-                  toast.success("Receipt created successfully")
+                  toast.success(t("creditNote.receiptCreated"))
                   setIsCreateReceiptModalOpen(false)
                 }}
                 className="flex-1"
               >
                 <Receipt className="w-4 h-4 mr-2" />
-                Create Receipt
+                {t("creditNote.createReceipt")}
               </Button>
               <Button variant="outline" onClick={() => setIsCreateReceiptModalOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
@@ -1499,7 +1499,7 @@ export function CreditNoteManagement() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload className="w-5 h-5" />
-              Import Credit Notes — Preview
+              {t("creditNote.importTitle")}
             </DialogTitle>
             <DialogDescription>
               {importFileName} · {importPreview.length} records found
@@ -1512,7 +1512,7 @@ export function CreditNoteManagement() {
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-1">
               <p className="text-sm font-medium text-red-700 flex items-center gap-1">
                 <AlertCircle className="w-4 h-4" />
-                Rows with errors (will be skipped):
+                {t("creditNote.rowsWithErrors")}
               </p>
               {importErrors.map((err, i) => (
                 <p key={i} className="text-xs text-red-600 ml-5">{err}</p>
@@ -1559,7 +1559,7 @@ export function CreditNoteManagement() {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No valid records found in the file.
+              {t("creditNote.noValidRecords")}
             </div>
           )}
 
@@ -1570,10 +1570,10 @@ export function CreditNoteManagement() {
               onClick={performImport}
             >
               <Upload className="w-4 h-4 mr-2" />
-              Import {importPreview.length} Records
+              {t("creditNote.importRecords").replace("{count}", String(importPreview.length))}
             </Button>
             <Button variant="outline" onClick={() => setIsImportModalOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </DialogContent>

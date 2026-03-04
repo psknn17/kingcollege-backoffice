@@ -1879,7 +1879,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const handleSaveChanges = () => {
     saveItemsToStorage(items, invoiceType)
     saveTemplatesToStorage(templates, invoiceType)
-    toast.success("Changes saved successfully")
+    toast.success(t("item.changesSaved"))
   }
 
   // Items state
@@ -2091,13 +2091,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const performSaveItem = () => {
     // Applicable grades are now optional
     if (!newItem.itemCode || !newItem.name || newItem.amount === undefined || newItem.amount === null || newItem.amount === '') {
-      toast.error("Please fill in all required fields")
+      toast.error(t("item.fillRequiredFields"))
       return
     }
 
     const amount = parseFloat(newItem.amount)
     if (isNaN(amount)) {
-      toast.error("Please enter a valid amount")
+      toast.error(t("item.enterValidAmount"))
       return
     }
 
@@ -2109,7 +2109,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       (newItem.category === 'Tuition' && newItem.name.toLowerCase().includes('tuition fee'))
 
     if (!isTuitionTemplate && amount <= 0) {
-      toast.error("Please enter a valid amount (must be greater than 0)")
+      toast.error(t("item.enterValidAmountPositive"))
       return
     }
 
@@ -2155,12 +2155,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       const updatedItems = items.map(item => item.id === editingItem.id ? itemData : item)
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
-      toast.success("Item updated successfully")
+      toast.success(t("item.itemUpdated"))
     } else {
       const updatedItems = [...items, itemData]
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
-      toast.success("Item created successfully")
+      toast.success(t("item.itemCreated"))
     }
 
     closeItemModal()
@@ -2195,7 +2195,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     saveItemsToStorage(updatedItems, invoiceType)
     saveTemplatesToStorage(updatedTemplates, invoiceType)
 
-    toast.success("Item deleted successfully from all templates")
+    toast.success(t("item.itemDeleted"))
   }
 
   const handleBulkDelete = () => {
@@ -2221,7 +2221,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     saveTemplatesToStorage(updatedTemplates, invoiceType)
 
     setSelectedItemIds(new Set())
-    toast.success(`Deleted ${idsToDelete.length} items successfully`)
+    toast.success(t("item.bulkDeleted").replace("{count}", String(idsToDelete.length)))
   }
 
   // Import functions
@@ -2250,7 +2250,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
     downloadAsXlsx(headers, [exampleRow], "item_import_template")
 
-    toast.success("Template downloaded")
+    toast.success(t("item.templateDownloaded"))
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2260,7 +2260,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     try {
       const rows = await parseXlsxOrCsvFile(file)
       if (rows.length === 0) {
-        setImportError("File has no data rows")
+        setImportError(t("item.fileHasNoData"))
         return
       }
 
@@ -2279,13 +2279,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       setImportError("")
       setShowAllImportPreview(false)
     } catch {
-      setImportError("Failed to parse file. Please use the provided template.")
+      setImportError(t("item.failedToParseFile"))
     }
   }
 
   const performConfirmImport = () => {
     if (importPreview.length === 0) {
-      toast.error("No data to import")
+      toast.error(t("item.noDataToImport"))
       return
     }
 
@@ -2323,7 +2323,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     setItems(updatedItems)
     saveItemsToStorage(updatedItems, invoiceType)
     setIsImportDialogOpen(false)
-    toast.success(`Imported ${imported} item${imported > 1 ? 's' : ''}${skipped > 0 ? `, skipped ${skipped} duplicate${skipped > 1 ? 's' : ''}` : ""}`)
+    toast.success(
+      skipped > 0
+        ? t("item.importedWithSkipped").replace("{imported}", String(imported)).replace("{skipped}", String(skipped))
+        : t("item.importedItems").replace("{imported}", String(imported))
+    )
   }
 
   const handleImport = () => {
@@ -2355,7 +2359,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   // Sync Tuition Fees function
   const handleSyncTuitionFees = () => {
     if (invoiceType !== "tuition" && invoiceType !== "student") {
-      toast.error("This feature is only available for Tuition invoices")
+      toast.error(t("item.syncTuitionOnly"))
       return
     }
 
@@ -2363,7 +2367,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       // Load tuition data from localStorage (from TuitionByYear component)
       const tuitionDataRaw = localStorage.getItem("tuitionByYearData")
       if (!tuitionDataRaw) {
-        toast.error("No tuition fee data found. Please set up tuition fees in Tuition Management > Tuition Fees by Year Group first.")
+        toast.error(t("item.noTuitionData"))
         return
       }
 
@@ -2372,7 +2376,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       // Get the most recent academic year
       const years = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
       if (years.length === 0) {
-        toast.error("No tuition fee data found")
+        toast.error(t("item.noTuitionData"))
         return
       }
 
@@ -2445,7 +2449,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       // Only show toast if items were created or updated
       if (created > 0 || updated > 0) {
 
-        toast.success(`Synced tuition fees: ${created} new, ${updated} updated from ${latestYear}`)
+        toast.success(t("item.syncedTuitionFees").replace("{created}", String(created)).replace("{updated}", String(updated)).replace("{year}", latestYear))
       }
     } catch (error) {
       console.error("Failed to sync tuition fees:", error)
@@ -2487,7 +2491,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const handleSaveTemplate = () => {
     // Applicable grades are now optional
     if (!newTemplate.name || selectedItemsForTemplate.length === 0) {
-      toast.error("Please provide template name and select at least one item")
+      toast.error(t("item.provideTemplateName"))
       return
     }
 
@@ -2518,10 +2522,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
     if (editingTemplate) {
       setTemplates(templates.map(template => template.id === editingTemplate.id ? templateData : template))
-      toast.success("Template updated successfully")
+      toast.success(t("item.templateUpdated"))
     } else {
       setTemplates([...templates, templateData])
-      toast.success("Template created successfully")
+      toast.success(t("item.templateCreated"))
     }
 
     closeTemplateModal()
@@ -2531,7 +2535,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     const updated = templates.filter(template => template.id !== templateId)
     setTemplates(updated)
     saveTemplatesToStorage(updated, invoiceType)
-    toast.success("Template deleted successfully")
+    toast.success(t("item.templateDeleted"))
   }
 
   // View Modal functions
@@ -2702,8 +2706,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle>{isExternalView ? "External Items" : isSimplifiedView ? "Activity Items" : "Manage Items"}</CardTitle>
-                <p className="text-muted-foreground">{isSimplifiedView ? "Create and manage items for activities and events" : "Create and manage invoice items"}</p>
+                <CardTitle>{isExternalView ? t("item.externalItems") : isSimplifiedView ? t("item.activityItems") : t("item.manageItems")}</CardTitle>
+                <p className="text-muted-foreground">{isSimplifiedView ? t("item.manageActivityItemsDesc") : t("item.manageItemsDesc")}</p>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -2712,11 +2716,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   onClick={handleImport}
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Import
+                  {t("common.import")}
                 </Button>
                 <Button disabled={!userCanEdit} onClick={openCreateItemModal}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Item
+                  {t("item.createItem")}
                 </Button>
               </div>
             </div>
@@ -2726,7 +2730,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             <div className="flex gap-4 mb-6">
               <div className="flex-1 relative">
                 <Input
-                  placeholder="Search by code, name, nominal code, category..."
+                  placeholder={t("item.searchItemsPlaceholder")}
                   value={searchItemTerm}
                   onChange={(e) => { setSearchItemTerm(e.target.value); setCurrentPage(1) }}
                   className=""
@@ -2735,10 +2739,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
               <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1) }} disabled={!userCanEdit}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Categories" />
+                  <SelectValue placeholder={t("item.allCategories")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t("item.allCategories")}</SelectItem>
                   {Array.from(new Set(items.map(item => item.category).filter((c): c is string => Boolean(c)))).map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
@@ -2746,10 +2750,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </Select>
               <Select value={selectedDocType} onValueChange={(val) => { setSelectedDocType(val); setCurrentPage(1) }} disabled={!userCanEdit}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Types" />
+                  <SelectValue placeholder={t("item.allTypes")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="all">{t("item.allTypes")}</SelectItem>
                   <SelectItem value="SI">SI</SelectItem>
                   <SelectItem value="CI">CI</SelectItem>
                 </SelectContent>
@@ -2760,7 +2764,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {selectedItemIds.size > 0 && (
               <div className="flex items-center justify-end gap-3 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <span className="text-sm font-medium text-red-800">
-                  {selectedItemIds.size} item{selectedItemIds.size > 1 ? "s" : ""} selected
+                  {t("item.itemsSelected").replace("{count}", String(selectedItemIds.size))}
                 </span>
                 <Button
                   variant="destructive"
@@ -2770,14 +2774,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
-                  Delete Selected
+                  {t("item.deleteSelected")}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedItemIds(new Set())}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             )}
@@ -2818,9 +2822,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                       </div>
                     </TableHead>
                     {/* Nominal Code - left aligned */}
-                    <TableHead align="left">Nominal Code</TableHead>
+                    <TableHead align="left">{t("item.nominalCode")}</TableHead>
                     {/* Type - left aligned */}
-                    <TableHead align="left">Type</TableHead>
+                    <TableHead align="left">{t("item.type")}</TableHead>
                     {/* Amount - right aligned (currency) */}
                     <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center justify-end gap-1">
@@ -2888,7 +2892,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                       {/* Status - center aligned (badge) */}
                       <TableCell align="center">
                         <Badge variant={item.isActive ? "default" : "secondary"}>
-                          {item.isActive ? "Active" : "Inactive"}
+                          {item.isActive ? t("common.active") : t("common.inactive")}
                         </Badge>
                       </TableCell>
                       {/* Actions - center aligned */}
@@ -2946,12 +2950,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle>{isExternalView ? "External Templates" : isSimplifiedView ? "Activity Templates" : "Manage Templates"}</CardTitle>
-                <p className="text-muted-foreground">{isSimplifiedView ? "Create shortcuts for commonly used activity item combinations" : "Create shortcuts for commonly used item combinations"}</p>
+                <CardTitle>{isExternalView ? t("item.externalTemplates") : isSimplifiedView ? t("item.activityTemplates") : t("item.manageTemplates")}</CardTitle>
+                <p className="text-muted-foreground">{isSimplifiedView ? t("item.manageActivityTemplatesDesc") : t("item.manageTemplatesDesc")}</p>
               </div>
               <Button disabled={!userCanEdit} onClick={openCreateTemplateModal}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Template
+                {t("item.createTemplate")}
               </Button>
             </div>
           </CardHeader>
@@ -2960,7 +2964,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             <div className="mb-6">
               <div className="relative">
                 <Input
-                  placeholder="Search templates..."
+                  placeholder={t("item.searchTemplates")}
                   value={searchTemplateTerm}
                   onChange={(e) => setSearchTemplateTerm(e.target.value)}
                   className=""
@@ -3014,10 +3018,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     {/* Applicable Grades - Hide for External and Exam (not grade-specific) */}
                     {invoiceType !== "external" && invoiceType !== "exam" && (
                       <div className="mb-3">
-                        <p className="text-sm font-medium mb-1">Applicable Grades:</p>
+                        <p className="text-sm font-medium mb-1">{t("item.applicableGrades")}:</p>
                         <div className="flex flex-wrap gap-1">
                           {template.applicableGrades.length === grades.length ? (
-                            <Badge variant="secondary" className="text-xs">All Grades</Badge>
+                            <Badge variant="secondary" className="text-xs">{t("item.allGrades")}</Badge>
                           ) : template.applicableGrades.length > 5 ? (
                             <>
                               {template.applicableGrades.slice(0, 3).map(grade => (
@@ -3035,7 +3039,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     )}
 
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">{template.items.length} items:</p>
+                      <p className="text-sm font-medium">{t("item.templateItemCount").replace("{count}", String(template.items.length))}</p>
                       <div className="space-y-1">
                         {template.items.map(itemId => {
                           const liveItem = items.find(i => i.id === itemId)
@@ -3048,7 +3052,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                             </div>
                           ) : (
                             <div key={itemId} className="flex justify-between text-sm text-muted-foreground italic">
-                              <span>Item removed — please re-edit template</span>
+                              <span>{t("item.itemRemovedReEdit")}</span>
                               <span className="font-medium">—</span>
                             </div>
                           )
@@ -3056,7 +3060,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                       </div>
                       <Separator />
                       <div className="flex justify-between font-medium">
-                        <span>Total:</span>
+                        <span>{t("common.total")}:</span>
                         <span>
                           {formatCurrency(
                             template.items.reduce((sum, itemId) => {
@@ -3080,16 +3084,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       <Dialog open={isCreateItemModalOpen} onOpenChange={closeItemModal}>
         <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Item" : "Create New Item"}</DialogTitle>
+            <DialogTitle>{editingItem ? t("item.editItem") : t("item.createNewItem")}</DialogTitle>
             <DialogDescription>
-              {editingItem ? "Update the item information" : "Add a new item to the system"}
+              {editingItem ? t("item.editItemDesc") : t("item.createNewItemDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="font-medium">Item Code *</label>
+                <label className="font-medium">{t("item.itemCodeRequired")}</label>
                 <Input
                   placeholder="TUI-001"
                   value={newItem.itemCode}
@@ -3097,7 +3101,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 />
               </div>
               <div className="space-y-2">
-                <label className="font-medium">Item Name *</label>
+                <label className="font-medium">{t("item.itemNameRequired")}</label>
                 <Input
                   placeholder="Swimming Program Fee"
                   value={newItem.name}
@@ -3108,7 +3112,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="font-medium">Nominal Code</label>
+                <label className="font-medium">{t("item.nominalCode")}</label>
                 <Input
                   placeholder="2130001"
                   value={newItem.nominalCode}
@@ -3116,7 +3120,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 />
               </div>
               <div className="space-y-2">
-                <label className="font-medium">Type</label>
+                <label className="font-medium">{t("item.type")}</label>
                 <Input
                   value="SI"
                   disabled
@@ -3126,16 +3130,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">Description</label>
+              <label className="font-medium">{t("item.description")}</label>
               <Textarea
-                placeholder="Brief description of the item"
+                placeholder={t("item.descriptionPlaceholder")}
                 value={newItem.description}
                 onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">Amount (Thai Baht) *</label>
+              <label className="font-medium">{t("item.amountRequired")}</label>
               <Input
                 type="number"
                 placeholder="50000"
@@ -3144,7 +3148,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               />
               {newItem.amount && !isNaN(parseFloat(newItem.amount)) && (
                 <p className="text-sm text-muted-foreground">
-                  Amount: {formatCurrency(parseFloat(newItem.amount))}
+                  {t("item.amountLabel")}: {formatCurrency(parseFloat(newItem.amount))}
                 </p>
               )}
             </div>
@@ -3152,9 +3156,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {editingItem && (
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <label className="font-medium text-sm">Status</label>
+                  <label className="font-medium text-sm">{t("table.status")}</label>
                   <p className="text-xs text-muted-foreground">
-                    {newItem.isActive ? "Active — item is available for invoices" : "Inactive — item is hidden from invoices"}
+                    {newItem.isActive ? t("item.statusActiveDesc") : t("item.statusInactiveDesc")}
                   </p>
                 </div>
                 <Switch
@@ -3167,10 +3171,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
             <div className="flex gap-3 pt-4">
               <Button onClick={handleSaveItem} className="flex-1">
-                {editingItem ? "Update Item" : "Create Item"}
+                {editingItem ? t("item.updateItem") : t("item.createItem")}
               </Button>
               <Button variant="outline" onClick={closeItemModal}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
@@ -3181,16 +3185,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       <Dialog open={isCreateTemplateModalOpen} onOpenChange={closeTemplateModal}>
         <DialogContent className="max-w-3xl p-6">
           <DialogHeader>
-            <DialogTitle>{editingTemplate ? "Edit Template" : "Create New Template"}</DialogTitle>
+            <DialogTitle>{editingTemplate ? t("item.editTemplate") : t("item.createNewTemplate")}</DialogTitle>
             <DialogDescription>
-              {editingTemplate ? "Update the template information" : "Create a shortcut for commonly used item combinations"}
+              {editingTemplate ? t("item.editTemplateDesc") : t("item.createNewTemplateDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="font-medium">Template Name *</label>
+                <label className="font-medium">{t("item.templateNameRequired")}</label>
                 <Input
                   placeholder="Year 1 Essential"
                   value={newTemplate.name}
@@ -3198,7 +3202,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 />
               </div>
               <div className="space-y-2">
-                <label className="font-medium">Description</label>
+                <label className="font-medium">{t("item.description")}</label>
                 <Input
                   placeholder="Essential items for Year 1 students"
                   value={newTemplate.description}
@@ -3210,7 +3214,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {/* Hide Applicable Grades for External and Exam templates (not grade-specific) */}
             {invoiceType !== "external" && invoiceType !== "exam" && (
               <div className="space-y-2">
-                <label className="font-medium">Applicable Grades *</label>
+                <label className="font-medium">{t("item.applicableGradesRequired")}</label>
                 <div className="flex flex-wrap gap-2">
                   {grades.map((grade) => (
                     <Badge
@@ -3225,20 +3229,20 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 </div>
                 {newTemplate.applicableGrades.length > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    {newTemplate.applicableGrades.length} grades selected
+                    {t("item.gradesSelected").replace("{count}", String(newTemplate.applicableGrades.length))}
                   </p>
                 )}
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="font-medium">Select Items *</label>
+              <label className="font-medium">{t("item.selectItemsRequired")}</label>
 
               {/* Search Items Input */}
               <div className="relative mb-2">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search items..."
+                  placeholder={t("item.searchItems")}
                   value={itemSearchTerm}
                   onChange={(e) => setItemSearchTerm(e.target.value)}
                   className="pl-8"
@@ -3288,22 +3292,22 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
               {selectedItemsForTemplate.length > 0 && (
                 <div className="text-sm text-muted-foreground">
-                  {selectedItemsForTemplate.length} items selected - Total: {formatCurrency(
+                  {t("item.templateItemsSelectedTotal").replace("{count}", String(selectedItemsForTemplate.length)).replace("{total}", formatCurrency(
                     selectedItemsForTemplate.reduce((sum, itemId) => {
                       const item = items.find(i => i.id === itemId)
                       return sum + (item?.amount || 0)
                     }, 0)
-                  )}
+                  ))}
                 </div>
               )}
             </div>
 
             <div className="flex gap-3 pt-4">
               <Button onClick={handleSaveTemplate} className="flex-1">
-                {editingTemplate ? "Update Template" : "Create Template"}
+                {editingTemplate ? t("item.updateTemplate") : t("item.createTemplate")}
               </Button>
               <Button variant="outline" onClick={closeTemplateModal}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
@@ -3344,9 +3348,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
           <div className="p-6 pb-0">
             <DialogHeader>
-              <DialogTitle>Import Items</DialogTitle>
+              <DialogTitle>{t("item.importItems")}</DialogTitle>
               <DialogDescription>
-                Upload a CSV file to import items. Download the template for the correct format.
+                {t("item.importItemsDesc")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -3355,18 +3359,18 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
-                <p className="font-medium">Excel Template</p>
-                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                <p className="font-medium">{t("student.excelTemplate")}</p>
+                <p className="text-sm text-muted-foreground">{t("item.downloadTemplateDesc")}</p>
               </div>
               <Button variant="outline" onClick={downloadTemplate}>
                 <FileDown className="w-4 h-4 mr-2" />
-                Download Template
+                {t("student.downloadTemplate")}
               </Button>
             </div>
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="csvFile">Upload File</Label>
+              <Label htmlFor="csvFile">{t("student.uploadFile")}</Label>
               <Input
                 id="csvFile"
                 type="file"
@@ -3392,7 +3396,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               const hiddenCount = importPreview.length - PREVIEW_LIMIT
               return (
                 <div className="space-y-2">
-                  <Label>Preview ({importPreview.length} items)</Label>
+                  <Label>{t("item.previewItems").replace("{count}", String(importPreview.length))}</Label>
 
                   {/* Duplicate warning */}
                   {duplicateRows.length > 0 && (
@@ -3412,11 +3416,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     <Table className="min-w-[600px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead align="left" className="w-32">Item Code</TableHead>
-                          <TableHead align="left">Name</TableHead>
-                          <TableHead align="right" className="w-32">Amount</TableHead>
-                          <TableHead align="left" className="w-32">Category</TableHead>
-                          <TableHead align="center" className="w-24">Status</TableHead>
+                          <TableHead align="left" className="w-32">{t("table.itemCode")}</TableHead>
+                          <TableHead align="left">{t("table.itemName")}</TableHead>
+                          <TableHead align="right" className="w-32">{t("table.amount")}</TableHead>
+                          <TableHead align="left" className="w-32">{t("table.category")}</TableHead>
+                          <TableHead align="center" className="w-24">{t("table.status")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3470,14 +3474,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
           <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleConfirmImport}
               disabled={!userCanEdit || importPreview.length === 0 || !!importError}
             >
               <Upload className="w-4 h-4 mr-2" />
-              Import {importPreview.length > 0 ? `${importPreview.length} Items` : ""}
+              {importPreview.length > 0 ? t("item.importCount").replace("{count}", String(importPreview.length)) : t("common.import")}
             </Button>
           </div>
         </DialogContent>
@@ -3508,26 +3512,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       <Dialog open={!!usageDialogItem} onOpenChange={(open) => { if (!open) setUsageDialogItem(null) }}>
         <DialogContent style={{ maxWidth: "540px" }} className="p-6">
           <DialogHeader>
-            <DialogTitle>Item Usage Detail</DialogTitle>
+            <DialogTitle>{t("item.itemUsageDetail")}</DialogTitle>
           </DialogHeader>
 
           {/* Item info summary */}
           {usageDialogItem && (
             <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Code</span>
+                <span className="text-muted-foreground">{t("item.codeLabel")}</span>
                 <span className="font-mono font-medium">{usageDialogItem.itemCode}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Name</span>
+                <span className="text-muted-foreground">{t("item.nameLabel")}</span>
                 <span className="font-medium">{usageDialogItem.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount</span>
+                <span className="text-muted-foreground">{t("item.amountLabel")}</span>
                 <span className="font-medium">{usageDialogItem.amount.toLocaleString()} THB</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Enrolled / Paid</span>
+                <span className="text-muted-foreground">{t("item.enrolledPaid")}</span>
                 <span>
                   <span className="text-blue-600 font-semibold">{getUsageCount(usageDialogItem)}</span>
                   {" / "}
@@ -3544,13 +3548,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               onClick={() => setUsageDialogFilter("all")}
               className={`text-sm px-3 py-1 rounded-md font-medium transition-colors ${usageDialogFilter === "all" ? "bg-blue-100 text-blue-700" : "text-muted-foreground hover:text-foreground"}`}
             >
-              All
+              {t("common.all")}
             </button>
             <button
               onClick={() => setUsageDialogFilter("paid")}
               className={`text-sm px-3 py-1 rounded-md font-medium transition-colors ${usageDialogFilter === "paid" ? "bg-green-100 text-green-700" : "text-muted-foreground hover:text-foreground"}`}
             >
-              Paid only
+              {t("item.paidOnly")}
             </button>
           </div>
 
@@ -3561,7 +3565,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               if (filtered.length === 0) {
                 return (
                   <div className="py-8 text-center text-muted-foreground text-sm">
-                    No records found
+                    {t("item.noRecordsFound")}
                   </div>
                 )
               }
@@ -3570,9 +3574,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2 font-medium text-muted-foreground">#</th>
-                      <th className="text-left py-2 font-medium text-muted-foreground">Student</th>
-                      <th className="text-left py-2 font-medium text-muted-foreground">Invoice No.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left py-2 font-medium text-muted-foreground">{t("table.student")}</th>
+                      <th className="text-left py-2 font-medium text-muted-foreground">{t("item.invoiceNo")}</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">{t("table.status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3586,10 +3590,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         <td className="py-2 font-mono text-xs">{inv.invoiceNumber || "-"}</td>
                         <td className="py-2 text-center">
                           {inv.status === "paid"
-                            ? <span className="inline-flex items-center gap-1 text-green-700 font-medium"><span>✓</span> Paid</span>
+                            ? <span className="inline-flex items-center gap-1 text-green-700 font-medium"><span>✓</span> {t("item.paid")}</span>
                             : inv.status === "cancelled"
-                            ? <span className="text-gray-400">Cancelled</span>
-                            : <span className="text-orange-600">Unpaid</span>
+                            ? <span className="text-gray-400">{t("item.cancelled")}</span>
+                            : <span className="text-orange-600">{t("item.unpaid")}</span>
                           }
                         </td>
                       </tr>
@@ -3601,7 +3605,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUsageDialogItem(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setUsageDialogItem(null)}>{t("common.close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

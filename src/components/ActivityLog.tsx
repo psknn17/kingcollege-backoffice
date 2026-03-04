@@ -8,6 +8,7 @@ import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { PaginationBar } from "@/components/ui/pagination-bar"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 const mockActivityLogs: ActivityLogEntry[] = [
   {
@@ -67,21 +68,22 @@ const mockActivityLogs: ActivityLogEntry[] = [
   }
 ]
 
-const getStatusBadge = (status: ActivityLogEntry["status"]) => {
-  switch (status) {
-    case "success":
-      return <Badge className="bg-green-100 text-green-800">Success</Badge>
-    case "warning":
-      return <Badge className="bg-yellow-100 text-yellow-800">Warning</Badge>
-    case "error":
-      return <Badge className="bg-red-100 text-red-800">Error</Badge>
-    default:
-      return <Badge variant="secondary">-</Badge>
-  }
-}
-
 export function ActivityLog() {
+  const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = usePersistedState("activity-log:search", "")
+
+  const getStatusBadge = (status: ActivityLogEntry["status"]) => {
+    switch (status) {
+      case "success":
+        return <Badge className="bg-green-100 text-green-800">{t("activityLog.success")}</Badge>
+      case "warning":
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("activityLog.warning")}</Badge>
+      case "error":
+        return <Badge className="bg-red-100 text-red-800">{t("activityLog.error")}</Badge>
+      default:
+        return <Badge variant="secondary">-</Badge>
+    }
+  }
   const [logs, setLogs] = useState<ActivityLogEntry[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -121,21 +123,21 @@ export function ActivityLog() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Activity Log</h2>
+        <h2 className="text-xl font-semibold">{t("activityLog.title")}</h2>
         <p className="text-sm text-muted-foreground">
-          Track user actions and system events.
+          {t("activityLog.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Search</CardTitle>
+          <CardTitle className="text-base">{t("activityLog.search")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search by user, action, or module..."
+            placeholder={t("activityLog.searchPlaceholder")}
             className="h-9"
           />
         </CardContent>
@@ -147,17 +149,17 @@ export function ActivityLog() {
             <TableHeader>
               <TableRow>
                 {/* Timestamp - date column, left aligned */}
-                <TableHead align="left" className="pl-6">Timestamp</TableHead>
+                <TableHead align="left" className="pl-6">{t("activityLog.timestamp")}</TableHead>
                 {/* User - text column, left aligned */}
-                <TableHead align="left">User</TableHead>
+                <TableHead align="left">{t("activityLog.user")}</TableHead>
                 {/* Action - text column, left aligned */}
-                <TableHead align="left">Action</TableHead>
+                <TableHead align="left">{t("activityLog.action")}</TableHead>
                 {/* Description (Detail) - text column, left aligned */}
-                <TableHead align="left">Detail</TableHead>
+                <TableHead align="left">{t("activityLog.detail")}</TableHead>
                 {/* IP Address - text column, left aligned */}
-                <TableHead align="left">IP</TableHead>
+                <TableHead align="left">{t("activityLog.ip")}</TableHead>
                 {/* Status - badge column, center aligned */}
-                <TableHead align="center">Status</TableHead>
+                <TableHead align="center">{t("common.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,7 +182,7 @@ export function ActivityLog() {
               {filteredLogs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    No activity logs found.
+                    {t("activityLog.noLogsFound")}
                   </TableCell>
                 </TableRow>
               )}

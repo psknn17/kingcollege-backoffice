@@ -551,7 +551,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     }
     addStudent(newStudent)
 
-    toast.success("Student added successfully")
+    toast.success(t("student.studentAdded"))
     setIsAddDialogOpen(false)
     setFormData(emptyStudent)
   }
@@ -586,7 +586,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         updatedAt: new Date()
       })
 
-      toast.success("Student updated successfully")
+      toast.success(t("student.studentUpdated"))
       setIsEditDialogOpen(false)
       setSelectedStudent(null)
     }
@@ -702,7 +702,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     try {
       const rows = await parseXlsxOrCsvFile(file)
       if (rows.length === 0) {
-        setImportError("File has no data rows")
+        setImportError(t("student.fileHasNoData"))
         return
       }
 
@@ -733,13 +733,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       setImportError("")
       setShowAllPreview(false)
     } catch {
-      setImportError("Failed to parse file. Please use the provided template.")
+      setImportError(t("student.failedToParse"))
     }
   }
 
   const performConfirmImport = () => {
     if (importPreview.length === 0) {
-      toast.error("No data to import")
+      toast.error(t("student.noDataToImport"))
       return
     }
 
@@ -895,7 +895,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
     downloadAsXlsx(headers, [exampleRow], "student_import_template")
 
-    toast.success("Template downloaded")
+    toast.success(t("student.templateDownloaded"))
   }
 
   // Grade progression map
@@ -1111,12 +1111,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   // Handle confirm promotion
   const handleConfirmPromotion = () => {
     if (!promoteFromYear || !promoteToYear || !promoteConfirmed) {
-      toast.error("Please confirm the action before proceeding")
+      toast.error(t("student.confirmBeforeProceeding"))
       return
     }
 
     if (selectedStudentIds.size === 0) {
-      toast.error("Please select at least one student to promote")
+      toast.error(t("student.selectAtLeastOne"))
       return
     }
 
@@ -1158,24 +1158,24 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setSelectedStudentIds(new Set())
 
     if (graduatedCount > 0) {
-      toast.success(`Promoted ${promotedCount} students and graduated ${graduatedCount} students`)
+      toast.success(t("student.promotedAndGraduated").replace("{promoted}", String(promotedCount)).replace("{graduated}", String(graduatedCount)))
     } else {
-      toast.success(`Promoted ${promotedCount} students to ${promoteToYear} `)
+      toast.success(t("student.promotedStudents").replace("{promoted}", String(promotedCount)).replace("{year}", promoteToYear))
     }
   }
 
   const studentFormContent = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-        <TabsTrigger value="academic">Academic</TabsTrigger>
-        <TabsTrigger value="parents">Parents</TabsTrigger>
+        <TabsTrigger value="basic">{t("student.basicInfo")}</TabsTrigger>
+        <TabsTrigger value="academic">{t("student.academic")}</TabsTrigger>
+        <TabsTrigger value="parents">{t("student.parentsTab")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="basic" className="space-y-4 mt-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Student ID</Label>
+            <Label>{t("student.studentId")}</Label>
             <Input
               value={formData.studentId}
               onChange={(e) => setFormData(prev => ({ ...prev, studentId: e.target.value }))}
@@ -1184,7 +1184,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             />
           </div>
           <div className="space-y-2">
-            <Label>Gender</Label>
+            <Label>{t("student.gender")}</Label>
             <Select
               value={formData.gender}
               onValueChange={(value: "male" | "female" | "other") => setFormData(prev => ({ ...prev, gender: value }))}
@@ -1194,9 +1194,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="male">{t("student.male")}</SelectItem>
+                <SelectItem value="female">{t("student.female")}</SelectItem>
+                <SelectItem value="other">{t("student.other")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1204,20 +1204,20 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>First Name *</Label>
+            <Label>{t("student.firstNameRequired")}</Label>
             <Input
               value={formData.firstName}
               onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-              placeholder="Enter first name"
+              placeholder={t("student.firstName")}
               disabled={!userCanEdit}
             />
           </div>
           <div className="space-y-2">
-            <Label>Last Name *</Label>
+            <Label>{t("student.lastNameRequired")}</Label>
             <Input
               value={formData.lastName}
               onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-              placeholder="Enter last name"
+              placeholder={t("student.lastName")}
               disabled={!userCanEdit}
             />
           </div>
@@ -1225,21 +1225,21 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Nickname</Label>
+            <Label>{t("student.nickname")}</Label>
             <Input
               value={formData.nickname}
               onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
-              placeholder="Enter nickname"
+              placeholder={t("student.nickname")}
               disabled={!userCanEdit}
             />
           </div>
           <div className="space-y-2">
-            <Label>Date of Birth</Label>
+            <Label>{t("student.dateOfBirth")}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!userCanEdit}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.dateOfBirth ? format(formData.dateOfBirth, "PPP") : "Pick a date"}
+                  {formData.dateOfBirth ? format(formData.dateOfBirth, "PPP") : t("student.pickADate")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -1311,11 +1311,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         </div>
 
         <div className="space-y-2">
-          <Label>Notes</Label>
+          <Label>{t("student.notes")}</Label>
           <Input
             value={formData.notes}
             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            placeholder="Additional notes"
+            placeholder={t("student.notes")}
             disabled={!userCanEdit}
           />
         </div>
@@ -1325,14 +1325,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         {/* Academic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Year Group *</Label>
+            <Label>{t("student.yearGroupRequired")}</Label>
             <Select
               value={formData.gradeLevel}
               onValueChange={(value) => setFormData(prev => ({ ...prev, gradeLevel: value }))}
               disabled={!userCanEdit}
             >
               <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                <SelectValue placeholder="Select grade" />
+                <SelectValue placeholder={t("student.selectGrade")} />
               </SelectTrigger>
               <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {gradeLevels.map(grade => (
@@ -1344,14 +1344,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Academic Year *</Label>
+            <Label>{t("student.academicYearRequired")}</Label>
             <Select
               value={formData.academicYear}
               onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
               disabled={!userCanEdit}
             >
               <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                <SelectValue placeholder="Select year" />
+                <SelectValue placeholder={t("student.selectYear")} />
               </SelectTrigger>
               <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {availableYears.map(year => (
@@ -1366,14 +1366,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Enrollment Term *</Label>
+            <Label>{t("student.enrollmentTermRequired")}</Label>
             <Select
               value={formData.enrollmentTerm}
               onValueChange={(value: "term1" | "term2" | "term3") => setFormData(prev => ({ ...prev, enrollmentTerm: value }))}
               disabled={!userCanEdit}
             >
               <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                <SelectValue placeholder="Select term" />
+                <SelectValue placeholder={t("student.selectTerm")} />
               </SelectTrigger>
               <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                 {getTermOptions(t).map(term => (
@@ -1385,7 +1385,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Status</Label>
+            <Label>{t("student.status")}</Label>
             <Select
               value={formData.status}
               onValueChange={(value: "active" | "graduated" | "withdrawn" | "on_leave") => setFormData(prev => ({
@@ -1423,14 +1423,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Academic Year</Label>
+                <Label>{t("student.academicYear")}</Label>
                 <Select
                   value={formData.withdrawalAcademicYear || ""}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, withdrawalAcademicYear: value }))}
                   disabled={!userCanEdit}
                 >
                   <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                    <SelectValue placeholder="Select year" />
+                    <SelectValue placeholder={t("student.selectYear")} />
                   </SelectTrigger>
                   <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                     {availableYears.map((year: string) => (
@@ -1440,14 +1440,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Term</Label>
+                <Label>{t("student.term")}</Label>
                 <Select
                   value={formData.withdrawalTerm || ""}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, withdrawalTerm: value }))}
                   disabled={!userCanEdit}
                 >
                   <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                    <SelectValue placeholder="Select term" />
+                    <SelectValue placeholder={t("student.selectTerm")} />
                   </SelectTrigger>
                   <SelectContent onPointerDown={(e) => e.stopPropagation()}>
                     {getTermOptions(t).map(term => (
@@ -1462,12 +1462,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Enrollment Date</Label>
+            <Label>{t("student.enrollmentDate")}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!userCanEdit}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.enrollmentDate ? format(formData.enrollmentDate, "PPP") : "Pick a date"}
+                  {formData.enrollmentDate ? format(formData.enrollmentDate, "PPP") : t("student.pickADate")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -1482,14 +1482,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Popover>
           </div>
           <div className="space-y-2">
-            <Label>Family Code</Label>
+            <Label>{t("student.familyCode")}</Label>
             <Input
               value={formData.familyCode || ""}
               onChange={(e) => {
                 const inputCode = e.target.value
                 setFormData(prev => ({ ...prev, familyCode: inputCode }))
               }}
-              placeholder="Enter family code (e.g., FAM001)"
+              placeholder={t("student.familyCodePlaceholder")}
               disabled={!userCanEdit}
               className="font-mono"
             />
@@ -1498,7 +1498,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 ? `✓ Existing family: ${families.find((f: Family) => f.familyCode === formData.familyCode)?.familyName}`
                 : formData.familyCode
                 ? "⚠ New family will be created"
-                : "Optional - leave empty if no family"}
+                : t("student.optionalFamilyCode")}
             </p>
           </div>
         </div>
@@ -1509,7 +1509,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         {/* Existing Parents */}
         {formData.parents.length > 0 && (
           <div className="space-y-2">
-            <Label>Current Parents/Guardians</Label>
+            <Label>{t("student.currentParentsGuardians")}</Label>
             <div className="space-y-2">
               {formData.parents.map((parent: Parent) => (
                 <div key={parent.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -1542,16 +1542,16 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           <Label className="text-base font-medium">Add Parent/Guardian</Label>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>{t("student.nameLabel")}</Label>
               <Input
                 value={newParent.name}
                 onChange={(e) => setNewParent(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Full name"
+                placeholder={t("student.parentName")}
                 disabled={!userCanEdit}
               />
             </div>
             <div className="space-y-2">
-              <Label>Relationship</Label>
+              <Label>{t("student.relationship")}</Label>
               <Select
                 value={newParent.relationship}
                 onValueChange={(value: "father" | "mother" | "guardian" | "other") => setNewParent(prev => ({ ...prev, relationship: value }))}
@@ -1561,17 +1561,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent onPointerDown={(e) => e.stopPropagation()}>
-                  <SelectItem value="father">Father</SelectItem>
-                  <SelectItem value="mother">Mother</SelectItem>
-                  <SelectItem value="guardian">Guardian</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="father">{t("student.father")}</SelectItem>
+                  <SelectItem value="mother">{t("student.mother")}</SelectItem>
+                  <SelectItem value="guardian">{t("student.guardian")}</SelectItem>
+                  <SelectItem value="other">{t("student.other")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{t("student.phoneLabel")}</Label>
               <Input
                 value={newParent.phone}
                 onChange={(e) => setNewParent(prev => ({ ...prev, phone: e.target.value }))}
@@ -1580,7 +1580,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>{t("student.emailLabel")}</Label>
               <Input
                 type="email"
                 value={newParent.email}
@@ -2055,17 +2055,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} modal={true}>
         <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>Add New Student</DialogTitle>
+            <DialogTitle>{t("student.addNewStudent")}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
             {studentFormContent}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveNewStudent} disabled={!userCanEdit || !formData.firstName || !formData.lastName || !formData.gradeLevel}>
-              Add Student
+              {t("student.addStudent")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2075,17 +2075,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} modal={true}>
         <DialogContent className="max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>Edit Student</DialogTitle>
+            <DialogTitle>{t("student.editStudent")}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
             {studentFormContent}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveEditStudent} disabled={!userCanEdit}>
-              Save Changes
+              {t("common.saveChanges")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2287,15 +2287,15 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       <AlertDialog open={deleteConfirmDialog.isOpen} onOpenChange={deleteConfirmDialog.setIsOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Student</AlertDialogTitle>
+            <AlertDialogTitle>{t("student.deleteStudentTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedStudent
-                ? `Are you sure you want to delete ${selectedStudent.firstName} ${selectedStudent.lastName}? This action cannot be undone.`
-                : "Are you sure you want to delete this student? This action cannot be undone."}
+                ? t("student.deleteStudentConfirm").replace("{name}", `${selectedStudent.firstName} ${selectedStudent.lastName}`)
+                : t("student.deleteStudentGeneric")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteConfirmDialog.handleConfirm}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -2308,7 +2308,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 padding: '0.5rem 1rem'
               }}
             >
-              Delete
+              {t("student.deleteAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2319,9 +2319,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         <DialogContent className="max-w-4xl w-[90vw] flex flex-col max-h-[90vh] p-0">
           <div className="p-6 pb-0">
           <DialogHeader>
-            <DialogTitle>Import Students</DialogTitle>
+            <DialogTitle>{t("student.importStudentsTitle")}</DialogTitle>
             <DialogDescription>
-              Upload a CSV file to import students. Download the template for the correct format.
+              {t("student.importStudentsDesc")}
             </DialogDescription>
           </DialogHeader>
           </div>
@@ -2330,18 +2330,18 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
               <div>
-                <p className="font-medium">Excel Template</p>
-                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                <p className="font-medium">{t("student.excelTemplate")}</p>
+                <p className="text-sm text-muted-foreground">{t("student.excelTemplateDesc")}</p>
               </div>
               <Button variant="outline" onClick={downloadTemplate}>
                 <Download className="w-4 h-4 mr-2" />
-                Download Template
+                {t("student.downloadTemplate")}
               </Button>
             </div>
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="csvFile">Upload File</Label>
+              <Label htmlFor="csvFile">{t("student.uploadFile")}</Label>
               <Input
                 id="csvFile"
                 type="file"
@@ -2362,7 +2362,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             {/* Preview Table */}
             {importPreview.length > 0 && (
               <div className="space-y-2">
-                <Label>Preview ({importPreview.length} students)</Label>
+                <Label>{t("student.preview").replace("{count}", String(importPreview.length))}</Label>
                 <div className="border rounded-lg overflow-x-auto">
                   <Table className="min-w-[640px]">
                     <TableHeader>
@@ -2371,7 +2371,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         <TableHead align="left">{t("table.name")}</TableHead>
                         <TableHead align="left" className="w-24">{t("table.yearGroup")}</TableHead>
                         <TableHead align="left" className="w-28">{t("table.year")}</TableHead>
-                        <TableHead align="left" className="w-32">Family Code</TableHead>
+                        <TableHead align="left" className="w-32">{t("student.familyCodeHeader")}</TableHead>
                         <TableHead align="center" className="w-20">{t("table.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2415,14 +2415,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
           <div className="p-6 pt-4 border-t flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleConfirmImport}
               disabled={!userCanEdit || importPreview.length === 0 || !!importError}
             >
               <Upload className="w-4 h-4 mr-2" />
-              Import {importPreview.length > 0 ? `${importPreview.length} Students` : ""}
+              {importPreview.length > 0 ? t("student.importCount").replace("{count}", String(importPreview.length)) : t("common.import")}
             </Button>
           </div>
         </DialogContent>
@@ -2434,10 +2434,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpCircle className="w-5 h-5" />
-              Promote Students to Next Grade
+              {t("student.promoteStudentsTitle")}
             </DialogTitle>
             <DialogDescription>
-              Select students to promote to the next grade level for the new academic year.
+              {t("student.promoteStudentsDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -2446,10 +2446,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             {/* Year Selection */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>From Academic Year</Label>
+                <Label>{t("student.fromAcademicYear")}</Label>
                 <Select value={promoteFromYear} onValueChange={(year: string) => setPromoteFromYear(year)} disabled={!userCanEdit}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select year" />
+                    <SelectValue placeholder={t("student.selectYear")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableYears.map((year: string) => (
@@ -2461,10 +2461,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>To Academic Year</Label>
+                <Label>{t("student.toAcademicYear")}</Label>
                 <Select value={promoteToYear} onValueChange={setPromoteToYear} disabled={!userCanEdit}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select year" />
+                    <SelectValue placeholder={t("student.selectYear")} />
                   </SelectTrigger>
                   <SelectContent>
                     {/* Show available years + next year based on selected From year */}
@@ -2496,14 +2496,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-base">
-                    Select Students ({totalStudentsToPromote} selected)
+                    {t("student.selectStudents").replace("{count}", String(totalStudentsToPromote))}
                   </Label>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={selectAllStudents} disabled={!userCanEdit}>
-                      Select All
+                      {t("student.selectAll")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={deselectAllStudents} disabled={!userCanEdit}>
-                      Deselect All
+                      {t("student.deselectAll")}
                     </Button>
                   </div>
                 </div>
@@ -2555,7 +2555,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
                         {/* Selected Count */}
                         <Badge variant={row.isGraduation ? "outline" : "secondary"} className="text-xs">
-                          {getSelectedCountForGrade(row.currentGradeId)}/{row.count} selected
+                          {t("student.selectedCount").replace("{selected}", String(getSelectedCountForGrade(row.currentGradeId))).replace("{total}", String(row.count))}
                         </Badge>
                       </div>
 
@@ -2598,9 +2598,9 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-medium text-amber-800">Year 13 Students</p>
+                      <p className="font-medium text-amber-800">{t("student.year13Students")}</p>
                       <p className="text-amber-700">
-                        Year 13 students will be marked as "Graduated" instead of being promoted to a new grade.
+                        {t("student.year13Warning")}
                       </p>
                     </div>
                   </div>
@@ -2609,7 +2609,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No active students found for {promoteFromYear || "the selected year"}</p>
+                <p>{t("student.noActiveStudents").replace("{year}", promoteFromYear || t("student.theSelectedYear"))}</p>
               </div>
             )}
 
@@ -2627,10 +2627,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     htmlFor="confirm-promote"
                     className="text-sm font-medium cursor-pointer"
                   >
-                    I confirm this action
+                    {t("student.confirmAction")}
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    This will update {totalStudentsToPromote} student records. This action cannot be easily undone.
+                    {t("student.confirmActionDesc").replace("{count}", String(totalStudentsToPromote))}
                   </p>
                 </div>
               </div>
@@ -2640,7 +2640,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           {/* Sticky Footer */}
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
             <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleConfirmPromotion}
@@ -2648,7 +2648,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               className="gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Promote {totalStudentsToPromote} Students
+              {t("student.promoteCount").replace("{count}", String(totalStudentsToPromote))}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -597,7 +597,7 @@ export function UserManagement() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userManagement.totalUsers")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summaryStats.total}</div>
@@ -606,7 +606,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userManagement.activeUsers")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.active}</div>
@@ -615,7 +615,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">SuperAdmin</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userManagement.superAdmin")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{summaryStats.admin}</div>
@@ -624,7 +624,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Finance Admin</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userManagement.financeAdmin")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{summaryStats.admin_accountant}</div>
@@ -633,7 +633,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approver</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userManagement.approver")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.approver}</div>
@@ -642,7 +642,7 @@ export function UserManagement() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">View</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userManagement.viewer")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-600">{summaryStats.viewer}</div>
@@ -663,69 +663,69 @@ export function UserManagement() {
               }}
             >
               <Plus className="w-4 h-4" />
-              Add User
+              {t("userManagement.addUser")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+              <DialogTitle>{t("userManagement.createNewUser")}</DialogTitle>
               <DialogDescription>
-                Add a new user to the system with role and permissions
+                {t("userManagement.createNewUserDesc")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
+                  <Label htmlFor="firstName">{t("userManagement.firstNameLabel")}</Label>
                   <Input
                     id="firstName"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Enter first name"
+                    placeholder={t("userManagement.enterFirstName")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Label htmlFor="lastName">{t("userManagement.lastNameLabel")}</Label>
                   <Input
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Enter last name"
+                    placeholder={t("userManagement.enterLastName")}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
+                  <Label htmlFor="username">{t("userManagement.usernameLabel")}</Label>
                   <Input
                     id="username"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder="Enter username"
+                    placeholder={t("userManagement.enterUsername")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t("userManagement.emailLabel")}</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="Enter email"
+                    placeholder={t("userManagement.enterEmail")}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password">{t("userManagement.passwordLabel")}</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Enter password"
+                    placeholder={t("userManagement.enterPassword")}
                     className="pr-10"
                   />
                   <Button
@@ -742,13 +742,13 @@ export function UserManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Roles *</Label>
+                  <Label>{t("userManagement.rolesLabel")}</Label>
                   <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                     {([
-                      { id: "admin", label: "SuperAdmin" },
-                      { id: "admin_accountant", label: "Finance Admin" },
-                      { id: "approver", label: "Approver" },
-                      { id: "viewer", label: "View" },
+                      { id: "admin", label: t("userManagement.superAdmin") },
+                      { id: "admin_accountant", label: t("userManagement.financeAdmin") },
+                      { id: "approver", label: t("userManagement.approver") },
+                      { id: "viewer", label: t("userManagement.viewer") },
                     ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
                       <div key={role} className="flex items-center space-x-2">
                         <Checkbox
@@ -770,14 +770,14 @@ export function UserManagement() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                  <Label htmlFor="status">{t("userManagement.statusFormLabel")}</Label>
                   <Select value={formData.status} onValueChange={(value: UserStatus) => setFormData({ ...formData, status: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">{t("userManagement.active")}</SelectItem>
+                      <SelectItem value="inactive">{t("userManagement.inactive")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -785,7 +785,7 @@ export function UserManagement() {
 
               {formData.roles.includes("approver") && (
                 <div className="space-y-2">
-                  <Label>Invoice Categories (Approval Queue)</Label>
+                  <Label>{t("userManagement.invoiceCategories")}</Label>
                   <p className="text-xs text-muted-foreground">ถ้าไม่เลือก = เห็นทุกประเภท</p>
                   <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                     {INVOICE_CATEGORIES.map(({ id, label }) => (
@@ -821,7 +821,7 @@ export function UserManagement() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
-              Search & Filter
+              {t("userManagement.searchAndFilter")}
             </CardTitle>
             <div className="flex gap-2">
               <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
@@ -832,10 +832,10 @@ export function UserManagement() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">{t("userManagement.searchLabel")}</label>
               <div className="relative">
                 <Input
-                  placeholder="Username, email, name"
+                  placeholder={t("userManagement.searchUsersPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className=""
@@ -844,32 +844,32 @@ export function UserManagement() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Role</label>
+              <label className="text-sm font-medium">{t("userManagement.roleLabel")}</label>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Roles" />
+                  <SelectValue placeholder={t("userManagement.allRoles")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">SuperAdmin</SelectItem>
-                  <SelectItem value="admin_accountant">Finance Admin</SelectItem>
-                  <SelectItem value="approver">Approver</SelectItem>
-                  <SelectItem value="viewer">View</SelectItem>
+                  <SelectItem value="all">{t("userManagement.allRoles")}</SelectItem>
+                  <SelectItem value="admin">{t("userManagement.superAdmin")}</SelectItem>
+                  <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
+                  <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
+                  <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t("userManagement.statusLabel")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="all">{t("userManagement.allStatus")}</SelectItem>
+                  <SelectItem value="active">{t("userManagement.active")}</SelectItem>
+                  <SelectItem value="inactive">{t("userManagement.inactive")}</SelectItem>
+                  <SelectItem value="suspended">{t("userManagement.suspended")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -880,7 +880,7 @@ export function UserManagement() {
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredUsers.length} of {users.length} users
+          {t("userManagement.showingCount").replace("{filtered}", String(filteredUsers.length)).replace("{total}", String(users.length))}
         </p>
       </div>
 
@@ -967,7 +967,7 @@ export function UserManagement() {
                         variant="ghost"
                         onClick={() => openEditDialog(user)}
                         disabled={!userCanEdit}
-                        title="Edit User"
+                        title={t("userManagement.editUserTooltip")}
                       >
                         <Edit className="w-4 h-4 text-gray-600" />
                       </Button>
@@ -976,7 +976,7 @@ export function UserManagement() {
                         variant="ghost"
                         onClick={() => toggleUserStatus(user.id)}
                         disabled={!userCanEdit}
-                        title={user.status === "active" ? "Deactivate User" : "Activate User"}
+                        title={user.status === "active" ? t("userManagement.deactivateUser") : t("userManagement.activateUser")}
                       >
                         {user.status === "active" ? (
                           <UserX className="w-4 h-4 text-orange-600" />
@@ -990,7 +990,7 @@ export function UserManagement() {
                           variant="ghost"
                           onClick={() => openDeleteDialog(user)}
                           disabled={!userCanEdit}
-                          title="Delete User"
+                          title={t("userManagement.deleteUserTooltip")}
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
@@ -1017,15 +1017,15 @@ export function UserManagement() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>{t("userManagement.editUserTitle")}</DialogTitle>
             <DialogDescription>
-              Update user information
+              {t("userManagement.updateUserInfo")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-firstName">First Name</Label>
+                <Label htmlFor="edit-firstName">{t("userManagement.firstNameEditLabel")}</Label>
                 <Input
                   id="edit-firstName"
                   value={formData.firstName}
@@ -1033,7 +1033,7 @@ export function UserManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-lastName">Last Name</Label>
+                <Label htmlFor="edit-lastName">{t("userManagement.lastNameEditLabel")}</Label>
                 <Input
                   id="edit-lastName"
                   value={formData.lastName}
@@ -1043,7 +1043,7 @@ export function UserManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-username">Username</Label>
+              <Label htmlFor="edit-username">{t("userManagement.usernameEditLabel")}</Label>
               <Input
                 id="edit-username"
                 value={formData.username}
@@ -1052,7 +1052,7 @@ export function UserManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email">{t("userManagement.emailEditLabel")}</Label>
               <Input
                 id="edit-email"
                 type="email"
@@ -1063,13 +1063,13 @@ export function UserManagement() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
-                <Label>Roles *</Label>
+                <Label>{t("userManagement.rolesLabel")}</Label>
                 <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                   {([
-                    { id: "admin", label: "SuperAdmin" },
-                    { id: "admin_accountant", label: "Finance Admin" },
-                    { id: "approver", label: "Approver" },
-                    { id: "viewer", label: "View" },
+                    { id: "admin", label: t("userManagement.superAdmin") },
+                    { id: "admin_accountant", label: t("userManagement.financeAdmin") },
+                    { id: "approver", label: t("userManagement.approver") },
+                    { id: "viewer", label: t("userManagement.viewer") },
                   ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
                     <div key={role} className="flex items-center space-x-2">
                       <Checkbox
@@ -1091,15 +1091,15 @@ export function UserManagement() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status">{t("userManagement.statusFormLabel")}</Label>
                 <Select value={formData.status} onValueChange={(value: UserStatus) => setFormData({ ...formData, status: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="active">{t("userManagement.active")}</SelectItem>
+                    <SelectItem value="inactive">{t("userManagement.inactive")}</SelectItem>
+                    <SelectItem value="suspended">{t("userManagement.suspended")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1107,7 +1107,7 @@ export function UserManagement() {
 
             {formData.roles.includes("approver") && (
               <div className="space-y-2">
-                <Label>Invoice Categories (Approval Queue)</Label>
+                <Label>{t("userManagement.invoiceCategories")}</Label>
                 <p className="text-xs text-muted-foreground">ถ้าไม่เลือก = เห็นทุกประเภท</p>
                 <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                   {INVOICE_CATEGORIES.map(({ id, label }) => (
@@ -1140,9 +1140,9 @@ export function UserManagement() {
       <Dialog open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Manage Permissions - {selectedUser?.username}</DialogTitle>
+            <DialogTitle>{t("userManagement.managePermissions").replace("{username}", selectedUser?.username ?? "")}</DialogTitle>
             <DialogDescription>
-              Customize permissions for this user
+              {t("userManagement.customizePermissions")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1152,14 +1152,14 @@ export function UserManagement() {
                 size="sm"
                 onClick={() => setSelectedPermissions(allPermissions.map(p => p.id))}
               >
-                Select All
+                {t("userManagement.selectAll")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedPermissions([])}
               >
-                Clear All
+                {t("userManagement.clearAll")}
               </Button>
               {selectedUser && (
                 <Button
@@ -1168,7 +1168,7 @@ export function UserManagement() {
                   onClick={() => setSelectedPermissions(Array.from(new Set(selectedUser.roles.flatMap(r => roleDefaultPermissions[r] || []))))}
                 >
                   <RotateCcw className="w-4 h-4 mr-1" />
-                  Reset to Role Default
+                  {t("userManagement.resetToDefault")}
                 </Button>
               )}
             </div>
@@ -1212,9 +1212,9 @@ export function UserManagement() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
+            <DialogTitle>{t("userManagement.deleteUserTitle")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedUser?.firstName} {selectedUser?.lastName}? This action cannot be undone.
+              {t("userManagement.deleteUserDesc").replace("{name}", `${selectedUser?.firstName ?? ""} ${selectedUser?.lastName ?? ""}`.trim())}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
