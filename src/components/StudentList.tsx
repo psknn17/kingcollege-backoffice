@@ -288,6 +288,27 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
   const availableYears = academicYears.map((y: any) => y.id).sort((a: string, b: string) => b.localeCompare(a))
 
+  // Build invoice terms map: studentId -> sorted array of term numbers ("1", "2", "3")
+  const invoiceTermsMap = useMemo(() => {
+    const map = new Map<string, string[]>()
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      if (!stored) return map
+      const invoices: any[] = JSON.parse(stored)
+      const sets = new Map<string, Set<string>>()
+      invoices.forEach((inv: any) => {
+        if (!inv.studentId) return
+        const termStr = inv.termName || inv.term || ""
+        const m = termStr.match(/[Tt]erm\s*(\d+)/)
+        if (!m) return
+        if (!sets.has(inv.studentId)) sets.set(inv.studentId, new Set())
+        sets.get(inv.studentId)!.add(m[1])
+      })
+      sets.forEach((terms, sid) => map.set(sid, Array.from(terms).sort()))
+    } catch { /* ignore */ }
+    return map
+  }, [students])
+
   // Filter students - Note: Year and Term filters are disabled to show all students across all years/terms
   const filteredStudents = useMemo(() => {
     return students.filter((student: Student) => {
@@ -299,13 +320,19 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         (student.familyCode && student.familyCode.toLowerCase().includes(searchTerm.toLowerCase()))
 
       const matchesGrade = filterGrade === "all" || student.gradeLevel === filterGrade
-      const matchesTerm = filterTerm === "all" || student.enrollmentTerm === filterTerm
+      const matchesTerm = (() => {
+        if (filterTerm === "all") return true
+        const termNum = filterTerm.replace("term", "") // "term1" → "1"
+        const invoiceTerms = invoiceTermsMap.get(student.studentId)
+        if (invoiceTerms && invoiceTerms.length > 0) return invoiceTerms.includes(termNum)
+        return student.enrollmentTerm === filterTerm
+      })()
       const matchesStatus = filterStatus === "all" || student.status === filterStatus
       const matchesAcademicYear = filterAcademicYear === "all" || student.academicYear === filterAcademicYear
 
       return matchesSearch && matchesGrade && matchesTerm && matchesStatus && matchesAcademicYear
     })
-  }, [students, searchTerm, filterGrade, filterTerm, filterStatus, filterAcademicYear])
+  }, [students, searchTerm, filterGrade, filterTerm, filterStatus, filterAcademicYear, invoiceTermsMap])
 
   // Sorting functions
   const handleSort = (column: string) => {
@@ -1896,7 +1923,19 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     <TableCell align="left">{formatAcademicYear(student.academicYear)}</TableCell>
                     {/* Term - Center (Badge) */}
                     <TableCell align="center">
-                      <Badge variant="outline">{getTermLabel(student.enrollmentTerm)}</Badge>
+                      {(() => {
+                        const terms = invoiceTermsMap.get(student.studentId)
+                        if (!terms || terms.length === 0) {
+                          return <Badge variant="outline">{getTermLabel(student.enrollmentTerm)}</Badge>
+                        }
+                        return (
+                          <div className="flex gap-1 justify-center flex-wrap">
+                            {terms.map(t => (
+                              <Badge key={t} variant="outline">Term {t}</Badge>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </TableCell>
                     {/* Family Code - Center (Badge) */}
                     <TableCell align="center">
