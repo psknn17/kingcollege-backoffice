@@ -3602,7 +3602,7 @@ export function InvoiceManagement({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("common.sent")}</CardTitle>
+            <CardTitle className="text-sm font-medium">Email</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.sent}</div>
