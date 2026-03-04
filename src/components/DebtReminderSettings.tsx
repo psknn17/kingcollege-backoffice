@@ -98,6 +98,7 @@ interface ReminderConfig {
   emailTitle: string
   message: string
   invoiceStatuses: InvoiceStatus[]
+  dueDateFilter?: string // ISO date string or "all"
   status: ReminderStatus
   scheduledAt?: string // ISO timestamp when scheduled
   sentAt?: string // ISO timestamp when sent
@@ -236,6 +237,59 @@ export function DebtReminderSettings() {
   const [templatePickerDialog, setTemplatePickerDialog] = useState<{ isOpen: boolean; reminderId: string | null }>({ isOpen: false, reminderId: null })
   const [reminderTemplates, setReminderTemplates] = usePersistedState<DebtReminderTemplate[]>("debt-reminder:templates", DEFAULT_REMINDER_TEMPLATES)
   const [templateManageDialog, setTemplateManageDialog] = useState<{ isOpen: boolean; editing: DebtReminderTemplate | null }>({ isOpen: false, editing: null })
+
+  // Get unique due dates from invoices filtered by reminder's academicYear, term, invoiceStatuses
+  const getAvailableDueDates = (reminder: ReminderConfig): string[] => {
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      if (!stored) return []
+      const invoices: any[] = JSON.parse(stored)
+      const dates = new Set<string>()
+
+      // Normalize academic year: "2025/2026" → "2025-2026"
+      const normalizeYear = (y: string) => (y || "").replace("/", "-").trim()
+
+      // Extract term number from any format: "Term 1", "2025-2026 - Term 1", "1", "term1"
+      const extractTermNum = (t: string): string => {
+        const m = (t || "").match(/[Tt]erm\s*(\d+)/)
+        if (m) return m[1]
+        const n = (t || "").match(/^\s*(\d+)\s*$/)
+        if (n) return n[1]
+        return ""
+      }
+
+      invoices.forEach(inv => {
+        if (!inv.dueDate) return
+
+        // Filter by academic year
+        if (reminder.academicYear) {
+          const ry = normalizeYear(reminder.academicYear)
+          const iy = normalizeYear(inv.academicYear || "")
+          if (iy && ry && ry !== iy) return
+        }
+
+        // Filter by term
+        if (reminder.term) {
+          const rt = extractTermNum(reminder.term)
+          const it = extractTermNum(inv.term || "")
+          if (rt && it && rt !== it) return
+        }
+
+        // Filter by invoice status
+        const statuses = reminder.invoiceStatuses || []
+        if (statuses.length > 0) {
+          const invStatus = inv.status === "paid" ? "paid" : inv.status === "overdue" ? "overdue" : "unpaid"
+          if (!statuses.includes(invStatus as InvoiceStatus)) return
+        }
+
+        const d = new Date(inv.dueDate)
+        if (!isNaN(d.getTime())) dates.add(d.toISOString().split("T")[0])
+      })
+      return Array.from(dates).sort()
+    } catch {
+      return []
+    }
+  }
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", subject: "", emailTitle: "", message: "" })
 
   // Calculate summary statistics
@@ -890,8 +944,8 @@ export function DebtReminderSettings() {
                   </div>
                 </div>
 
-                {/* Row 2: Email Subject & Invoice Status Filter */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Row 2: Email Subject, Invoice Status Filter & Due Date Filter */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Email Subject</Label>
                     <Select
@@ -965,6 +1019,27 @@ export function DebtReminderSettings() {
                         </div>
                       </PopoverContent>
                     </Popover>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Due Date Filter</Label>
+                    <Select
+                      value={reminder.dueDateFilter || "all"}
+                      onValueChange={(value) => updateReminder(reminder.id, "dueDateFilter", value)}
+                      disabled={!userCanEdit || isReminderLocked(reminder)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Due Dates" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Due Dates</SelectItem>
+                        {getAvailableDueDates(reminder).map(date => (
+                          <SelectItem key={date} value={date}>
+                            {format(new Date(date), "dd MMM yyyy")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
