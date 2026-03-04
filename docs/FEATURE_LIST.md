@@ -16,10 +16,12 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 3 | Debt Reminder Settings | U | — | — | Year / Term / Invoice Status / Due Date | — | — | — | — | ✅ Preview + Send |
+| 3 | Debt Reminder Settings | U | — | — | Year / Term / Invoice Status / Due Date | — | — | — | — | ✅ 4 Templates / Preview + Send |
 | 4 | Invoice / Receipt Template | U | — | — | — | — | — | — | — | — |
 | 5 | Email History | View | — | XLSX | Recipient / Type / Subject | — | — | — | — | — |
 | 6 | Payment History | View / U | — | XLSX | Date / Status / Student / Amount | ✅ | ✅ | — | — | — |
+
+> **Debt Reminder Templates (C1.1):** 1. First Reminder · 2. Second Reminder · 3. Final Notice · 4. Overdue Notice
 
 ---
 
@@ -251,4 +253,4 @@
 
 ---
 
-*Last updated: 2026-03-04*
+*Last updated: 2026-03-04 (v1.2)*
