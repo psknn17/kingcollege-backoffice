@@ -1,5 +1,5 @@
 # Feature List — Payment Backoffice System
-> Generated: 2026-03-02 | Version: 1.0
+> Generated: 2026-03-02 | Version: 1.1 | Updated: 2026-03-04
 
 ---
 
@@ -16,7 +16,7 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 3 | Debt Reminder Settings | U | — | — | Status / Category / Year | — | — | — | — | ✅ Preview + Send |
+| 3 | Debt Reminder Settings | U | — | — | Year / Term / Invoice Status / Due Date | — | — | — | — | ✅ Preview + Send |
 | 4 | Invoice / Receipt Template | U | — | — | — | — | — | — | — | — |
 | 5 | Email History | View | — | XLSX | Recipient / Type / Subject | — | — | — | — | — |
 | 6 | Payment History | View / U | — | XLSX | Date / Status / Student / Amount | ✅ | ✅ | — | — | — |
@@ -96,8 +96,8 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 34 | Student List | CRUD | ✅ XLSX / CSV | ✅ XLSX | Search + Status / Year / Grade | ✅ | ✅ | ✅ Email invite | — | ✅ |
-| 35 | Family Groups | CRUD | — | ✅ XLSX | Search + Portal status | ✅ | ✅ | ✅ Email invite | — | ✅ |
+| 34 | Student List | CRUD | ✅ XLSX / CSV | ✅ XLSX | Search + Status / Year / Grade / Term | ✅ | ✅ | ✅ Email invite | — | ✅ |
+| 35 | Family Groups | CRUD | — | ✅ XLSX | Search | ✅ | ✅ | ✅ Email invite | — | ✅ |
 
 ---
 
@@ -105,9 +105,8 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 36 | Promotional Campaigns | CRUD | — | — | Search | — | — | — | — | — |
-| 37 | Waive Fee Management | View | — | — | Status / Year | — | — | — | — | — |
-| 38 | Waive Fee Year Details | C / U | — | — | Search / Status | — | — | — | — | — |
+| 36 | Waive Fee Management | View | — | — | Status / Year | — | — | — | — | — |
+| 37 | Waive Fee Year Details | C / U | — | — | Search / Status | — | — | — | — | — |
 
 ---
 
@@ -115,9 +114,9 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 39 | Approval Queue | View / Approve | — | XLSX / PDF | Status / Date / Student | ✅ | ✅ | ✅ Approve / Reject / PDF | ✅ | ✅ |
-| 40 | Invoice Creation | C / U | — | PDF / Interface File | Search Student / Item | — | — | — | ✅ | ✅ |
-| 41 | External Invoice Creation | C / U | — | PDF | Search Client / Item | — | — | — | ✅ | ✅ |
+| 38 | Approval Queue | View / Approve | — | XLSX / PDF | Status / Date / Student | ✅ | ✅ | ✅ Approve / Reject / PDF | ✅ | ✅ |
+| 39 | Invoice Creation | C / U | — | PDF / Interface File | Search Student / Item | — | — | — | ✅ | ✅ |
+| 40 | External Invoice Creation | C / U | — | PDF | Search Client / Item | — | — | — | ✅ | ✅ |
 
 ---
 
@@ -125,14 +124,14 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 42 | School Settings | U | — | — | — | — | — | — | — | — |
-| 43 | Bank Settings | CRUD | — | — | — | — | — | — | — | — |
-| 44 | Term Settings | CRUD | — | — | — | — | — | — | — | — |
-| 45 | User Management | CRUD | — | — | Username / Role / Email | ✅ | — | — | — | ✅ Reset pw |
-| 46 | Activity Log | View | — | — | Search / Filter | ✅ | — | — | — | — |
-| 47 | User Profile | U | — | — | — | — | — | — | — | — |
-| 48 | User Settings | U | — | — | — | — | — | — | — | — |
-| 49 | User Activity | View | — | — | — | — | — | — | — | — |
+| 41 | School Settings | U | — | — | — | — | — | — | — | — |
+| 42 | Bank Settings | CRUD | — | — | — | — | — | — | — | — |
+| 43 | Term Settings | CRUD | — | — | — | — | — | — | — | — |
+| 44 | User Management | CRUD | — | — | Username / Role / Email | ✅ | — | — | — | ✅ Reset pw |
+| 45 | Activity Log | View | — | — | Search / Filter | ✅ | — | — | — | — |
+| 46 | User Profile | U | — | — | — | — | — | — | — | — |
+| 47 | User Settings | U | — | — | — | — | — | — | — | — |
+| 48 | User Activity | View | — | — | — | — | — | — | — | — |
 
 ---
 
@@ -149,7 +148,7 @@
 | Bulk Actions | 16 |
 | PDF Generation | 10 |
 | Email Sending | 12 |
-| **Total Pages** | **49** |
+| **Total Pages** | **48** |
 
 ---
 
@@ -252,4 +251,4 @@
 
 ---
 
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-04*
