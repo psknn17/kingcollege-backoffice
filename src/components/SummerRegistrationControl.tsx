@@ -582,8 +582,8 @@ export function SummerRegistrationControl() {
                       </div>
                       
                       <div className="grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-2">
-                        <span>{t("summer.start")}: {format(period.startDate, "MMM dd, yyyy")}</span>
-                        <span>{t("summer.end")}: {format(period.endDate, "MMM dd, yyyy")}</span>
+                        <span>{t("summer.start")}: {format(period.startDate, "dd MMM yyyy")}</span>
+                        <span>{t("summer.end")}: {format(period.endDate, "dd MMM yyyy")}</span>
                         <span>{t("summer.target")}: {period.targetGroups.join(", ")}</span>
                       </div>
                       
@@ -684,7 +684,7 @@ export function SummerRegistrationControl() {
                         <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground mb-2">
                           <span>{t("summer.age")}: {activity.ageGroup}</span>
                           <span>{t("summer.fee")}: ฿{activity.fee.toLocaleString()}</span>
-                          <span>{t("summer.deadline")}: {format(activity.registrationDeadline, "MMM dd")}</span>
+                          <span>{t("summer.deadline")}: {format(activity.registrationDeadline, "dd MMM")}</span>
                           <span>{t("summer.waitlist")}: {activity.waitlist}</span>
                         </div>
                         
@@ -831,7 +831,7 @@ export function SummerRegistrationControl() {
                     <div>
                       <Label className="text-muted-foreground">{t("summer.duration")}</Label>
                       <p className="font-medium">
-                        {format(currentPeriodForPricing.startDate, "MMM dd")} - {format(currentPeriodForPricing.endDate, "MMM dd, yyyy")}
+                        {format(currentPeriodForPricing.startDate, "dd MMM")} - {format(currentPeriodForPricing.endDate, "dd MMM yyyy")}
                       </p>
                     </div>
                   </div>

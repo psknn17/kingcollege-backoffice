@@ -606,7 +606,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "MM/dd") : t("receipt.from")}
+                          {dateFrom ? format(dateFrom, "dd/MM") : t("receipt.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -623,7 +623,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "MM/dd") : t("receipt.to")}
+                          {dateTo ? format(dateTo, "dd/MM") : t("receipt.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -788,7 +788,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                       )}
                       <TableCell>₿{receipt.amount.toLocaleString()}</TableCell>
                       <TableCell>{receipt.paymentMethod}</TableCell>
-                      <TableCell>{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
                       <TableCell>{getStatusBadge(receipt.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -972,7 +972,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                 <div>
                   <h4 className="font-medium">{t("receipt.additionalInfo")}</h4>
                   <div className="space-y-2 mt-2">
-                    <p><span className="font-medium">{t("common.date")}:</span> {format(selectedReceipt.transactionDate, "MMMM dd, yyyy")}</p>
+                    <p><span className="font-medium">{t("common.date")}:</span> {format(selectedReceipt.transactionDate, "dd MMMM yyyy")}</p>
                     {!isExternal && <p><span className="font-medium">{t("receipt.term")}:</span> {selectedReceipt.term}</p>}
                     <p><span className="font-medium">{t("receipt.downloads")}:</span> {selectedReceipt.downloadCount} {t("receipt.times")}</p>
                   </div>

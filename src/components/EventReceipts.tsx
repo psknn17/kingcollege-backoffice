@@ -496,7 +496,7 @@ export function EventReceipts() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateFrom ? format(dateFrom, "MM/dd") : t("eventReceipt.from")}
+                          {dateFrom ? format(dateFrom, "dd/MM") : t("eventReceipt.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -513,7 +513,7 @@ export function EventReceipts() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateTo ? format(dateTo, "MM/dd") : t("eventReceipt.to")}
+                          {dateTo ? format(dateTo, "dd/MM") : t("eventReceipt.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -618,7 +618,7 @@ export function EventReceipts() {
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <CalendarEmoji className="w-3 h-3" />
-                            {format(receipt.eventDate, "MMM dd, yyyy")}
+                            {format(receipt.eventDate, "dd MMM yyyy")}
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <MapPin className="w-3 h-3" />
@@ -644,7 +644,7 @@ export function EventReceipts() {
                       {/* Payment Method - text/left */}
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - date/left */}
-                      <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
                       {/* Status - badge/center */}
                       <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                       {/* Downloads - number/right */}

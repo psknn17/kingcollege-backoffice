@@ -513,7 +513,7 @@ export function SummerActivitiesReceipts() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateFrom ? format(dateFrom, "MM/dd") : t("common.from")}
+                          {dateFrom ? format(dateFrom, "dd/MM") : t("common.from")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -530,7 +530,7 @@ export function SummerActivitiesReceipts() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {dateTo ? format(dateTo, "MM/dd") : t("common.to")}
+                          {dateTo ? format(dateTo, "dd/MM") : t("common.to")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -665,7 +665,7 @@ export function SummerActivitiesReceipts() {
                       {/* Payment Method - text (left aligned) */}
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - date (left aligned) */}
-                      <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
                       {/* Status - badge (center aligned) */}
                       <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                       {/* Downloads - number (right aligned) */}

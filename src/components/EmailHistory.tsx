@@ -309,10 +309,10 @@ export function EmailHistory() {
                   {dateRange.from ? (
                     dateRange.to ? (
                       <>
-                        {format(dateRange.from, "LLL dd")} - {format(dateRange.to, "LLL dd, y")}
+                        {format(dateRange.from, "dd LLL")} - {format(dateRange.to, "dd LLL y")}
                       </>
                     ) : (
-                      format(dateRange.from, "LLL dd, y")
+                      format(dateRange.from, "dd LLL y")
                     )
                   ) : (
                     "Filter by Date"

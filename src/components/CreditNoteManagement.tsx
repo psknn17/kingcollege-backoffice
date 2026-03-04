@@ -1239,18 +1239,18 @@ export function CreditNoteManagement() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Issue Date</p>
-                    <p className="font-medium">{format(selectedCreditNote.issueDate, "MMM dd, yyyy")}</p>
+                    <p className="font-medium">{format(selectedCreditNote.issueDate, "dd MMM yyyy")}</p>
                   </div>
                   {selectedCreditNote.dueDate && (
                     <div>
                       <p className="text-sm text-muted-foreground">Due Date</p>
-                      <p className="font-medium">{format(selectedCreditNote.dueDate, "MMM dd, yyyy")}</p>
+                      <p className="font-medium">{format(selectedCreditNote.dueDate, "dd MMM yyyy")}</p>
                     </div>
                   )}
                   {selectedCreditNote.appliedDate && (
                     <div>
                       <p className="text-sm text-muted-foreground">Applied Date</p>
-                      <p className="font-medium">{format(selectedCreditNote.appliedDate, "MMM dd, yyyy")}</p>
+                      <p className="font-medium">{format(selectedCreditNote.appliedDate, "dd MMM yyyy")}</p>
                     </div>
                   )}
                 </div>

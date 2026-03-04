@@ -463,7 +463,7 @@ export function ExternalParentsApproval() {
                   <TableCell>
                     {getDocumentStatus(application.documents)}
                   </TableCell>
-                  <TableCell>{format(application.applicationDate, "MMM dd, yyyy")}</TableCell>
+                  <TableCell>{format(application.applicationDate, "dd MMM yyyy")}</TableCell>
                   <TableCell>{getStatusBadge(application.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-center">
@@ -503,7 +503,7 @@ export function ExternalParentsApproval() {
                 <div>
                   <h3 className="text-lg font-medium">{selectedApplication.studentName}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {t("external.appliedBy")} {selectedApplication.parentName} {t("external.on")} {format(selectedApplication.applicationDate, "MMM dd, yyyy")}
+                    {t("external.appliedBy")} {selectedApplication.parentName} {t("external.on")} {format(selectedApplication.applicationDate, "dd MMM yyyy")}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -640,7 +640,7 @@ export function ExternalParentsApproval() {
                       <div>
                         <p className="text-sm text-muted-foreground">{t("external.reviewDate")}</p>
                         <p className="font-medium">
-                          {selectedApplication.reviewDate ? format(selectedApplication.reviewDate, "MMM dd, yyyy") : "N/A"}
+                          {selectedApplication.reviewDate ? format(selectedApplication.reviewDate, "dd MMM yyyy") : "N/A"}
                         </p>
                       </div>
                     </div>

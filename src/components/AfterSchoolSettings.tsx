@@ -397,7 +397,7 @@ export function AfterSchoolSettings() {
                           disabled={!userCanEdit}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {period.earlyBirdDeadline ? format(period.earlyBirdDeadline, "MM/dd") : t("settings.pickDate")}
+                          {period.earlyBirdDeadline ? format(period.earlyBirdDeadline, "dd/MM") : t("settings.pickDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">

@@ -4120,9 +4120,9 @@ export function InvoiceManagement({
                         )}
                       </TableCell>
                       {/* Issue Date - LEFT */}
-                      <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                      <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "dd MMM yyyy") : "-"}</TableCell>
                       {/* Due Date - LEFT */}
-                      <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell align="left">{format(invoice.dueDate, "dd MMM yyyy")}</TableCell>
                       {/* Actions - CENTER */}
                       <TableCell align="center">
                         <div className="flex gap-1 justify-center">
@@ -4506,9 +4506,9 @@ export function InvoiceManagement({
                           )}
                         </TableCell>
                         {/* Issue Date - LEFT */}
-                        <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                        <TableCell align="left">{getApprovalStatus(invoice) === "approved" && invoice.issueDate ? format(invoice.issueDate, "dd MMM yyyy") : "-"}</TableCell>
                         {/* Due Date - LEFT */}
-                        <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                        <TableCell align="left">{format(invoice.dueDate, "dd MMM yyyy")}</TableCell>
                         {/* Actions - CENTER */}
                         <TableCell align="center">
                           <div className="flex items-center gap-1 justify-center">
@@ -7079,7 +7079,7 @@ export function InvoiceManagement({
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium">
-                            {format(new Date(log.sentAt), "MMM dd, yyyy")}
+                            {format(new Date(log.sentAt), "dd MMM yyyy")}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {format(new Date(log.sentAt), "HH:mm:ss")}

@@ -884,10 +884,10 @@ export function UserManagement() {
                   {/* Status Badge - CENTER aligned */}
                   <TableCell align="center">{getStatusBadge(user.status)}</TableCell>
                   {/* Created Date - LEFT aligned */}
-                  <TableCell align="left">{format(user.createdAt, "MMM dd, yyyy")}</TableCell>
+                  <TableCell align="left">{format(user.createdAt, "dd MMM yyyy")}</TableCell>
                   {/* Last Login Date - LEFT aligned */}
                   <TableCell align="left">
-                    {user.lastLogin ? format(user.lastLogin, "MMM dd, yyyy") : "-"}
+                    {user.lastLogin ? format(user.lastLogin, "dd MMM yyyy") : "-"}
                   </TableCell>
                   {/* Actions - CENTER aligned */}
                   <TableCell align="center">

@@ -121,9 +121,9 @@ export function TuitionDashboard() {
 
     if (dateRange.from) {
       if (dateRange.to) {
-        filters.push(`${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`)
+        filters.push(`${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`)
       } else {
-        filters.push(`${t("date.from")} ${format(dateRange.from, "MMM dd")}`)
+        filters.push(`${t("date.from")} ${format(dateRange.from, "dd MMM")}`)
       }
     }
 
@@ -211,10 +211,10 @@ export function TuitionDashboard() {
                         {dateRange.from ? (
                           dateRange.to ? (
                             <>
-                              {format(dateRange.from, "MMM dd, yyyy")} - {format(dateRange.to, "MMM dd, yyyy")}
+                              {format(dateRange.from, "dd MMM yyyy")} - {format(dateRange.to, "dd MMM yyyy")}
                             </>
                           ) : (
-                            format(dateRange.from, "MMM dd, yyyy")
+                            format(dateRange.from, "dd MMM yyyy")
                           )
                         ) : (
                           t("dashboard.pickDateRange")
@@ -295,8 +295,8 @@ export function TuitionDashboard() {
                       <CalendarIcon className="w-3 h-3" />
                       <span>
                         {appliedFilters.dateRange.to ?
-                          `${format(appliedFilters.dateRange.from, "MMM dd")} - ${format(appliedFilters.dateRange.to, "MMM dd")}` :
-                          format(appliedFilters.dateRange.from, "MMM dd, yyyy")
+                          `${format(appliedFilters.dateRange.from, "dd MMM")} - ${format(appliedFilters.dateRange.to, "dd MMM")}` :
+                          format(appliedFilters.dateRange.from, "dd MMM yyyy")
                         }
                       </span>
                       <button

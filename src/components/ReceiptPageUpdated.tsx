@@ -1567,7 +1567,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       {/* Payment Method - left aligned */}
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - left aligned */}
-                      <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                      <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
                       {/* Status - center aligned */}
                       <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                       {/* Actions - center aligned */}
@@ -2181,7 +2181,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         {/* Reason - left aligned */}
                         <TableCell align="left" className="max-w-xs truncate">{creditNote.reason}</TableCell>
                         {/* Issue Date - left aligned */}
-                        <TableCell align="left">{format(creditNote.issueDate, "MMM dd, yyyy")}</TableCell>
+                        <TableCell align="left">{format(creditNote.issueDate, "dd MMM yyyy")}</TableCell>
                         {/* Status - center aligned */}
                         <TableCell align="center">{getStatusBadge(creditNote.status)}</TableCell>
                         {/* Actions - center aligned */}

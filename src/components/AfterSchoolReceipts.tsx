@@ -472,7 +472,7 @@ export function AfterSchoolReceipts() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateFrom ? format(dateFrom, "MM/dd", { locale }) : t("invoice.fromDate")}
+                      {dateFrom ? format(dateFrom, "dd/MM", { locale }) : t("invoice.fromDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -489,7 +489,7 @@ export function AfterSchoolReceipts() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateTo ? format(dateTo, "MM/dd", { locale }) : t("invoice.toDate")}
+                      {dateTo ? format(dateTo, "dd/MM", { locale }) : t("invoice.toDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -616,7 +616,7 @@ export function AfterSchoolReceipts() {
                   {/* Type - CENTER */}
                   <TableCell align="center">{getPaymentTypeBadge(receipt.paymentType)}</TableCell>
                   {/* Date - LEFT */}
-                  <TableCell align="left">{format(receipt.transactionDate, "MMM dd, yyyy")}</TableCell>
+                  <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
                   {/* Status - CENTER */}
                   <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                   {/* Downloads - RIGHT */}

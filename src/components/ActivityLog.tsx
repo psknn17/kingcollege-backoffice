@@ -164,7 +164,7 @@ export function ActivityLog() {
               {paginatedLogs.map(log => (
                 <TableRow key={log.id}>
                   {/* Timestamp - date column, left aligned */}
-                  <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "MMM dd, yyyy HH:mm")}</TableCell>
+                  <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "dd MMM yyyy HH:mm")}</TableCell>
                   {/* User - text column, left aligned */}
                   <TableCell align="left" className="font-medium">{log.user}</TableCell>
                   {/* Action - text column, left aligned */}

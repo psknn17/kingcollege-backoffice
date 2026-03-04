@@ -1143,9 +1143,9 @@ export function ApprovalQueue() {
                     })()}
                   </TableCell>
                   {/* Issue Date - left aligned */}
-                  <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "MMM dd, yyyy") : "-"}</TableCell>
+                  <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "dd MMM yyyy") : "-"}</TableCell>
                   {/* Due Date - left aligned */}
-                  <TableCell align="left">{format(invoice.dueDate, "MMM dd, yyyy")}</TableCell>
+                  <TableCell align="left">{format(invoice.dueDate, "dd MMM yyyy")}</TableCell>
                   {/* Actions - center aligned */}
                   <TableCell align="center">
                     <div className="flex justify-center gap-2">

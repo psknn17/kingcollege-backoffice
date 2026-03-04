@@ -718,7 +718,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                     <TableCell>{invoice.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <div>
-                        <div>{format(invoice.dueDate, "MMM dd, yyyy", { locale })}</div>
+                        <div>{format(invoice.dueDate, "dd MMM yyyy", { locale })}</div>
                         {invoice.status === "unpaid" && (
                           <div className={`text-sm ${daysUntilDue < 0 ? "text-red-600" : daysUntilDue <= 7 ? "text-orange-600" : "text-muted-foreground"}`}>
                             {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} ${t("invoiceOverview.daysOverdue")}` : `${daysUntilDue} ${t("invoiceOverview.daysLeft")}`}
@@ -876,12 +876,12 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoice.issueDate")}</p>
-                    <p className="font-medium">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "MMM dd, yyyy", { locale }) : "Pending Approval"}</p>
+                    <p className="font-medium">{selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy", { locale }) : "Pending Approval"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("invoice.dueDate")}</p>
                     <div>
-                      <p className="font-medium">{format(selectedInvoice.dueDate, "MMM dd, yyyy", { locale })}</p>
+                      <p className="font-medium">{format(selectedInvoice.dueDate, "dd MMM yyyy", { locale })}</p>
                       {selectedInvoice.status === "unpaid" && (
                         <div className="flex items-center gap-1 mt-1">
                           <Clock className="w-3 h-3" />

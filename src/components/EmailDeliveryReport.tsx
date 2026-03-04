@@ -512,7 +512,7 @@ export function EmailDeliveryReport() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateFrom ? format(dateFrom, "MM/dd") : t("common.from")}
+                      {dateFrom ? format(dateFrom, "dd/MM") : t("common.from")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -529,7 +529,7 @@ export function EmailDeliveryReport() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1">
                       <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateTo ? format(dateTo, "MM/dd") : t("common.to")}
+                      {dateTo ? format(dateTo, "dd/MM") : t("common.to")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -632,11 +632,11 @@ export function EmailDeliveryReport() {
                   <TableCell>{getStatusBadge(record.status)}</TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {format(record.sentAt, "MMM dd, HH:mm")}
+                      {format(record.sentAt, "dd MMM HH:mm")}
                     </div>
                     {record.openedAt && (
                       <div className="text-xs text-muted-foreground">
-                        {t("email.status.opened")}: {format(record.openedAt, "MMM dd, HH:mm")}
+                        {t("email.status.opened")}: {format(record.openedAt, "dd MMM HH:mm")}
                       </div>
                     )}
                   </TableCell>
@@ -771,7 +771,7 @@ export function EmailDeliveryReport() {
                     <div>
                       <p className="font-medium">{t("email.emailSent")}</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(selectedRecord.sentAt, "MMM dd, yyyy 'at' HH:mm:ss")}
+                        {format(selectedRecord.sentAt, "dd MMM yyyy 'at' HH:mm:ss")}
                       </p>
                     </div>
                   </div>
@@ -784,7 +784,7 @@ export function EmailDeliveryReport() {
                       <div>
                         <p className="font-medium">{t("email.emailDelivered")}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(selectedRecord.deliveredAt, "MMM dd, yyyy 'at' HH:mm:ss")}
+                          {format(selectedRecord.deliveredAt, "dd MMM yyyy 'at' HH:mm:ss")}
                         </p>
                       </div>
                     </div>
@@ -798,7 +798,7 @@ export function EmailDeliveryReport() {
                       <div>
                         <p className="font-medium">{t("email.emailOpened")}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(selectedRecord.openedAt, "MMM dd, yyyy 'at' HH:mm:ss")}
+                          {format(selectedRecord.openedAt, "dd MMM yyyy 'at' HH:mm:ss")}
                         </p>
                       </div>
                     </div>

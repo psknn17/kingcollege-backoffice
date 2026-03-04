@@ -314,10 +314,10 @@ function renderFilterInput(
               {dateRange.from ? (
                 dateRange.to ? (
                   <>
-                    {format(dateRange.from, "LLL dd", { locale })} - {format(dateRange.to, "LLL dd", { locale })}
+                    {format(dateRange.from, "dd LLL", { locale })} - {format(dateRange.to, "dd LLL", { locale })}
                   </>
                 ) : (
-                  format(dateRange.from, "LLL dd, y", { locale })
+                  format(dateRange.from, "dd LLL y", { locale })
                 )
               ) : (
                 filter.placeholder || "Pick dates"
@@ -372,7 +372,7 @@ function formatFilterValue(filter: FilterConfig, value: any, locale: typeof th |
   if (filter.type === "daterange" && typeof value === "object") {
     const range = value as { from?: Date; to?: Date }
     if (range.from && range.to) {
-      return `${format(range.from, "MM/dd", { locale })} - ${format(range.to, "MM/dd", { locale })}`
+      return `${format(range.from, "dd/MM", { locale })} - ${format(range.to, "dd/MM", { locale })}`
     }
     if (range.from) return format(range.from, "PP", { locale })
   }

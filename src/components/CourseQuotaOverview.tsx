@@ -965,7 +965,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                     <div>
                       <p className="text-sm text-muted-foreground">{t("settings.duration")}</p>
                       <p className="font-medium">
-                        {format(selectedCourse.startDate, "MMM dd")} - {format(selectedCourse.endDate, "MMM dd, yyyy")}
+                        {format(selectedCourse.startDate, "dd MMM")} - {format(selectedCourse.endDate, "dd MMM yyyy")}
                       </p>
                     </div>
                   </div>
@@ -1168,7 +1168,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                           <div>
                             <div className="flex items-center gap-1 text-sm">
                               <Calendar className="w-3 h-3" />
-                              {format(student.registrationDate, "MMM dd, yyyy")}
+                              {format(student.registrationDate, "dd MMM yyyy")}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {format(student.registrationDate, "HH:mm")}
@@ -1183,7 +1183,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                             </div>
                             {student.paymentDate && (
                               <div className="text-xs text-muted-foreground">
-                                Paid: {format(student.paymentDate, "MMM dd, yyyy")}
+                                Paid: {format(student.paymentDate, "dd MMM yyyy")}
                               </div>
                             )}
                             <div className="flex items-center gap-1 text-xs">

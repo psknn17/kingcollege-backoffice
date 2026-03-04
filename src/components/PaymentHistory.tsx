@@ -348,7 +348,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
     // In a real app, this would generate and download a PDF receipt
     console.log("Downloading receipt for payment:", payment.invoiceNumber)
     // Create a mock download
-    const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nYear Group: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "MMM dd, yyyy", { locale })}`
+    const content = `Receipt for ${payment.invoiceNumber}\nStudent: ${payment.studentName}\nYear Group: ${payment.studentGrade}\nAmount: ₿${payment.amount.toLocaleString()}\nPayer: ${payment.payerName}\nPayment Channel: ${payment.paymentChannel}\nDate: ${format(payment.transactionDate, "dd MMM yyyy", { locale })}`
     triggerDownload(content, `receipt-${payment.invoiceNumber}.txt`, 'text/plain')
   }
 
@@ -704,7 +704,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                   {/* Status - badge/center */}
                   <TableCell align="center">{getStatusBadge(payment.status, t)}</TableCell>
                   {/* Transaction Date - date/left */}
-                  <TableCell align="left">{format(payment.transactionDate, "MMM dd, yyyy", { locale })}</TableCell>
+                  <TableCell align="left">{format(payment.transactionDate, "dd MMM yyyy", { locale })}</TableCell>
                   {/* Actions - actions/center */}
                   <TableCell align="center">
                     <Dialog>
@@ -738,7 +738,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                             <div className="text-right">
                               {getStatusBadge(payment.status, t)}
                               <p className="text-sm text-muted-foreground mt-1">
-                                {format(payment.transactionDate, "MMM dd, yyyy 'at' HH:mm", { locale })}
+                                {format(payment.transactionDate, "dd MMM yyyy 'at' HH:mm", { locale })}
                               </p>
                             </div>
                           </div>
@@ -789,7 +789,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                                 </div>
                                 <div>
                                   <p className="text-sm text-muted-foreground">{t("payment.dueDate")}</p>
-                                  <p>{payment.dueDate ? format(payment.dueDate, "MMM dd, yyyy", { locale }) : "N/A"}</p>
+                                  <p>{payment.dueDate ? format(payment.dueDate, "dd MMM yyyy", { locale }) : "N/A"}</p>
                                 </div>
                               </div>
                             </div>

@@ -197,8 +197,8 @@ export function EventPaymentDeadline() {
 
   const getDefaultReminderMessage = (type: string, deadline: PaymentDeadline) => {
     const messages = {
-      payment_due: `Dear Parent,\n\nThis is a friendly reminder that payment for the ${deadline.eventName} is due by ${format(deadline.paymentDeadline, "MMMM dd, yyyy")}.\n\nPlease ensure payment is completed to secure your child's participation.\n\nThank you for your attention to this matter.\n\nBest regards,\nKing's College Finance Team`,
-      payment_overdue: `Dear Parent,\n\nWe notice that the payment for ${deadline.eventName} is now overdue. The deadline was ${format(deadline.paymentDeadline, "MMMM dd, yyyy")}.\n\nPlease make the payment as soon as possible to avoid any inconvenience.\n\nIf you have already made the payment, please disregard this message.\n\nBest regards,\nKing's College Finance Team`,
+      payment_due: `Dear Parent,\n\nThis is a friendly reminder that payment for the ${deadline.eventName} is due by ${format(deadline.paymentDeadline, "dd MMMM yyyy")}.\n\nPlease ensure payment is completed to secure your child's participation.\n\nThank you for your attention to this matter.\n\nBest regards,\nKing's College Finance Team`,
+      payment_overdue: `Dear Parent,\n\nWe notice that the payment for ${deadline.eventName} is now overdue. The deadline was ${format(deadline.paymentDeadline, "dd MMMM yyyy")}.\n\nPlease make the payment as soon as possible to avoid any inconvenience.\n\nIf you have already made the payment, please disregard this message.\n\nBest regards,\nKing's College Finance Team`,
       final_notice: `Dear Parent,\n\nThis is the final notice regarding the overdue payment for ${deadline.eventName}.\n\nImmediate action is required to secure your child's participation. Please contact our finance office if you need assistance.\n\nThank you for your immediate attention.\n\nBest regards,\nKing's College Finance Team`,
       custom: ''
     }
@@ -415,7 +415,7 @@ export function EventPaymentDeadline() {
                   </TableCell>
                   {/* date: Payment Deadline */}
                   <TableCell align="left">
-                    {format(deadline.paymentDeadline, "MMM dd, yyyy", { locale })}
+                    {format(deadline.paymentDeadline, "dd MMM yyyy", { locale })}
                   </TableCell>
                   {/* currency: Amount */}
                   <TableCell align="right">
@@ -506,7 +506,7 @@ export function EventPaymentDeadline() {
                     </div>
                     <div>
                       <Label className="text-muted-foreground">{t("eventPayment.paymentDeadline")}</Label>
-                      <p className="font-medium">{format(currentDeadlineForReminder.paymentDeadline, "MMM dd, yyyy", { locale })}</p>
+                      <p className="font-medium">{format(currentDeadlineForReminder.paymentDeadline, "dd MMM yyyy", { locale })}</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">{t("eventPayment.totalStudents")}</Label>

@@ -544,7 +544,7 @@ export function ExternalParentManagement() {
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
                       <Calendar className="w-3 h-3" />
-                      {format(parent.applicationDate, "MMM dd, yyyy")}
+                      {format(parent.applicationDate, "dd MMM yyyy")}
                     </div>
                   </TableCell>
                   <TableCell>
