@@ -55,9 +55,11 @@ const toDateOrNull = (value: any): Date | null => {
 const deserializeAcademicYears = (json: string): AcademicYear[] => {
   const parsed = JSON.parse(json)
 
-  // Ensure dates are properly converted
+  // Ensure dates are properly converted + migrate id format "-" → "/"
   return parsed.map((year: any) => ({
     ...year,
+    id: (year.id || "").replace(/-/g, "/"),
+    name: (year.name || "").replace(/-/g, "/"),
     terms: year.terms.map((term: any) => ({
       ...term,
       startDate: toDateOrNull(term.startDate),
@@ -95,8 +97,8 @@ const saveToStorage = (years: AcademicYear[]) => {
 
 const initialAcademicYears: AcademicYear[] = [
   {
-    id: "2025-2026",
-    name: "2025-2026",
+    id: "2025/2026",
+    name: "2025/2026",
     terms: [
       {
         id: "1",
@@ -122,8 +124,8 @@ const initialAcademicYears: AcademicYear[] = [
     ]
   },
   {
-    id: "2024-2025",
-    name: "2024-2025",
+    id: "2024/2025",
+    name: "2024/2025",
     terms: [
       {
         id: "1",

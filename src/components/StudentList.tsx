@@ -495,8 +495,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student)
     const { id, ...studentData } = student
-    // Normalize academicYear format: "2025/2026" → "2025-2026" to match dropdown options
-    setFormData({ ...studentData, academicYear: (studentData.academicYear || "").replace("/", "-") })
+    // Normalize academicYear format: "2025-2026" → "2025/2026" to match dropdown options
+    setFormData({ ...studentData, academicYear: (studentData.academicYear || "").replace(/-/g, "/") })
     setActiveTab("basic")
     setShowDobYearPicker(!studentData.dateOfBirth)
     setSelectedDobYear(studentData.dateOfBirth ? studentData.dateOfBirth.getFullYear() : null)
@@ -762,8 +762,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       const firstName = row["First Name"] || (nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : nameParts[0]) || ""
       const lastName = row["Last Name"] || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : "") || ""
 
-      // Support both "Academic Year" and "Year" column — normalize slash to dash
-      const academicYear = (row["Academic Year"] || row["Year"] || availableYears[0] || "").replace("/", "-")
+      // Support both "Academic Year" and "Year" column — normalize dash to slash
+      const academicYear = (row["Academic Year"] || row["Year"] || availableYears[0] || "").replace(/-/g, "/")
 
       const parentEmail = row["Parent 1 Email"] || ""
       const parentPhone = row["Parent 1 Phone"] || ""
