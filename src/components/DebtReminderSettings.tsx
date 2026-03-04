@@ -136,46 +136,46 @@ const initialReminders: ReminderConfig[] = [
   {
     id: "1",
     name: "First Reminder",
-    academicYear: "2025-2026",
-    term: "1",
+    academicYear: "",
+    term: "",
     sendDate: "",
-    sendTime: "09:00",
+    sendTime: "",
     method: "email",
     enabled: true,
-    subject: "Tuition Payment Reminder",
-    emailTitle: "Tuition Payment Reminder - Term 1",
-    message: "Dear Parent, This is a friendly reminder that your child's tuition payment is due soon. Please make your payment by the due date.",
-    invoiceStatuses: ["unpaid", "overdue"],
+    subject: "",
+    emailTitle: "",
+    message: "",
+    invoiceStatuses: [],
     status: "draft"
   },
   {
     id: "2",
     name: "Second Reminder",
-    academicYear: "2025-2026",
-    term: "1",
+    academicYear: "",
+    term: "",
     sendDate: "",
-    sendTime: "10:00",
+    sendTime: "",
     method: "email",
     enabled: true,
-    subject: "ECA Payment Reminder",
-    emailTitle: "ECA Payment Reminder - Term 1",
-    message: "Dear Parent, Your child's ECA payment is due soon. Please complete your payment as soon as possible to ensure continuous enrollment.",
-    invoiceStatuses: ["unpaid", "overdue"],
+    subject: "",
+    emailTitle: "",
+    message: "",
+    invoiceStatuses: [],
     status: "draft"
   },
   {
     id: "3",
     name: "Final Notice",
-    academicYear: "2025-2026",
-    term: "1",
+    academicYear: "",
+    term: "",
     sendDate: "",
-    sendTime: "14:00",
+    sendTime: "",
     method: "email",
     enabled: true,
-    subject: "School Bus Payment Reminder",
-    emailTitle: "School Bus - Final Payment Notice",
-    message: "Dear Parent, This is a reminder that your child's school bus payment is due. Please contact our office immediately if you need assistance with payment arrangements.",
-    invoiceStatuses: ["unpaid", "overdue"],
+    subject: "",
+    emailTitle: "",
+    message: "",
+    invoiceStatuses: [],
     status: "draft"
   }
 ]
@@ -223,7 +223,7 @@ export function DebtReminderSettings() {
   const { academicYears } = useAcademicYears()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
-  const [reminders, setReminders] = usePersistedState<ReminderConfig[]>("debt-reminder:reminders", initialReminders)
+  const [reminders, setReminders] = usePersistedState<ReminderConfig[]>("debt-reminder:reminders-v2", initialReminders)
   const [globalSettings, setGlobalSettings] = usePersistedState("debt-reminder:globalSettings", {
     enableReminders: true,
     fromEmail: "noreply@kingscollege.ac.th"
