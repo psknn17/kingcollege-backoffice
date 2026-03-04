@@ -1,5 +1,5 @@
 # Feature List — Payment Backoffice System
-> Generated: 2026-03-02 | Version: 1.1 | Updated: 2026-03-04
+> Generated: 2026-03-02 | Version: 1.3 | Updated: 2026-03-04
 
 ---
 
@@ -116,9 +116,12 @@
 
 | # | Feature | CRUD | Import | Export | Search/Filter | Pagination | Sort | Bulk | PDF | Email |
 |---|---------|:----:|:------:|:------:|:-------------:|:----------:|:----:|:----:|:---:|:-----:|
-| 38 | Approval Queue | View / Approve | — | XLSX / PDF | Status / Date / Student | ✅ | ✅ | ✅ Approve / Reject / PDF | ✅ | ✅ |
+| 38 | Approval Queue | View / Approve | — | XLSX / PDF | Status / Date / Student | ✅ | ✅ | ✅ Bulk Approve / Per-invoice Reject / PDF | ✅ | ✅ |
 | 39 | Invoice Creation | C / U | — | PDF / Interface File | Search Student / Item | — | — | — | ✅ | ✅ |
 | 40 | External Invoice Creation | C / U | — | PDF | Search Client / Item | — | — | — | ✅ | ✅ |
+
+> **Discount types (L2.3):** 5 ประเภท — Student Group · Sibling · Staff Child · Scholarship · Early Bird
+> ทุกประเภทบริหารผ่าน Discount Management (% หรือ Fixed Amount) · Staff Child 100% ไม่แสดงในหน้าสร้าง Invoice · ห้ามเพิ่ม discount ซ้ำต่อนักเรียน
 
 ---
 
