@@ -63,7 +63,7 @@ const mockReceipts: Receipt[] = [
     paymentMethod: "Credit Card",
     transactionDate: new Date("2025-08-15"),
     paymentType: "yearly",
-    term: "2025-2026",
+    term: "2025/2026",
     status: "issued",
     downloadCount: 3
   },
@@ -93,7 +93,7 @@ const mockReceipts: Receipt[] = [
     paymentMethod: "Bank Counter",
     transactionDate: new Date("2025-08-13"),
     paymentType: "yearly",
-    term: "2025-2026",
+    term: "2025/2026",
     status: "resent",
     downloadCount: 0
   },
@@ -123,7 +123,7 @@ const mockReceipts: Receipt[] = [
     paymentMethod: "Credit Card",
     transactionDate: new Date("2025-08-11"),
     paymentType: "yearly",
-    term: "2025-2026",
+    term: "2025/2026",
     status: "failed",
     downloadCount: 0
   }
@@ -147,7 +147,7 @@ for (let i = 6; i <= 120; i++) {
     paymentMethod: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
     transactionDate: new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
     paymentType: paymentTypes[Math.floor(Math.random() * paymentTypes.length)],
-    term: Math.random() > 0.5 ? "2025-2026" : `Term ${Math.floor(Math.random() * 3) + 1}`,
+    term: Math.random() > 0.5 ? "2025/2026" : `Term ${Math.floor(Math.random() * 3) + 1}`,
     status: statuses[Math.floor(Math.random() * statuses.length)],
     downloadCount: Math.floor(Math.random() * 10)
   })

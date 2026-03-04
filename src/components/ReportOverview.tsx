@@ -73,7 +73,7 @@ const getInvoiceAmount = (inv: StoredInvoice): number => {
   return inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
 }
 
-// Match academic year: yearId "2025-2026" should match stored academicYear "2025/2026" or term "2025-2026 - Term 1"
+// Match academic year: yearId "2025/2026" should match stored academicYear "2025/2026" or term "2025-2026 - Term 1"
 const matchAcademicYear = (inv: StoredInvoice, yearId: string): boolean => {
   if (!yearId || yearId === "all") return true
   const withSlash = yearId.replace('-', '/')

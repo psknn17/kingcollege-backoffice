@@ -120,7 +120,7 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
       let term = r.term || ""
 
       // Fallback: parse from schoolYear if direct fields are missing
-      // Format: "2025-2026 - Term 2 (January - March)" or just "2025-2026"
+      // Format: "2025-2026 - Term 2 (January - March)" or just "2025/2026"
       if ((!academicYear || !term) && r.schoolYear) {
         const parts = r.schoolYear.split(" - ")
         if (!academicYear) academicYear = parts[0] || ""
@@ -177,7 +177,7 @@ const mockCreditNotes: CreditNote[] = [
     amount: 5000,
     reason: "Course cancellation",
     issueDate: new Date("2025-08-20"),
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     status: "issued"
   },
@@ -191,7 +191,7 @@ const mockCreditNotes: CreditNote[] = [
     amount: 3000,
     reason: "Overpayment refund",
     issueDate: new Date("2025-08-19"),
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     status: "issued"
   },
@@ -205,7 +205,7 @@ const mockCreditNotes: CreditNote[] = [
     amount: 10000,
     reason: "Activity cancellation",
     issueDate: new Date("2025-08-18"),
-    academicYear: "2024-2025",
+    academicYear: "2024/2025",
     term: "Term 2",
     status: "pending"
   }
@@ -215,7 +215,7 @@ const mockCreditNotes: CreditNote[] = [
 for (let i = 4; i <= 50; i++) {
   const student = studentData[i % studentData.length]
   const reasons = ["Course cancellation", "Overpayment refund", "Activity cancellation", "Billing error", "Withdrawal"]
-  const academicYears = ["2024-2025", "2025-2026"]
+  const academicYears = ["2024/2025", "2025/2026"]
   const terms = ["Term 1", "Term 2", "Term 3"]
   const statuses: ("issued" | "cancelled" | "pending")[] = ["issued", "cancelled", "pending"]
 
@@ -280,7 +280,7 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
     amount: [5000, 10000, 15000, 3000, 8000][i % 5],
     reason: ["Overpayment refund", "Course cancellation", "Duplicate payment", "Activity cancellation", "Billing adjustment"][i % 5],
     issueDate: new Date(Date.now() - (i + 1) * 7 * 24 * 3600 * 1000),
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     status: "issued" as const,
     familyCode: s.familyCode

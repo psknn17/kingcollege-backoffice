@@ -160,7 +160,7 @@ export function DiscountOptionsProvider({ children }: { children: ReactNode }) {
 
   // Get discount options for a specific year (term is kept for API compatibility but not used for lookup)
   const getDiscountOptions = (academicYear: string, term: string): DiscountOptionsData => {
-    // Storage key is just the academic year (e.g., "2024-2025")
+    // Storage key is just the academic year (e.g., "2024/2025")
     return allData[academicYear] || createDefaultData(academicYear)
   }
 
@@ -288,8 +288,8 @@ export function checkFeePrivilegeEligibility(
   // First child logic: must wait minimumTerms before receiving
   if (childOrder === 1) {
     // Calculate completed terms
-    const enrollmentYearNum = parseInt(enrollmentYear.split("-")[0])
-    const currentYearNum = parseInt(currentYear.split("-")[0])
+    const enrollmentYearNum = parseInt(enrollmentYear.split(/[-/]/)[0])
+    const currentYearNum = parseInt(currentYear.split(/[-/]/)[0])
     const termToNumber = (term: string) => {
       if (term === "term1") return 1
       if (term === "term2") return 2

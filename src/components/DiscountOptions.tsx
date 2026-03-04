@@ -71,7 +71,7 @@ const defaultRegistrationFees: RegistrationFeeSettings = {
 const defaultRegistrationPrivileges: RegistrationPrivilege[] = [
   {
     id: "1",
-    condition: "First child enrolled in academic year 2025-2026 or 2026-2027",
+    condition: "First child enrolled in academic year 2025/2026 or 2026/2027",
     privilege: "Registration fee waiver after the 3rd year",
     enabled: true,
   },

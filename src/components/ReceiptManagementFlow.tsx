@@ -143,7 +143,7 @@ const YEAR_GROUPS = [
   "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
-const SCHOOL_YEARS = ["2024-2025", "2025-2026", "2026-2027"]
+const SCHOOL_YEARS = ["2024/2025", "2025/2026", "2026/2027"]
 
 // ========================
 // HELPER FUNCTIONS

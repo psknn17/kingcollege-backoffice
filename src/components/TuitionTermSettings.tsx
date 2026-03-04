@@ -31,7 +31,7 @@ export function TuitionTermSettings() {
   const confirmDialog = useConfirmDialog()
   const deleteDialog = useConfirmDialog()
   const locale = language === "th" ? th : enUS
-  const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025-2026"])
+  const [expandedYears, setExpandedYears] = usePersistedState<string[]>("tuition-term-settings:expandedYears", ["2025/2026"])
   const [isAddYearDialogOpen, setIsAddYearDialogOpen] = useState(false)
 
   // Helper function to deep clone academic year with proper Date objects

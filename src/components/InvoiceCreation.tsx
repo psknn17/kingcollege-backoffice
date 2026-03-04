@@ -1359,7 +1359,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const confirmDialog = useConfirmDialog()
 
   // Get current academic year and term (default to first ones)
-  const academicYear = academicYears[0]?.id || "2025-2026"
+  const academicYear = academicYears[0]?.id || "2025/2026"
   const term = "term1" // Default term
 
   // Create invoice state - declare early so they can be used in useMemo
@@ -1641,7 +1641,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         setSelectedTerm(termMatch[2].trim())
       } else {
         // Fallback for imported invoices where term and academicYear are stored separately
-        // Normalize "2024/2025" (Excel format) → "2024-2025" (Select ID format)
+        // Normalize "2024/2025" (Excel format) → "2024/2025" (Select ID format)
         if (editInvoice.academicYear) setSelectedAcademicYear(editInvoice.academicYear.replace('/', '-'))
         // Normalize "Term 1" → "term1" to match term IDs
         if (editInvoice.term) setSelectedTerm(editInvoice.term.toLowerCase().replace(/\s+/g, ''))
@@ -3594,7 +3594,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       </Label>
                       <Input
                         disabled={!userCanEdit}
-                        placeholder="e.g., 2024-2025"
+                        placeholder="e.g., 2024/2025"
                         value={tripLocation}
                         onChange={(e) => setTripLocation(e.target.value)}
                         className="h-10"

@@ -33,7 +33,7 @@ interface RegistrationPeriod {
 const initialPeriods: RegistrationPeriod[] = [
   {
     id: "1",
-    name: "Term 1 Registration 2025-2026",
+    name: "Term 1 Registration 2025/2026",
     description: "After school activities registration for Term 1 (August - December 2025)",
     openDate: new Date("2025-07-01"),
     closeDate: new Date("2025-07-31"),
@@ -45,7 +45,7 @@ const initialPeriods: RegistrationPeriod[] = [
   },
   {
     id: "2",
-    name: "Term 2 Registration 2025-2026",
+    name: "Term 2 Registration 2025/2026",
     description: "After school activities registration for Term 2 (January - March 2026)",
     openDate: new Date("2025-12-01"),
     closeDate: new Date("2025-12-31"),

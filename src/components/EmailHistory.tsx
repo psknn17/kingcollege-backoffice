@@ -21,7 +21,7 @@ const mockHistory = [
     id: "h1",
     sentDate: "2026-01-20",
     subject: "Tuition Payment Reminder",
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     recipients: 145,
     status: "sent"
@@ -30,7 +30,7 @@ const mockHistory = [
     id: "h2",
     sentDate: "2026-01-15",
     subject: "ECA Payment Reminder",
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     recipients: 89,
     status: "sent"
@@ -39,7 +39,7 @@ const mockHistory = [
     id: "h3",
     sentDate: "2026-01-10",
     subject: "School Bus Payment Reminder",
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     recipients: 67,
     status: "sent"
@@ -48,7 +48,7 @@ const mockHistory = [
     id: "h4",
     sentDate: "2025-12-20",
     subject: "Tuition Payment Reminder",
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     recipients: 152,
     status: "sent"
@@ -57,7 +57,7 @@ const mockHistory = [
     id: "h5",
     sentDate: "2025-12-15",
     subject: "Exam Payment Reminder",
-    academicYear: "2025-2026",
+    academicYear: "2025/2026",
     term: "Term 1",
     recipients: 98,
     status: "sent"

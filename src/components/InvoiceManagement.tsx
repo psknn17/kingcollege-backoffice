@@ -907,7 +907,7 @@ export function InvoiceManagement({
       dueDate: invoice.dueDate.toISOString(),
       term: invoice.term,
       category: "Invoice",
-      academicYear: "2024-2025",
+      academicYear: "2024/2025",
       items: invoice.items.map(item => ({
         name: item.description,
         description: item.description,
@@ -1715,8 +1715,8 @@ export function InvoiceManagement({
 
       if (!termField) return null
 
-      // Normalize school year format: "2025/2026" ↔ "2025-2026"
-      const normalizeYear = (y: string) => y.replace(/\//g, "-").replace(/\s/g, "")
+      // Normalize school year format: always use "/" for comparison
+      const normalizeYear = (y: string) => y.replace(/-/g, "/").replace(/\s/g, "")
       const normalizedInput = normalizeYear(schoolYear)
 
       const tryYearData = (data: any[]): number | null => {

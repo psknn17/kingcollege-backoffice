@@ -22,7 +22,7 @@ export interface Student {
   academicYear: string
   enrollmentTerm: "term1" | "term2" | "term3" // Term when student enrolled
   status: "active" | "graduated" | "withdrawn" | "on_leave"
-  withdrawalAcademicYear?: string // e.g. "2025-2026" — term withdrawal takes effect FROM
+  withdrawalAcademicYear?: string // e.g. "2025/2026" — term withdrawal takes effect FROM
   withdrawalTerm?: string         // e.g. "term1" | "term2" | "term3"
   familyId: string
   familyCode?: string // Added for easier display and search
@@ -91,7 +91,7 @@ const loadDiscountOptions = (academicYear: string, term: string) => {
     const stored = localStorage.getItem(DISCOUNT_OPTIONS_STORAGE_KEY)
     if (stored) {
       const allData = JSON.parse(stored)
-      // Storage key is just the academic year (e.g., "2024-2025")
+      // Storage key is just the academic year (e.g., "2024/2025")
       return allData[academicYear] || null
     }
   } catch (error) {
@@ -122,7 +122,7 @@ export const convertTermFormat = (term: string): string => {
 // a billing term is before or after a withdrawal effective date.
 // e.g. "2025-2026 term2" → 2025*3+1 = 6076
 const termToSortKey = (academicYear: string, term: string): number => {
-  const yearStart = parseInt(academicYear.split("-")[0]) || 2025
+  const yearStart = parseInt(academicYear.split(/[-/]/)[0]) || 2025
   const termIndex = (term === "term1" || term === "1") ? 0
     : (term === "term2" || term === "2") ? 1 : 2
   return yearStart * 3 + termIndex
@@ -318,7 +318,7 @@ const generateMockData = () => {
         dateOfBirth: new Date(2010 + Math.floor(Math.random() * 10), 0, 1),
         gender: isMale ? "male" : "female",
         gradeLevel: gradeLevels[Math.floor(Math.random() * gradeLevels.length)],
-        academicYear: "2025-2026",
+        academicYear: "2025/2026",
         enrollmentTerm: "term1",
         status: "active",
         familyId: familyId,
@@ -445,7 +445,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     // If no effective term is set, removal is immediate (backward compatible).
     if (student.familyId) {
       const familySiblings = students.filter(s => s.familyId === student.familyId)
-      const billingYear = billingAcademicYear || student.academicYear || "2025-2026"
+      const billingYear = billingAcademicYear || student.academicYear || "2025/2026"
       const currentKey = termToSortKey(billingYear, term)
 
       const hasEffectiveWithdrawal = familySiblings.some(s => {
@@ -459,7 +459,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       if (hasEffectiveWithdrawal) return 0
     }
 
-    const academicYear = billingAcademicYear || student.academicYear || "2025-2026"
+    const academicYear = billingAcademicYear || student.academicYear || "2025/2026"
     return getSiblingDiscountFromSettings(student.childOrder, academicYear, term)
   }
 

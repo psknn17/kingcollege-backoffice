@@ -163,7 +163,7 @@ export function getAcademicYear(date: Date): string {
 // ============================================
 
 /**
- * Extract the start year from academic year string (e.g., "2025/2026" or "2025-2026" -> "2025")
+ * Extract the start year from academic year string (e.g., "2025/2026" or "2025/2026" -> "2025")
  */
 export function getFormattedAcademicYear(academicYear: string | undefined): string {
   if (!academicYear) return new Date().getFullYear().toString()

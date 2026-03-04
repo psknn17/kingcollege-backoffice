@@ -88,7 +88,7 @@ type ReminderStatus = "draft" | "scheduled" | "sent" | "cancelled"
 interface ReminderConfig {
   id: string
   name: string
-  academicYear: string // Academic year ID (e.g., "2024-2025")
+  academicYear: string // Academic year ID (e.g., "2024/2025")
   term: string // Term ID (e.g., "1", "2", "3")
   sendDate: string // Date string in YYYY-MM-DD format
   sendTime: string // Time string in HH:MM format (24-hour)
@@ -246,7 +246,7 @@ export function DebtReminderSettings() {
       const invoices: any[] = JSON.parse(stored)
       const dates = new Set<string>()
 
-      // Normalize academic year: "2025/2026" → "2025-2026"
+      // Normalize academic year: "2025/2026" → "2025/2026"
       const normalizeYear = (y: string) => (y || "").replace("/", "-").trim()
 
       // Extract term number from any format: "Term 1", "2025-2026 - Term 1", "1", "term1"

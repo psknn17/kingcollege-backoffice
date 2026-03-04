@@ -983,7 +983,7 @@ export default function App() {
                     } />
                     <Route path="/waive-fee-year-details" element={
                       <WaiveFeeYearDetails
-                        academicYear={subPageParams?.academicYear || '2024-2025'}
+                        academicYear={subPageParams?.academicYear || '2024/2025'}
                         onBack={navigateBack}
                       />
                     } />

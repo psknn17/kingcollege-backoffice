@@ -495,7 +495,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student)
     const { id, ...studentData } = student
-    // Normalize academicYear format: "2025-2026" → "2025/2026" to match dropdown options
+    // Normalize academicYear format: "2025/2026" → "2025/2026" to match dropdown options
     setFormData({ ...studentData, academicYear: (studentData.academicYear || "").replace(/-/g, "/") })
     setActiveTab("basic")
     setShowDobYearPicker(!studentData.dateOfBirth)
@@ -877,7 +877,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "2015-05-15",
       "male",
       "Year 4",
-      "2025-2026",
+      "2025/2026",
       "active",
       "1",
       "2024-08-15",
@@ -1078,7 +1078,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     if (defaultFromYear) {
       setPromoteFromYear(defaultFromYear)
       // Generate next academic year
-      const [startYear] = defaultFromYear.split("-").map(Number)
+      const [startYear] = defaultFromYear.split(/[-/]/).map(Number)
       const nextYear = `${startYear + 1} -${startYear + 2} `
       setPromoteToYear(nextYear)
 
@@ -1103,7 +1103,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setSelectedStudentIds(new Set(allStudentIds))
 
     // Update to year
-    const [startYear] = year.split("-").map(Number)
+    const [startYear] = year.split(/[-/]/).map(Number)
     const nextYear = `${startYear + 1} -${startYear + 2} `
     setPromoteToYear(nextYear)
   }
@@ -2472,12 +2472,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                       const yearsSet = new Set(availableYears)
                       // Add next year from selected "From" year
                       if (promoteFromYear) {
-                        const [startYear] = promoteFromYear.split("-").map(Number)
+                        const [startYear] = promoteFromYear.split(/[-/]/).map(Number)
                         yearsSet.add(`${startYear + 1} -${startYear + 2} `)
                       }
                       // Add next year from latest available year
                       if (availableYears.length > 0) {
-                        const [startYear] = availableYears[0].split("-").map(Number)
+                        const [startYear] = availableYears[0].split(/[-/]/).map(Number)
                         yearsSet.add(`${startYear + 1} -${startYear + 2} `)
                       }
                       return Array.from(yearsSet).sort((a: string, b: string) => b.localeCompare(a))
