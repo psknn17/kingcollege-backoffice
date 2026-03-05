@@ -71,9 +71,9 @@ export function TuitionTermSettings() {
     if (academicYears.length === 0) {
       return new Date().getFullYear()
     }
-    // Get the latest year's end year
+    // Get the latest year's end year (supports both "2025/2026" and "2025-2026" formats)
     const latestYear = academicYears.sort((a, b) => b.id.localeCompare(a.id))[0]
-    const endYear = parseInt(latestYear.id.split('-')[1])
+    const endYear = parseInt(latestYear.id.split(/[-/]/)[1])
     return endYear
   }
 
@@ -92,7 +92,7 @@ export function TuitionTermSettings() {
 
     const startYear = parseInt(newYearStart)
     const endYear = startYear + 1
-    const yearId = `${startYear}-${endYear}`
+    const yearId = `${startYear}/${endYear}`
 
     // Check if year already exists
     if (academicYears.find(y => y.id === yearId)) {
@@ -560,7 +560,7 @@ export function TuitionTermSettings() {
             )}
             {(!newYearStart || parseInt(newYearStart) === getNextValidYear()) && (
               <p className="text-sm text-gray-500 mt-2">
-                {t("termSettings.willCreateYear")} {newYearStart ? `${newYearStart}-${parseInt(newYearStart) + 1}` : "YYYY-YYYY"} {t("termSettings.withDefaultTerms")}
+                {t("termSettings.willCreateYear")} {newYearStart ? `${newYearStart}/${parseInt(newYearStart) + 1}` : "YYYY/YYYY"} {t("termSettings.withDefaultTerms")}
               </p>
             )}
           </div>

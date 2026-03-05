@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -14,6 +14,7 @@ import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useStudents } from "@/contexts/StudentContext"
 import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
@@ -124,10 +125,36 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
   // Confirmation dialog hook
   const confirmDialog = useConfirmDialog()
 
+  const { students } = useStudents()
+
   // Client information
   const [clientName, setClientName] = useState("")
   const [contactName, setContactName] = useState("")
   const [address, setAddress] = useState("")
+
+  // Student search dropdown
+  const [studentSearch, setStudentSearch] = useState("")
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false)
+  const studentSearchRef = useRef<HTMLDivElement>(null)
+
+  const filteredStudentOptions = studentSearch.length >= 1
+    ? students.filter(s =>
+        s.status === "active" &&
+        `${s.firstName} ${s.lastName} ${s.nickname} ${s.studentId}`
+          .toLowerCase().includes(studentSearch.toLowerCase())
+      ).slice(0, 8)
+    : []
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (studentSearchRef.current && !studentSearchRef.current.contains(e.target as Node)) {
+        setShowStudentDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
 
   // Invoice details (invoice number will be assigned on approval)
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
@@ -593,16 +620,53 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 <h3 className="font-semibold">Client Information</h3>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-9">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" ref={studentSearchRef}>
                   <Label className="text-sm font-medium">
                     Client name <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Company or individual name"
-                    className="h-9"
-                  />
+                  <div className="relative">
+                    <Input
+                      value={clientName}
+                      onChange={(e) => {
+                        setClientName(e.target.value)
+                        setStudentSearch(e.target.value)
+                        setShowStudentDropdown(true)
+                      }}
+                      onFocus={() => {
+                        setStudentSearch(clientName)
+                        setShowStudentDropdown(true)
+                      }}
+                      placeholder="Search or type name..."
+                      className="h-9 pr-8"
+                    />
+                    <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    {showStudentDropdown && filteredStudentOptions.length > 0 && (
+                      <div className="absolute z-50 top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {filteredStudentOptions.map(student => {
+                          const primaryParent = student.parents?.find(p => p.isPrimary) || student.parents?.[0]
+                          return (
+                            <div
+                              key={student.id}
+                              className="px-3 py-2 hover:bg-muted/60 cursor-pointer"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                setClientName(`${student.firstName} ${student.lastName}`)
+                                setContactName(primaryParent?.name || contactName)
+                                setStudentSearch("")
+                                setShowStudentDropdown(false)
+                              }}
+                            >
+                              <div className="text-sm font-medium">
+                                {student.firstName} {student.lastName}
+                                {student.nickname && <span className="text-muted-foreground ml-1">({student.nickname})</span>}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{student.studentId} · {student.gradeLevel}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Contact name</Label>
