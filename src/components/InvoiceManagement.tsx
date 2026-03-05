@@ -3984,16 +3984,18 @@ export function InvoiceManagement({
                 {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
               </span>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!userCanEdit}
-                  onClick={() => setIsBulkChangeDueDateOpen(true)}
-                  className="bg-white"
-                >
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  Change Due Date
-                </Button>
+                {(user?.role === "super_admin" || user?.role === "approver" || user?.role === "Approver") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!userCanEdit}
+                    onClick={() => setIsBulkChangeDueDateOpen(true)}
+                    className="bg-white"
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-1" />
+                    Change Due Date
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   size="sm"
@@ -4402,16 +4404,18 @@ export function InvoiceManagement({
                 {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
               </span>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!userCanEdit}
-                  onClick={() => setIsBulkChangeDueDateOpen(true)}
-                  className="bg-white"
-                >
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  Change Due Date
-                </Button>
+                {(user?.role === "super_admin" || user?.role === "approver" || user?.role === "Approver") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!userCanEdit}
+                    onClick={() => setIsBulkChangeDueDateOpen(true)}
+                    className="bg-white"
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-1" />
+                    Change Due Date
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   size="sm"

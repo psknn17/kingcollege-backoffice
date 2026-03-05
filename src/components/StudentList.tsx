@@ -284,7 +284,16 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const [promoteToYear, setPromoteToYear] = useState<string>("")
   const [promoteConfirmed, setPromoteConfirmed] = useState(false)
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
+  const [promoteSelectedIds, setPromoteSelectedIds] = useState<Set<string>>(new Set())
   const [expandedGrades, setExpandedGrades] = useState<Set<string>>(new Set())
+  const [promoteSearch, setPromoteSearch] = useState("")
+
+  // Promoted years lock (prevent double-promotion)
+  const PROMOTED_YEARS_KEY = "promotedAcademicYears"
+  const getPromotedYears = (): string[] => {
+    try { return JSON.parse(localStorage.getItem(PROMOTED_YEARS_KEY) || "[]") } catch { return [] }
+  }
+  const isYearAlreadyPromoted = (toYear: string) => getPromotedYears().includes(toYear)
 
   const availableYears = academicYears.map((y: any) => y.id).sort((a: string, b: string) => b.localeCompare(a))
 
@@ -968,10 +977,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       })
   }, [students, promoteFromYear])
 
-  // Total students to promote (only selected ones)
+  // Total students to promote (selected ones in promote dialog)
   const totalStudentsToPromote = useMemo(() => {
-    return selectedStudentIds.size
-  }, [selectedStudentIds])
+    return promoteSelectedIds.size
+  }, [students, promoteFromYear])
 
   // Get selected count per grade
   const getSelectedCountForGrade = (gradeId: string) => {
@@ -1068,8 +1077,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   // Handle promote dialog open
+  const getNextAcademicYear = (fromYear: string): string => {
+    const [startYear] = fromYear.split(/[-/]/).map(Number)
+    return `${startYear + 1}/${startYear + 2}`
+  }
+
   const handleOpenPromoteDialog = () => {
-    // Set default values - use current academic year based on date
     const currentAcademicYear = getCurrentAcademicYear()
     const defaultFromYear = availableYears.includes(currentAcademicYear)
       ? currentAcademicYear
@@ -1077,35 +1090,26 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
     if (defaultFromYear) {
       setPromoteFromYear(defaultFromYear)
-      // Generate next academic year
-      const [startYear] = defaultFromYear.split(/[-/]/).map(Number)
-      const nextYear = `${startYear + 1} -${startYear + 2} `
-      setPromoteToYear(nextYear)
-
-      // Select all students by default
-      const allStudentIds = students
+      setPromoteToYear(getNextAcademicYear(defaultFromYear))
+      const allIds = students
         .filter((s: Student) => s.academicYear === defaultFromYear && s.status === "active")
         .map((s: Student) => s.id)
-      setSelectedStudentIds(new Set(allStudentIds))
+      setPromoteSelectedIds(new Set(allIds))
     }
     setPromoteConfirmed(false)
     setExpandedGrades(new Set())
+    setPromoteSearch("")
     setIsPromoteDialogOpen(true)
   }
 
-  // Update selected students when promoteFromYear changes
+  // Update from year in promote dialog
   const handleFromYearChange = (year: string) => {
     setPromoteFromYear(year)
-    // Select all students for the new year
-    const allStudentIds = students
+    setPromoteToYear(getNextAcademicYear(year))
+    const allIds = students
       .filter((s: Student) => s.academicYear === year && s.status === "active")
       .map((s: Student) => s.id)
-    setSelectedStudentIds(new Set(allStudentIds))
-
-    // Update to year
-    const [startYear] = year.split(/[-/]/).map(Number)
-    const nextYear = `${startYear + 1} -${startYear + 2} `
-    setPromoteToYear(nextYear)
+    setPromoteSelectedIds(new Set(allIds))
   }
 
   // Handle confirm promotion
@@ -1115,47 +1119,66 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       return
     }
 
-    if (selectedStudentIds.size === 0) {
+    // Prevent double promotion
+    if (isYearAlreadyPromoted(promoteToYear)) {
+      toast.error(t("student.alreadyPromoted").replace("{year}", promoteToYear))
+      return
+    }
+
+    const studentsToPromote = students.filter(
+      (s: Student) => promoteSelectedIds.has(s.id)
+    )
+
+    if (studentsToPromote.length === 0) {
       toast.error(t("student.selectAtLeastOne"))
       return
     }
 
-    // Only promote selected students
-    const studentsToPromote = students.filter(
-      (s: Student) => selectedStudentIds.has(s.id)
-    )
-
     let promotedCount = 0
     let graduatedCount = 0
+    const now = new Date()
 
     studentsToPromote.forEach((student: Student) => {
       const currentGrade = student.gradeLevel.toLowerCase().replace(" ", "")
       const nextGrade = getNextGrade(currentGrade)
+      const newId = `${student.id}-${promoteToYear.replace(/[^0-9]/g, "")}`
 
       if (nextGrade === "graduated") {
-        // Year 13 students graduate
-        updateStudent(student.id, {
+        // Year 13 → create new record as graduated
+        addStudent({
+          ...student,
+          id: newId,
+          gradeLevel: "Year 13",
           status: "graduated",
           academicYear: promoteToYear,
-          updatedBy: "Admin",
-          updatedAt: new Date()
+          enrollmentTerm: "term1",
+          updatedBy: user?.name || "Admin",
+          updatedAt: now,
+          createdAt: now
         })
         graduatedCount++
       } else if (nextGrade) {
-        // Promote to next grade
-        updateStudent(student.id, {
+        // Promote to next grade → create new record, keep old record intact
+        addStudent({
+          ...student,
+          id: newId,
           gradeLevel: nextGrade,
           academicYear: promoteToYear,
-          updatedBy: "Admin",
-          updatedAt: new Date()
+          enrollmentTerm: "term1",
+          updatedBy: user?.name || "Admin",
+          updatedAt: now,
+          createdAt: now
         })
         promotedCount++
       }
     })
 
+    // Lock this promotion year
+    const promotedYears = getPromotedYears()
+    localStorage.setItem(PROMOTED_YEARS_KEY, JSON.stringify([...promotedYears, promoteToYear]))
+
     setIsPromoteDialogOpen(false)
     setPromoteConfirmed(false)
-    setSelectedStudentIds(new Set())
 
     if (graduatedCount > 0) {
       toast.success(t("student.promotedAndGraduated").replace("{promoted}", String(promotedCount)).replace("{graduated}", String(graduatedCount)))
@@ -1623,6 +1646,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <Download className="w-4 h-4 mr-2" />
             {t("common.export")}
           </Button>
+          <Button variant="outline" onClick={handleOpenPromoteDialog} disabled={!userCanEdit}>
+            <ArrowUpCircle className="w-4 h-4 mr-2" />
+            {t("student.promoteGrade")}
+          </Button>
           <Button onClick={handleAddStudent} disabled={!userCanEdit}>
             <Plus className="w-4 h-4 mr-2" />
             {t("student.addStudent")}
@@ -1833,7 +1860,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 </TableHead>
                 {/* Term - Center (Badge) */}
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("enrollmentTerm")} align="center">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     {t("student.term")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
@@ -1867,7 +1894,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   </div>
                 </TableHead>
                 {/* Actions - Center */}
-                <TableHead className="text-right" align="center">{t("common.actions")}</TableHead>
+                <TableHead className="text-center" align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1925,14 +1952,15 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     {/* Term - Center (Badge) */}
                     <TableCell align="center">
                       {(() => {
-                        const terms = invoiceTermsMap.get(student.studentId)
-                        if (!terms || terms.length === 0) {
-                          return <Badge variant="outline">{getTermLabel(student.enrollmentTerm)}</Badge>
-                        }
+                        const termToNum = (t: string) => t === "term1" ? 1 : t === "term2" ? 2 : 3
+                        const start = termToNum(student.enrollmentTerm || "term1")
+                        const end = student.withdrawalTerm ? termToNum(student.withdrawalTerm) : 3
+                        const termNums = []
+                        for (let i = start; i <= end; i++) termNums.push(i)
                         return (
                           <div className="flex gap-1 justify-center flex-wrap">
-                            {terms.map(t => (
-                              <Badge key={t} variant="outline">Term {t}</Badge>
+                            {termNums.map(n => (
+                              <Badge key={n} variant="outline">Term {n}</Badge>
                             ))}
                           </div>
                         )
@@ -2430,7 +2458,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Promote Grade Dialog */}
       <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-6">
+        <DialogContent className="max-w-md max-h-[90vh] flex flex-col p-6">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpCircle className="w-5 h-5" />
@@ -2441,175 +2469,128 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </DialogDescription>
           </DialogHeader>
 
-          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             {/* Year Selection */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("student.fromAcademicYear")}</Label>
-                <Select value={promoteFromYear} onValueChange={(year: string) => setPromoteFromYear(year)} disabled={!userCanEdit}>
+                <Select value={promoteFromYear} onValueChange={handleFromYearChange} disabled={!userCanEdit}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("student.selectYear")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableYears.map((year: string) => (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t("student.toAcademicYear")}</Label>
-                <Select value={promoteToYear} onValueChange={setPromoteToYear} disabled={!userCanEdit}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("student.selectYear")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Show available years + next year based on selected From year */}
-                    {(() => {
-                      const yearsSet = new Set(availableYears)
-                      // Add next year from selected "From" year
-                      if (promoteFromYear) {
-                        const [startYear] = promoteFromYear.split(/[-/]/).map(Number)
-                        yearsSet.add(`${startYear + 1} -${startYear + 2} `)
-                      }
-                      // Add next year from latest available year
-                      if (availableYears.length > 0) {
-                        const [startYear] = availableYears[0].split(/[-/]/).map(Number)
-                        yearsSet.add(`${startYear + 1} -${startYear + 2} `)
-                      }
-                      return Array.from(yearsSet).sort((a: string, b: string) => b.localeCompare(a))
-                    })().map((year: string) => (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>{t("student.toAcademicYearLabel")}</Label>
+                <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm font-medium">
+                  {promoteToYear || "-"}
+                </div>
               </div>
             </div>
 
-            {/* Preview with Student Selection */}
+            {/* Preview */}
             {getPromotionPreview.length > 0 ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base">
-                    {t("student.selectStudents").replace("{count}", String(totalStudentsToPromote))}
-                  </Label>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={selectAllStudents} disabled={!userCanEdit}>
-                      {t("student.selectAll")}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={deselectAllStudents} disabled={!userCanEdit}>
-                      {t("student.deselectAll")}
-                    </Button>
-                  </div>
+                <Label className="text-base">{t("student.promotePreview").replace("{count}", String(totalStudentsToPromote))}</Label>
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9 h-9"
+                    placeholder={t("common.search") + "..."}
+                    value={promoteSearch}
+                    onChange={e => setPromoteSearch(e.target.value)}
+                  />
                 </div>
-
                 <div className="border rounded-lg overflow-hidden">
-                  {getPromotionPreview.map((row, index) => (
+                  {getPromotionPreview.map((row, index) => {
+                    const filteredStudents = promoteSearch
+                      ? row.students.filter(s =>
+                          `${s.firstName} ${s.lastName} ${s.nickname} ${s.studentId}`
+                            .toLowerCase().includes(promoteSearch.toLowerCase())
+                        )
+                      : row.students
+                    if (promoteSearch && filteredStudents.length === 0) return null
+                    return (
                     <div key={index} className={cn("border-b last:border-b-0", row.isGraduation && "bg-amber-50/50")}>
-                      {/* Grade Row Header */}
+                      {/* Grade header row - clickable to expand */}
                       <div
-                        className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
-                        onClick={() => toggleGradeExpansion(row.currentGradeId)}
+                        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/40"
+                        onClick={() => {
+                          setExpandedGrades(prev => {
+                            const next = new Set(prev)
+                            next.has(row.currentGradeId) ? next.delete(row.currentGradeId) : next.add(row.currentGradeId)
+                            return next
+                          })
+                        }}
                       >
-                        {/* Expand/Collapse Icon */}
-                        <button className="p-0.5">
-                          {expandedGrades.has(row.currentGradeId) ? (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </button>
-
-                        {/* Grade Checkbox */}
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={isGradeFullySelected(row.currentGradeId)}
-                            ref={(el) => {
-                              if (el) {
-                                (el as any).indeterminate = isGradePartiallySelected(row.currentGradeId)
-                              }
-                            }}
-                            onCheckedChange={() => toggleGradeSelection(row.currentGradeId)}
-                            disabled={!userCanEdit}
-                          />
-                        </div>
-
-                        {/* Grade Info */}
+                        {expandedGrades.has(row.currentGradeId)
+                          ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        }
                         <div className="flex-1 flex items-center gap-2">
                           <span className="font-medium">{row.currentGrade}</span>
                           <span className="text-muted-foreground">→</span>
                           {row.isGraduation ? (
                             <span className="flex items-center gap-1 font-medium text-amber-700">
                               <GraduationCap className="w-4 h-4" />
-                              {row.nextGrade}
+                              {t("student.graduated")}
                             </span>
                           ) : (
                             <span className="font-medium text-green-700">{row.nextGrade}</span>
                           )}
                         </div>
-
-                        {/* Selected Count */}
                         <Badge variant={row.isGraduation ? "outline" : "secondary"} className="text-xs">
-                          {t("student.selectedCount").replace("{selected}", String(getSelectedCountForGrade(row.currentGradeId))).replace("{total}", String(row.count))}
+                          {t("student.countPeople").replace("{count}", String(row.count))}
                         </Badge>
                       </div>
-
-                      {/* Expanded Student List */}
-                      {expandedGrades.has(row.currentGradeId) && (
-                        <div className="pl-12 pr-3 pb-3 space-y-1">
-                          {row.students.map(student => (
-                            <div
-                              key={student.id}
-                              className="flex items-center gap-3 p-2 rounded hover:bg-muted/50"
+                      {/* Expanded student list */}
+                      {(expandedGrades.has(row.currentGradeId) || promoteSearch) && filteredStudents.length > 0 && (
+                        <div className="pl-9 pr-3 pb-2 space-y-1">
+                          {filteredStudents.map(student => (
+                            <div key={student.id} className="flex items-center gap-3 py-1 px-2 rounded hover:bg-muted/40 text-sm cursor-pointer"
+                              onClick={() => setPromoteSelectedIds(prev => {
+                                const next = new Set(prev)
+                                next.has(student.id) ? next.delete(student.id) : next.add(student.id)
+                                return next
+                              })}
                             >
                               <Checkbox
-                                checked={selectedStudentIds.has(student.id)}
-                                onCheckedChange={() => toggleStudentSelection(student.id)}
-                                disabled={!userCanEdit}
+                                checked={promoteSelectedIds.has(student.id)}
+                                onCheckedChange={() => setPromoteSelectedIds(prev => {
+                                  const next = new Set(prev)
+                                  next.has(student.id) ? next.delete(student.id) : next.add(student.id)
+                                  return next
+                                })}
+                                onClick={e => e.stopPropagation()}
                               />
-                              <div className="flex-1">
-                                <span className="text-sm">
-                                  {student.firstName} {student.lastName}
-                                </span>
-                                {student.nickname && (
-                                  <span className="text-xs text-muted-foreground ml-1">
-                                    ({student.nickname})
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground font-mono">
-                                {student.studentId}
-                              </span>
+                              <span className="flex-1">{student.firstName} {student.lastName}{student.nickname ? ` (${student.nickname})` : ""}</span>
+                              <Badge variant="outline" className="text-xs font-mono">{student.studentId}</Badge>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
-                {/* Graduation Warning */}
                 {getPromotionPreview.some(p => p.isGraduation) && (
                   <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                      <p className="font-medium text-amber-800">{t("student.year13Students")}</p>
-                      <p className="text-amber-700">
-                        {t("student.year13Warning")}
-                      </p>
-                    </div>
+                    <p className="text-sm text-amber-700">{t("student.year13NewRecord")}</p>
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{t("student.noActiveStudents").replace("{year}", promoteFromYear || t("student.theSelectedYear"))}</p>
+                <p>{t("student.noActiveInYear").replace("{year}", promoteFromYear)}</p>
               </div>
             )}
 
@@ -2623,28 +2604,30 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   disabled={!userCanEdit}
                 />
                 <div className="space-y-1">
-                  <label
-                    htmlFor="confirm-promote"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {t("student.confirmAction")}
+                  <label htmlFor="confirm-promote" className="text-sm font-medium cursor-pointer">
+                    {t("student.promoteConfirmTitle")}
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    {t("student.confirmActionDesc").replace("{count}", String(totalStudentsToPromote))}
+                    {t("student.promoteConfirmDesc").replace("{count}", String(totalStudentsToPromote)).replace("{year}", promoteToYear)}
                   </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Sticky Footer */}
+          {/* Footer */}
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
+            {promoteToYear && isYearAlreadyPromoted(promoteToYear) && (
+              <p className="text-sm text-destructive font-medium mr-auto">
+                {t("student.alreadyPromoted").replace("{year}", promoteToYear)}
+              </p>
+            )}
             <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
               {t("common.cancel")}
             </Button>
             <Button
               onClick={handleConfirmPromotion}
-              disabled={!userCanEdit || totalStudentsToPromote === 0 || !promoteConfirmed || !promoteToYear}
+              disabled={!userCanEdit || totalStudentsToPromote === 0 || !promoteConfirmed || !promoteToYear || isYearAlreadyPromoted(promoteToYear)}
               className="gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />

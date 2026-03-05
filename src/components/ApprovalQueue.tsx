@@ -1429,19 +1429,6 @@ export function ApprovalQueue() {
                                 <span className="text-sm font-medium text-red-600">
                                   {selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}
                                 </span>
-                                {canApproveInvoices && selectedInvoice.approvalStatus !== "approved" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
-                                    onClick={() => {
-                                      setEditDueDateValue(selectedInvoice.dueDate instanceof Date ? selectedInvoice.dueDate : new Date(selectedInvoice.dueDate))
-                                      setIsEditingDueDate(true)
-                                    }}
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                  </Button>
-                                )}
                               </>
                             )}
                           </div>
