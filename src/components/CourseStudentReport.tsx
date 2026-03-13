@@ -136,8 +136,8 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [sortColumn, setSortColumn] = usePersistedState("course-student-report:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("course-student-report:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   const course = mockCourses.find(c => c.id === courseId) || mockCourses[0]
 

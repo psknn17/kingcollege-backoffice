@@ -14,11 +14,20 @@
  * ──────────────────────────────────────────────────────────────────────────
  */
 
+// Use the same key as ReceiptPageUpdated so both components share one store
 const STORAGE_KEY = "creditNotesRecords"
 
 // ========================
 // TYPES
 // ========================
+
+export interface CreditNoteUsage {
+  invoiceId?: string
+  receiptNo?: string
+  appliedAmount: number
+  appliedAt: string
+  appliedBy: "staff" | "parent"
+}
 
 export interface CreditNote {
   id: string
@@ -31,6 +40,8 @@ export interface CreditNote {
   reason: string
   status: "issued" | "pending" | "cancelled" | "used" | "partial"
   issueDate: string
+  usageHistory?: CreditNoteUsage[]
+  // legacy single-use fields (kept for backwards compat)
   appliedToInvoice?: string
   appliedToReceipt?: string
   appliedAt?: string
@@ -53,7 +64,28 @@ export interface ApplyCreditNotePayload {
 export async function getAllCreditNotes(): Promise<CreditNote[]> {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
+    if (!stored) return []
+    const raw: any[] = JSON.parse(stored)
+    // Bridge CreditNoteManagement format → service CreditNote format
+    return raw.map(cn => ({
+      id: cn.id,
+      creditNoteNumber: cn.creditNoteNumber,
+      studentName: cn.studentName,
+      studentId: cn.studentId,
+      familyCode: cn.parentName ?? cn.familyCode,  // CreditNoteManagement stores family code as `parentName`
+      // CreditNoteManagement stores the credit value as `creditAmount`
+      amount: cn.creditAmount ?? cn.amount ?? 0,
+      remainingBalance: cn.remainingBalance,
+      reason: cn.reason,
+      status: (cn.status === "applied" ? "used" : cn.status === "draft" ? "pending" : cn.status) as CreditNote["status"],
+      issueDate: cn.issueDate instanceof Date
+        ? cn.issueDate.toISOString()
+        : typeof cn.issueDate === "string" ? cn.issueDate : new Date(cn.issueDate).toISOString(),
+      appliedToInvoice: cn.appliedToInvoice,
+      appliedToReceipt: cn.appliedToReceipt,
+      appliedAt: cn.appliedAt ?? cn.appliedDate,
+      appliedBy: cn.appliedBy,
+    }))
   } catch {
     return []
   }
@@ -66,7 +98,8 @@ export async function getAllCreditNotes(): Promise<CreditNote[]> {
  */
 export async function getCreditNotesByFamily(
   familyCode: string,
-  studentId?: string
+  studentId?: string,
+  studentName?: string
 ): Promise<CreditNote[]> {
   const all = await getAllCreditNotes()
   return all.filter(cn => {
@@ -74,8 +107,8 @@ export async function getCreditNotesByFamily(
     const matchesFamily =
       (familyCode && cn.familyCode === familyCode) ||
       (studentId && cn.studentId === studentId) ||
-      (studentId && cn.studentName && cn.studentName.trim().toLowerCase() ===
-        studentId.trim().toLowerCase())
+      (studentName && cn.studentName &&
+        cn.studentName.trim().toLowerCase() === studentName.trim().toLowerCase())
     return isAvailable && matchesFamily
   })
 }
@@ -92,24 +125,40 @@ export async function getCreditNotesByFamily(
 export async function applyCreditNotes(
   payloads: ApplyCreditNotePayload[]
 ): Promise<void> {
-  const all = await getAllCreditNotes()
+  // Read raw records (CreditNoteManagement format) — do NOT go through getAllCreditNotes()
+  // so we preserve all original fields when writing back
+  const stored = localStorage.getItem(STORAGE_KEY)
+  const raw: any[] = stored ? JSON.parse(stored) : []
   const appliedAt = new Date().toISOString()
 
-  const updated = all.map(cn => {
+  const updated = raw.map(cn => {
     const payload = payloads.find(p => p.creditNoteId === cn.id)
     if (!payload) return cn
 
-    const currentBalance = cn.remainingBalance ?? cn.amount
+    const creditValue = cn.creditAmount ?? cn.amount ?? 0
+    const currentBalance = cn.remainingBalance ?? creditValue
     const newBalance = Math.max(0, currentBalance - payload.appliedAmount)
-    const newStatus: CreditNote["status"] = newBalance === 0 ? "used" : "partial"
+    // Map back to CreditNoteManagement's status enum
+    const newStatus = newBalance === 0 ? "applied" : "issued"
+
+    const newEntry: CreditNoteUsage = {
+      invoiceId: payload.invoiceId,
+      receiptNo: payload.receiptNo,
+      appliedAmount: payload.appliedAmount,
+      appliedAt,
+      appliedBy: payload.appliedBy,
+    }
+    const existingHistory: CreditNoteUsage[] = cn.usageHistory ?? []
 
     return {
       ...cn,
       status: newStatus,
       remainingBalance: newBalance,
+      usageHistory: [...existingHistory, newEntry],
+      // keep legacy fields pointing to latest usage
       appliedToInvoice: payload.invoiceId ?? cn.appliedToInvoice,
       appliedToReceipt: payload.receiptNo ?? cn.appliedToReceipt,
-      appliedAt,
+      appliedDate: appliedAt,
       appliedBy: payload.appliedBy,
     }
   })

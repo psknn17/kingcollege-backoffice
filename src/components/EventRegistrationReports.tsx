@@ -127,13 +127,13 @@ const paymentStatusData = [
 
 export function EventRegistrationReports() {
   const { t } = useLanguage()
-  const [selectedEvent, setSelectedEvent] = usePersistedState("event-registration:selectedYear", "all")
+  const [selectedEvent, setSelectedEvent] = useState("all")
   const [selectedYearGroup, setSelectedYearGroup] = useState("all")
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<PaymentStatus>("all")
   const [selectedPaymentChannel, setSelectedPaymentChannel] = useState<PaymentChannel>("all")
   const [dateFrom, setDateFrom] = useState<Date>()
   const [dateTo, setDateTo] = useState<Date>()
-  const [searchTerm, setSearchTerm] = usePersistedState("event-registration:search", "")
+  const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -200,6 +200,8 @@ export function EventRegistrationReports() {
     if (searchTerm && !reg.studentName.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !reg.studentId.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !reg.parentEmail.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    if (dateFrom && new Date(reg.registrationDate) < dateFrom) return false
+    if (dateTo && new Date(reg.registrationDate) > dateTo) return false
     return true
   })
 
@@ -454,7 +456,7 @@ export function EventRegistrationReports() {
                 />
 
                 <div className="space-y-2">
-                  <Label>{t("eventReports.dateRange")}</Label>
+                  <Label>{t("registrationDate")}</Label>
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>

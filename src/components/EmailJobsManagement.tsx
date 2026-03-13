@@ -269,7 +269,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
     toast.success("Email jobs saved successfully")
   }
 
-  const [searchTerm, setSearchTerm] = usePersistedState("email-jobs:search", "")
+  const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)

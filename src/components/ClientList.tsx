@@ -20,6 +20,7 @@ import { PaginationBar } from "./ui/pagination-bar"
 export interface Client {
   id: string
   clientName: string
+  clientId: string
   contactName: string
   address: string
   createdAt: string
@@ -27,6 +28,7 @@ export interface Client {
 
 const emptyForm: Omit<Client, "id" | "createdAt"> = {
   clientName: "",
+  clientId: "",
   contactName: "",
   address: "",
 }
@@ -58,6 +60,7 @@ export function ClientList() {
     return clients.filter(
       c =>
         c.clientName.toLowerCase().includes(q) ||
+        c.clientId.toLowerCase().includes(q) ||
         c.contactName.toLowerCase().includes(q) ||
         c.address.toLowerCase().includes(q)
     )
@@ -77,7 +80,12 @@ export function ClientList() {
 
   const openEdit = (client: Client) => {
     setEditingClient(client)
-    setForm({ clientName: client.clientName, contactName: client.contactName, address: client.address })
+    setForm({ 
+      clientName: client.clientName, 
+      clientId: client.clientId || "",
+      contactName: client.contactName, 
+      address: client.address 
+    })
     setErrors({})
     setIsDialogOpen(true)
   }
@@ -117,9 +125,10 @@ export function ClientList() {
 
   // --- Export ---
   const handleExport = () => {
-    const headers = ["Client Name", "Contact Name", "Address", "Created At"]
+    const headers = ["Client Name", "Client ID", "Contact Name", "Address", "Created At"]
     const rows = filtered.map(c => [
       c.clientName,
+      c.clientId || "",
       c.contactName,
       c.address,
       c.createdAt ? format(new Date(c.createdAt), "dd/MM/yyyy HH:mm") : "",
@@ -185,6 +194,7 @@ export function ClientList() {
       const newClient: Client = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         clientName,
+        clientId: (row["Client ID"] || "").trim(),
         contactName: (row["Contact Name"] || "").trim(),
         address: (row["Address"] || "").trim(),
         createdAt: new Date().toISOString(),
@@ -208,8 +218,8 @@ export function ClientList() {
   }
 
   const downloadTemplate = () => {
-    const headers = ["Client Name", "Contact Name", "Address"]
-    const exampleRow = ["ABC Company Ltd.", "Mr. John Smith", "123 Main Street, Bangkok 10110"]
+    const headers = ["Client Name", "Client ID", "Contact Name", "Address"]
+    const exampleRow = ["ABC Company Ltd.", "CL001", "Mr. John Smith", "123 Main Street, Bangkok 10110"]
     downloadAsXlsx(headers, [exampleRow], "client_import_template")
     toast.success(t("clientList.templateDownloaded"))
   }
@@ -289,6 +299,7 @@ export function ClientList() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-left">#</TableHead>
+                  <TableHead className="text-left">{t("clientList.clientId")}</TableHead>
                   <TableHead className="text-left">{t("clientList.clientName")}</TableHead>
                   <TableHead className="text-left">{t("clientList.contactName")}</TableHead>
                   <TableHead className="text-left">{t("clientList.address")}</TableHead>
@@ -306,6 +317,7 @@ export function ClientList() {
                   paginatedClients.map((client, idx) => (
                     <TableRow key={client.id}>
                       <TableCell className="text-left text-muted-foreground">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
+                      <TableCell className="text-left">{client.clientId || "-"}</TableCell>
                       <TableCell className="text-left font-medium">{client.clientName}</TableCell>
                       <TableCell className="text-left">{client.contactName || "-"}</TableCell>
                       <TableCell className="text-left">{client.address || "-"}</TableCell>
@@ -347,7 +359,20 @@ export function ClientList() {
             <DialogTitle>{editingClient ? t("clientList.editClient") : t("clientList.addClient")}</DialogTitle>
           </DialogHeader>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", width: "100%", marginTop: "0px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%", marginTop: "0px" }}>
+            {/* Client ID */}
+            <div className="space-y-1.5">
+              <Label>
+                {t("clientList.clientIdLabel")}
+              </Label>
+              <Input
+                placeholder={t("clientList.clientIdPlaceholder")}
+                value={form.clientId}
+                onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))}
+                autoComplete="off"
+              />
+            </div>
+
             {/* Client Name */}
             <div className="space-y-1.5">
               <Label>
@@ -454,6 +479,7 @@ export function ClientList() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-left">{t("clientList.clientName")}</TableHead>
+                        <TableHead className="text-left">{t("clientList.clientId")}</TableHead>
                         <TableHead className="text-left">{t("clientList.contactName")}</TableHead>
                         <TableHead className="text-left">{t("clientList.address")}</TableHead>
                       </TableRow>
@@ -467,6 +493,7 @@ export function ClientList() {
                               {row["Client Name"] || ""}
                               {isDuplicate && <span className="ml-2 text-xs text-yellow-600">{t("clientList.duplicate")}</span>}
                             </TableCell>
+                            <TableCell className="text-left">{row["Client ID"] || "-"}</TableCell>
                             <TableCell className="text-left">{row["Contact Name"] || "-"}</TableCell>
                             <TableCell className="text-left">{row["Address"] || "-"}</TableCell>
                           </TableRow>

@@ -1860,9 +1860,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   // Track if tuition fee has been loaded for current selection
   const [tuitionFeeLoaded, setTuitionFeeLoaded] = useState<string>("")
 
-  // Auto-populate items from catalog for non-tuition invoice types when grade + term are selected
+  // Auto-populate items from catalog for trip/bus invoice types when grade + term are selected
+  // ECA, Exam are excluded — items must be selected manually
   useEffect(() => {
     if (invoiceType === "student" || invoiceType === "tuition" || !invoiceType) return
+    if (invoiceType === "eca" || invoiceType === "exam") return
     if (isEditMode) return
 
     const hasGrade = selectedGrade || selectedGrades.length > 0
@@ -2440,8 +2442,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setSelectedStudents([...selectedStudents, student])
     setSearchStudentTerm("")
 
-    // Auto-select items based on student's grade (only if no items are selected yet and not in edit mode)
-    if (selectedItems.length === 0 && invoiceType !== "external" && !isEditMode) {
+    // Auto-select items based on student's grade (only for tuition and not in edit mode)
+    if (selectedItems.length === 0 && (invoiceType === "student" || invoiceType === "tuition") && !isEditMode) {
       const studentGradeLabel = getGradeLabel(student.grade)
       const matchingItems = availableItems.filter(item =>
         item.isActive &&
@@ -2489,8 +2491,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       setSelectedStudents(studentsToSelect)
     }
 
-    // Auto-select items based on selected students' grades (only if no items are selected yet and not in edit mode)
-    if (selectedItems.length === 0 && invoiceType !== "external" && !isEditMode && studentsToSelect.length > 0) {
+    // Auto-select items based on selected students' grades (only for tuition and not in edit mode)
+    if (selectedItems.length === 0 && (invoiceType === "student" || invoiceType === "tuition") && !isEditMode && studentsToSelect.length > 0) {
       // Get unique grades from selected students
       const studentGrades = [...new Set(studentsToSelect.map(s => getGradeLabel(s.grade)))]
 
@@ -5211,7 +5213,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
                               </tr>
                             ))}
-                            {/* Security Deposit Waiver (for new students with fee waiver) - Purple - After Registration Fees */}
+
+
+                            {/* Adjustment/Discount Section */}
                             {securityDepositWaiver > 0 && (
                               <tr className="border-b border-gray-200 text-purple-700">
                                 <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + 1}</td>
@@ -5219,7 +5223,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(securityDepositWaiver)}</td>
                               </tr>
                             )}
-                            {/* Discount Items - Green (Sibling, Registration Fee Waiver, Group, Scholarship, Staff Child, Early Bird) */}
                             {discountCalc.discountItems.map((discount, idx) => (
                               <tr key={`discount-${idx}`} className="border-b border-gray-200 text-green-700">
                                 <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + (securityDepositWaiver > 0 ? 1 : 0) + idx + 1}</td>

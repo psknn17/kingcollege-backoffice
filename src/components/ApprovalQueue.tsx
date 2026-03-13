@@ -10,6 +10,7 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Input } from "./ui/input"
 import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { PaginationBar } from "@/components/ui/pagination-bar"
@@ -21,10 +22,12 @@ import { normalizeAcademicYear, formatAcademicYear, downloadAsXlsx } from "@/uti
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
-import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail, Pencil } from "lucide-react"
+import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail, Pencil, Trash2, DollarSign, CreditCard } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { formatCurrency, numberToWords, getAcademicYear, generateNextInvoiceNumber } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
@@ -145,7 +148,16 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           approvedBy: inv.approvedBy,
           approvedAt: inv.approvedAt ? new Date(inv.approvedAt) : undefined,
           rejectedReason: inv.rejectedReason,
-          category: inv.category || "tuition",
+          category: (() => {
+            const cat = String(inv.category || "tuition").toLowerCase()
+            if (cat.includes("tuition")) return "tuition"
+            if (cat.includes("eca")) return "eca"
+            if (cat.includes("trip")) return "trip"
+            if (cat.includes("exam")) return "exam"
+            if (cat.includes("bus")) return "school_bus"
+            if (cat.includes("external")) return "external"
+            return cat
+          })(),
         }
       })
     }
@@ -202,10 +214,10 @@ export function ApprovalQueue() {
     const loaded = loadCreatedInvoicesFromStorage()
     return loaded
   })
-  const [searchTerm, setSearchTerm] = usePersistedState("approval-queue:search", "")
+  const [searchTerm, setSearchTerm] = useState("")
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = usePersistedState("approval-queue:statusFilter", "all")
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
@@ -220,8 +232,8 @@ export function ApprovalQueue() {
   const [rejectReason, setRejectReason] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
-  const [sortKey, setSortKey] = usePersistedState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "approvalStatus" | "issueDate" | "dueDate" | null>("approval-queue:sortColumn", "invoiceNumber")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("approval-queue:sortDirection", "desc")
+  const [sortKey, setSortKey] = useState<"invoiceNumber" | "studentName" | "academicYear" | "term" | "studentGrade" | "finalAmount" | "approvalStatus" | "issueDate" | "dueDate" | null>("invoiceNumber")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isEditingDueDate, setIsEditingDueDate] = useState(false)
@@ -229,18 +241,49 @@ export function ApprovalQueue() {
   const [isBulkDueDateOpen, setIsBulkDueDateOpen] = useState(false)
   const [bulkDueDateValue, setBulkDueDateValue] = useState<Date | undefined>(undefined)
 
+  const [isBulkMarkPaidOpen, setIsBulkMarkPaidOpen] = useState(false)
+  const [bulkMarkPaidData, setBulkMarkPaidData] = useState<{ total: number, count: number }>({ total: 0, count: 0 })
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("bank_transfer")
+  const [paymentReference, setPaymentReference] = useState("")
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
+  const [edcFeePercent, setEdcFeePercent] = useState<string>("0")
+
+  const deleteConfirmDialog = useConfirmDialog()
+
+  const creditNotes = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("creditNotesRecords")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return parsed.map((cn: any) => ({
+          ...cn,
+          amount: cn.amount ?? cn.creditAmount ?? 0,
+          issueDate: new Date(cn.issueDate)
+        }))
+      }
+    } catch { }
+    return []
+  }, [])
+
   // Load approver's allowed invoice categories from UserManagement persisted users
   const approverAllowedCategories = useMemo(() => {
     if (user?.role !== "approver") return null
+
+    // Priority 1: Use from auth user object if available
+    if (user?.approverInvoiceTypes && user.approverInvoiceTypes.length > 0) {
+      return user.approverInvoiceTypes
+    }
+
+    // Priority 2: Fallback to localStorage match (for sessions that existed before)
     try {
       const stored = localStorage.getItem("users")
-      if (!stored) return null
+      if (!stored) return [] // Strict: if no data, no see
       const managedUsers = JSON.parse(stored)
       const match = managedUsers.find((u: any) => u.email === user?.email || u.username === user?.name)
       const types: string[] = match?.approverInvoiceTypes || []
-      return types.length > 0 ? types : null // null = no restriction
-    } catch { return null }
-  }, [user?.role, user?.email, user?.name])
+      return types // Even if empty, return it (will result in empty filter)
+    } catch { return [] }
+  }, [user?.role, user?.email, user?.name, user?.approverInvoiceTypes])
 
   const availableTerms = academicYearFilter !== "all"
     ? (academicYears.find(y => y.id === academicYearFilter)?.terms || [])
@@ -347,8 +390,9 @@ export function ApprovalQueue() {
     }
 
     // Approver category restriction
-    if (approverAllowedCategories) {
-      filtered = filtered.filter(inv => approverAllowedCategories.includes(inv.category || "tuition"))
+    if (user?.role === "approver") {
+      const allowedCategories = approverAllowedCategories || []
+      filtered = filtered.filter(inv => allowedCategories.includes(inv.category || "tuition"))
     }
 
     setFilteredInvoices(filtered)
@@ -431,7 +475,7 @@ export function ApprovalQueue() {
   )
 
   const isSelectable = (invoice: Invoice) =>
-    !["approved", "rejected"].includes(getApprovalStatus(invoice)) && invoice.status !== "cancelled"
+    invoice.status !== "paid" && invoice.status !== "cancelled"
 
   const selectableInvoices = useMemo(
     () => filteredInvoices.filter(isSelectable),
@@ -595,6 +639,8 @@ export function ApprovalQueue() {
           approvedBy: "Admin",
           approvedAt: now.toISOString(),
           issueDate: (inv.issueDate || now).toISOString().split('T')[0],
+          status: "sent",
+          emailSentAt: now.toISOString(),
         },
         overrideNumber: inv.invoiceNumber
       })
@@ -638,6 +684,138 @@ export function ApprovalQueue() {
       detail: `Invoices: ${[...approvalMap.values()].join(", ")}`
     })
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+  }
+
+  const handleBulkDelete = () => {
+    const idsToDelete = Array.from(selectedInvoiceIds)
+    const updatedInvoicesList = invoices.filter(inv => !selectedInvoiceIds.has(inv.id))
+    setInvoices(updatedInvoicesList)
+
+    const storedStr = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+    if (storedStr) {
+      const allSaved = JSON.parse(storedStr)
+      const filtered = allSaved.filter((inv: any) => !selectedInvoiceIds.has(inv.id))
+      localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(filtered))
+    }
+
+    toast.success(`Deleted ${selectedInvoiceIds.size} invoices`)
+    setSelectedInvoiceIds(new Set())
+    applyFilters(updatedInvoicesList)
+    window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+  }
+
+  const handleBulkMarkPaid = () => {
+    const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+    const totalAmount = selectedInvoices.reduce((sum, inv) => sum + (inv.finalAmount || 0), 0)
+    setBulkMarkPaidData({ total: totalAmount, count: selectedInvoices.length })
+    setIsBulkMarkPaidOpen(true)
+  }
+
+  const confirmMarkPaid = () => {
+    const selectedInvoicesList = invoices
+      .filter(inv => selectedInvoiceIds.has(inv.id))
+      .sort((a, b) => (b.finalAmount || 0) - (a.finalAmount || 0))
+
+    if (selectedInvoicesList.length === 0) return
+
+    const now = new Date()
+    const storedInvoices = JSON.parse(localStorage.getItem(CREATED_INVOICES_STORAGE_KEY) || "[]")
+    
+    // Process payment and Credit Notes
+    const studentIds = Array.from(new Set(selectedInvoicesList.map(inv => inv.studentId)))
+    
+    // Load CNs again to ensure we have latest
+    let currentCNs = []
+    try {
+      const stored = localStorage.getItem("creditNotesRecords")
+      if (stored) currentCNs = JSON.parse(stored)
+    } catch {}
+
+    studentIds.forEach(sid => {
+      const studentInvoices = selectedInvoicesList.filter(inv => inv.studentId === sid)
+      
+      studentInvoices.forEach(inv => {
+        let currentOutstanding = inv.finalAmount || 0
+        const appliedCNsForThisInvoice: any[] = []
+
+        currentCNs.forEach((cn: any) => {
+          if (cn.studentId === sid && cn.status === "issued" && currentOutstanding > 0) {
+            const cnAmount = cn.amount ?? cn.creditAmount ?? 0
+            const applyAmount = Math.min(currentOutstanding, cnAmount)
+            if (applyAmount > 0) {
+              currentOutstanding -= applyAmount
+              const newAmount = cnAmount - applyAmount
+              cn.amount = newAmount
+              cn.creditAmount = newAmount
+              if (newAmount <= 0) cn.status = "used"
+              else cn.status = "partial"
+              
+              appliedCNsForThisInvoice.push({
+                id: cn.id,
+                number: cn.creditNoteNumber,
+                amount: applyAmount
+              })
+            }
+          }
+        })
+        
+        // Update individual invoice in storage
+        const idx = storedInvoices.findIndex((si: any) => si.id === inv.id)
+        if (idx !== -1) {
+          storedInvoices[idx] = {
+            ...storedInvoices[idx],
+            status: "paid",
+            paidDate: paymentDate.toISOString(),
+            paymentMethod: selectedPaymentMethod,
+            paymentReference: paymentReference,
+            appliedCreditNotes: appliedCNsForThisInvoice,
+            netPayableTotal: currentOutstanding // Amount after CN
+          }
+        }
+
+        // Generate Receipt
+        const receiptCategory = inv.category || "tuition"
+        const storageKey = `receiptRecords_${receiptCategory}`
+        const existingReceipts = JSON.parse(localStorage.getItem(storageKey) || "[]")
+        
+        const lastReceiptNo = existingReceipts.length > 0 
+          ? parseInt(existingReceipts[0].receiptNo.split('-').pop()) 
+          : 0
+        const nextReceiptNo = `RCT-${receiptCategory.toUpperCase().substring(0,3)}-${now.getFullYear()}-${String(lastReceiptNo + 1).padStart(6, '0')}`
+
+        const newReceipt = {
+          id: `rct-${Date.now()}-${inv.id}`,
+          receiptNo: nextReceiptNo,
+          invoiceNumber: inv.invoiceNumber,
+          studentName: inv.studentName,
+          studentId: inv.studentId,
+          amount: inv.finalAmount,
+          netPayable: currentOutstanding,
+          paymentMethod: selectedPaymentMethod,
+          receiptDate: paymentDate.toISOString(),
+          createdAt: now.toISOString(),
+          status: "issued",
+          invoices: [{
+            invoiceNo: inv.invoiceNumber,
+            invoiceAmount: inv.finalAmount,
+            appliedCNAmount: (inv.finalAmount || 0) - currentOutstanding,
+            paidAmount: currentOutstanding
+          }]
+        }
+        
+        localStorage.setItem(storageKey, JSON.stringify([newReceipt, ...existingReceipts]))
+      })
+    })
+
+    localStorage.setItem("creditNotesRecords", JSON.stringify(currentCNs))
+    localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(storedInvoices))
+    
+    toast.success(`Successfully marked ${selectedInvoiceIds.size} invoices as paid`)
+    setIsBulkMarkPaidOpen(false)
+    setSelectedInvoiceIds(new Set())
+    reloadInvoices()
+    window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+    window.dispatchEvent(new CustomEvent("creditNotesUpdated"))
   }
 
   const openApproveDialog = (invoice: Invoice) => {
@@ -751,7 +929,7 @@ export function ApprovalQueue() {
   }
 
   // Check if user can approve invoices (not viewer role)
-  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "super_admin" || user?.role === "admin_accountant" || user?.role === "approver")
+  const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "super_admin" || user?.role === "approver")
 
   return (
     <div className="space-y-6">
@@ -1048,65 +1226,69 @@ export function ApprovalQueue() {
         </CardContent>
       </Card>
 
-      {canApproveInvoices && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {t("approvalQueue.selectedCount").replace("{count}", String(selectedInvoiceIds.size))}
+      {selectedInvoiceIds.size > 0 && (
+        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-sm font-medium text-blue-800">
+            {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
           </div>
           <div className="flex gap-2">
-            <Popover open={isBulkDueDateOpen} onOpenChange={setIsBulkDueDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={selectedInvoiceIds.size === 0}
-                  className="gap-1.5"
-                >
-                  <CalendarIcon className="w-3.5 h-3.5" />
-                  {t("approvalQueue.setDueDate")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-3 border-b">
-                  <p className="text-sm font-medium">{t("approvalQueue.setDueDateFor").replace("{count}", String(selectedInvoiceIds.size))}</p>
-                </div>
-                <Calendar
-                  mode="single"
-                  selected={bulkDueDateValue}
-                  onSelect={setBulkDueDateValue}
-                  initialFocus
-                />
-                <div className="p-3 border-t flex justify-end gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setIsBulkDueDateOpen(false); setBulkDueDateValue(undefined) }}>
-                    {t("approvalQueue.cancel")}
-                  </Button>
+            {(() => {
+              const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+              const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
+              const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
+
+              if (allApprovedAndSent) {
+                return (
                   <Button
                     size="sm"
-                    disabled={!bulkDueDateValue}
-                    onClick={() => {
-                      if (!bulkDueDateValue) return
-                      const day = bulkDueDateValue
-                      const updated = invoices.map(inv =>
-                        selectedInvoiceIds.has(inv.id) ? { ...inv, dueDate: day } : inv
-                      )
-                      setInvoices(updated)
-                      invoices.forEach(inv => {
-                        if (selectedInvoiceIds.has(inv.id)) {
-                          updateLocalStorage(inv, { dueDate: day.toISOString() })
-                        }
-                      })
-                      toast.success(`Due date updated for ${selectedInvoiceIds.size} invoice${selectedInvoiceIds.size !== 1 ? "s" : ""}`)
-                      setIsBulkDueDateOpen(false)
-                      setBulkDueDateValue(undefined)
-                    }}
+                    onClick={handleBulkMarkPaid}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md px-4"
+                    style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
                   >
-                    {t("approvalQueue.apply")}
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    Mark Paid
                   </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Button size="sm" onClick={approveSelectedInvoices} disabled={selectedInvoiceIds.size === 0}>
-              {t("approvalQueue.approveSelected")}
+                )
+              }
+
+              if (allDraft) {
+                return (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={approveSelectedInvoices}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md px-4 transition-colors"
+                      style={{ backgroundColor: '#000000', color: '#ffffff', opacity: 1, border: 'none' }}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Approve Selected
+                    </Button>
+                    {user?.role !== "approver" && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md px-4 transition-colors"
+                        style={{ backgroundColor: '#dc2626', color: '#ffffff', opacity: 1, border: 'none' }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete Selected
+                      </Button>
+                    )}
+                  </div>
+                )
+              }
+
+              return null
+            })()}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedInvoiceIds(new Set())}
+              className="text-blue-800 hover:bg-blue-100"
+            >
+              {t("approvalQueue.cancel")}
             </Button>
           </div>
         </div>
@@ -1321,6 +1503,95 @@ export function ApprovalQueue() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Mark Paid Dialog */}
+      <Dialog open={isBulkMarkPaidOpen} onOpenChange={setIsBulkMarkPaidOpen}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Bulk Mark Paid
+            </DialogTitle>
+            <DialogDescription>
+              Marking {bulkMarkPaidData.count} invoices as paid. Total: <span className="font-bold text-lg text-black">฿{bulkMarkPaidData.total.toLocaleString()}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Payment Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start h-9 font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(paymentDate, "dd MMM yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar 
+                    mode="single" 
+                    selected={paymentDate} 
+                    onSelect={(date) => setPaymentDate(date || new Date())} 
+                    initialFocus 
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Payment Method</label>
+              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="credit_card">Credit Card (EDC)</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedPaymentMethod === "credit_card" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-orange-600">EDC Fee (%)</label>
+                <Input 
+                  type="number" 
+                  value={edcFeePercent} 
+                  onChange={(e) => setEdcFeePercent(e.target.value)} 
+                  placeholder="e.g. 2.0"
+                />
+                <p className="text-xs text-muted-foreground">Fee will be calculated on top of invoice amounts.</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Reference / Note</label>
+              <Input 
+                value={paymentReference} 
+                onChange={(e) => setPaymentReference(e.target.value)} 
+                placeholder="Transaction ID, Receipt Number, etc."
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkMarkPaidOpen(false)}>Cancel</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={confirmMarkPaid}>Confirm Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog 
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="Delete Selected Invoices"
+        descriptionKey={`Are you sure you want to delete ${selectedInvoiceIds.size} selected invoices? This action cannot be undone.`}
+        confirmTextKey="common.delete"
+        variant="destructive"
+      />
 
       {/* Invoice Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

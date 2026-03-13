@@ -165,15 +165,20 @@ const getRegistrationFees = (academicYear: string, term: string): { applicationF
 }
 
 // Get Student Groups that a student belongs to (from all categories)
-const getStudentGroupDiscounts = (studentId: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number; departments: string[] }[] => {
-  const allGroups: { name: string; discountType: string; discountPercentage: number; fixedAmount: number; departments: string[] }[] = []
+const getStudentGroupDiscounts = (studentId: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number; departments: string[]; category: string }[] => {
+  const allGroups: { name: string; discountType: string; discountPercentage: number; fixedAmount: number; departments: string[]; category: string }[] = []
 
-  // Load from both tuition and bus categories
-  const categories = ['tuition', 'bus']
+  // Load from all invoice categories (tuition uses "studentGroups", others use "studentGroups_<category>")
+  const categoryKeys: { category: string; storageKey: string }[] = [
+    { category: "tuition", storageKey: "studentGroups" },
+    { category: "eca", storageKey: "studentGroups_eca" },
+    { category: "trip", storageKey: "studentGroups_trip" },
+    { category: "exam", storageKey: "studentGroups_exam" },
+    { category: "bus", storageKey: "studentGroups_bus" },
+  ]
 
-  categories.forEach(category => {
+  categoryKeys.forEach(({ category, storageKey }) => {
     try {
-      const storageKey = `studentGroups_${category}`
       const stored = localStorage.getItem(storageKey)
       if (stored) {
         const groups = JSON.parse(stored)
@@ -184,7 +189,8 @@ const getStudentGroupDiscounts = (studentId: string): { name: string; discountTy
             discountType: group.discountType,
             discountPercentage: group.discountPercentage || 0,
             fixedAmount: group.fixedAmount || 0,
-            departments: group.departments || []
+            departments: group.departments || [],
+            category,
           }))
         allGroups.push(...matchingGroups)
       }
@@ -246,15 +252,15 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const importConfirmDialog = useConfirmDialog()
   const deleteConfirmDialog = useConfirmDialog()
 
-  const [searchTerm, setSearchTerm] = usePersistedState("student-list:search", "")
-  const [filterGrade, setFilterGrade] = usePersistedState("student-list:gradeFilter", "all")
-  const [filterStatus, setFilterStatus] = usePersistedState("student-list:statusFilter", "all")
-  const [filterAcademicYear, setFilterAcademicYear] = usePersistedState("student-list:academicYearFilter", "all")
-  const [filterTerm, setFilterTerm] = usePersistedState("student-list:termFilter", "all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterGrade, setFilterGrade] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterAcademicYear, setFilterAcademicYear] = useState("all")
+  const [filterTerm, setFilterTerm] = useState("all")
 
   // Sorting states
-  const [sortColumn, setSortColumn] = usePersistedState("student-list:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("student-list:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -704,6 +710,87 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setIsImportDialogOpen(true)
   }
 
+  // Find which academic year contains the given date (checks term date ranges)
+  const findAcademicYearByDate = (date: Date): string => {
+    for (const ay of academicYears) {
+      for (const term of ay.terms) {
+        if (term.startDate && term.endDate) {
+          if (date >= new Date(term.startDate) && date <= new Date(term.endDate)) {
+            return ay.name
+          }
+        }
+      }
+    }
+    // Fallback: most recent academic year
+    return academicYears.length > 0 ? academicYears[academicYears.length - 1].name : (availableYears[0] || "")
+  }
+
+  // Parse iSAMS format rows (1 row per contact) into normalized student rows (1 per student)
+  const parseISAMSRows = (rows: any[]): any[] => {
+    const today = new Date()
+    const academicYear = findAcademicYearByDate(today)
+
+    // Group rows by School Code
+    const groups = new Map<string, any[]>()
+    for (const row of rows) {
+      const schoolCode = String(row["School Code"] || "").trim()
+      if (!schoolCode) continue
+      if (!groups.has(schoolCode)) groups.set(schoolCode, [])
+      groups.get(schoolCode)!.push(row)
+    }
+
+    const result: any[] = []
+    let idx = 1
+    for (const [schoolCode, contactRows] of groups) {
+      const first = contactRows[0]
+      const yearCode = String(first["Year Code"] || "").trim()
+      const yearGroup = yearCode ? `Year ${yearCode}` : ""
+
+      const parents = contactRows.map((row, i) => {
+        const forename = String(row["Primary Contact Forename"] || "").trim()
+        const surname = String(row["Primary Contact Surname"] || "").trim()
+        const name = [forename, surname].filter(Boolean).join(" ")
+        const rel = String(row["Relation Type"] || "").trim().toLowerCase()
+        const relationship = rel === "mother" ? "mother" : rel === "father" ? "father" : "guardian"
+        return {
+          name,
+          relationship,
+          phone: String(row["Primary Contact Mobile"] || "").trim(),
+          email: String(row["Primary Contact Email"] || "").trim(),
+          isPrimary: i === 0
+        }
+      })
+
+      const p1 = parents[0]
+      const p2 = parents[1]
+
+      result.push({
+        "Student ID": schoolCode,
+        "First Name": String(first["Forename"] || "").trim(),
+        "Last Name": String(first["Surname"] || "").trim(),
+        "Nickname": String(first["Preferred Name"] || "").trim(),
+        "Date of Birth": first["Date of Birth"] || "",
+        "Gender": String(first["Gender"] || "").trim().toLowerCase(),
+        "Year Group": yearGroup,
+        "Academic Year": academicYear,
+        "Family Code": String(first["Student Billing Account Code"] || "").trim(),
+        "Enrollment Date": first["Enrolment Date"] || "",
+        "Status": "active",
+        "Parent 1 Name": p1?.name || "",
+        "Parent 1 Relationship": p1?.relationship || "",
+        "Parent 1 Phone": p1?.phone || "",
+        "Parent 1 Email": p1?.email || "",
+        "Parent 2 Name": p2?.name || "",
+        "Parent 2 Relationship": p2?.relationship || "",
+        "Parent 2 Phone": p2?.phone || "",
+        "Parent 2 Email": p2?.email || "",
+        _parents: parents,
+        _rowIndex: idx++
+      })
+    }
+    return result
+  }
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -716,6 +803,19 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       }
 
       const fileHeaders = Object.keys(rows[0])
+
+      // Detect iSAMS format (School Code + Forename columns)
+      if (fileHeaders.includes("School Code") && fileHeaders.includes("Forename")) {
+        const parsed = parseISAMSRows(rows)
+        if (parsed.length === 0) {
+          setImportError("No valid student data found in iSAMS file")
+          return
+        }
+        setImportPreview(parsed)
+        setImportError("")
+        setShowAllPreview(false)
+        return
+      }
 
       // Accept alternative column names:
       // "Name" → covers "First Name" + "Last Name" (will split on first space)
@@ -816,27 +916,42 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         updatedAt: now
       }
 
-      // Add parents if provided
-      if (row["Parent 1 Name"]) {
-        newStudent.parents.push({
-          id: `P${Date.now()}_1`,
-          name: row["Parent 1 Name"],
-          relationship: (row["Parent 1 Relationship"]?.toLowerCase() || "guardian") as "father" | "mother" | "guardian" | "other",
-          phone: row["Parent 1 Phone"] || "",
-          email: row["Parent 1 Email"] || "",
-          isPrimary: true
+      // Add parents — use _parents array (iSAMS format) if available, else use Parent 1/2 columns
+      if (row["_parents"] && Array.isArray(row["_parents"])) {
+        row["_parents"].forEach((parent: any, i: number) => {
+          if (parent.name) {
+            newStudent.parents.push({
+              id: `P${Date.now()}_${i}`,
+              name: parent.name,
+              relationship: parent.relationship as "father" | "mother" | "guardian" | "other",
+              phone: parent.phone || "",
+              email: parent.email || "",
+              isPrimary: i === 0
+            })
+          }
         })
-      }
+      } else {
+        if (row["Parent 1 Name"]) {
+          newStudent.parents.push({
+            id: `P${Date.now()}_1`,
+            name: row["Parent 1 Name"],
+            relationship: (row["Parent 1 Relationship"]?.toLowerCase() || "guardian") as "father" | "mother" | "guardian" | "other",
+            phone: row["Parent 1 Phone"] || "",
+            email: row["Parent 1 Email"] || "",
+            isPrimary: true
+          })
+        }
 
-      if (row["Parent 2 Name"]) {
-        newStudent.parents.push({
-          id: `P${Date.now()}_2`,
-          name: row["Parent 2 Name"],
-          relationship: (row["Parent 2 Relationship"]?.toLowerCase() || "guardian") as "father" | "mother" | "guardian" | "other",
-          phone: row["Parent 2 Phone"] || "",
-          email: row["Parent 2 Email"] || "",
-          isPrimary: false
-        })
+        if (row["Parent 2 Name"]) {
+          newStudent.parents.push({
+            id: `P${Date.now()}_2`,
+            name: row["Parent 2 Name"],
+            relationship: (row["Parent 2 Relationship"]?.toLowerCase() || "guardian") as "father" | "mother" | "guardian" | "other",
+            phone: row["Parent 2 Phone"] || "",
+            email: row["Parent 2 Email"] || "",
+            isPrimary: false
+          })
+        }
       }
 
       addStudent(newStudent)
@@ -854,55 +969,32 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const downloadTemplate = () => {
+    // iSAMS format — one row per contact (multiple rows per student)
     const headers = [
-      "Student ID",
-      "First Name",
-      "Last Name",
-      "Nickname",
-      "Date of Birth",
+      "Forename",
+      "Preferred Name",
+      "Surname",
+      "Full Name",
+      "Year Code",
+      "School Code",
+      "Student Billing Account Code",
+      "Contact Billing Account Code",
       "Gender",
-      "Year Group",
-      "Academic Year",
-      "Status",
-      "Child Order",
-      "Enrollment Date",
-      "Family Code",
-      "Parent 1 Name",
-      "Parent 1 Relationship",
-      "Parent 1 Phone",
-      "Parent 1 Email",
-      "Parent 2 Name",
-      "Parent 2 Relationship",
-      "Parent 2 Phone",
-      "Parent 2 Email",
-      "Notes"
+      "Date of Birth",
+      "Primary Contact Email",
+      "Primary Contact Forename",
+      "Primary Contact Surname",
+      "Primary Contact Mobile",
+      "Relation Type",
+      "Enrolment Date"
     ]
 
-    const exampleRow = [
-      "KC2024007",
-      "John",
-      "Doe",
-      "Johnny",
-      "2015-05-15",
-      "male",
-      "Year 4",
-      "2025/2026",
-      "active",
-      "1",
-      "2024-08-15",
-      "FAM001",
-      "James Doe",
-      "father",
-      "081-234-5678",
-      "james.doe@email.com",
-      "Jane Doe",
-      "mother",
-      "081-234-5679",
-      "jane.doe@email.com",
-      "Sample notes"
+    const exampleRows = [
+      ["John", "Johnny", "Doe", "John Doe", "4", "100001", "DOE0001", "JD100001", "Male", "2015-05-15", "james.doe@email.com", "James", "Doe", "+66 81 234 5678", "Father", "2024-08-15"],
+      ["John", "Johnny", "Doe", "John Doe", "4", "100001", "DOE0001", "JA100001", "Male", "2015-05-15", "jane.doe@email.com", "Jane", "Doe", "+66 81 234 5679", "Mother", "2024-08-15"],
     ]
 
-    downloadAsXlsx(headers, [exampleRow], "student_import_template")
+    downloadAsXlsx(headers, exampleRows, "student_import_template")
 
     toast.success(t("student.templateDownloaded"))
   }
@@ -2021,9 +2113,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
                         // Student Group Discounts
                         groupDiscounts.forEach((group: any, idx: number) => {
+                          const discountLabel = group.discountType === "fixed"
+                            ? `฿${(group.fixedAmount || 0).toLocaleString()}`
+                            : `${group.discountPercentage}%`
+                          const categoryLabel = group.category === "tuition" ? "" : ` (${group.category?.toUpperCase()})`
                           discounts.push(
                             <Badge key={`group-${idx}`} className="bg-teal-100 text-teal-800 text-xs">
-                              {group.name} {group.discountPercentage}%
+                              {group.name} {discountLabel}{categoryLabel}
                             </Badge>
                           )
                         })
@@ -2129,9 +2225,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-primary" />
-                </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold">
                     {selectedStudent.firstName} {selectedStudent.lastName}
@@ -2386,6 +2479,26 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 {importError}
               </div>
             )}
+
+            {/* Warning: Missing Parent 1 Email */}
+            {importPreview.length > 0 && (() => {
+              const missingEmail = importPreview.filter(row => !row["Parent 1 Email"])
+              if (missingEmail.length === 0) return null
+              return (
+                <div className="rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                  <p className="font-semibold mb-1">
+                    ⚠️ {missingEmail.length} student{missingEmail.length > 1 ? "s" : ""} missing Parent 1 Email — invoice emails will not be sent to these students.
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5 text-yellow-700">
+                    {missingEmail.map((row, i) => {
+                      const name = row["Name"] || `${row["First Name"] || ""} ${row["Last Name"] || ""}`.trim() || "—"
+                      const id = row["Student ID"] || "—"
+                      return <li key={i}>{id} — {name}</li>
+                    })}
+                  </ul>
+                </div>
+              )
+            })()}
 
             {/* Preview Table */}
             {importPreview.length > 0 && (

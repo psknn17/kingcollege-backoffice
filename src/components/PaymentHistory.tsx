@@ -140,8 +140,8 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
   const [pageSize, setPageSize] = useState(10)
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortColumn, setSortColumn] = useState<string>("transactionDate")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {

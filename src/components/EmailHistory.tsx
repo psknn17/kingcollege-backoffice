@@ -119,7 +119,7 @@ const generateMockRecipients = (count: number, subject: string) => {
 export function EmailHistory() {
   const { t } = useLanguage()
   const schoolSettings = useSchoolSettings()
-  const [historySearch, setHistorySearch] = usePersistedState("email-history:search", "")
+  const [historySearch, setHistorySearch] = useState("")
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
   const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
   const [resendDialog, setResendDialog] = useState<any>(null)

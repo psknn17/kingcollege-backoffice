@@ -70,7 +70,7 @@ const mockActivityLogs: ActivityLogEntry[] = [
 
 export function ActivityLog() {
   const { t } = useLanguage()
-  const [searchTerm, setSearchTerm] = usePersistedState("activity-log:search", "")
+  const [searchTerm, setSearchTerm] = useState("")
 
   const getStatusBadge = (status: ActivityLogEntry["status"]) => {
     switch (status) {

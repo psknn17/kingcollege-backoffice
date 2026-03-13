@@ -1886,10 +1886,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [searchItemTerm, setSearchItemTerm] = invoiceType === "tuition"
-    ? usePersistedState<string>("tuition-item-management:search", "")
+    ? useState<string>("")
     : useState("")
   const [selectedCategory, setSelectedCategory] = invoiceType === "tuition"
-    ? usePersistedState<string>("tuition-item-management:filterCategory", "all")
+    ? useState<string>("all")
     : useState("all")
   const [selectedDocType, setSelectedDocType] = useState("all")
 
@@ -1902,10 +1902,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
   // Sorting states
   const [sortColumn, setSortColumn] = invoiceType === "tuition"
-    ? usePersistedState<string>("tuition-item-management:sortColumn", "")
+    ? useState<string>("")
     : useState<string>("")
   const [sortDirection, setSortDirection] = invoiceType === "tuition"
-    ? usePersistedState<"asc" | "desc">("tuition-item-management:sortDirection", "asc")
+    ? useState<"asc" | "desc">("asc")
     : useState<"asc" | "desc">("asc")
   // Templates state
   const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false)

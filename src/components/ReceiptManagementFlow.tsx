@@ -75,6 +75,7 @@ interface InvoiceRow {
   invoiceAmount: number
   receivedAmount: number
   outstandingAmount: number
+  cnDeduction?: number
 }
 
 interface ReceiptFormData {
@@ -98,6 +99,11 @@ interface ReceiptFormData {
   bankBranch: string
   chequeNo: string
   chequeDate: Date | undefined
+  // EDC-specific
+  edcAmount?: number
+  transactionFeePercent?: number
+  transactionFeeAmount?: number
+  overpaymentAmount?: number
   // Authorization
   collectorName: string
   authorizedSignature: string
@@ -118,6 +124,10 @@ interface ReceiptRecord {
   netPayableAmount?: number
   appliedCreditNotes?: AppliedCreditNote[]
   paymentMethod: string
+  edcAmount?: number
+  transactionFeePercent?: number
+  transactionFeeAmount?: number
+  overpaymentAmount?: number
   status: "generated" | "sent" | "downloaded"
   createdAt: Date
   invoices: InvoiceRow[]
@@ -258,7 +268,20 @@ export function ReceiptManagementFlow({
     try {
       const stored = localStorage.getItem("creditNotesRecords")
       if (stored) {
-        const all: CreditNoteRecord[] = JSON.parse(stored)
+        const raw: any[] = JSON.parse(stored)
+        // Map CreditNoteManagement format → CreditNoteRecord format
+        const all: CreditNoteRecord[] = raw.map(cn => ({
+          id: cn.id,
+          creditNoteNumber: cn.creditNoteNumber,
+          studentName: cn.studentName,
+          studentId: cn.studentId,
+          familyCode: cn.parentName ?? cn.familyCode,
+          amount: cn.creditAmount ?? cn.amount ?? 0,
+          remainingBalance: cn.remainingBalance,
+          reason: cn.reason,
+          status: (cn.status === "applied" ? "used" : cn.status === "draft" ? "pending" : cn.status) as CreditNoteRecord["status"],
+          issueDate: cn.issueDate instanceof Date ? cn.issueDate.toISOString() : String(cn.issueDate),
+        }))
         const available = all.filter(cn =>
           (cn.status === "issued" || cn.status === "partial") &&
           ((cn.familyCode || cn.studentId || "").toLowerCase() === clientNo.toLowerCase())
@@ -270,8 +293,16 @@ export function ReceiptManagementFlow({
 
   const toggleCN = (id: string) => {
     setSelectedCNIds(prev => {
+      const isSelected = prev.has(id)
+      const currentTotal = availableCreditNotes
+        .filter(cn => prev.has(cn.id))
+        .reduce((sum, cn) => sum + (cn.remainingBalance ?? cn.amount), 0)
+      const targetAmount = getTotalReceivedAmount()
+
+      if (!isSelected && currentTotal >= targetAmount) return prev
+
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
+      if (isSelected) next.delete(id)
       else next.add(id)
       return next
     })
@@ -282,7 +313,7 @@ export function ReceiptManagementFlow({
     .reduce((sum, cn) => sum + (cn.remainingBalance ?? cn.amount), 0)
 
   // Search and filter state
-  const [searchTerm, setSearchTerm] = usePersistedState(`eca-receipts:search`, "")
+  const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterYearGroup, setFilterYearGroup] = useState<string>("all")
   const [filterDateFrom, setFilterDateFrom] = useState<Date | undefined>(undefined)
@@ -523,55 +554,113 @@ export function ReceiptManagementFlow({
   const handleGenerateReceipt = () => {
     if (!validateForm()) return
 
-    const appliedCNs: AppliedCreditNote[] = availableCreditNotes
-      .filter(cn => selectedCNIds.has(cn.id))
-      .map(cn => ({
-        id: cn.id,
-        creditNoteNumber: cn.creditNoteNumber,
-        studentName: cn.studentName,
-        reason: cn.reason,
-        appliedAmount: cn.remainingBalance ?? cn.amount
-      }))
+    const activeInvoices = formData.invoices.filter(inv => inv.invoiceNo.trim())
+    if (activeInvoices.length === 0) return
 
-    const newReceipt: ReceiptRecord = {
-      id: crypto.randomUUID(),
-      receiptNo: formData.receiptNo,
-      receiptDate: formData.receiptDate!,
-      clientType: formData.clientType,
-      clientNo: formData.clientNo,
-      clientName: formData.clientName,
-      contactName: formData.contactName,
-      yearGroup: formData.clientType === "internal" ? formData.yearGroup : "",
-      schoolYear: formData.schoolYear,
-      totalAmount: getTotalReceivedAmount(),
-      creditNoteTotal: totalAppliedCN,
-      netPayableAmount: Math.max(0, getTotalReceivedAmount() - totalAppliedCN),
-      appliedCreditNotes: appliedCNs.length > 0 ? appliedCNs : undefined,
-      paymentMethod: formData.paymentMethod,
-      status: "generated",
-      createdAt: new Date(),
-      invoices: formData.invoices.filter(inv => inv.invoiceNo.trim())
-    }
+    // 1. Calculate how much total CN we are ACTUALLY using (cannot exceed total received amount)
+    const totalActuallyUsedCN = Math.min(totalAppliedCN, getTotalReceivedAmount())
+    let globalCNPool = totalActuallyUsedCN
 
-    const updatedReceipts = [newReceipt, ...receipts]
+    // 2. Sort invoices by receivedAmount descending to prioritize highest price for CN application
+    const sortedInvoices = [...activeInvoices].sort((a, b) => b.receivedAmount - a.receivedAmount)
+
+    // 3. Prepare to generate separate receipts
+    const newReceiptRecords: ReceiptRecord[] = []
+    const baseReceiptNo = formData.receiptNo
+    
+    // We need to track actual CN usage per CN ID to update storage correctly later
+    const cnUsageMap = new Map<string, number>()
+    let currentPoolForUpdate = totalActuallyUsedCN
+    availableCreditNotes.filter(cn => selectedCNIds.has(cn.id)).forEach(cn => {
+      const balance = cn.remainingBalance ?? cn.amount
+      const use = Math.min(balance, currentPoolForUpdate)
+      cnUsageMap.set(cn.id, use)
+      currentPoolForUpdate -= use
+    })
+
+    // 4. Generate records
+    let cnAllocationPool = totalActuallyUsedCN
+    sortedInvoices.forEach((inv, index) => {
+      const receiptNo = index === 0 ? baseReceiptNo : generateReceiptNo(menuType)
+      const cnForThisReceipt = Math.min(inv.receivedAmount, cnAllocationPool)
+      cnAllocationPool -= cnForThisReceipt
+
+      // Collect meta for applied CNs for this specific receipt
+      const receiptAppliedCNs: AppliedCreditNote[] = []
+      if (cnForThisReceipt > 0) {
+        // We'll just list the CN numbers and the portion used for THIS invoice
+        // To keep it simple but accurate
+        let remainingToDistribute = cnForThisReceipt
+        availableCreditNotes.filter(cn => selectedCNIds.has(cn.id)).forEach(cn => {
+          if (remainingToDistribute <= 0) return
+          
+          // Current consumption of this CN in this loop
+          // This is a bit abstract but we just need it for the receipt table
+          // We'll just attribute the discount line to available CNs
+          const totalUseOfThisCN = cnUsageMap.get(cn.id) || 0
+          if (totalUseOfThisCN > 0) {
+             const portion = Math.min(totalUseOfThisCN, remainingToDistribute)
+             if (portion > 0) {
+               receiptAppliedCNs.push({
+                 id: cn.id,
+                 creditNoteNumber: cn.creditNoteNumber,
+                 studentName: cn.studentName,
+                 reason: cn.reason,
+                 appliedAmount: portion
+               })
+               remainingToDistribute -= portion
+             }
+          }
+        })
+      }
+
+      const newReceipt: ReceiptRecord = {
+        id: crypto.randomUUID(),
+        receiptNo: receiptNo,
+        receiptDate: formData.receiptDate!,
+        clientType: formData.clientType,
+        clientNo: formData.clientNo,
+        clientName: formData.clientName,
+        contactName: formData.contactName,
+        yearGroup: formData.clientType === "internal" ? formData.yearGroup : "",
+        schoolYear: formData.schoolYear,
+        totalAmount: inv.receivedAmount,
+        creditNoteTotal: cnForThisReceipt,
+        netPayableAmount: Math.max(0, inv.receivedAmount - cnForThisReceipt),
+        appliedCreditNotes: receiptAppliedCNs.length > 0 ? receiptAppliedCNs : undefined,
+        paymentMethod: formData.paymentMethod,
+        status: "generated",
+        createdAt: new Date(),
+        invoices: [{ ...inv, cnDeduction: cnForThisReceipt }]
+      }
+      newReceiptRecords.push(newReceipt)
+    })
+
+    const updatedReceipts = [...newReceiptRecords, ...receipts]
     setReceipts(updatedReceipts)
     localStorage.setItem(getStorageKey(menuType), JSON.stringify(updatedReceipts))
 
-    // Update applied credit notes in storage
+    // 5. Update credit notes in storage with CORRECT remaining balance
     if (selectedCNIds.size > 0) {
       try {
         const stored = localStorage.getItem("creditNotesRecords")
         if (stored) {
           const all = JSON.parse(stored)
+          let usedTracker = totalActuallyUsedCN
           const updatedCNs = all.map((cn: any) => {
             if (!selectedCNIds.has(cn.id)) return cn
+            
             const balance = cn.remainingBalance ?? cn.amount
-            const newBalance = Math.max(0, balance)
+            const use = Math.min(balance, usedTracker)
+            usedTracker -= use
+            const newBalance = Math.max(0, balance - use)
+
             return {
               ...cn,
-              remainingBalance: 0,
-              status: "used",
-              appliedToReceipt: formData.receiptNo
+              remainingBalance: newBalance,
+              status: newBalance === 0 ? "applied" : "partial",
+              appliedDate: new Date().toISOString(),
+              appliedToReceipt: newReceiptRecords.map(r => r.receiptNo).join(", ")
             }
           })
           localStorage.setItem("creditNotesRecords", JSON.stringify(updatedCNs))
@@ -753,76 +842,78 @@ export function ReceiptManagementFlow({
     return (
       <div ref={forPrint ? printRef : undefined} style={containerStyle}>
         {/* HEADER */}
-        <div style={{ textAlign: 'center', marginBottom: forPrint ? '25px' : '35px' }}>
+        <div style={{ textAlign: 'center', marginBottom: forPrint ? '20px' : '30px' }}>
           <img
             src={schoolSettings.logoUrl || SchoolLogo}
             alt="School Logo"
-            style={{ height: forPrint ? '60px' : '80px', display: 'block', margin: '0 auto 12px auto' }}
+            style={{ height: forPrint ? '70px' : '90px', display: 'block', margin: '0 auto 8px auto' }}
           />
-          <div style={{ fontSize: headerFontSize, fontWeight: 'bold', letterSpacing: '3px', marginBottom: '4px' }}>
+          <div style={{ fontSize: headerFontSize, fontWeight: 'bold', letterSpacing: '2px', marginBottom: '2px' }}>
             {schoolSettings.schoolName.toUpperCase()}
           </div>
-          <div style={{ fontSize: bodyFontSize, letterSpacing: '2px', marginBottom: '10px' }}>
+          <div style={{ fontSize: smallFontSize, color: '#333', letterSpacing: '1px', marginBottom: '8px' }}>
             BANGKOK
           </div>
-          <div style={{ fontSize: smallFontSize, color: '#333', marginBottom: '4px' }}>
+          <div style={{ fontSize: '9px', color: '#555', marginBottom: '2px' }}>
             {schoolSettings.address}
           </div>
-          <div style={{ fontSize: smallFontSize, color: '#333', marginBottom: forPrint ? '18px' : '25px' }}>
-            {schoolSettings.phone}, {schoolSettings.email}
+          <div style={{ fontSize: '9px', color: '#555' }}>
+            {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
           </div>
-          <div style={{ fontSize: titleFontSize, fontWeight: 'bold', letterSpacing: '3px' }}>
+        </div>
+
+        {/* TITLE */}
+        <div style={{ textAlign: 'center', marginBottom: forPrint ? '20px' : '30px' }}>
+          <div style={{ fontSize: '28px', fontWeight: 'bold', letterSpacing: '4px' }}>
             RECEIPT
           </div>
         </div>
 
-        {/* CLIENT & RECEIPT INFO */}
-        <div style={{ border: '1px solid #000', padding: forPrint ? '15px 20px' : '20px 25px', marginBottom: forPrint ? '20px' : '30px', fontSize: bodyFontSize }}>
+        {/* CLIENT & RECEIPT INFO - BOXED LAYOUT */}
+        <div style={{ border: '1px solid #ccc', padding: '15px 20px', marginBottom: '25px', fontSize: bodyFontSize }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{ width: '50%', verticalAlign: 'top' }}>
+                <td style={{ width: '55%', verticalAlign: 'top' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       <tr>
-                        <td style={{ width: '100px', paddingBottom: '8px' }}>Client no.</td>
-                        <td style={{ paddingBottom: '8px' }}>{data.clientNo}</td>
+                        <td style={{ width: '110px', paddingBottom: '6px' }}>Student ID no.</td>
+                        <td style={{ paddingBottom: '6px', fontWeight: 'bold' }}>{data.clientNo}</td>
                       </tr>
                       <tr>
-                        <td style={{ width: '100px', paddingBottom: '8px' }}>Client name</td>
-                        <td style={{ paddingBottom: '8px' }}>{data.clientName}</td>
+                        <td style={{ paddingBottom: '6px' }}>Student name</td>
+                        <td style={{ paddingBottom: '6px', fontWeight: 'bold' }}>{data.clientName}</td>
                       </tr>
                       <tr>
-                        <td style={{ width: '100px', paddingBottom: '8px' }}>Contact name</td>
-                        <td style={{ paddingBottom: '8px' }}>{data.contactName || "-"}</td>
+                        <td style={{ paddingBottom: '6px' }}>Contact name</td>
+                        <td style={{ paddingBottom: '6px' }}>{data.contactName || "-"}</td>
                       </tr>
                       <tr>
-                        <td style={{ width: '100px', paddingBottom: '8px' }}>Address</td>
-                        <td style={{ paddingBottom: '8px' }}>{data.address || "-"}</td>
+                        <td style={{ verticalAlign: 'top' }}>Address</td>
+                        <td>{data.address || "-"}</td>
                       </tr>
                     </tbody>
                   </table>
                 </td>
-                <td style={{ width: '50%', verticalAlign: 'top' }}>
+                <td style={{ width: '45%', verticalAlign: 'top' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       <tr>
-                        <td style={{ paddingBottom: '8px' }}>Receipt no.</td>
-                        <td style={{ paddingBottom: '8px', textAlign: 'right' }}>{data.receiptNo}</td>
+                        <td style={{ width: '100px', paddingBottom: '6px' }}>Receipt no.</td>
+                        <td style={{ paddingBottom: '6px', textAlign: 'right', fontWeight: 'bold' }}>{data.receiptNo}</td>
                       </tr>
                       <tr>
-                        <td style={{ paddingBottom: '8px' }}>Receipt date</td>
-                        <td style={{ paddingBottom: '8px', textAlign: 'right' }}>{data.receiptDate ? format(data.receiptDate, "d MMMM yyyy") : "-"}</td>
+                        <td style={{ paddingBottom: '6px' }}>Receipt date</td>
+                        <td style={{ paddingBottom: '6px', textAlign: 'right' }}>{data.receiptDate ? format(data.receiptDate, "dd MMMM yyyy") : "-"}</td>
                       </tr>
-                      {data.clientType === "internal" && (
-                        <tr>
-                          <td style={{ paddingBottom: '8px' }}>Year group</td>
-                          <td style={{ paddingBottom: '8px', textAlign: 'right' }}>{data.yearGroup || "-"}</td>
-                        </tr>
-                      )}
                       <tr>
-                        <td style={{ paddingBottom: '8px' }}>School year</td>
-                        <td style={{ paddingBottom: '8px', textAlign: 'right' }}>{data.schoolYear}</td>
+                        <td style={{ paddingBottom: '6px' }}>Year group</td>
+                        <td style={{ paddingBottom: '6px', textAlign: 'right' }}>{data.yearGroup || "-"}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ paddingBottom: '6px' }}>School year</td>
+                        <td style={{ paddingBottom: '6px', textAlign: 'right' }}>{data.schoolYear}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -832,139 +923,136 @@ export function ReceiptManagementFlow({
           </table>
         </div>
 
-        {/* INVOICE TABLE */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: forPrint ? '25px' : '35px' }}>
+        {/* INVOICE TABLE - FULL BORDERS */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: '25px' }}>
           <thead>
-            <tr>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal', width: forPrint ? '35px' : '50px' }}>No.</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'left', fontWeight: 'normal' }}>Invoice no.</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Invoice date</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Invoice amount<br />(THB)</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Received amount<br />(THB)</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Outstanding amount<br />(THB)</th>
+            <tr style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc' }}>
+              <th style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal', width: '40px' }}>No.</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Invoice no.</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Invoice date</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Invoice amount (THB)</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Received amount (THB)</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Outstanding amount (THB)</th>
             </tr>
           </thead>
           <tbody>
             {data.invoices.filter(inv => inv.invoiceNo.trim()).map((invoice, index) => (
-              <tr key={invoice.id}>
-                <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>{index + 1}</td>
-                <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px' }}>{invoice.invoiceNo}</td>
-                <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>{invoice.invoiceDate ? format(invoice.invoiceDate, "d MMMM yyyy") : "-"}</td>
-                <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'right' }}>{formatCurrency(invoice.invoiceAmount)}</td>
-                <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'right' }}>{formatCurrency(invoice.receivedAmount)}</td>
-                <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'right' }}>{invoice.outstandingAmount > 0 ? formatCurrency(invoice.outstandingAmount) : "-"}</td>
+              <tr key={invoice.id} style={{ height: '30px' }}>
+                <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{index + 1}</td>
+                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{invoice.invoiceNo}</td>
+                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{invoice.invoiceDate ? format(invoice.invoiceDate, "dd MMMM yyyy") : "-"}</td>
+                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>{formatCurrency(invoice.invoiceAmount)}</td>
+                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>{formatCurrency(invoice.receivedAmount)}</td>
+                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>{invoice.outstandingAmount > 0 ? formatCurrency(invoice.outstandingAmount) : "-"}</td>
               </tr>
             ))}
-            {/* Amount in words row */}
+            {/* Amount in words and total footer */}
             {(() => {
-              const totalReceived = data.invoices.reduce((sum, inv) => sum + (inv.receivedAmount || 0), 0)
+              const cnList: AppliedCreditNote[] = (data as any).appliedCreditNotes ||
+                (selectedCNIds.size > 0
+                  ? availableCreditNotes
+                    .filter(cn => selectedCNIds.has(cn.id))
+                    .map(cn => ({ id: cn.id, creditNoteNumber: cn.creditNoteNumber, studentName: cn.studentName, reason: cn.reason, appliedAmount: Math.min((cn.remainingBalance ?? cn.amount), getTotalReceivedAmount()) }))
+                  : [])
+              const cnTotal = cnList.reduce((s, cn) => s + cn.appliedAmount, 0)
+              const totalInvoiceReceived = data.invoices.reduce((sum, inv) => sum + (inv.receivedAmount || 0), 0)
               const totalOutstanding = data.invoices.reduce((sum, inv) => sum + (inv.outstandingAmount || 0), 0)
+              const netReceivedAmount = Math.max(0, totalInvoiceReceived - cnTotal)
+
               return (
-                <tr>
-                  <td colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'left' }}>
-                    {numberToWords(totalReceived)} BAHT ONLY
-                  </td>
-                  <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center', fontWeight: 'bold' }}>TOTAL</td>
-                  <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(totalReceived)}</td>
-                  <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'right' }}>{totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "-"}</td>
-                </tr>
+                <>
+                  {/* Credit Note Rows as consecutive items */}
+                  {cnList.map((cn, i) => (
+                    <tr key={cn.id} style={{ height: '30px', color: '#059669' }}>
+                      <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>
+                        {data.invoices.filter(inv => inv.invoiceNo.trim()).length + i + 1}
+                      </td>
+                      <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>
+                        Credit Note ({cn.creditNoteNumber})
+                      </td>
+                      <td colSpan={2} style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'left', verticalAlign: 'top', fontSize: '11px' }}>
+                        {cn.reason || "Credit applied"}
+                      </td>
+                      <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>
+                        -{formatCurrency(cn.appliedAmount)}
+                      </td>
+                      <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}></td>
+                    </tr>
+                  ))}
+
+                  {/* Spacer Row to fill height, ensuring borders go down */}
+                  <tr style={{ height: '180px' }}>
+                    <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
+                  </tr>
+
+                  {/* Final Total Received */}
+                  <tr style={{ backgroundColor: '#f9f9f9' }}>
+                    <td colSpan={3} style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'left', fontSize: '10px' }}>
+                      {numberToWords(netReceivedAmount)} BAHT ONLY
+                    </td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>
+                      TOTAL
+                    </td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'right', fontWeight: 'bold' }}>
+                      {formatCurrency(netReceivedAmount)}
+                    </td>
+                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'right' }}>
+                      {totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "-"}
+                    </td>
+                  </tr>
+                </>
               )
             })()}
           </tbody>
         </table>
 
-        {/* CREDIT NOTES APPLIED */}
-        {(() => {
-          const cnList: AppliedCreditNote[] = (data as any).appliedCreditNotes ||
-            (selectedCNIds.size > 0
-              ? availableCreditNotes
-                  .filter(cn => selectedCNIds.has(cn.id))
-                  .map(cn => ({ id: cn.id, creditNoteNumber: cn.creditNoteNumber, studentName: cn.studentName, reason: cn.reason, appliedAmount: cn.remainingBalance ?? cn.amount }))
-              : [])
-          const cnTotal = cnList.reduce((s, cn) => s + cn.appliedAmount, 0)
-          if (cnList.length === 0) return null
-          const totalReceived = data.invoices.reduce((sum, inv) => sum + (inv.receivedAmount || 0), 0)
-          return (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: forPrint ? '8px' : '12px' }}>
-              <thead>
-                <tr>
-                  <th colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'left', fontWeight: 'normal', backgroundColor: '#f0fdf4' }}>
-                    Credit Note Applied
-                  </th>
-                  <th style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'center', fontWeight: 'normal', backgroundColor: '#f0fdf4' }}>Credit Note No.</th>
-                  <th style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'right', fontWeight: 'normal', backgroundColor: '#f0fdf4' }}>Amount (THB)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cnList.map((cn, i) => (
-                  <tr key={cn.id}>
-                    <td colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px' }}>{cn.reason} — {cn.studentName}</td>
-                    <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'center', fontFamily: 'monospace' }}>{cn.creditNoteNumber}</td>
-                    <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'right', color: '#16a34a' }}>-{formatCurrency(cn.appliedAmount)}</td>
-                  </tr>
-                ))}
-                <tr style={{ backgroundColor: '#f0fdf4' }}>
-                  <td colSpan={3} style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', fontWeight: 'bold' }}>Net Payable Amount</td>
-                  <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px' }}></td>
-                  <td style={{ border: '1px solid #000', padding: forPrint ? '6px 10px' : '8px 14px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(Math.max(0, totalReceived - cnTotal))}</td>
-                </tr>
-              </tbody>
-            </table>
-          )
-        })()}
-
-        {/* PAYMENT INFORMATION */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: forPrint ? '30px' : '45px' }}>
+        {/* PAYMENT METHOD TABLE */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: '40px' }}>
           <thead>
-            <tr>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>{t("paymentMethod.label")}</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Bank name</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Bank branch</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Cheque no.</th>
-              <th style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '12px 14px', textAlign: 'center', fontWeight: 'normal' }}>Cheque date</th>
+            <tr style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc' }}>
+              <th style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Payment method</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Bank name</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Bank branch</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Cheque no.</th>
+              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Cheque date</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>
-                {PAYMENT_METHODS.find(p => p.value === data.paymentMethod)?.label || "-"}
+            <tr style={{ borderBottom: '1px solid #ccc' }}>
+              <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>
+                {PAYMENT_METHODS.find(p => p.value === data.paymentMethod)?.label?.toUpperCase() || "-"}
               </td>
-              <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>
-                {data.bankName || "-"}
-              </td>
-              <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>
-                {data.bankBranch || "-"}
-              </td>
-              <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>
-                {data.chequeNo || "-"}
-              </td>
-              <td style={{ border: '1px solid #000', padding: forPrint ? '8px 10px' : '10px 14px', textAlign: 'center' }}>
-                {data.chequeDate ? format(data.chequeDate, "dd/MM/yyyy") : "-"}
-              </td>
+              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.bankName || "-"}</td>
+              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.bankBranch || "-"}</td>
+              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.chequeNo || "-"}</td>
+              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.chequeDate ? format(data.chequeDate, "dd/MM/yyyy") : "-"}</td>
             </tr>
           </tbody>
         </table>
 
-        {/* SIGNATURES */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: forPrint ? '30px' : '40px', padding: forPrint ? '0 40px' : '0 60px' }}>
-          <div style={{ width: '40%', textAlign: 'center' }}>
-            <div style={{ height: signatureHeight, fontSize: bodyFontSize, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        {/* SIGNATURE SECTION */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', padding: '0 20px' }}>
+          <div style={{ width: '45%', textAlign: 'center' }}>
+            <div style={{ border: '1px solid #ccc', padding: '15px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
               {data.collectorName || ""}
             </div>
-            <div style={{ borderTop: '1px solid #000', marginBottom: '8px', marginTop: '8px' }}></div>
             <div style={{ fontSize: bodyFontSize }}>Collector</div>
           </div>
-          <div style={{ width: '40%', textAlign: 'center' }}>
-            <div style={{ height: signatureHeight, fontSize: bodyFontSize, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-              {data.authorizedSignature || ""}
+          <div style={{ width: '45%', textAlign: 'center' }}>
+            <div style={{ border: '1px solid #ccc', padding: '15px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
+              {/* Optional Signature image goes here */}
             </div>
-            <div style={{ borderTop: '1px solid #000', marginBottom: '8px', marginTop: '8px' }}></div>
             <div style={{ fontSize: bodyFontSize }}>Authorised signature</div>
           </div>
         </div>
 
-        {/* FOOTER */}
-        <div style={{ fontSize: smallFontSize, textAlign: 'center', color: '#333', marginTop: forPrint ? '20px' : '25px' }}>
+        {/* LEGAL FOOTER */}
+        <div style={{ fontSize: '9px', textAlign: 'left', color: '#555', marginTop: 'auto', borderTop: '1px solid #eee', paddingTop: '10px' }}>
           In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.
         </div>
       </div>
@@ -1051,38 +1139,41 @@ export function ReceiptManagementFlow({
                     <SelectItem value="downloaded">{t("receiptStatus.downloaded")}</SelectItem>
                   </SelectContent>
                 </Select>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {filterDateFrom ? format(filterDateFrom, "dd/MM/yyyy") : "Date from"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={filterDateFrom}
-                      onSelect={setFilterDateFrom}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {filterDateTo ? format(filterDateTo, "dd/MM/yyyy") : "Date to"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={filterDateTo}
-                      onSelect={setFilterDateTo}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {filterDateFrom ? format(filterDateFrom, "dd/MM/yyyy") : "Receipt Date from"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={filterDateFrom}
+                        onSelect={setFilterDateFrom}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground">→</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {filterDateTo ? format(filterDateTo, "dd/MM/yyyy") : "Receipt Date to"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={filterDateTo}
+                        onSelect={setFilterDateTo}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 {(filterYearGroup !== "all" || filterStatus !== "all" || filterDateFrom || filterDateTo) && (
                   <Button
                     variant="ghost"
@@ -1568,20 +1659,24 @@ export function ReceiptManagementFlow({
                   {availableCreditNotes.map(cn => {
                     const balance = cn.remainingBalance ?? cn.amount
                     const isSelected = selectedCNIds.has(cn.id)
+                    const isDisabled = !isSelected && totalAppliedCN >= getTotalReceivedAmount()
                     return (
                       <div
                         key={cn.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected ? "bg-emerald-100 border-emerald-400" : "bg-white border-gray-200 hover:border-emerald-300"
+                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                          isSelected ? "bg-emerald-100 border-emerald-400" : 
+                          isDisabled ? "bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed" :
+                          "bg-white border-gray-200 hover:border-emerald-300 cursor-pointer"
                         }`}
-                        onClick={() => toggleCN(cn.id)}
+                        onClick={() => !isDisabled && toggleCN(cn.id)}
                       >
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
                             checked={isSelected}
+                            disabled={isDisabled}
                             onChange={() => toggleCN(cn.id)}
-                            className="w-4 h-4 accent-emerald-600"
+                            className="w-4 h-4 accent-emerald-600 cursor-pointer disabled:cursor-not-allowed"
                             onClick={e => e.stopPropagation()}
                           />
                           <div>
@@ -1909,6 +2004,10 @@ export function ReceiptManagementFlow({
               bankBranch: "",
               chequeNo: "",
               chequeDate: undefined,
+              edcAmount: selectedReceipt.edcAmount,
+              transactionFeePercent: selectedReceipt.transactionFeePercent,
+              transactionFeeAmount: selectedReceipt.transactionFeeAmount,
+              overpaymentAmount: selectedReceipt.overpaymentAmount,
               collectorName: "",
               authorizedSignature: ""
             })}

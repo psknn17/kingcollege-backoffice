@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Download, Search, Filter, Eye, CalendarIcon, X } from "lucide-react"
+import { Download, Search, Filter, Eye, CalendarIcon, X, ArrowUpDown } from "lucide-react"
 import { PaginationBar } from "./ui/pagination-bar"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -83,16 +83,27 @@ export function PaymentHistorySimple() {
   const { t } = useLanguage()
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = usePersistedState<string>("payment-history:statusFilter", "all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
-  const [academicYearFilter, setAcademicYearFilter] = usePersistedState<string>("payment-history:academicYearFilter", "all")
+  const [academicYearFilter, setAcademicYearFilter] = useState<string>("all")
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all")
-  const [dateFrom, setDateFrom] = usePersistedState<Date | undefined>("payment-history:dateFrom", undefined)
-  const [dateTo, setDateTo] = usePersistedState<Date | undefined>("payment-history:dateTo", undefined)
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
   const [viewingPaymentProof, setViewingPaymentProof] = useState<PaymentRecord | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [sortColumn, setSortColumn] = useState<string>("transactionDate")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
 
   useEffect(() => {
     const loadPayments = () => {
@@ -161,10 +172,56 @@ export function PaymentHistorySimple() {
     return matchesSearch && matchesStatus && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesDateFrom && matchesDateTo
   })
 
+  const sortedPayments = useMemo(() => {
+    if (!sortColumn) return filteredPayments
+    return [...filteredPayments].sort((a, b) => {
+      let aVal: any, bVal: any
+      switch (sortColumn) {
+        case "transactionDate":
+          aVal = a.transactionDate?.getTime() || 0
+          bVal = b.transactionDate?.getTime() || 0
+          break
+        case "referenceOrder":
+          aVal = a.referenceOrder
+          bVal = b.referenceOrder
+          break
+        case "studentName":
+          aVal = a.studentName
+          bVal = b.studentName
+          break
+        case "studentGrade":
+          aVal = a.studentGrade
+          bVal = b.studentGrade
+          break
+        case "amount":
+          aVal = a.amount
+          bVal = b.amount
+          break
+        case "status":
+          aVal = a.status
+          bVal = b.status
+          break
+        case "paymentMethod":
+          aVal = a.paymentMethod
+          bVal = b.paymentMethod
+          break
+        case "email":
+          aVal = a.email
+          bVal = b.email
+          break
+        default:
+          return 0
+      }
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+      return 0
+    })
+  }, [filteredPayments, sortColumn, sortDirection])
+
   const paginatedPayments = useMemo(() => {
     const start = (currentPage - 1) * pageSize
-    return filteredPayments.slice(start, start + pageSize)
-  }, [filteredPayments, currentPage, pageSize])
+    return sortedPayments.slice(start, start + pageSize)
+  }, [sortedPayments, currentPage, pageSize])
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -406,7 +463,7 @@ export function PaymentHistorySimple() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date From */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("common.from")}</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")} ({t("date.from")})</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -433,7 +490,7 @@ export function PaymentHistorySimple() {
 
             {/* Date To */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("common.to")}</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")} ({t("date.to")})</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -474,23 +531,30 @@ export function PaymentHistorySimple() {
           <Table>
             <TableHeader>
               <TableRow>
-                {/* Date alignment */}
-                <TableHead align="left">Timestamp</TableHead>
-                {/* Text/ID alignment */}
-                <TableHead align="left">Reference Order</TableHead>
-                {/* Text alignment */}
-                <TableHead align="left">{t("payment.student")}</TableHead>
-                {/* Badge alignment */}
-                <TableHead align="center">{t("student.yearGroup")}</TableHead>
-                {/* Currency alignment */}
-                <TableHead align="right">{t("common.amount")} (THB)</TableHead>
-                {/* Status badge alignment */}
-                <TableHead align="center">{t("common.status")}</TableHead>
-                {/* Text alignment */}
-                <TableHead align="left">Method</TableHead>
-                {/* Text alignment */}
-                <TableHead align="left">Email</TableHead>
-                {/* Actions alignment */}
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
+                  <div className="flex items-center gap-1">Timestamp <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("referenceOrder")}>
+                  <div className="flex items-center gap-1">Reference Order <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                  <div className="flex items-center gap-1">{t("payment.student")} <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
+                  <div className="flex items-center gap-1 justify-center">{t("student.yearGroup")} <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                  <div className="flex items-center gap-1 justify-end">{t("common.amount")} (THB) <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center gap-1 justify-center">{t("common.status")} <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
+                  <div className="flex items-center gap-1">Method <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("email")}>
+                  <div className="flex items-center gap-1">Email <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -548,7 +612,7 @@ export function PaymentHistorySimple() {
           <PaginationBar
             currentPage={currentPage}
             pageSize={pageSize}
-            totalCount={filteredPayments.length}
+            totalCount={sortedPayments.length}
             onPageChange={setCurrentPage}
             onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
           />

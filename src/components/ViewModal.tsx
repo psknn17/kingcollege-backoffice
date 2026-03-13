@@ -354,7 +354,8 @@ export function ViewModal({
                   <td className="py-1.5 px-2 text-right align-top">{formatCurrencyUtil(item.discountedAmount || item.amount || 0)}</td>
                 </tr>
               ))}
-              {/* Discount Rows */}
+
+              {/* Discount Section */}
               {discounts.length > 0 && discounts.map((discount: any, idx: number) => (
                 <tr key={`discount-${idx}`} className="border-b border-gray-200" style={{ color: '#059669' }}>
                   <td className="py-1.5 px-2 align-top">{(data.items?.length || 0) + idx + 1}</td>
@@ -364,7 +365,8 @@ export function ViewModal({
                   <td className="py-1.5 px-2 text-right align-top">-{formatCurrencyUtil(discount.amount || 0)}</td>
                 </tr>
               ))}
-              {/* Total Row */}
+
+              {/* Total Summary Row */}
               <tr className="border-t border-black bg-gray-100">
                 <td colSpan={2} className="py-2 px-2">
                   <div className="flex justify-between items-center">

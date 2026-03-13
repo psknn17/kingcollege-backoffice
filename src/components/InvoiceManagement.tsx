@@ -265,7 +265,11 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           // Family/parent info
           adultIdNo: inv.adultIdNo || "",
           // Bank account GL code (stored at mark-as-paid time)
-          receiveAccountNo: inv.receiveAccountNo || ""
+          receiveAccountNo: inv.receiveAccountNo || "",
+          // Email fields — must be restored so getEmailStatus works after reload
+          emailSentAt: inv.emailSentAt ? new Date(inv.emailSentAt) : undefined,
+          paidDate: inv.paidDate ? new Date(inv.paidDate) : undefined,
+          approvedAt: inv.approvedAt ? new Date(inv.approvedAt) : undefined,
         }
       })
     }
@@ -459,17 +463,17 @@ export function InvoiceManagement({
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([])
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
-  const [searchTerm, setSearchTerm] = usePersistedState("invoice-management:search", "")
-  const [academicYearFilter, setAcademicYearFilter] = usePersistedState("invoice-management:academicYear", "all")
-  const [termFilter, setTermFilter] = usePersistedState("invoice-management:term", "all")
-  const [statusFilter, setStatusFilter] = usePersistedState("invoice-management:status", "all")
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = usePersistedState("invoice-management:invoiceStatus", "all")
-  const [paymentStatusFilter, setPaymentStatusFilter] = usePersistedState("invoice-management:paymentStatus", "all")
-  const [gradeFilter, setGradeFilter] = usePersistedState("invoice-management:grade", "all")
-  const [dateFrom, setDateFrom] = usePersistedState<Date | null>("invoice-management:dateFrom", null)
-  const [dateTo, setDateTo] = usePersistedState<Date | null>("invoice-management:dateTo", null)
-  const [dueDateFrom, setDueDateFrom] = usePersistedState<Date | null>("invoice-management:dueDateFrom", null)
-  const [dueDateTo, setDueDateTo] = usePersistedState<Date | null>("invoice-management:dueDateTo", null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [academicYearFilter, setAcademicYearFilter] = useState("all")
+  const [termFilter, setTermFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
+  const [gradeFilter, setGradeFilter] = useState("all")
+  const [dateFrom, setDateFrom] = useState<Date | null>(null)
+  const [dateTo, setDateTo] = useState<Date | null>(null)
+  const [dueDateFrom, setDueDateFrom] = useState<Date | null>(null)
+  const [dueDateTo, setDueDateTo] = useState<Date | null>(null)
   const [isExportingAll, setIsExportingAll] = useState(false)
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
   const [templateToEdit, setTemplateToEdit] = useState<EmailTemplate | null>(null)
@@ -494,7 +498,7 @@ export function InvoiceManagement({
     | "term"
     | null
   >("invoice-management:sortKey", "invoiceNumber")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("invoice-management:sortDirection", "desc")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -629,11 +633,25 @@ export function InvoiceManagement({
   const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = useState<Invoice | null>(null)
   const [isMarkPaidOpen, setIsMarkPaidOpen] = useState(false)
   const [markPaidInvoice, setMarkPaidInvoice] = useState<Invoice | null>(null)
+  const [markPaidInvoices, setMarkPaidInvoices] = useState<Invoice[]>([])
   const [paymentMethod, setPaymentMethod] = useState("")
   const [paymentFiles, setPaymentFiles] = useState<File[]>([])
   const [isSavingPayment, setIsSavingPayment] = useState(false)
   const [edcBank, setEdcBank] = useState("")
   const [edcAccountNumber, setEdcAccountNumber] = useState("")
+  const [edcAmount, setEdcAmount] = useState<string>("")
+  const [ccFeePercent, setCcFeePercent] = useState<string>("")
+
+  // Auto-deselect CNs when EDC amount covers the full invoice
+  useEffect(() => {
+    if (paymentMethod === "EDC") {
+      const edcAmt = parseFloat(edcAmount) || 0
+      const invoiceAmt = markPaidInvoice?.finalAmount ?? 0
+      if (edcAmt >= invoiceAmt) {
+        setSelectedCNIdsForPaid(new Set())
+      }
+    }
+  }, [edcAmount, paymentMethod, markPaidInvoice])
   const [selectedGlAccount, setSelectedGlAccount] = useState("")
   const [bankAccounts] = usePersistedState<any[]>("bankAccounts", [])
   const [availableCNsForPaid, setAvailableCNsForPaid] = useState<CreditNoteRecord[]>([])
@@ -1343,6 +1361,92 @@ export function InvoiceManagement({
       module: "Invoices",
       detail: `Invoices: ${deletedNumbers.join(", ")}`
     })
+  }
+
+  const handleBulkMarkPaid = async () => {
+    const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+    
+    // All must be approved/sent and not paid
+    const canPay = selectedInvoices.filter(inv => 
+      (inv.status === "approved" || inv.status === "sent" || getApprovalStatus(inv) === "approved") && 
+      inv.status !== "paid" && 
+      inv.status !== "cancelled"
+    )
+    
+    if (canPay.length === 0) {
+      toast.error("No payable invoices selected. Only approved or sent invoices can be marked as paid.")
+      return
+    }
+
+    if (canPay.length < selectedInvoices.length) {
+      toast.warning(`Only ${canPay.length} of ${selectedInvoices.length} selected invoices can be marked as paid.`)
+    }
+
+    // Sort to apply CNs to the highest price first later
+    const sorted = [...canPay].sort((a, b) => (b.finalAmount || 0) - (a.finalAmount || 0))
+    
+    // For CN fetching, we'll try to find CNs for the reference student
+    const refInvoice = sorted[0]
+    setMarkPaidInvoice(refInvoice)
+    setMarkPaidInvoices(sorted)
+    
+    setPaymentMethod("")
+    setPaymentFiles([])
+    setSelectedCNIdsForPaid(new Set())
+    setEdcAmount("")
+    setCcFeePercent("")
+
+    // Credit Notes match logic (similar to openMarkPaidDialog)
+    const isExternalInvoice = refInvoice.invoiceType === "external" || refInvoice.studentId === "EXTERNAL" || refInvoice.category === "external"
+    let cns: CreditNoteRecord[] = []
+    if (isExternalInvoice) {
+      setAvailableCNsForPaid([])
+      setIsMarkPaidOpen(true)
+      return
+    }
+    try {
+      const stored = localStorage.getItem("creditNotesRecords")
+      if (stored) {
+        const raw: any[] = JSON.parse(stored)
+        const fCode = (refInvoice.adultIdNo || "").trim().toLowerCase()
+        const sId = (refInvoice.studentId || "").trim().toLowerCase()
+        const sName = (refInvoice.studentName || "").trim().toLowerCase()
+
+        cns = raw
+          .filter(cn => {
+            const rawStatus = (cn.status || "").toLowerCase()
+            if (rawStatus === "applied" || rawStatus === "cancelled" || rawStatus === "used") return false
+            const cnFamilyCode = (cn.parentName || cn.familyCode || "").trim().toLowerCase()
+            const cnStudentId = (cn.studentId || "").trim().toLowerCase()
+            const cnStudentName = (cn.studentName || "").trim().toLowerCase()
+            return (
+              (fCode && (cnFamilyCode === fCode || cnStudentId === fCode)) ||
+              (sId && (cnStudentId === sId || cnFamilyCode === sId)) ||
+              (sName && cnStudentName === sName)
+            )
+          })
+          .map(cn => ({
+            id: String(cn.id),
+            creditNoteNumber: cn.creditNoteNumber || "",
+            studentName: cn.studentName || "",
+            studentId: cn.studentId || "",
+            familyCode: cn.parentName || cn.familyCode || "",
+            amount: cn.creditAmount ?? cn.amount ?? 0,
+            remainingBalance: cn.remainingBalance,
+            reason: cn.reason || "",
+            status: "issued" as const,
+            issueDate: cn.issueDate ? String(cn.issueDate) : new Date().toISOString(),
+          }))
+      }
+    } catch {
+      cns = await getCreditNotesByFamily(
+        refInvoice.adultIdNo || refInvoice.studentId,
+        refInvoice.studentId,
+        refInvoice.studentName
+      ) as CreditNoteRecord[]
+    }
+    setAvailableCNsForPaid(cns)
+    setIsMarkPaidOpen(true)
   }
 
 
@@ -3109,11 +3213,63 @@ export function InvoiceManagement({
     setPaymentMethod("")
     setPaymentFiles([])
     setSelectedCNIdsForPaid(new Set())
-    // Use service to load available CNs — swap getCreditNotesByFamily() to API when backend ready
-    const cns = await getCreditNotesByFamily(
-      invoice.adultIdNo || invoice.studentId,
-      invoice.studentId
-    )
+    setEdcAmount("")
+    setCcFeePercent("")
+
+    // Credit Notes are not applicable for external invoices
+    const isExternalInvoice = invoice.invoiceType === "external" || invoice.studentId === "EXTERNAL" || invoice.category === "external"
+
+    // Read credit notes directly from localStorage and match permissively
+    let cns: CreditNoteRecord[] = []
+    if (isExternalInvoice) {
+      setAvailableCNsForPaid([])
+      setIsMarkPaidOpen(true)
+      return
+    }
+    try {
+      const stored = localStorage.getItem("creditNotesRecords")
+      if (stored) {
+        const raw: any[] = JSON.parse(stored)
+        const fCode = (invoice.adultIdNo || "").trim().toLowerCase()
+        const sId = (invoice.studentId || "").trim().toLowerCase()
+        const sName = (invoice.studentName || "").trim().toLowerCase()
+
+        cns = raw
+          .filter(cn => {
+            const rawStatus = (cn.status || "").toLowerCase()
+            if (rawStatus === "applied" || rawStatus === "cancelled" || rawStatus === "used") return false
+
+            const cnFamilyCode = (cn.parentName || cn.familyCode || "").trim().toLowerCase()
+            const cnStudentId = (cn.studentId || "").trim().toLowerCase()
+            const cnStudentName = (cn.studentName || "").trim().toLowerCase()
+
+            return (
+              (fCode && (cnFamilyCode === fCode || cnStudentId === fCode)) ||
+              (sId && (cnStudentId === sId || cnFamilyCode === sId)) ||
+              (sName && cnStudentName === sName)
+            )
+          })
+          .map(cn => ({
+            id: String(cn.id),
+            creditNoteNumber: cn.creditNoteNumber || "",
+            studentName: cn.studentName || "",
+            studentId: cn.studentId || "",
+            familyCode: cn.parentName || cn.familyCode || "",
+            amount: cn.creditAmount ?? cn.amount ?? 0,
+            remainingBalance: cn.remainingBalance,
+            reason: cn.reason || "",
+            status: "issued" as const,
+            issueDate: cn.issueDate ? String(cn.issueDate) : new Date().toISOString(),
+          }))
+      }
+    } catch {
+      // fallback to service layer
+      cns = await getCreditNotesByFamily(
+        invoice.adultIdNo || invoice.studentId,
+        invoice.studentId,
+        invoice.studentName
+      ) as CreditNoteRecord[]
+    }
     setAvailableCNsForPaid(cns)
     setIsMarkPaidOpen(true)
   }, [])
@@ -3128,221 +3284,250 @@ export function InvoiceManagement({
   }
 
   const confirmMarkPaid = async () => {
-    if (!markPaidInvoice) return
-    if (!paymentMethod) {
+    const invoicesToPay = markPaidInvoices.length > 0 ? markPaidInvoices : (markPaidInvoice ? [markPaidInvoice] : [])
+    if (invoicesToPay.length === 0) return
+
+    const totalFinalAmount = invoicesToPay.reduce((sum, inv) => sum + (inv.finalAmount || 0), 0)
+
+    // Compute how much CNs cover (Total pool)
+    const totalCNPool = [...selectedCNIdsForPaid].reduce((sum, id) => {
+      const cn = availableCNsForPaid.find(c => c.id === id)
+      return sum + (cn ? (cn.remainingBalance ?? cn.amount) : 0)
+    }, 0)
+    
+    // We can't use more CN than the total invoice amount
+    const usedCNPool = Math.min(totalCNPool, totalFinalAmount)
+    const netPayableTotal = Math.max(0, totalFinalAmount - usedCNPool)
+
+    if (netPayableTotal > 0 && !paymentMethod) {
       toast.error("Please select a payment method")
       return
     }
-    if (paymentMethod === "edc" && !edcBank) {
+    if (netPayableTotal > 0 && paymentMethod === "EDC" && !edcBank) {
       toast.error("Please select a bank account for EDC payment")
       return
     }
+    if (netPayableTotal > 0 && paymentMethod === "EDC" && !edcAmount) {
+      toast.error("Please enter EDC Amount")
+      return
+    }
+    if (netPayableTotal > 0 && paymentMethod === "EDC" && !ccFeePercent) {
+      toast.error("Please enter Transaction Fee (%)")
+      return
+    }
+
+    // EDC-specific computed values (fee calculated from net payable after CN)
+    const _edcAmt = paymentMethod === "EDC" ? (parseFloat(edcAmount) || 0) : 0
+    const _ccFeePct = paymentMethod === "EDC" ? (parseFloat(ccFeePercent) || 0) : 0
+    const _ccFee = parseFloat((netPayableTotal * _ccFeePct / 100).toFixed(2))
+    const _totalToPay = netPayableTotal + _ccFee
+    const _overpayment = paymentMethod === "EDC" ? Math.max(0, _edcAmt - _totalToPay) : 0
 
     setIsSavingPayment(true)
     try {
       const proofs = await Promise.all(paymentFiles.map(readFileAsDataUrl))
       const paidAt = new Date()
       const isPartial = paymentMethod === "Partial"
+      
+      const _edcAmt = paymentMethod === "EDC" ? (parseFloat(edcAmount) || 0) : 0
+      const _ccFeePct = paymentMethod === "EDC" ? (parseFloat(ccFeePercent) || 0) : 0
+      const _ccFeeTotal = parseFloat((netPayableTotal * _ccFeePct / 100).toFixed(2))
+      const _totalToPayFull = netPayableTotal + _ccFeeTotal
 
-      const paymentMethodDetail = paymentMethod === "EDC"
-        ? `EDC - ${edcBank} (${edcAccountNumber})`
-        : paymentMethod
+      const paymentMethodDetailBase = netPayableTotal === 0
+        ? "Credit Note"
+        : paymentMethod === "EDC"
+          ? `EDC - ${edcBank} (${edcAccountNumber})`
+          : paymentMethod
 
-      const updatedInvoices = invoices.map(inv =>
-        inv.id === markPaidInvoice.id
-          ? {
-            ...inv,
-            status: isPartial ? inv.status : ("paid" as const),
-            paidDate: isPartial ? inv.paidDate : paidAt,
+      // Process invoices one by one (sorted by amount DESC to apply CN correctly)
+      const sortedInvoices = [...invoicesToPay].sort((a,b) => (b.finalAmount || 0) - (a.finalAmount || 0))
+      let cnPoolRemaining = usedCNPool
+      
+      const invoiceStatusUpdates: Record<string, Partial<Invoice>> = {}
+      
+      for (const inv of sortedInvoices) {
+        const cnForThis = Math.min(inv.finalAmount || 0, cnPoolRemaining)
+        cnPoolRemaining -= cnForThis
+        const netForThis = (inv.finalAmount || 0) - cnForThis
+        
+        // EDC specific for this invoice portion if needed, but usually we just say same method
+        const paymentMethodDetail = cnForThis > 0 && netForThis === 0 
+           ? "Credit Note" 
+           : paymentMethodDetailBase
+
+        invoiceStatusUpdates[inv.id] = {
+           status: isPartial ? inv.status : ("paid" as const),
+           paidDate: isPartial ? inv.paidDate : paidAt,
+           paymentMethod: paymentMethodDetail,
+           receiveAccountNo: selectedGlAccount,
+           paymentProofs: proofs
+        }
+
+        // Save payment record
+        try {
+          const paymentKey = "paymentRecords"
+          const storedPayments = localStorage.getItem(paymentKey)
+          const payments = storedPayments ? JSON.parse(storedPayments) : []
+          const paymentRecord = {
+            id: `payment-${inv.id}`,
+            invoiceId: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            studentName: inv.studentName,
+            studentId: inv.studentId,
+            studentGrade: inv.studentGrade,
+            amount: inv.finalAmount,
+            term: inv.term || "-",
             paymentMethod: paymentMethodDetail,
-            receiveAccountNo: selectedGlAccount,
+            status: isPartial ? "partial" : "paid",
+            transactionDate: paidAt.toISOString(),
             paymentProofs: proofs
           }
-          : inv
-      )
-      setInvoices(updatedInvoices)
+          const existingIndex = payments.findIndex((p: any) => p.invoiceId === inv.id || p.invoiceNumber === inv.invoiceNumber)
+          if (existingIndex >= 0) payments[existingIndex] = paymentRecord
+          else payments.push(paymentRecord)
+          localStorage.setItem(paymentKey, JSON.stringify(payments))
+        } catch (e) { console.error(e) }
 
-      // Update localStorage
-      try {
-        const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
-        if (stored) {
-          const savedInvoices = JSON.parse(stored)
-          const updatedSavedInvoices = savedInvoices.map((inv: any) =>
-            inv.id === markPaidInvoice.id
-              ? {
-                ...inv,
-                status: isPartial ? inv.status : "paid",
-                paidDate: isPartial ? inv.paidDate : paidAt.toISOString(),
-                paymentMethod: paymentMethodDetail,
-                receiveAccountNo: selectedGlAccount,
-                paymentProofs: proofs
-              }
-              : inv
-          )
-          localStorage.setItem(CREATED_INVOICES_STORAGE_KEY, JSON.stringify(updatedSavedInvoices))
-        }
-      } catch (error) {
-        console.error("Failed to update paid status in localStorage:", error)
-      }
+        // Generate receipt
+        if (!isPartial) {
+          try {
+            let receiptStorageKey = ""
+            let receiptPrefix = ""
+            const category = inv.category
+            if (category === "eca") { receiptStorageKey = "receiptRecords_eca"; receiptPrefix = "ECA"; }
+            else if (category === "trip") { receiptStorageKey = "receiptRecords_trip"; receiptPrefix = "TRP"; }
+            else if (category === "exam") { receiptStorageKey = "receiptRecords_event"; receiptPrefix = "EXM"; }
+            else if (category === "bus") { receiptStorageKey = "receiptRecords_summer"; receiptPrefix = "BUS"; }
+            else if (category === "external") { receiptStorageKey = "receiptRecords_external"; receiptPrefix = "EXT"; }
+            else { receiptStorageKey = "receiptRecords_tuition"; receiptPrefix = "TUI"; }
 
-      // Save payment record
-      try {
-        const paymentKey = "paymentRecords"
-        const storedPayments = localStorage.getItem(paymentKey)
-        const payments = storedPayments ? JSON.parse(storedPayments) : []
-        const paymentRecord = {
-          id: `payment-${markPaidInvoice.id}`,
-          invoiceId: markPaidInvoice.id,
-          invoiceNumber: markPaidInvoice.invoiceNumber,
-          studentName: markPaidInvoice.studentName,
-          studentId: markPaidInvoice.studentId,
-          studentGrade: markPaidInvoice.studentGrade,
-          amount: markPaidInvoice.finalAmount,
-          term: markPaidInvoice.term || "-",
-          paymentMethod: paymentMethodDetail,
-          status: isPartial ? "partial" : "paid",
-          transactionDate: paidAt.toISOString(),
-          paymentProofs: proofs
-        }
-        const existingIndex = payments.findIndex((p: any) =>
-          p.invoiceId === markPaidInvoice.id || p.invoiceNumber === markPaidInvoice.invoiceNumber
-        )
-        if (existingIndex >= 0) {
-          payments[existingIndex] = paymentRecord
-        } else {
-          payments.push(paymentRecord)
-        }
-        localStorage.setItem(paymentKey, JSON.stringify(payments))
-        window.dispatchEvent(new CustomEvent("paymentsUpdated"))
-      } catch (error) {
-        console.error("Failed to save payment record:", error)
-      }
+            const storedReceipts = localStorage.getItem(receiptStorageKey)
+            const receipts = storedReceipts ? JSON.parse(storedReceipts) : []
 
-      // Auto-generate receipt if not partial payment
-      if (!isPartial) {
-        try {
-          // Determine receipt storage key and prefix based on category
-          let receiptStorageKey = ""
-          let receiptPrefix = ""
+            const academicYearStr = inv.academicYear || ""
+            const acYearStart = academicYearStr.match(/(\d{4})/)?.[1] || new Date().getFullYear().toString()
+            const runningKey = `receipt_running_no_${acYearStart}`
+            const currentRunning = parseInt(localStorage.getItem(runningKey) || "0", 10)
+            const nextRunning = currentRunning + 1
+            localStorage.setItem(runningKey, nextRunning.toString())
+            const receiptNo = `R${acYearStart}-${String(nextRunning).padStart(5, "0")}`
 
-          const category = markPaidInvoice.category
-          if (category === "eca") {
-            receiptStorageKey = "receiptRecords_eca"
-            receiptPrefix = "ECA"
-          } else if (category === "trip") {
-            receiptStorageKey = "receiptRecords_trip"
-            receiptPrefix = "TRP"
-          } else if (category === "exam") {
-            receiptStorageKey = "receiptRecords_event"
-            receiptPrefix = "EXM"
-          } else if (category === "bus") {
-            receiptStorageKey = "receiptRecords_summer"
-            receiptPrefix = "BUS"
-          } else if (category === "external") {
-            receiptStorageKey = "receiptRecords_external"
-            receiptPrefix = "EXT"
-          } else {
-            // For tuition and other categories, use general receipt storage
-            receiptStorageKey = "receiptRecords_tuition"
-            receiptPrefix = "TUI"
-          }
-
-          // Get existing receipts
-          const storedReceipts = localStorage.getItem(receiptStorageKey)
-          const receipts = storedReceipts ? JSON.parse(storedReceipts) : []
-
-          // Generate receipt number: R{YYYY}-{NNNNN} using global running number per academic year
-          const academicYearStr = markPaidInvoice.academicYear || ""
-          const acYearStart = academicYearStr.match(/(\d{4})/)?.[1] || new Date().getFullYear().toString()
-          const runningKey = `receipt_running_no_${acYearStart}`
-          const currentRunning = parseInt(localStorage.getItem(runningKey) || "0", 10)
-          const nextRunning = currentRunning + 1
-          localStorage.setItem(runningKey, nextRunning.toString())
-          const receiptNo = `R${acYearStart}-${String(nextRunning).padStart(5, "0")}`
-
-          // Create receipt record
-          const receiptRecord = {
-            id: `receipt-${markPaidInvoice.id}`,
-            receiptNo: receiptNo,
-            receiptDate: paidAt.toISOString(),
-            clientType: markPaidInvoice.invoiceType === "external" ? "external" : "internal",
-            clientNo: markPaidInvoice.studentId,
-            clientName: markPaidInvoice.parentName || markPaidInvoice.studentName,
-            contactName: markPaidInvoice.studentName,
-            yearGroup: markPaidInvoice.studentGrade,
-            schoolYear: (() => {
-              const ay = markPaidInvoice.academicYear || ""
-              const tm = markPaidInvoice.term || ""
-              if (ay && tm) return `${ay} - ${tm}`
-              return ay || tm
-            })(),
-            academicYear: markPaidInvoice.academicYear || "",
-            term: markPaidInvoice.term || "",
-            totalAmount: markPaidInvoice.finalAmount,
-            paymentMethod: paymentMethodDetail,
-            status: "generated",
-            createdAt: paidAt.toISOString(),
-            invoices: [
-              {
-                id: markPaidInvoice.id,
-                invoiceNo: markPaidInvoice.invoiceNumber,
-                invoiceDate: markPaidInvoice.issueDate
-                  ? (typeof markPaidInvoice.issueDate === 'string'
-                    ? markPaidInvoice.issueDate
-                    : markPaidInvoice.issueDate.toISOString())
-                  : new Date().toISOString(),
-                invoiceAmount: markPaidInvoice.finalAmount,
-                receivedAmount: markPaidInvoice.finalAmount,
-                outstandingAmount: 0
-              }
-            ]
-          }
-
-          // Add receipt to storage
-          receipts.push(receiptRecord)
-          localStorage.setItem(receiptStorageKey, JSON.stringify(receipts))
-
-
-        } catch (error) {
-          console.error("Failed to auto-generate receipt:", error)
-          // Don't show error to user, receipt generation is secondary
-        }
-      }
-
-      // Mark applied Credit Notes as "used" via service
-      // → swap applyCreditNotes() to API call when backend ready
-      if (selectedCNIdsForPaid.size > 0) {
-        try {
-          const payloads = [...selectedCNIdsForPaid].map(id => {
-            const cn = availableCNsForPaid.find(c => c.id === id)
-            return {
-              creditNoteId: id,
-              invoiceId: markPaidInvoice.invoiceNumber,
-              appliedAmount: cn?.remainingBalance ?? cn?.amount ?? 0,
-              appliedBy: "staff" as const,
+            const receiptRecord = {
+              id: `receipt-${inv.id}`,
+              receiptNo: receiptNo,
+              receiptDate: paidAt.toISOString(),
+              clientType: inv.invoiceType === "external" ? "external" : "internal",
+              clientNo: inv.studentId,
+              clientName: inv.parentName || inv.studentName,
+              contactName: inv.studentName,
+              yearGroup: inv.studentGrade,
+              schoolYear: (inv.academicYear && inv.term) ? `${inv.academicYear} - ${inv.term}` : (inv.academicYear || inv.term || ""),
+              academicYear: inv.academicYear || "",
+              term: inv.term || "",
+              totalAmount: netForThis, // Total received cash
+              creditNoteTotal: cnForThis,
+              paymentMethod: paymentMethodDetail,
+              status: "generated",
+              createdAt: paidAt.toISOString(),
+              invoices: [{
+                id: inv.id,
+                invoiceNo: inv.invoiceNumber,
+                invoiceAmount: inv.finalAmount || 0,
+                receivedAmount: inv.finalAmount || 0,
+                cnDeduction: cnForThis
+              }]
             }
-          })
-          await applyCreditNotes(payloads)
-        } catch (e) {
-          console.error("Failed to update credit notes:", e)
+            receipts.push(receiptRecord)
+            localStorage.setItem(receiptStorageKey, JSON.stringify(receipts))
+          } catch (e) { console.error(e) }
+        }
+
+        // Apply Credit Notes if used for this invoice
+        if (cnForThis > 0 && selectedCNIdsForPaid.size > 0) {
+          try {
+            // Distribute the cnForThis across selected CNs (simplification for localStorage service)
+            let remainingToApply = cnForThis
+            const payloads = [...selectedCNIdsForPaid].map(id => {
+              const cn = availableCNsForPaid.find(c => c.id === id)
+              const cnBalance = cn?.remainingBalance ?? cn?.amount ?? 0
+              const toApply = Math.min(cnBalance, remainingToApply)
+              remainingToApply = Math.max(0, remainingToApply - toApply)
+              if (toApply <= 0) return null
+              return {
+                creditNoteId: id,
+                invoiceId: inv.invoiceNumber,
+                appliedAmount: toApply,
+                appliedBy: "staff" as const,
+              }
+            }).filter(p => p !== null) as any[]
+            
+            if (payloads.length > 0) {
+              await applyCreditNotes(payloads)
+              window.dispatchEvent(new CustomEvent("creditNotesUpdated"))
+            }
+          } catch (e) { console.error("Failed to update credit notes:", e) }
+        }
+
+        // Auto-create Credit Note for EDC overpayment (only for the last invoice if bulk, or distributed)
+        // Usually overpayment happens on the total transaction. 
+        // For simplicity, we handle it once if it's the last invoice in the sorted list.
+        if (inv.id === sortedInvoices[sortedInvoices.length - 1].id && _overpayment > 0) {
+          try {
+            const cnNumber = `CN-OVP-${Date.now()}`
+            const newCN = {
+              id: `cn-${Date.now()}`,
+              creditNoteNumber: cnNumber,
+              studentName: inv.studentName,
+              studentId: inv.studentId,
+              studentGrade: inv.studentGrade || "",
+              academicYear: inv.academicYear || "",
+              term: inv.term || "",
+              invoiceNumber: inv.invoiceNumber,
+              parentName: inv.adultIdNo || "",
+              familyCode: inv.adultIdNo || "",
+              creditAmount: _overpayment,
+              amount: _overpayment,
+              remainingBalance: _overpayment,
+              reason: `EDC Overpayment`,
+              status: "issued",
+              issueDate: new Date().toISOString(),
+            }
+            const storedCNs = localStorage.getItem("creditNotesRecords")
+            const existingCNs = storedCNs ? JSON.parse(storedCNs) : []
+            existingCNs.unshift(newCN)
+            localStorage.setItem("creditNotesRecords", JSON.stringify(existingCNs))
+            toast.info(`Credit Note ${cnNumber} (฿${_overpayment.toLocaleString()}) created for EDC overpayment`)
+          } catch (e) { console.error("Failed to create overpayment credit note:", e) }
         }
       }
 
       window.dispatchEvent(new CustomEvent("invoicesUpdated"))
+      window.dispatchEvent(new CustomEvent("paymentsUpdated"))
+
+      // Log activity for the bulk or single action
+      const invoiceNumbersLog = invoicesToPay.map(inv => inv.invoiceNumber).join(", ")
       logActivity({
-        action: `${isPartial ? "Recorded partial payment" : "Marked invoice as paid"} ${markPaidInvoice.invoiceNumber}`,
+        action: `${isPartial ? "Recorded partial payment" : "Marked invoice as paid"} for ${invoicesToPay.length} invoice(s): ${invoiceNumbersLog}`,
         module: "Invoices",
-        detail: `Payment Method: ${paymentMethodDetail}, Proofs: ${proofs.length}${selectedCNIdsForPaid.size > 0 ? `, Credit Notes applied: ${selectedCNIdsForPaid.size}` : ""}`
+        detail: `Payment Method: ${paymentMethodDetailBase}, Proofs: ${proofs.length}${selectedCNIdsForPaid.size > 0 ? `, Credit Notes applied: ${selectedCNIdsForPaid.size}` : ""}${_overpayment > 0 ? `, EDC Overpayment: ฿${_overpayment}` : ""}`
       })
-      toast.success(isPartial ? "Saved partial payment" : "Marked invoice as paid and receipt generated")
+
+      toast.success(isPartial ? "Saved partial payment" : "Marked invoice(s) as paid and receipt(s) generated")
+      
+      // Cleanup states
       setIsMarkPaidOpen(false)
       setMarkPaidInvoice(null)
+      setMarkPaidInvoices([])
       setPaymentMethod("")
       setPaymentFiles([])
       setAvailableCNsForPaid([])
       setSelectedCNIdsForPaid(new Set())
+      setEdcAmount("")
+      setCcFeePercent("")
       setEdcBank("")
       setEdcAccountNumber("")
+      setSelectedGlAccount("")
     } catch (error) {
       console.error("Failed to mark paid:", error)
       toast.error("Failed to mark invoice as paid")
@@ -3364,9 +3549,10 @@ export function InvoiceManagement({
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
       case "sent":
         return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
+      case "unsent":
+        return <Badge className="bg-gray-100 text-gray-600 border border-gray-200"><Mail className="w-3 h-3 mr-1" />Not Sent</Badge>
       case "cancelled":
         return <span className="text-muted-foreground text-sm">—</span>
-        return <Badge variant="secondary">{status}</Badge>
     }
   }
 
@@ -3498,7 +3684,7 @@ export function InvoiceManagement({
     pendingApproval: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "wait").length,
     approved: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length,
     rejected: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length,
-    sent: tabFilteredInvoices.filter(inv => inv.status === "sent").length,
+    sent: tabFilteredInvoices.filter(inv => getEmailStatus(inv) === "sent").length,
     paid: tabFilteredInvoices.filter(inv => inv.status === "paid").length,
     overdue: tabFilteredInvoices.filter(inv => inv.status === "overdue").length,
     totalAmount: tabFilteredInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0)
@@ -3513,26 +3699,14 @@ export function InvoiceManagement({
           </p>
         </div>
         <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                Download Interface File
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={downloadInterfaceFile}>
-                <Download className="w-4 h-4 mr-2" />
-                Download Invoice Interface
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={downloadInterfaceTemplate}>
-                <FileText className="w-4 h-4 mr-2" />
-                Download Template
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={downloadInterfaceFile}
+          >
+            <Download className="w-4 h-4" />
+            Download Interface File
+          </Button>
           <Button
             variant="outline"
             className="flex items-center gap-2"
@@ -3844,9 +4018,11 @@ export function InvoiceManagement({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">{t("invoice.allTerms")}</SelectItem>
-                          {availableTerms.map(term => (
-                            <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
-                          ))}
+                          {availableTerms.map(term => {
+                            const termMatch = term.name.match(/Term\s*\d+/i)
+                            const termLabel = termMatch ? termMatch[0] : term.name
+                            return <SelectItem key={term.name} value={term.name}>{termLabel}</SelectItem>
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -3984,28 +4160,39 @@ export function InvoiceManagement({
                 {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
               </span>
               <div className="flex gap-2">
-                {(user?.role === "super_admin" || user?.role === "approver" || user?.role === "Approver") && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!userCanEdit}
-                    onClick={() => setIsBulkChangeDueDateOpen(true)}
-                    className="bg-white"
-                  >
-                    <CalendarIcon className="w-4 h-4 mr-1" />
-                    Change Due Date
-                  </Button>
-                )}
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={!userCanEdit}
-                  onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
-                  style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete Selected
-                </Button>
+                {(() => {
+                  const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+                  const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
+                  const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
+                  
+                  return (
+                    <>
+                      {allApprovedAndSent && (
+                        <Button
+                          size="sm"
+                          onClick={handleBulkMarkPaid}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md px-4"
+                          style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
+                        >
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          Mark Paid
+                        </Button>
+                      )}
+                      {allDraft && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={!userCanEdit}
+                          onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                          style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete Selected
+                        </Button>
+                      )}
+                    </>
+                  )
+                })()}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -4027,18 +4214,18 @@ export function InvoiceManagement({
                     {/* Checkbox - CENTER */}
                     <TableHead align="center" className="w-12">
                       <Checkbox
-                        checked={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length > 0 && paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").every(invoice => selectedInvoiceIds.has(invoice.id))}
+                        checked={paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").length > 0 && paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").every(invoice => selectedInvoiceIds.has(invoice.id))}
                         onCheckedChange={(checked) => {
                           const newSelected = new Set(selectedInvoiceIds)
-                          const draftInvoices = paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait")
+                          const payableOrDraft = paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled")
                           if (checked) {
-                            draftInvoices.forEach(invoice => newSelected.add(invoice.id))
+                            payableOrDraft.forEach(invoice => newSelected.add(invoice.id))
                           } else {
-                            draftInvoices.forEach(invoice => newSelected.delete(invoice.id))
+                            payableOrDraft.forEach(invoice => newSelected.delete(invoice.id))
                           }
                           setSelectedInvoiceIds(newSelected)
                         }}
-                        disabled={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length === 0}
+                        disabled={paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").length === 0}
                       />
                     </TableHead>
                     {/* Invoice Number - LEFT */}
@@ -4081,7 +4268,7 @@ export function InvoiceManagement({
                         <Checkbox
                           checked={selectedInvoiceIds.has(invoice.id)}
                           onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
-                          disabled={getApprovalStatus(invoice) !== "wait"}
+                          disabled={invoice.status === "paid" || invoice.status === "cancelled"}
                         />
                       </TableCell>
                       {/* Invoice Number - LEFT */}
@@ -4404,28 +4591,39 @@ export function InvoiceManagement({
                 {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
               </span>
               <div className="flex gap-2">
-                {(user?.role === "super_admin" || user?.role === "approver" || user?.role === "Approver") && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!userCanEdit}
-                    onClick={() => setIsBulkChangeDueDateOpen(true)}
-                    className="bg-white"
-                  >
-                    <CalendarIcon className="w-4 h-4 mr-1" />
-                    Change Due Date
-                  </Button>
-                )}
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={!userCanEdit}
-                  onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
-                  style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete Selected
-                </Button>
+                {(() => {
+                  const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+                  const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
+                  const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
+                  
+                  return (
+                    <>
+                      {allApprovedAndSent && (
+                        <Button
+                          size="sm"
+                          onClick={handleBulkMarkPaid}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md px-4"
+                          style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
+                        >
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          Mark Paid
+                        </Button>
+                      )}
+                      {allDraft && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={!userCanEdit}
+                          onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                          style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete Selected
+                        </Button>
+                      )}
+                    </>
+                  )
+                })()}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -4454,18 +4652,18 @@ export function InvoiceManagement({
                       {/* Checkbox - CENTER */}
                       <TableHead align="center" className="w-12">
                         <Checkbox
-                          checked={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length > 0 && paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").every(invoice => selectedInvoiceIds.has(invoice.id))}
+                          checked={paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").length > 0 && paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").every(invoice => selectedInvoiceIds.has(invoice.id))}
                           onCheckedChange={(checked) => {
                             const newSelected = new Set(selectedInvoiceIds)
-                            const draftInvoices = paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait")
+                            const payableOrDraft = paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled")
                             if (checked) {
-                              draftInvoices.forEach(invoice => newSelected.add(invoice.id))
+                              payableOrDraft.forEach(invoice => newSelected.add(invoice.id))
                             } else {
-                              draftInvoices.forEach(invoice => newSelected.delete(invoice.id))
+                              payableOrDraft.forEach(invoice => newSelected.delete(invoice.id))
                             }
                             setSelectedInvoiceIds(newSelected)
                           }}
-                          disabled={paginatedInvoices.filter(inv => getApprovalStatus(inv) === "wait").length === 0}
+                          disabled={paginatedInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").length === 0}
                         />
                       </TableHead>
                       {/* Invoice No - LEFT */}
@@ -4498,7 +4696,7 @@ export function InvoiceManagement({
                           <Checkbox
                             checked={selectedInvoiceIds.has(invoice.id)}
                             onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
-                            disabled={getApprovalStatus(invoice) !== "wait"}
+                            disabled={invoice.status === "paid" || invoice.status === "cancelled"}
                           />
                         </TableCell>
                         {/* Invoice No - LEFT */}
@@ -4592,16 +4790,6 @@ export function InvoiceManagement({
                             >
                               <Download className="w-4 h-4" />
                             </Button>
-                            {getApprovalStatus(invoice) === "approved" && invoice.status !== "cancelled" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openSendEmailConfirm(invoice.id)}
-                                title="Send Email"
-                              >
-                                <Mail className="w-4 h-4" />
-                              </Button>
-                            )}
                             {getApprovalStatus(invoice) === "approved" && getPaymentStatus(invoice) !== "paid" && invoice.status !== "cancelled" && (
                               <Button
                                 size="sm"
@@ -5927,33 +6115,114 @@ export function InvoiceManagement({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {/* 1. Payment Method */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Payment Method</label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_SOURCES.map(source => (
-                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {(() => {
+            const _rawTotalCN = [...selectedCNIdsForPaid].reduce((sum, id) => {
+              const cn = availableCNsForPaid.find(c => c.id === id)
+              return sum + (cn ? (cn.remainingBalance ?? cn.amount) : 0)
+            }, 0)
+            const _invoiceAmt = markPaidInvoices.length > 1 
+              ? markPaidInvoices.reduce((sum, inv) => sum + (inv.finalAmount || 0), 0)
+              : (markPaidInvoice?.finalAmount ?? 0)
+            const _totalCN = Math.min(_rawTotalCN, _invoiceAmt)
+            const _netAfterCN = Math.max(0, _invoiceAmt - _totalCN)
+            const _netPayable = _netAfterCN  // used for payment proof visibility
+            const _fullyByCN = selectedCNIdsForPaid.size > 0 && _netAfterCN === 0
+            const _edcAmt = paymentMethod === "EDC" ? (parseFloat(edcAmount) || 0) : 0
+            const _edcCoversInvoice = paymentMethod === "EDC" && _edcAmt >= _invoiceAmt
+            const _ccFeePct = paymentMethod === "EDC" ? (parseFloat(ccFeePercent) || 0) : 0
+            // Fee calculated from net payable after CN (non-circular)
+            const _ccFee = parseFloat((_netAfterCN * _ccFeePct / 100).toFixed(2))
+            const _totalToPay = _netAfterCN + _ccFee
+            const _overpay = paymentMethod === "EDC" ? Math.max(0, _edcAmt - _totalToPay) : 0
+            // Final balance due after CN + EDC
+            const _balanceDue = paymentMethod === "EDC"
+              ? Math.max(0, _totalToPay - _edcAmt)
+              : _netAfterCN
 
-            {/* 2. Bank Account - shown when a payment method is selected */}
-            {PAYMENT_SOURCES.some(s => s.value === paymentMethod) && (
+            return (
+          <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-2 theme-scrollbar">
+            {/* Apply Credit Notes */}
+            {availableCNsForPaid.length > 0 && (
+              <div className={`border rounded-lg overflow-hidden ${_edcCoversInvoice ? "border-gray-200 opacity-60" : "border-green-200"}`}>
+                <div className={`px-4 py-2.5 border-b ${_edcCoversInvoice ? "bg-gray-50 border-gray-200" : "bg-green-50 border-green-200"}`}>
+                  <p className={`text-sm font-medium ${_edcCoversInvoice ? "text-gray-500" : "text-green-800"}`}>
+                    Apply Credit Notes <span className="font-normal">(optional)</span>
+                    {_edcCoversInvoice && <span className="ml-2 text-xs text-gray-400">— Not required, EDC amount covers the full invoice</span>}
+                  </p>
+                </div>
+                <div 
+                  className="divide-y divide-green-100 overflow-y-auto theme-scrollbar"
+                  style={{ maxHeight: '230px' }}
+                >
+                  {availableCNsForPaid.map(cn => (
+                    <label
+                      key={cn.id}
+                      className={`flex items-center justify-between gap-3 px-4 py-2 transition-colors ${_edcCoversInvoice ? "cursor-not-allowed" : "cursor-pointer hover:bg-green-50"}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Checkbox
+                          checked={selectedCNIdsForPaid.has(cn.id)}
+                          disabled={_edcCoversInvoice || (_fullyByCN && !selectedCNIdsForPaid.has(cn.id))}
+                          onCheckedChange={() => {
+                            if (_edcCoversInvoice) return
+                            if (_fullyByCN && !selectedCNIdsForPaid.has(cn.id)) return
+                            setSelectedCNIdsForPaid(prev => {
+                              const next = new Set(prev)
+                              next.has(cn.id) ? next.delete(cn.id) : next.add(cn.id)
+                              return next
+                            })
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium font-mono text-gray-800">{cn.creditNoteNumber}</p>
+                          <p className="text-xs text-muted-foreground truncate">{cn.reason}</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-green-700 shrink-0">
+                        ฿{(cn.remainingBalance ?? cn.amount).toLocaleString()}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fully covered banner */}
+            {_fullyByCN && (
+              <div className="flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-3">
+                <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                <p className="text-sm text-green-800 font-medium">Fully covered by Credit Note — no additional payment required.</p>
+              </div>
+            )}
+
+            {/* Payment Method — hidden when fully covered by CN */}
+            {!_fullyByCN && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Payment Method</label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_SOURCES.map(source => (
+                      <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Bank Account */}
+            {!_fullyByCN && PAYMENT_SOURCES.some(s => s.value === paymentMethod) && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Select Bank Account</label>
                 <Select
                   onValueChange={(accountId) => {
-                    const account = bankAccounts.find(a => a.id === accountId);
+                    const account = bankAccounts.find(a => a.id === accountId)
                     if (account) {
-                      setEdcBank(account.bankName);
-                      setEdcAccountNumber(account.accountNumber);
-                      setSelectedGlAccount(account.glAccount || account.accountNumber || "");
+                      setEdcBank(account.bankName)
+                      setEdcAccountNumber(account.accountNumber)
+                      setSelectedGlAccount(account.glAccount || account.accountNumber || "")
                     }
                   }}
                 >
@@ -5979,75 +6248,94 @@ export function InvoiceManagement({
               </div>
             )}
 
-            {/* 3. Apply Credit Notes */}
-            {availableCNsForPaid.length > 0 && (
-              <div className="border border-green-200 rounded-lg overflow-hidden">
-                {/* Header */}
-                <div className="bg-green-50 px-4 py-2.5 border-b border-green-200">
-                  <p className="text-sm font-medium text-green-800">
-                    Apply Credit Notes <span className="font-normal text-green-600">(optional)</span>
-                  </p>
+            {/* EDC Amount & CC Fee inputs (inline, above summary) */}
+            {!_fullyByCN && paymentMethod === "EDC" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">EDC Amount (฿) <span className="text-red-500">*</span></label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={edcAmount}
+                    onChange={e => setEdcAmount(e.target.value)}
+                    className="h-9"
+                  />
                 </div>
-
-                {/* CN list */}
-                <div className="divide-y divide-green-100">
-                  {availableCNsForPaid.map(cn => (
-                    <label
-                      key={cn.id}
-                      className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-green-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Checkbox
-                          checked={selectedCNIdsForPaid.has(cn.id)}
-                          onCheckedChange={() => {
-                            setSelectedCNIdsForPaid(prev => {
-                              const next = new Set(prev)
-                              next.has(cn.id) ? next.delete(cn.id) : next.add(cn.id)
-                              return next
-                            })
-                          }}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium font-mono text-gray-800">{cn.creditNoteNumber}</p>
-                          <p className="text-xs text-muted-foreground truncate">{cn.reason}</p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-semibold text-green-700 shrink-0">
-                        ฿{(cn.remainingBalance ?? cn.amount).toLocaleString()}
-                      </span>
-                    </label>
-                  ))}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Transaction Fee (%) <span className="text-red-500">*</span></label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="e.g. 2"
+                    value={ccFeePercent}
+                    onChange={e => setCcFeePercent(e.target.value)}
+                    className="h-9"
+                  />
                 </div>
-
-                {/* Summary */}
-                {selectedCNIdsForPaid.size > 0 && (() => {
-                  const totalCN = [...selectedCNIdsForPaid].reduce((sum, id) => {
-                    const cn = availableCNsForPaid.find(c => c.id === id)
-                    return sum + (cn ? (cn.remainingBalance ?? cn.amount) : 0)
-                  }, 0)
-                  const netPayable = Math.max(0, (markPaidInvoice?.finalAmount ?? 0) - totalCN)
-                  return (
-                    <div className="bg-green-50 border-t border-green-200 px-4 py-3 space-y-1.5">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Invoice Amount</span>
-                        <span>฿{markPaidInvoice?.finalAmount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-green-700">
-                        <span>Credit Note Applied</span>
-                        <span>−฿{totalCN.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-bold text-gray-900 pt-1 border-t border-green-200">
-                        <span>Net Payable</span>
-                        <span>฿{netPayable.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )
-                })()}
               </div>
             )}
 
-            {/* 4. Payment Proof */}
-            <div className="space-y-2">
+            {/* Unified Payment Summary */}
+            {(selectedCNIdsForPaid.size > 0 || (paymentMethod && paymentMethod !== "EDC") || (paymentMethod === "EDC" && _edcAmt > 0)) && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 space-y-1 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{markPaidInvoices.length > 1 ? `Total Amount (${markPaidInvoices.length} Invoices)` : "Invoice Amount"}</span>
+                  <span>฿{_invoiceAmt.toLocaleString()}</span>
+                </div>
+                {selectedCNIdsForPaid.size > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Credit Note Applied</span>
+                    <span>−฿{_totalCN.toLocaleString()}</span>
+                  </div>
+                )}
+                {paymentMethod === "EDC" && _ccFeePct > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Transaction Fee ({_ccFeePct}%)</span>
+                    <span>+฿{_ccFee.toLocaleString()}</span>
+                  </div>
+                )}
+                {paymentMethod === "EDC" && (
+                  <div className="flex justify-between text-muted-foreground pt-1 border-t border-gray-200">
+                    <span>Total to Pay</span>
+                    <span>฿{_totalToPay.toLocaleString()}</span>
+                  </div>
+                )}
+                {paymentMethod === "EDC" && _edcAmt > 0 && (
+                  <>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>EDC Amount (actual)</span>
+                      <span>฿{_edcAmt.toLocaleString()}</span>
+                    </div>
+                    {_overpay > 0 && (
+                      <div className="flex justify-between text-amber-700 font-medium">
+                        <span>Overpayment → Credit Note</span>
+                        <span>฿{_overpay.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="flex justify-between font-bold pt-1 border-t border-gray-200">
+                  {paymentMethod === "EDC" && _edcAmt > 0 && _balanceDue === 0 ? (
+                    <>
+                      <span className="text-green-700">Paid in Full</span>
+                      <span className="text-green-700">฿0</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-gray-900">Balance Due</span>
+                      <span className="text-gray-900">฿{_balanceDue.toLocaleString()}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Payment Proof — hide when fully covered by credit notes */}
+            {_netPayable > 0 && <div className="space-y-2">
               <label className="text-sm font-medium">Payment Proof (JPG/PNG) <span className="text-muted-foreground font-normal">- optional</span></label>
               <div className="flex items-center gap-3">
                 <input
@@ -6077,8 +6365,10 @@ export function InvoiceManagement({
                   ))}
                 </div>
               )}
-            </div>
+            </div>}
           </div>
+            )
+          })()}
 
           <DialogFooter>
             <Button
@@ -6090,6 +6380,8 @@ export function InvoiceManagement({
                 setPaymentFiles([])
                 setAvailableCNsForPaid([])
                 setSelectedCNIdsForPaid(new Set())
+                setEdcAmount("")
+                setCcFeePercent("")
               }}
             >
               Cancel

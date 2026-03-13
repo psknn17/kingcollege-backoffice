@@ -58,6 +58,7 @@ import {
   DollarSign,
   Percent,
   Tag,
+  TrendingUp,
   TrendingDown,
   FileCheck,
   FileText as FileInvoice,
@@ -109,7 +110,6 @@ import { EmailHistoryView } from "./components/EmailHistoryView"
 import { EmailCsvExport } from "./components/EmailCsvExport"
 import { WaiveFeeYearDetails } from "./components/WaiveFeeYearDetails"
 import { UserManagement } from "./components/UserManagement"
-import { RolesPermissions } from "./components/RolesPermissions"
 import { ActivityLog } from "./components/ActivityLog"
 import { ApprovalQueue } from "./components/ApprovalQueue"
 import { logActivity } from "@/lib/activityLog"
@@ -117,6 +117,7 @@ import { StudentList } from "./components/StudentList"
 import { FamilyGroups } from "./components/FamilyGroups"
 import { SchoolSettings } from "./components/SchoolSettings"
 import { ReportOverview } from "./components/ReportOverview"
+import { AnalyticsDashboard } from "./components/AnalyticsDashboard"
 import { UserProfile } from "./components/UserProfile"
 import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
@@ -131,10 +132,10 @@ import { canAccessSection, getAccessibleMenuItems, canAccessMenuItem } from "./u
 const menuItems = {
   tuition: [
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
-    { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
-    { id: "tuition-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
+    { id: "tuition-receipts", labelKey: "menu.receipts", icon: Receipt },
+    { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
   ],
   debtReminder: [
     { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
@@ -374,6 +375,7 @@ export default function App() {
                         {[
                           { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
                           { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
+                          { id: "analytics-dashboard", labelKey: "menu.analytics", icon: TrendingUp },
                         ].map((item) => {
                           if (!user?.role || !canAccessMenuItem(user.role, item.id)) return null;
                           return (
@@ -398,7 +400,7 @@ export default function App() {
                       <SidebarGroup>
                         <CollapsibleTrigger className="w-full">
                           <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                            Payment Reminders
+                            {t("menu.debtReminder")}
                             <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["debtReminder"] ? "rotate-180" : ""}`} />
                           </SidebarGroupLabel>
                         </CollapsibleTrigger>
@@ -412,7 +414,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -429,7 +431,7 @@ export default function App() {
                       <SidebarGroup>
                         <CollapsibleTrigger className="w-full">
                           <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                            Tuition
+                            {t("menu.tuition")}
                             <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["tuition"] ? "rotate-180" : ""}`} />
                           </SidebarGroupLabel>
                         </CollapsibleTrigger>
@@ -443,7 +445,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -474,7 +476,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -505,7 +507,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -536,7 +538,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -567,7 +569,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -598,7 +600,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -629,7 +631,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -660,7 +662,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -691,7 +693,7 @@ export default function App() {
                                     isActive={activeSection === item.id}
                                   >
                                     <item.icon className="w-4 h-4" />
-                                    <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
+                                    <span>{t(item.labelKey)}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
                               ))}
@@ -823,6 +825,7 @@ export default function App() {
                         if (activeSection === "payment-history") return t("menu.paymentHistory");
                         if (activeSection === "credit-notes") return "Credit Notes";
                         if (activeSection === "discount-reports") return t("menu.reports");
+                        if (activeSection === "analytics-dashboard") return "Analytics";
 
                         // 4. Special cases
                         if (activeSection === "invoice-creation") {
@@ -871,6 +874,7 @@ export default function App() {
                     <Route path="/" element={<ReportOverview />} />
                     <Route path="/tuition-dashboard" element={<ReportOverview />} />
                     <Route path="/discount-reports" element={<DiscountReports />} />
+                    <Route path="/analytics-dashboard" element={<AnalyticsDashboard />} />
 
                     {/* Debt Reminder */}
                     <Route path="/debt-reminder-settings" element={<DebtReminderSettings />} />

@@ -3,17 +3,17 @@
 export const rolePermissions = {
   super_admin: {
     name: "Admin",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "userManagement", "studentManagement", "report"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "settings", "userManagement", "studentManagement", "report", "analytics"],
     menuItems: [] as string[] // Empty means ALL items within allowed sections
   },
   admin_accountant: {
     name: "Finance Admin",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "settings", "studentManagement", "report"],
-    menuItems: [] // Combined permissions from Admin and Accountant
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "settings", "studentManagement", "report", "analytics"],
+    menuItems: []
   },
   viewer: {
     name: "Viewver",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report"],
+    sections: ["report", "analytics"],
     menuItems: [] // Can view all menus (read-only access)
   },
   approver: {
@@ -23,12 +23,12 @@ export const rolePermissions = {
   },
   manager: {
     name: "Manager",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report", "userManagement"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "studentManagement", "report", "userManagement", "analytics"],
     menuItems: []
   },
   finance_head: {
     name: "FinanceHead",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "summer", "discount", "studentManagement", "report", "userManagement", "settings"],
+    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "studentManagement", "report", "userManagement", "settings", "analytics"],
     menuItems: [] as string[]
   }
 }
@@ -48,6 +48,12 @@ export function canAccessMenuItem(userRole: string, menuItemId: string): boolean
 
   if (!permissions) return false
 
+  // Check exclusions first
+  const rolePermissionsAny = permissions as any
+  if (rolePermissionsAny.excludedMenuItems && rolePermissionsAny.excludedMenuItems.includes(menuItemId)) {
+    return false
+  }
+
   // If menuItems is empty, user has access to all items in their allowed sections
   if (permissions.menuItems.length === 0) return true
 
@@ -64,11 +70,18 @@ export function getAccessibleMenuItems(userRole: string, section: string, items:
   // Check if user can access this section at all
   if (!permissions.sections.includes(section)) return []
 
-  // If menuItems is empty, return all items in section
-  if (permissions.menuItems.length === 0) return items
+  // Apply exclusions if any
+  const rolePermissionsAny = permissions as any
+  let accessibleItems = items
+  if (rolePermissionsAny.excludedMenuItems) {
+    accessibleItems = accessibleItems.filter(item => !rolePermissionsAny.excludedMenuItems.includes(item.id))
+  }
+
+  // If menuItems is empty, return all (filtered by exclusions) items in section
+  if (permissions.menuItems.length === 0) return accessibleItems
 
   // Filter items based on allowed menuItems
-  return items.filter(item => (permissions.menuItems as string[]).includes(item.id))
+  return accessibleItems.filter(item => (permissions.menuItems as string[]).includes(item.id))
 }
 
 function normalizeRoleName(role: string): string {

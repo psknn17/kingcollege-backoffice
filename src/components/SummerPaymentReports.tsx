@@ -252,6 +252,8 @@ export function SummerPaymentReports() {
     if (selectedPaymentMethod !== "all" && payment.paymentMethod !== selectedPaymentMethod) return false
     if (searchTerm && !payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !payment.studentId.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    if (dateFrom && new Date(payment.paymentDate) < dateFrom) return false
+    if (dateTo && new Date(payment.paymentDate) > dateTo) return false
     return true
   })
 
@@ -559,7 +561,7 @@ export function SummerPaymentReports() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t("payment.dateRange")}</Label>
+                  <Label>{t("summerPayment.paymentDate")}</Label>
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>

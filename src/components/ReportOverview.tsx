@@ -412,65 +412,6 @@ export function ReportOverview() {
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bar Chart - Revenue by Module */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("report.revenueByModule")}</CardTitle>
-            <p className="text-sm text-muted-foreground">{t("report.collectedVsOutstanding")}</p>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={barChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
-                <Legend />
-                <Bar dataKey="collected" fill="#82ca9d" name={t("report.collected")} />
-                <Bar dataKey="outstanding" fill="#ffc658" name={t("report.outstanding")} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Pie Chart - Collection Rate by Module */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("report.collectionByModule")}</CardTitle>
-            <p className="text-sm text-muted-foreground">{t("report.collectedProportion")}</p>
-          </CardHeader>
-          <CardContent>
-            {pieChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                {t("report.noData")}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }

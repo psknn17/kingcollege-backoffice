@@ -5,6 +5,7 @@ interface User {
   email: string
   name: string
   role: string
+  approverInvoiceTypes?: string[]
 }
 
 interface AuthContextType {
@@ -67,35 +68,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false)
 
-  // Load user from localStorage on mount
+  // Load user from localStorage on mount and on updates
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      const roleSelectionNeeded = localStorage.getItem(ROLE_SELECTION_KEY)
+    const handleUserUpdate = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY)
+        const roleSelectionNeeded = localStorage.getItem(ROLE_SELECTION_KEY)
 
-      if (stored) {
-        const userData = JSON.parse(stored)
+        if (stored) {
+          const userData = JSON.parse(stored)
 
-        // Migrate old role display names to role IDs
-        if (userData.role) {
-          const migratedRole = migrateRole(userData.role)
-          if (migratedRole !== userData.role) {
-            userData.role = migratedRole
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+          // Migrate old role display names to role IDs
+          if (userData.role) {
+            const migratedRole = migrateRole(userData.role)
+            if (migratedRole !== userData.role) {
+              userData.role = migratedRole
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+            }
           }
-        }
 
-        setUser(userData)
+          setUser(userData)
 
-        // Check if role selection is needed
-        if (roleSelectionNeeded === "true") {
-          setNeedsRoleSelection(true)
+          // Check if role selection is needed
+          if (roleSelectionNeeded === "true") {
+            setNeedsRoleSelection(true)
+          } else {
+            setNeedsRoleSelection(false)
+          }
+        } else {
+          setUser(null)
+          setNeedsRoleSelection(false)
         }
+      } catch (error) {
+        console.error("Failed to load user:", error)
       }
-    } catch (error) {
-      console.error("Failed to load user:", error)
-      localStorage.removeItem(STORAGE_KEY)
-      localStorage.removeItem(ROLE_SELECTION_KEY)
+    }
+
+    handleUserUpdate()
+    window.addEventListener(STORAGE_KEY + "Updated", handleUserUpdate)
+    window.addEventListener("authUserUpdated", handleUserUpdate)
+    
+    return () => {
+      window.removeEventListener(STORAGE_KEY + "Updated", handleUserUpdate)
+      window.removeEventListener("authUserUpdated", handleUserUpdate)
     }
   }, [])
 
@@ -122,9 +137,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const selectRole = (roleId: string) => {
     if (user) {
-      const updatedUser = {
+      // Try to find the user settings from the users list in localStorage
+      let invoiceTypes: string[] | undefined = undefined
+      try {
+        const usersStored = localStorage.getItem(USERS_STORAGE_KEY)
+        if (usersStored) {
+          const usersList = JSON.parse(usersStored)
+          const matchedUser = usersList.find((u: any) => u.email === user.email)
+          if (matchedUser && matchedUser.approverInvoiceTypes) {
+            invoiceTypes = matchedUser.approverInvoiceTypes
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load user settings during selection", e)
+      }
+
+      const updatedUser: User = {
         ...user,
-        role: roleId
+        role: roleId,
+        approverInvoiceTypes: roleId === "approver" ? invoiceTypes : undefined
       }
       setUser(updatedUser)
       setNeedsRoleSelection(false)

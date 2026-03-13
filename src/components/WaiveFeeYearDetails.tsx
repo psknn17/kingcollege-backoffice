@@ -60,12 +60,12 @@ interface WaiveFeeYearDetailsProps {
 
 export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetailsProps) {
   const { t } = useLanguage()
-  const [searchQuery, setSearchQuery] = usePersistedState("waive-fee-year:search", '')
-  const [filterStatus, setFilterStatus] = usePersistedState("waive-fee-year:statusFilter", 'all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
 
   // Sorting states
-  const [sortColumn, setSortColumn] = usePersistedState("waive-fee-year:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("waive-fee-year:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 

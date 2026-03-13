@@ -195,7 +195,7 @@ export function DiscountReports() {
     return labelMap[type] || type
   }
 
-  const [searchTerm, setSearchTerm] = usePersistedState("discount-reports:search", "")
+  const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
 
   // Load discount group names from sub-menu (studentGroups localStorage)
@@ -215,8 +215,8 @@ export function DiscountReports() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
 
   // Sorting states
-  const [sortColumn, setSortColumn] = usePersistedState("discount-reports:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("discount-reports:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)

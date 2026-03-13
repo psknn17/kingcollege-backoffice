@@ -115,9 +115,9 @@ export function CreditNoteManagement() {
   // Load credit notes from localStorage
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>([])
-  const [searchTerm, setSearchTerm] = usePersistedState("credit-note:search", "")
-  const [statusFilter, setStatusFilter] = usePersistedState("credit-note:statusFilter", "all")
-  const [typeFilter, setTypeFilter] = usePersistedState("credit-note:typeFilter", "all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [selectedCreditNote, setSelectedCreditNote] = useState<CreditNote | null>(null)
@@ -163,8 +163,8 @@ export function CreditNoteManagement() {
   }, [])
 
   // Sorting states
-  const [sortColumn, setSortColumn] = usePersistedState("credit-note:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("credit-note:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -182,8 +182,9 @@ export function CreditNoteManagement() {
     setFilteredCreditNotes(creditNotes)
   }, [])
 
-  // Update filtered when creditNotes change
+  // Auto-save to localStorage whenever creditNotes changes
   useEffect(() => {
+    saveCreditNotesToStorage(creditNotes)
     setFilteredCreditNotes(creditNotes)
   }, [creditNotes])
 
@@ -339,13 +340,15 @@ export function CreditNoteManagement() {
       creditAmount: creditAmount,
       reason: newCreditNote.reason,
       type: newCreditNote.type,
-      status: "draft",
+      status: "issued",
       issueDate: new Date(),
       issuedBy: "Finance Team",
       notes: newCreditNote.notes
     }
 
-    setCreditNotes([newNote, ...creditNotes])
+    const updated = [newNote, ...creditNotes]
+    setCreditNotes(updated)
+    saveCreditNotesToStorage(updated)
     toast.success(t("creditNote.createdSuccess").replace("{number}", newNote.creditNoteNumber))
     closeCreateModal()
   }
@@ -925,7 +928,7 @@ export function CreditNoteManagement() {
                   </div>
 
                   <div className="space-y-1.5 lg:col-span-2">
-                    <label className="text-sm font-medium text-muted-foreground">{t("creditNote.dateRange")}</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
                     <div className="flex items-center gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
@@ -1095,7 +1098,7 @@ export function CreditNoteManagement() {
 
       {/* Credit Note Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
@@ -1107,123 +1110,104 @@ export function CreditNoteManagement() {
           </DialogHeader>
 
           {selectedCreditNote && (
-            <div className="space-y-6">
-              {/* Credit Note Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{t("creditNote.creditNoteNumberLabel")}</p>
-                  <p className="font-mono text-lg font-medium">{selectedCreditNote.creditNoteNumber}</p>
-                </div>
-                <div className="flex gap-2">
-                  {getStatusBadge(selectedCreditNote.status)}
-                  {getTypeBadge(selectedCreditNote.type)}
-                </div>
-              </div>
+            <div className="space-y-4">
+              <div className="border rounded-xl bg-card p-5 space-y-4">
 
-              <Separator />
-
-              {/* Student & Invoice Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <h3 className="font-medium">{t("creditNote.studentInfoLabel")}</h3>
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.studentName")}</p>
-                      <p className="font-medium">{selectedCreditNote.studentName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.studentIdLabel2")}</p>
-                      <p className="font-mono">{selectedCreditNote.studentId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.yearGroupLabel")}</p>
-                      <Badge variant="secondary">{selectedCreditNote.studentGrade}</Badge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.parentGuardian")}</p>
-                      <p className="font-medium">{selectedCreditNote.parentName}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-medium">{t("creditNote.creditInfoLabel")}</h3>
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.relatedInvoice")}</p>
-                      <p className="font-mono">{selectedCreditNote.invoiceNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.originalAmount")}</p>
-                      <p className="font-medium">₿{selectedCreditNote.originalAmount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.creditAmount")}</p>
-                      <p className="text-xl font-bold text-red-600">-₿{selectedCreditNote.creditAmount.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Credit Details */}
-              <div className="space-y-3">
-                <h3 className="font-medium">{t("creditNote.creditDetailsLabel")}</h3>
-                <div className="space-y-2">
+                {/* CN Number + Status */}
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">{t("creditNote.reason")}</p>
-                    <p className="font-medium">{selectedCreditNote.reason}</p>
+                    <p className="text-xs text-muted-foreground">{t("creditNote.creditNoteNumberLabel")}</p>
+                    <p className="font-mono text-sm font-semibold">{selectedCreditNote.creditNoteNumber}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{t("creditNote.issueDateLabel")}</p>
-                    <p className="font-medium">{format(selectedCreditNote.issueDate, "dd MMM yyyy")}</p>
+                  <div className="flex gap-2">
+                    {getStatusBadge(selectedCreditNote.status)}
+                    {getTypeBadge(selectedCreditNote.type)}
                   </div>
-                  {selectedCreditNote.dueDate && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.dueDateLabel")}</p>
-                      <p className="font-medium">{format(selectedCreditNote.dueDate, "dd MMM yyyy")}</p>
-                    </div>
-                  )}
-                  {selectedCreditNote.appliedDate && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.appliedDateLabel")}</p>
-                      <p className="font-medium">{format(selectedCreditNote.appliedDate, "dd MMM yyyy")}</p>
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              <Separator />
+                <Separator />
 
-              {/* Processing Information */}
-              <div className="space-y-3">
-                <h3 className="font-medium">{t("creditNote.processingInfoLabel")}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{t("creditNote.issuedBy")}</p>
-                    <p className="font-medium">{selectedCreditNote.issuedBy}</p>
-                  </div>
-                  {selectedCreditNote.approvedBy && (
+                {/* Student Info */}
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{t("creditNote.studentInfoLabel")}</p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">{t("creditNote.approvedBy")}</p>
-                      <p className="font-medium">{selectedCreditNote.approvedBy}</p>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.studentName")}</p>
+                      <p className="text-sm font-medium">{selectedCreditNote.studentName}</p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.studentIdLabel2")}</p>
+                      <p className="text-sm font-mono">{selectedCreditNote.studentId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.yearGroupLabel")}</p>
+                      <Badge variant="secondary" className="mt-0.5 text-xs">{selectedCreditNote.studentGrade}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.parentGuardian")}</p>
+                      <p className="text-sm font-medium">{selectedCreditNote.parentName}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {selectedCreditNote.notes && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <h3 className="font-medium">{t("creditNote.notesLabel")}</h3>
-                    <div className="bg-muted/50 rounded-lg p-4">
+                <Separator />
+
+                {/* Credit Info */}
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{t("creditNote.creditInfoLabel")}</p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.relatedInvoice")}</p>
+                      <p className="text-sm font-mono">{selectedCreditNote.invoiceNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.originalAmount")}</p>
+                      <p className="text-sm font-medium">฿{selectedCreditNote.originalAmount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.creditAmount")}</p>
+                      <p className="text-base font-bold text-green-600">฿{selectedCreditNote.creditAmount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("creditNote.issueDateLabel")}</p>
+                      <p className="text-sm font-medium">{format(selectedCreditNote.issueDate, "dd MMM yyyy")}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">{t("creditNote.reason")}</p>
+                      <p className="text-sm font-medium">{selectedCreditNote.reason}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {(selectedCreditNote.issuedBy || selectedCreditNote.approvedBy) && (
+                  <>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-x-6">
+                      <div>
+                        <p className="text-xs text-muted-foreground">{t("creditNote.issuedBy")}</p>
+                        <p className="text-sm font-medium">{selectedCreditNote.issuedBy}</p>
+                      </div>
+                      {selectedCreditNote.approvedBy && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t("creditNote.approvedBy")}</p>
+                          <p className="text-sm font-medium">{selectedCreditNote.approvedBy}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {selectedCreditNote.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">{t("creditNote.notesLabel")}</p>
                       <p className="text-sm">{selectedCreditNote.notes}</p>
                     </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">

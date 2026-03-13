@@ -57,6 +57,8 @@ interface Receipt {
   invoiceDate: Date
   invoiceAmount: number
   amount: number // received amount
+  appliedCNAmount?: number
+  appliedCNNumbers?: string[]
   outstandingAmount: number
   paymentMethod: string
   paymentChannel: "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank"
@@ -88,7 +90,12 @@ interface CreditNote {
   term: string
   status: "issued" | "resent" | "failed" | "cancelled" | "pending" | "used" | "partial"
   familyCode?: string
+  appliedToInvoice?: string
   appliedToReceipt?: string
+  appliedAt?: string
+  appliedDate?: string
+  appliedBy?: "staff" | "parent"
+  usageHistory?: { invoiceId?: string; receiptNo?: string; appliedAmount: number; appliedAt: string; appliedBy?: "staff" | "parent" }[]
 }
 
 // Function to load receipts from localStorage based on category
@@ -147,8 +154,10 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         contactName: parentName,
         address: address,
         invoiceDate: r.invoices?.[0]?.invoiceDate ? new Date(r.invoices[0].invoiceDate) : new Date(r.createdAt),
-        invoiceAmount: r.invoices?.[0]?.invoiceAmount || r.totalAmount,
-        amount: r.totalAmount,
+        invoiceAmount: r.invoices?.[0]?.invoiceAmount || r.amount || r.totalAmount,
+        amount: r.netPayable !== undefined ? r.netPayable : (r.totalAmount !== undefined ? r.totalAmount : r.amount),
+        appliedCNAmount: r.invoices?.[0]?.appliedCNAmount || 0,
+        appliedCNNumbers: r.invoices?.[0]?.appliedCreditNotes || [],
         outstandingAmount: r.invoices?.[0]?.outstandingAmount || 0,
         paymentMethod: r.paymentMethod || "N/A",
         paymentChannel: "counter_bank" as const,
@@ -253,8 +262,9 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
         const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
         return {
           ...cn,
+          amount: cn.amount ?? cn.creditAmount ?? 0,
           issueDate: new Date(cn.issueDate),
-          familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || ""
+          familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || cn.parentName || ""
         }
       })
     }
@@ -349,9 +359,20 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
 
+  // Reload credit notes when updated from another component (e.g. after applying CN in InvoiceManagement)
+  useEffect(() => {
+    const handleCreditNotesUpdated = () => {
+      const reloaded = loadCreditNotesFromStorage()
+      setCreditNotes(reloaded)
+      setFilteredCreditNotes(reloaded)
+    }
+    window.addEventListener("creditNotesUpdated", handleCreditNotesUpdated)
+    return () => window.removeEventListener("creditNotesUpdated", handleCreditNotesUpdated)
+  }, [])
+
   // Filter states
-  const [searchTerm, setSearchTerm] = usePersistedState("receipt-page:search", "")
-  const [academicYearFilter, setAcademicYearFilter] = usePersistedState("receipt-page:academicYear", "all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [paymentChannelFilter, setPaymentChannelFilter] = useState("all")
@@ -932,8 +953,14 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return
     }
 
+    // Derive familyCode from matching invoice
+    const invoicesStored = localStorage.getItem("createdInvoices")
+    const allInvoices = invoicesStored ? JSON.parse(invoicesStored) : []
+    const matchingInvoice = allInvoices.find((inv: any) => inv.invoiceNumber === creditNoteForm.invoiceNumber)
+    const derivedFamilyCode = matchingInvoice?.adultIdNo || matchingInvoice?.familyCode || ""
+
     const newCreditNote: CreditNote = {
-      id: (creditNotes.length + 1).toString(),
+      id: `cn-${Date.now()}`,
       creditNoteNumber: creditNoteForm.creditNoteNumber,
       invoiceNumber: creditNoteForm.invoiceNumber,
       studentName: creditNoteForm.studentName,
@@ -944,11 +971,14 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       issueDate: creditNoteForm.issueDate,
       academicYear: creditNoteForm.academicYear,
       term: creditNoteForm.term,
-      status: "pending"
+      status: "issued",
+      familyCode: derivedFamilyCode
     }
 
-    setCreditNotes([newCreditNote, ...creditNotes])
-    setFilteredCreditNotes([newCreditNote, ...creditNotes])
+    const updated = [newCreditNote, ...creditNotes]
+    setCreditNotes(updated)
+    setFilteredCreditNotes(updated)
+    saveCreditNotesToStorage(updated)
 
     // Reset form with auto-generated credit note number
     setCreditNoteForm({
@@ -1046,6 +1076,14 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
         setImportPreview(preview)
         setImportErrors(errors)
+
+        if (preview.length === 0 && errors.length === 0) {
+          toast.warning(t("receipt.noValidRecordsFound"))
+        } else if (errors.length > 0) {
+          toast.error(t("receipt.importErrorsFound").replace("{count}", String(errors.length)))
+        } else {
+          toast.info(t("receipt.previewReady").replace("{count}", String(preview.length)))
+        }
       } catch (err) {
         console.error("Import error:", err)
         toast.error(t("receipt.failedToReadExcel"))
@@ -1352,7 +1390,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.dateRange")}</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")}</label>
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
@@ -1577,7 +1615,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           {/* Academic Year - left aligned */}
                           <TableCell align="left">{formatAcademicYear(receipt.academicYear)}</TableCell>
                           {/* Term - left aligned */}
-                          <TableCell align="left">{receipt.term}</TableCell>
+                          <TableCell align="left">{(receipt.term?.match(/Term\s*\d+/i) || [])[0] || receipt.term}</TableCell>
                         </>
                       )}
                       {/* Amount - right aligned */}
@@ -1739,9 +1777,19 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           <td className="border-r border-black p-2">{viewingReceipt.invoiceNumber}</td>
                           <td className="border-r border-black p-2">{format(viewingReceipt.invoiceDate, "dd MMMM yyyy")}</td>
                           <td className="border-r border-black p-2 text-right">{viewingReceipt.invoiceAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="border-r border-black p-2 text-right">{viewingReceipt.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="p-2 text-right">{viewingReceipt.outstandingAmount > 0 ? viewingReceipt.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                          <td className="border-r border-black p-2 text-right">{viewingReceipt.invoiceAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="p-2 text-right">{(viewingReceipt.outstandingAmount || 0) > 0 ? viewingReceipt.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
                         </tr>
+                        {viewingReceipt.appliedCNAmount && viewingReceipt.appliedCNAmount > 0 ? (
+                          <tr className="border-b border-black text-red-600">
+                            <td className="border-r border-black p-2">2</td>
+                            <td className="border-r border-black p-2">{viewingReceipt.appliedCNNumbers && viewingReceipt.appliedCNNumbers.length > 0 ? viewingReceipt.appliedCNNumbers.join(', ') : 'Credit Note'}</td>
+                            <td className="border-r border-black p-2 text-center">-</td>
+                            <td className="border-r border-black p-2 text-right">-</td>
+                            <td className="border-r border-black p-2 text-right">-{viewingReceipt.appliedCNAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-2 text-right">-</td>
+                          </tr>
+                        ) : null}
                         {/* Empty rows for spacing */}
                         <tr className="border-b border-black h-8">
                           <td className="border-r border-black p-2"></td>
@@ -1982,29 +2030,22 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.dateRange")}</label>
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={dateFrom || undefined}
-                            onSelect={(date) => setDateFrom(date ?? null)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.from")})</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start h-9 font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date ?? null)} initialFocus />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground opacity-0">{t("common.to")}</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.to")})</label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start h-9 font-normal">
@@ -2013,12 +2054,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={dateTo || undefined}
-                          onSelect={(date) => setDateTo(date ?? null)}
-                          initialFocus
-                        />
+                        <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date ?? null)} initialFocus />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -2274,82 +2310,142 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
             {/* View Credit Note Dialog */}
             <Dialog open={isViewDialogOpen && viewingCreditNote !== null} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-                <DialogHeader className="px-6 pt-8 pb-6 border-b border-border/50">
-                  <DialogTitle className="text-2xl font-bold">{t("receipt.creditNoteDetails")}</DialogTitle>
+              <DialogContent className="max-h-[90vh] overflow-y-auto p-0" style={{ maxWidth: "520px" }}>
+                <DialogHeader className="px-6 pt-6 pb-4 border-b">
+                  <DialogTitle className="text-lg font-bold">{t("receipt.creditNoteDetails")}</DialogTitle>
                 </DialogHeader>
                 {viewingCreditNote && (
-                  <div className="px-6 py-6 space-y-10">
-                    {/* Credit Note Header */}
-                    <div className="bg-muted/30 rounded-lg p-5">
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.creditNoteNumber")}</p>
-                          <p className="font-mono font-bold text-lg">{viewingCreditNote.creditNoteNumber}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.invoiceNumber")}</p>
-                          <p className="font-mono font-bold text-lg">{viewingCreditNote.invoiceNumber}</p>
-                        </div>
+                  <div className="px-8 py-6 space-y-6">
+
+                    {/* CN Number + Status row */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.creditNoteNumber")}</p>
+                        <p className="font-mono font-bold text-base">{viewingCreditNote.creditNoteNumber}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground mb-1">{t("common.status")}</p>
+                        {getStatusBadge(viewingCreditNote.status)}
                       </div>
                     </div>
 
-                    {/* Student Information */}
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground mb-5">{t("receipt.studentInformation")}</h3>
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-8">
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.studentName")}</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.studentName}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.familyCode")}</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.familyCode || viewingCreditNote.studentId}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("common.yearGroup")}</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.studentGrade}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("common.academicYear")}</p>
-                          <p className="text-base font-semibold">{formatAcademicYear(viewingCreditNote.academicYear)}</p>
-                        </div>
+                    {/* Amount highlight */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-0.5">Credit Amount</p>
+                        <p className="text-2xl font-bold text-green-700">฿{viewingCreditNote.amount.toLocaleString()}</p>
                       </div>
-                    </div>
-
-                    {/* Credit Note Information */}
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground mb-5">{t("receipt.creditNoteInformation")}</h3>
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-8">
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.refundAmount")}</p>
-                          <p className="text-4xl font-bold text-green-600">
-                            ฿{viewingCreditNote.amount.toLocaleString()}
+                      {viewingCreditNote.remainingBalance !== undefined && viewingCreditNote.remainingBalance !== viewingCreditNote.amount && (
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground mb-0.5">Remaining Balance</p>
+                          <p className={`text-lg font-bold ${viewingCreditNote.remainingBalance > 0 ? "text-amber-600" : "text-gray-400"}`}>
+                            ฿{viewingCreditNote.remainingBalance.toLocaleString()}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("common.status")}</p>
-                          <div className="mt-1">
-                            {getStatusBadge(viewingCreditNote.status)}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.issueDate")}</p>
-                          <p className="text-base font-semibold">{format(viewingCreditNote.issueDate, "dd MMMM yyyy")}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">{t("common.term")}</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.term}</p>
-                        </div>
+                      )}
+                    </div>
+
+                    {/* Student + Issue info grid */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.studentName")}</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.studentName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.familyCode")}</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.familyCode || viewingCreditNote.studentId}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("common.yearGroup")}</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.studentGrade || "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("common.academicYear")}</p>
+                        <p className="text-sm font-medium">{formatAcademicYear(viewingCreditNote.academicYear)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.issueDate")}</p>
+                        <p className="text-sm font-medium">{format(viewingCreditNote.issueDate, "dd MMM yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t("common.term")}</p>
+                        <p className="text-sm font-medium">{(viewingCreditNote.term?.match(/Term\s*\d+/i) || [])[0] || viewingCreditNote.term || "-"}</p>
+                      </div>
+                      {viewingCreditNote.invoiceNumber && (
                         <div className="col-span-2">
-                          <p className="text-sm text-muted-foreground mb-2">{t("receipt.reason")}</p>
-                          <p className="text-base font-semibold">{viewingCreditNote.reason}</p>
+                          <p className="text-sm text-muted-foreground mb-1">{t("receipt.invoiceNumber")}</p>
+                          <p className="text-sm font-medium font-mono">{viewingCreditNote.invoiceNumber}</p>
                         </div>
+                      )}
+                      <div className="col-span-2">
+                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.reason")}</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.reason}</p>
                       </div>
                     </div>
 
+                    {/* Usage History */}
+                    {(() => {
+                      const history = viewingCreditNote.usageHistory && viewingCreditNote.usageHistory.length > 0
+                        ? viewingCreditNote.usageHistory
+                        : (viewingCreditNote.appliedToInvoice || viewingCreditNote.appliedToReceipt)
+                          ? [{
+                              invoiceId: viewingCreditNote.appliedToInvoice,
+                              receiptNo: viewingCreditNote.appliedToReceipt,
+                              appliedAmount: 0,
+                              appliedAt: viewingCreditNote.appliedAt || viewingCreditNote.appliedDate || "",
+                              appliedBy: viewingCreditNote.appliedBy,
+                            }]
+                          : []
+                      if (history.length === 0) return null
+                      return (
+                        <div className="border-t pt-4">
+                          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                            Usage History ({history.length})
+                          </p>
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            {history.map((entry, idx) => (
+                              <div key={idx} className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-3">
+                                <div className="col-span-2 flex items-center justify-between">
+                                  <span className="text-xs text-muted-foreground font-medium">#{idx + 1}</span>
+                                  {entry.appliedAmount > 0 && (
+                                    <span className="text-sm font-semibold text-amber-700">−฿{entry.appliedAmount.toLocaleString()}</span>
+                                  )}
+                                </div>
+                                {entry.invoiceId && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground mb-1">Applied to Invoice</p>
+                                    <p className="text-sm font-medium font-mono">{entry.invoiceId}</p>
+                                  </div>
+                                )}
+                                {entry.receiptNo && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground mb-1">Receipt No.</p>
+                                    <p className="text-sm font-medium font-mono">{entry.receiptNo}</p>
+                                  </div>
+                                )}
+                                {entry.appliedAt && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground mb-1">Applied Date</p>
+                                    <p className="text-sm font-medium">
+                                      {(() => { try { return format(new Date(entry.appliedAt), "dd MMM yyyy HH:mm") } catch { return entry.appliedAt } })()}
+                                    </p>
+                                  </div>
+                                )}
+                                {entry.appliedBy && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground mb-1">Applied By</p>
+                                    <p className="text-sm font-medium capitalize">{entry.appliedBy}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })()}
+
                     {/* Actions */}
-                    <div className="flex gap-3 pt-8 pb-2 border-t border-border/50">
+                    <div className="flex gap-3 pt-4 pb-6 border-t">
                       <Button
                         onClick={() => {
                           downloadCreditNote(viewingCreditNote.id)
@@ -2591,8 +2687,30 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
             {/* Error Display */}
             {importErrors.length > 0 && (
-              <div className="p-3 border border-red-200 bg-red-50 rounded-lg text-red-700 text-sm">
-                {importErrors[0]}{importErrors.length > 1 ? ` (+${importErrors.length - 1} more)` : ""}
+              <div className="space-y-2">
+                <Label className="text-red-600 font-medium flex items-center gap-2">
+                  <X className="w-4 h-4" />
+                  {t("receipt.importErrors")} ({importErrors.length})
+                </Label>
+                <div className="p-3 border border-red-200 bg-red-50 rounded-lg text-red-700 text-sm max-h-[150px] overflow-y-auto space-y-1">
+                  {importErrors.map((err, i) => (
+                    <p key={i} className="flex gap-2">
+                      <span className="font-semibold shrink-0">•</span>
+                      <span>{err}</span>
+                    </p>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground italic">
+                  {t("receipt.errorRowsWillBeSkipped")}
+                </p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {importFileName && importPreview.length === 0 && importErrors.length === 0 && (
+              <div className="p-8 text-center border-2 border-dashed rounded-lg bg-muted/20">
+                <p className="text-muted-foreground font-medium">{t("receipt.noDataInFile")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("receipt.checkTemplateFormat")}</p>
               </div>
             )}
 
@@ -2645,7 +2763,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             </Button>
             <Button
               onClick={performImport}
-              disabled={!userCanEdit || importPreview.length === 0 || importErrors.length > 0}
+              disabled={!userCanEdit || importPreview.length === 0}
             >
               <Upload className="w-4 h-4 mr-2" />
               {importPreview.length > 0 ? t("receipt.importRecords").replace("{count}", String(importPreview.length)) : t("common.import")}

@@ -45,13 +45,12 @@ interface User {
 }
 
 const INVOICE_CATEGORIES = [
-  { id: "tuition", label: "Tuition" },
-  { id: "eca", label: "After School (ECA)" },
-  { id: "trip", label: "Trip / Events" },
-  { id: "exam", label: "Exam" },
-  { id: "school_bus", label: "School Bus" },
+  { id: "tuition", label: "Tuition Invoice" },
+  { id: "eca", label: "ECA Invoice" },
+  { id: "trip", label: "Trip & Activity Invoice" },
+  { id: "exam", label: "Exam Invoice" },
+  { id: "school_bus", label: "School Bus Invoice" },
   { id: "external", label: "External Invoice" },
-  { id: "summer", label: "Summer Activities" },
 ]
 
 // Permission definitions with translation keys
@@ -230,11 +229,11 @@ export function UserManagement() {
     } catch {}
     return mockUsers
   })
-  const [searchTerm, setSearchTerm] = usePersistedState("user-management:search", "")
-  const [roleFilter, setRoleFilter] = usePersistedState("user-management:roleFilter", "all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [sortColumn, setSortColumn] = usePersistedState<string>("user-management:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("user-management:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState<string>("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -382,6 +381,10 @@ export function UserManagement() {
       toast.error("Please fill in all required fields")
       return
     }
+    if (formData.roles.includes("approver") && formData.approverInvoiceTypes.length === 0) {
+      toast.error("Please select at least one invoice type for Approver")
+      return
+    }
 
     const mergedDefaultPermissions = Array.from(new Set(
       formData.roles.flatMap(r => roleDefaultPermissions[r] || [])
@@ -416,6 +419,10 @@ export function UserManagement() {
 
   const performEditUser = () => {
     if (!selectedUser) return
+    if (formData.roles.includes("approver") && formData.approverInvoiceTypes.length === 0) {
+      toast.error("Please select at least one invoice type for Approver")
+      return
+    }
 
     const updatedUsers = users.map(user => {
       if (user.id === selectedUser.id) {
@@ -435,6 +442,23 @@ export function UserManagement() {
 
     setUsers(updatedUsers)
     setFilteredUsers(updatedUsers)
+
+    // Sync with current user session if the edited user is the current user
+    if (user?.email === formData.email || user?.name === formData.username) {
+      const storedAuthUser = localStorage.getItem("authUser")
+      if (storedAuthUser) {
+        const authUserData = JSON.parse(storedAuthUser)
+        const updatedAuthUser = {
+          ...authUserData,
+          role: formData.roles[0],
+          approverInvoiceTypes: formData.roles.includes("approver") ? formData.approverInvoiceTypes : undefined
+        }
+        localStorage.setItem("authUser", JSON.stringify(updatedAuthUser))
+        // Window location reload or state update would be better, but standard for this project seems to be storage events
+        window.dispatchEvent(new CustomEvent("authUserUpdated"))
+      }
+    }
+
     setIsEditDialogOpen(false)
     resetForm()
     toast.success(`User ${formData.username} updated successfully`)
@@ -743,31 +767,22 @@ export function UserManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t("userManagement.rolesLabel")}</Label>
-                  <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
-                    {([
-                      { id: "admin", label: t("userManagement.superAdmin") },
-                      { id: "admin_accountant", label: t("userManagement.financeAdmin") },
-                      { id: "approver", label: t("userManagement.approver") },
-                      { id: "viewer", label: t("userManagement.viewer") },
-                    ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
-                      <div key={role} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`role-${role}`}
-                          checked={formData.roles.includes(role)}
-                          onCheckedChange={(checked) => {
-                            const newRoles = checked
-                              ? [...formData.roles, role]
-                              : formData.roles.filter(r => r !== role)
-                            if (newRoles.length === 0) return
-                            setFormData({ ...formData, roles: newRoles })
-                          }}
-                        />
-                        <Label htmlFor={`role-${role}`} className="text-sm cursor-pointer whitespace-nowrap">
-                          {label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
+                  <Select
+                    value={formData.roles[0] ?? "viewer"}
+                    onValueChange={(value: UserRole) =>
+                      setFormData({ ...formData, roles: [value], approverInvoiceTypes: value === "approver" ? formData.approverInvoiceTypes : [] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">{t("userManagement.superAdmin")}</SelectItem>
+                      <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
+                      <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
+                      <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">{t("userManagement.statusFormLabel")}</Label>
@@ -786,7 +801,7 @@ export function UserManagement() {
               {formData.roles.includes("approver") && (
                 <div className="space-y-2">
                   <Label>{t("userManagement.invoiceCategories")}</Label>
-                  <p className="text-xs text-muted-foreground">ถ้าไม่เลือก = เห็นทุกประเภท</p>
+                  <p className="text-xs text-muted-foreground text-red-500">* กรุณาเลือกอย่างน้อย 1 ประเภท</p>
                   <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                     {INVOICE_CATEGORIES.map(({ id, label }) => (
                       <div key={id} className="flex items-center space-x-2">
@@ -1064,31 +1079,22 @@ export function UserManagement() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
                 <Label>{t("userManagement.rolesLabel")}</Label>
-                <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
-                  {([
-                    { id: "admin", label: t("userManagement.superAdmin") },
-                    { id: "admin_accountant", label: t("userManagement.financeAdmin") },
-                    { id: "approver", label: t("userManagement.approver") },
-                    { id: "viewer", label: t("userManagement.viewer") },
-                  ] as { id: UserRole; label: string }[]).map(({ id: role, label }) => (
-                    <div key={role} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-role-${role}`}
-                        checked={formData.roles.includes(role)}
-                        onCheckedChange={(checked) => {
-                          const newRoles = checked
-                            ? [...formData.roles, role]
-                            : formData.roles.filter(r => r !== role)
-                          if (newRoles.length === 0) return
-                          setFormData({ ...formData, roles: newRoles })
-                        }}
-                      />
-                      <Label htmlFor={`edit-role-${role}`} className="text-sm cursor-pointer whitespace-nowrap">
-                        {label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                <Select
+                  value={formData.roles[0] ?? "viewer"}
+                  onValueChange={(value: UserRole) =>
+                    setFormData({ ...formData, roles: [value], approverInvoiceTypes: value === "approver" ? formData.approverInvoiceTypes : [] })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">{t("userManagement.superAdmin")}</SelectItem>
+                    <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
+                    <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
+                    <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">{t("userManagement.statusFormLabel")}</Label>
@@ -1108,7 +1114,7 @@ export function UserManagement() {
             {formData.roles.includes("approver") && (
               <div className="space-y-2">
                 <Label>{t("userManagement.invoiceCategories")}</Label>
-                <p className="text-xs text-muted-foreground">ถ้าไม่เลือก = เห็นทุกประเภท</p>
+                <p className="text-xs text-muted-foreground text-red-500">* กรุณาเลือกอย่างน้อย 1 ประเภท (หากไม่เลือกจะไม่เห็นรายการในหน้า Approval Queue)</p>
                 <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                   {INVOICE_CATEGORIES.map(({ id, label }) => (
                     <div key={id} className="flex items-center space-x-2">

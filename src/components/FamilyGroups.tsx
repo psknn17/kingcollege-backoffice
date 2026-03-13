@@ -89,13 +89,13 @@ export function FamilyGroups() {
     updateStudent
   } = useStudents()
 
-  const [searchTerm, setSearchTerm] = usePersistedState("family-groups:search", "")
-  const [expandedFamilies, setExpandedFamilies] = usePersistedState<string[]>("family-groups:expanded", [])
-  const [yearGroupFilter, setYearGroupFilter] = usePersistedState("family-groups:yearGroupFilter", "all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [expandedFamilies, setExpandedFamilies] = useState<string[]>([])
+  const [yearGroupFilter, setYearGroupFilter] = useState("all")
 
   // Sorting states
-  const [sortColumn, setSortColumn] = usePersistedState("family-groups:sortColumn", "")
-  const [sortDirection, setSortDirection] = usePersistedState<"asc" | "desc">("family-groups:sortDirection", "asc")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)

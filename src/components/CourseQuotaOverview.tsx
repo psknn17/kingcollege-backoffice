@@ -202,7 +202,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const { t } = useLanguage()
   const [courses, setCourses] = useState<Course[]>(mockCourses)
   const [filteredCourses, setFilteredCourses] = useState<Course[]>(mockCourses)
-  const [searchTerm, setSearchTerm] = usePersistedState("course-quota:search", "")
+  const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
@@ -230,8 +230,8 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const [studentRegistrations, setStudentRegistrations] = useState<StudentRegistration[]>([])
   const [studentReportPage, setStudentReportPage] = useState(1)
   const studentReportItemsPerPage = 10
-  const [tableSortColumn, setTableSortColumn] = usePersistedState("course-quota:sortColumn", "")
-  const [tableSortDirection, setTableSortDirection] = usePersistedState<"asc" | "desc">("course-quota:sortDirection", "asc")
+  const [tableSortColumn, setTableSortColumn] = useState("")
+  const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
 
   const handleTableSort = (column: string) => {
     if (tableSortColumn === column) {
