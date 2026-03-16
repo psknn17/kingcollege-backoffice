@@ -2678,6 +2678,56 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">
+            {activeTab === "items" 
+              ? (isExternalView ? t("item.externalItems") : isSimplifiedView ? t("item.activityItems") : t("item.manageItems"))
+              : (isExternalView ? t("item.externalTemplates") : isSimplifiedView ? t("item.activityTemplates") : t("item.manageTemplates"))
+            }
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {activeTab === "items"
+              ? (isSimplifiedView ? t("item.manageActivityItemsDesc") : t("item.manageItemsDesc"))
+              : (isSimplifiedView ? t("item.manageActivityTemplatesDesc") : t("item.manageTemplatesDesc"))
+            }
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {activeTab === "items" ? (
+            <>
+              <Button
+                variant="outline"
+                disabled={!userCanEdit}
+                onClick={handleImport}
+                className="flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {t("common.import")}
+              </Button>
+              <Button 
+                disabled={!userCanEdit} 
+                onClick={openCreateItemModal}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {t("item.createItem")}
+              </Button>
+            </>
+          ) : (
+            <Button 
+              disabled={!userCanEdit} 
+              onClick={openCreateTemplateModal}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              {t("item.createTemplate")}
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <Button
@@ -2703,29 +2753,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       {/* Items Tab */}
       {activeTab === "items" && (
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>{isExternalView ? t("item.externalItems") : isSimplifiedView ? t("item.activityItems") : t("item.manageItems")}</CardTitle>
-                <p className="text-muted-foreground">{isSimplifiedView ? t("item.manageActivityItemsDesc") : t("item.manageItemsDesc")}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  disabled={!userCanEdit}
-                  onClick={handleImport}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {t("common.import")}
-                </Button>
-                <Button disabled={!userCanEdit} onClick={openCreateItemModal}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t("item.createItem")}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             {/* Filters */}
             <div className="flex gap-4 mb-6">
               <div className="flex-1 relative">
@@ -2947,19 +2975,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       {/* Templates Tab */}
       {activeTab === "templates" && (
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>{isExternalView ? t("item.externalTemplates") : isSimplifiedView ? t("item.activityTemplates") : t("item.manageTemplates")}</CardTitle>
-                <p className="text-muted-foreground">{isSimplifiedView ? t("item.manageActivityTemplatesDesc") : t("item.manageTemplatesDesc")}</p>
-              </div>
-              <Button disabled={!userCanEdit} onClick={openCreateTemplateModal}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t("item.createTemplate")}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             {/* Template Search */}
             <div className="mb-6">
               <div className="relative">

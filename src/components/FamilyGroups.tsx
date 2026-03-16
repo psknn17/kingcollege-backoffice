@@ -39,25 +39,14 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useStudents, Family, Student } from "@/contexts/StudentContext"
 import { cn } from "./ui/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
+import { gradeLevels } from "@/utils/grades"
 
-const gradeLevels: Record<string, string> = {
-  "pre-nursery": "Pre-Nursery",
-  "nursery": "Nursery",
-  "reception": "Reception",
-  "year1": "Year 1",
-  "year2": "Year 2",
-  "year3": "Year 3",
-  "year4": "Year 4",
-  "year5": "Year 5",
-  "year6": "Year 6",
-  "year7": "Year 7",
-  "year8": "Year 8",
-  "year9": "Year 9",
-  "year10": "Year 10",
-  "year11": "Year 11",
-  "year12": "Year 12",
-  "year13": "Year 13",
-}
+// gradeLevels is now imported from @/utils/grades as an array of objects
+// We'll create a mapping object for easy lookup in this component
+const gradeLevelLabels: Record<string, string> = {}
+gradeLevels.forEach(g => {
+  gradeLevelLabels[g.id] = g.label
+})
 
 const emptyFamily: Omit<Family, "id" | "createdAt"> = {
   familyCode: "",
@@ -433,16 +422,15 @@ export function FamilyGroups() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("familyGroups.title")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("familyGroups.subtitle")}
           </p>
         </div>
-        <Button onClick={handleAddFamily} disabled={!userCanEdit}>
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={handleAddFamily} disabled={!userCanEdit} className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
           {t("familyGroups.addFamily")}
         </Button>
       </div>
@@ -546,7 +534,7 @@ export function FamilyGroups() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Year Groups</SelectItem>
-                  {Object.values(gradeLevels).map(label => (
+                  {Object.values(gradeLevelLabels).map(label => (
                     <SelectItem key={label} value={label}>{label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -683,8 +671,7 @@ export function FamilyGroups() {
                               <TableHead align="left">{t("familyGroups.yearGroup")}</TableHead>
                               {/* Discounts - CENTER (badge list) */}
                               <TableHead align="center">{t("discountReports.discountsDetail")}</TableHead>
-                              {/* Fee Waiver - CENTER (badge) */}
-                              <TableHead align="center">{t("familyGroups.feeWaiver")}</TableHead>
+
                               {/* Actions - CENTER */}
                               <TableHead align="center">{t("familyGroups.actions")}</TableHead>
                             </TableRow>
@@ -719,44 +706,39 @@ export function FamilyGroups() {
                                 {/* Student ID - LEFT (text) */}
                                 <TableCell align="left">{student.studentId}</TableCell>
                                 {/* Year Group - LEFT (text) */}
-                                <TableCell align="left">{gradeLevels[student.gradeLevel] || student.gradeLevel}</TableCell>
+                                <TableCell align="left">{gradeLevelLabels[student.gradeLevel] || student.gradeLevel}</TableCell>
                                 {/* Discounts - CENTER (badge list) */}
                                 <TableCell align="center">
                                   <div className="flex flex-wrap justify-center gap-1">
                                     {(() => {
+                                      const badges = []
                                       const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-                                      if (groupDiscounts.length > 0) {
-                                        return groupDiscounts.map((d, i) => (
-                                          <Badge key={i} className="bg-green-100 text-green-800 text-[10px] py-0 h-5">
+                                      const feeWaiver = checkFeePrivilegeEligibility(student, student.academicYear, student.enrollmentTerm)
+
+                                      // Fee Waiver Badge
+                                      if (feeWaiver.eligible) {
+                                        badges.push(
+                                          <Badge key="waiver" className="bg-indigo-100 text-indigo-800 text-[10px] py-0 h-5">
+                                            {t("student.waiver")} ฿{(feeWaiver.creditPerTerm || 0).toLocaleString()}
+                                          </Badge>
+                                        )
+                                      }
+
+                                      // Group Discounts Badges
+                                      groupDiscounts.forEach((d, i) => {
+                                        badges.push(
+                                          <Badge key={`group-${i}`} className="bg-green-100 text-green-800 text-[10px] py-0 h-5">
                                             {d.name} {d.discountType === 'percentage' ? `${d.discountPercentage}%` : `฿${d.fixedAmount.toLocaleString()}`}
                                           </Badge>
-                                        ))
-                                      }
+                                        )
+                                      })
+
+                                      if (badges.length > 0) return badges
                                       return <span className="text-muted-foreground text-sm">{t("familyGroups.noDiscount")}</span>
                                     })()}
                                   </div>
                                 </TableCell>
-                                {/* Fee Waiver - CENTER (badge) */}
-                                <TableCell align="center">
-                                  {(() => {
-                                    const eligibility = checkFeePrivilegeEligibility(
-                                      student,
-                                      student.academicYear,
-                                      student.enrollmentTerm
-                                    )
-                                    if (eligibility.eligible) {
-                                      return (
-                                        <div>
-                                          <Badge className="bg-indigo-100 text-indigo-800">
-                                            ฿{eligibility.creditPerTerm?.toLocaleString()}{t("familyGroups.perTerm")}
-                                          </Badge>
-                                          <p className="text-xs text-indigo-600 mt-1">{eligibility.reason}</p>
-                                        </div>
-                                      )
-                                    }
-                                    return <span className="text-muted-foreground text-sm">-</span>
-                                  })()}
-                                </TableCell>
+
                                 {/* Actions - CENTER */}
                                 <TableCell align="center">
                                   <Button
@@ -806,46 +788,6 @@ export function FamilyGroups() {
                             return null;
                           })()}
 
-                          {/* Fee Waiver Summary (only show if any student is eligible) */}
-                          {(() => {
-                            const eligibleStudents = familyStudents.filter(student => {
-                              const eligibility = checkFeePrivilegeEligibility(
-                                student,
-                                student.academicYear,
-                                student.enrollmentTerm
-                              )
-                              return eligibility.eligible
-                            })
-
-                            if (eligibleStudents.length > 0) {
-                              return (
-                                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                  <h4 className="font-medium text-indigo-800 mb-2">{t("familyGroups.registrationFeeWaiverProgram")}</h4>
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    {eligibleStudents.map(student => {
-                                      const eligibility = checkFeePrivilegeEligibility(
-                                        student,
-                                        student.academicYear,
-                                        student.enrollmentTerm
-                                      )
-                                      return (
-                                        <div key={student.id}>
-                                          <p className="text-indigo-700 font-medium">
-                                            {student.firstName} ({t("student.child")} #{student.childOrder})
-                                          </p>
-                                          <p className="font-bold text-indigo-800">
-                                            ฿{eligibility.creditPerTerm?.toLocaleString()}{t("familyGroups.perTerm")}
-                                          </p>
-                                          <p className="text-xs text-indigo-600">{eligibility.reason}</p>
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              )
-                            }
-                            return null
-                          })()}
                         </div>
                       )}
                     </CardContent>

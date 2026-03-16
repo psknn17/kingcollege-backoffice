@@ -380,9 +380,12 @@ const generateReceiptForPaidInvoice = (invoice: SavedInvoice) => {
     let receiptPrefix = ""
 
     const category = invoice.category
-    if (category === "trip" || category === "eca") {
+    if (category === "trip") {
       receiptStorageKey = "receiptRecords_afterschool"
       receiptPrefix = "TRP"
+    } else if (category === "eca") {
+      receiptStorageKey = "receiptRecords_afterschool"
+      receiptPrefix = "ECA"
     } else if (category === "exam") {
       receiptStorageKey = "receiptRecords_event"
       receiptPrefix = "EXM"
@@ -1385,13 +1388,17 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
       // For simplified views (Trip/Activity, Exam, School Bus), don't calculate discounts or fee waivers
       if (isSimplifiedView) {
+        // Recipient Email Logic: Priority 1: Family Email, Priority 2: First Parent Email
+        const family = families.find(f => f.id === student.familyId)
+        const recipientEmail = family?.email || student.parents?.[0]?.email || ""
+
         return {
           id: student.studentId,
           name: `${student.firstName} ${student.lastName}`,
           grade: gradeLabel,
           room: studentRoom,
           parentName: student.parents?.[0]?.name || "Parent",
-          email: student.parents?.[0]?.email || "parent@email.com",
+          email: recipientEmail,
           originalStudent: student,
           isNewStudent: false,
           enrollmentTerm: student.enrollmentTerm || "",
@@ -1432,13 +1439,17 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       // In production, this should be tracked in database
       const termsRemaining = feeWaiverEligibility.eligible ? 3 : 0
 
-      return {
-        id: student.studentId,
-        name: `${student.firstName} ${student.lastName}`,
-        grade: gradeLabel, // Convert to label format to match Create Invoice dropdown
-        room: studentRoom, // Use actual room/section, empty means "All Rooms"
-        parentName: student.parents?.[0]?.name || "Parent",
-        email: student.parents?.[0]?.email || "parent@email.com",
+        // Recipient Email Logic: Priority 1: Family Email, Priority 2: First Parent Email
+        const family = families.find(f => f.id === student.familyId)
+        const recipientEmail = family?.email || student.parents?.[0]?.email || ""
+
+        return {
+          id: student.studentId,
+          name: `${student.firstName} ${student.lastName}`,
+          grade: gradeLabel, // Convert to label format to match Create Invoice dropdown
+          room: studentRoom, // Use actual room/section, empty means "All Rooms"
+          parentName: student.parents?.[0]?.name || "Parent",
+          email: recipientEmail,
         originalStudent: student,
         isNewStudent: false, // Existing students are NOT new - no registration fees
         enrollmentTerm: student.enrollmentTerm || "",

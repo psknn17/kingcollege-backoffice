@@ -122,7 +122,7 @@ export function ActivityLog() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <h2 className="text-xl font-semibold">{t("activityLog.title")}</h2>
         <p className="text-sm text-muted-foreground">
           {t("activityLog.subtitle")}

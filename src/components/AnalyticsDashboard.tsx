@@ -230,8 +230,7 @@ export function AnalyticsDashboard() {
 
   return (
     <div className="p-6 space-y-6 bg-muted/20 min-h-screen">
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
             <BarChart3 className="w-5 h-5 text-primary-foreground" />

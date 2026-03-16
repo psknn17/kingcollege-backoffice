@@ -3692,13 +3692,22 @@ export function InvoiceManagement({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
+          <h2 className="text-xl font-semibold">
+            {category === "tuition" ? t("menu.tuitionInvoices") :
+             category === "eca" ? t("menu.ecaInvoices") :
+             category === "trip" ? t("menu.tripInvoices") :
+             category === "exam" ? t("menu.examInvoices") :
+             category === "bus" ? t("menu.busInvoices") :
+             category === "external" ? t("menu.externalInvoices") :
+             t("invoice.title")}
+          </h2>
           <p className="text-sm text-muted-foreground">
             {t("invoice.subtitle")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
@@ -3730,7 +3739,7 @@ export function InvoiceManagement({
                 {isExportingAll
                   ? `${t("invoice.exporting")} ${exportProgress?.current ?? 0}/${exportProgress?.total ?? 0}`
                   : "Export"}
-                <ChevronDown className="w-3 h-3 ml-1" />
+                <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

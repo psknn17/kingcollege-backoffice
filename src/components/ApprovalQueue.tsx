@@ -933,14 +933,14 @@ export function ApprovalQueue() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("approvalQueue.title")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("approvalQueue.subtitle")}
           </p>
         </div>
-        <Button variant="outline" onClick={handleExportExcel} className="gap-2">
+        <Button variant="outline" onClick={handleExportExcel} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
           {t("approvalQueue.exportExcel")}
         </Button>

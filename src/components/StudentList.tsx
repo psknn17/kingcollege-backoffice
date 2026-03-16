@@ -56,25 +56,7 @@ import { useStudents, Student, Parent, Family, convertTermFormat } from "@/conte
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { cn } from "./ui/utils"
-
-const gradeLevels = [
-  { id: "pre-nursery", label: "Pre-Nursery" },
-  { id: "nursery", label: "Nursery" },
-  { id: "reception", label: "Reception" },
-  { id: "year1", label: "Year 1" },
-  { id: "year2", label: "Year 2" },
-  { id: "year3", label: "Year 3" },
-  { id: "year4", label: "Year 4" },
-  { id: "year5", label: "Year 5" },
-  { id: "year6", label: "Year 6" },
-  { id: "year7", label: "Year 7" },
-  { id: "year8", label: "Year 8" },
-  { id: "year9", label: "Year 9" },
-  { id: "year10", label: "Year 10" },
-  { id: "year11", label: "Year 11" },
-  { id: "year12", label: "Year 12" },
-  { id: "year13", label: "Year 13" },
-]
+import { gradeLevels, gradeProgressionMap, getGradeLabel, getNextGrade } from "@/utils/grades"
 
 const getStatusOptions = (t: (key: string) => string) => [
   { id: "active", label: t("studentStatus.active"), color: "bg-green-100 text-green-800" },
@@ -88,6 +70,16 @@ const getTermOptions = (t: (key: string) => string) => [
   { id: "term2", label: t("term.term2") },
   { id: "term3", label: t("term.term3") },
 ]
+
+const getTermLabel = (termId: string | undefined): string => {
+  if (!termId) return "-"
+  const terms: Record<string, string> = {
+    term1: "Term 1",
+    term2: "Term 2",
+    term3: "Term 3"
+  }
+  return terms[termId] || termId
+}
 
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
@@ -439,13 +431,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     return { active: activeStudentsCount, total: totalStudentsCount, familyCount: familyCount }
   }, [students, families])
 
-  const getGradeLabel = (gradeId: string) => {
-    return gradeLevels.find(g => g.id === gradeId)?.label || gradeId
-  }
-
-  const getTermLabel = (termId: string) => {
-    return getTermOptions(t).find(term => term.id === termId)?.label || termId
-  }
+  // getGradeLabel is now imported from @/utils/grades
 
   const getStatusBadge = (status: string) => {
     const statusOption = getStatusOptions(t).find(s => s.id === status)
@@ -472,10 +458,23 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     // เงื่อนไขที่ 3: มี familycode และมีในระบบ → เพิ่มนักเรียนเข้า family เดิม
     const existingFamily = families.find((f: Family) => f.familyCode === familyCode)
     if (existingFamily) {
+      const updates: Partial<Family> = {}
+      
+      // Update student list if not already present
       if (!existingFamily.studentIds.includes(studentId)) {
-        updateFamily(existingFamily.id, {
-          studentIds: [...existingFamily.studentIds, studentId]
-        })
+        updates.studentIds = [...existingFamily.studentIds, studentId]
+      }
+      
+      // Audit Fix: Sync Email/Phone to Family Group if currently empty
+      if (!existingFamily.email && familyData?.email) {
+        updates.email = familyData.email
+      }
+      if (!existingFamily.phone && familyData?.phone) {
+        updates.phone = familyData.phone
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updateFamily(existingFamily.id, updates)
       }
       return existingFamily.id
     }
@@ -494,6 +493,20 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     }
     addFamily(newFamily)
     return newFamily.id
+  }
+
+  // Update existing family info if missing (Sync)
+  const syncFamilyData = (familyId: string, familyData: { email?: string; phone?: string }) => {
+    const family = families.find(f => f.id === familyId)
+    if (!family) return
+
+    const updates: Partial<Family> = {}
+    if (!family.email && familyData.email) updates.email = familyData.email
+    if (!family.phone && familyData.phone) updates.phone = familyData.phone
+
+    if (Object.keys(updates).length > 0) {
+      updateFamily(familyId, updates)
+    }
   }
 
   const handleAddStudent = () => {
@@ -999,30 +1012,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     toast.success(t("student.templateDownloaded"))
   }
 
-  // Grade progression map
-  const gradeProgressionMap: Record<string, string> = {
-    "nursery": "reception",
-    "reception": "year1",
-    "year1": "year2",
-    "year2": "year3",
-    "year3": "year4",
-    "year4": "year5",
-    "year5": "year6",
-    "year6": "year7",
-    "year7": "year8",
-    "year8": "year9",
-    "year9": "year10",
-    "year10": "year11",
-    "year11": "year12",
-    "year12": "year13",
-    "year13": "graduated" // Special case - changes status instead
-  }
-
-  // Get next grade level
-  const getNextGrade = (currentGrade: string): string | null => {
-    const normalizedGrade = currentGrade.toLowerCase().replace(" ", "")
-    return gradeProgressionMap[normalizedGrade] || null
-  }
+  // gradeProgressionMap, getNextGrade are now imported from @/utils/grades
 
   // Get promotion preview data with individual students
   const getPromotionPreview = useMemo(() => {
@@ -1721,8 +1711,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("student.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -1730,20 +1719,20 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleImport} disabled={!userCanEdit}>
-            <Upload className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={handleImport} disabled={!userCanEdit} className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
             {t("common.import")}
           </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
             {t("common.export")}
           </Button>
-          <Button variant="outline" onClick={handleOpenPromoteDialog} disabled={!userCanEdit}>
-            <ArrowUpCircle className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={handleOpenPromoteDialog} disabled={!userCanEdit} className="flex items-center gap-2">
+            <ArrowUpCircle className="w-4 h-4" />
             {t("student.promoteGrade")}
           </Button>
-          <Button onClick={handleAddStudent} disabled={!userCanEdit}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={handleAddStudent} disabled={!userCanEdit} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
             {t("student.addStudent")}
           </Button>
         </div>
