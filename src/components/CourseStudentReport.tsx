@@ -308,7 +308,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   return (
     <div className="space-y-6">
       {/* Course Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{course.name} - {t("course.studentReport")}</h2>
           <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">

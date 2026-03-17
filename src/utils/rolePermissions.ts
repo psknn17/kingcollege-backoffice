@@ -88,6 +88,7 @@ function normalizeRoleName(role: string): string {
   // Convert role display names back to IDs
   const roleMap: Record<string, string> = {
     "Admin": "super_admin",
+    "admin": "super_admin",
     "AdminAccountant": "admin_accountant",
     "Finance Admin": "admin_accountant",
     "Viewver": "viewer",

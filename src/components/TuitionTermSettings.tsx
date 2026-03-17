@@ -322,10 +322,10 @@ export function TuitionTermSettings() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-black">{t("termSettings.title")}</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-xl font-semibold">{t("termSettings.title")}</h2>
+          <p className="text-sm text-muted-foreground">
             {t("termSettings.subtitle")}
           </p>
         </div>

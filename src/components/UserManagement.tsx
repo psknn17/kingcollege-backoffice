@@ -19,8 +19,9 @@ import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { logActivity } from "@/lib/activityLog"
 
-type UserRole = "admin" | "admin_accountant" | "viewer" | "approver"
+type UserRole = "super_admin" | "admin_accountant" | "viewer" | "approver"
 type UserStatus = "active" | "inactive" | "suspended"
 
 interface Permission {
@@ -37,6 +38,7 @@ interface User {
   firstName: string
   lastName: string
   roles: UserRole[]
+  role: UserRole // Added for 1-to-1 transition
   status: UserStatus
   permissions: string[]
   createdAt: Date
@@ -113,7 +115,7 @@ const allPermissions: Permission[] = permissionDefs.map(def => ({
 }))
 
 const roleDefaultPermissions: Record<UserRole, string[]> = {
-  admin: allPermissions.map(p => p.id),
+  super_admin: allPermissions.map(p => p.id),
   admin_accountant: [
     "tuition_view", "tuition_edit",
     "afterschool_view", "afterschool_approve",
@@ -148,9 +150,10 @@ const mockUsers: User[] = [
     email: "admin@school.com",
     firstName: "System",
     lastName: "Administrator",
-    roles: ["admin"],
+    roles: ["super_admin"],
+    role: "super_admin",
     status: "active",
-    permissions: roleDefaultPermissions.admin,
+    permissions: roleDefaultPermissions.super_admin,
     createdAt: new Date("2024-01-01"),
     lastLogin: new Date("2025-12-10"),
   },
@@ -161,6 +164,7 @@ const mockUsers: User[] = [
     firstName: "John",
     lastName: "Smith",
     roles: ["approver"],
+    role: "approver",
     status: "active",
     permissions: roleDefaultPermissions.approver,
     createdAt: new Date("2024-03-15"),
@@ -173,6 +177,7 @@ const mockUsers: User[] = [
     firstName: "Sarah",
     lastName: "Johnson",
     roles: ["admin_accountant"],
+    role: "admin_accountant",
     status: "active",
     permissions: roleDefaultPermissions.admin_accountant,
     createdAt: new Date("2024-06-01"),
@@ -185,6 +190,7 @@ const mockUsers: User[] = [
     firstName: "Mike",
     lastName: "Wilson",
     roles: ["viewer"],
+    role: "viewer",
     status: "inactive",
     permissions: roleDefaultPermissions.viewer,
     createdAt: new Date("2024-09-01"),
@@ -208,7 +214,7 @@ export function UserManagement() {
         const parsed = JSON.parse(stored)
         return parsed.map((u: any) => ({
           ...u,
-          createdAt: new Date(u.createdAt),
+          createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
           lastLogin: u.lastLogin ? new Date(u.lastLogin) : null,
         }))
       }
@@ -222,7 +228,7 @@ export function UserManagement() {
         const parsed = JSON.parse(stored)
         return parsed.map((u: any) => ({
           ...u,
-          createdAt: new Date(u.createdAt),
+          createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
           lastLogin: u.lastLogin ? new Date(u.lastLogin) : null,
         }))
       }
@@ -325,7 +331,7 @@ export function UserManagement() {
     firstName: "",
     lastName: "",
     password: "",
-    roles: ["viewer"] as UserRole[],
+    role: "viewer" as UserRole,
     status: "active" as UserStatus,
     approverInvoiceTypes: [] as string[],
   })
@@ -368,7 +374,7 @@ export function UserManagement() {
       firstName: "",
       lastName: "",
       password: "",
-      roles: ["viewer"] as UserRole[],
+      role: "viewer" as UserRole,
       status: "active" as UserStatus,
       approverInvoiceTypes: [],
     })
@@ -381,14 +387,12 @@ export function UserManagement() {
       toast.error("Please fill in all required fields")
       return
     }
-    if (formData.roles.includes("approver") && formData.approverInvoiceTypes.length === 0) {
+    if (formData.role === "approver" && formData.approverInvoiceTypes.length === 0) {
       toast.error("Please select at least one invoice type for Approver")
       return
     }
 
-    const mergedDefaultPermissions = Array.from(new Set(
-      formData.roles.flatMap(r => roleDefaultPermissions[r] || [])
-    ))
+    const mergedDefaultPermissions = roleDefaultPermissions[formData.role] || []
 
     const newUser: User = {
       id: String(Date.now()),
@@ -396,12 +400,13 @@ export function UserManagement() {
       email: formData.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
-      roles: formData.roles,
+      roles: [formData.role],
+      role: formData.role,
       status: formData.status,
-      permissions: selectedPermissions.length > 0 ? selectedPermissions : mergedDefaultPermissions,
+      permissions: roleDefaultPermissions[formData.role],
       createdAt: new Date(),
       lastLogin: null,
-      approverInvoiceTypes: formData.roles.includes("approver") ? formData.approverInvoiceTypes : undefined,
+      approverInvoiceTypes: formData.role === "approver" ? formData.approverInvoiceTypes : undefined,
     }
 
     setUsers([...users, newUser])
@@ -409,6 +414,11 @@ export function UserManagement() {
     setIsCreateDialogOpen(false)
     resetForm()
     toast.success(`User ${newUser.username} created successfully`)
+    logActivity({
+      action: "Created user",
+      module: "User Management",
+      detail: `Username: ${newUser.username}, Role: ${newUser.roles.join(", ")}`
+    })
   }
 
   const handleCreateUser = () => {
@@ -419,7 +429,11 @@ export function UserManagement() {
 
   const performEditUser = () => {
     if (!selectedUser) return
-    if (formData.roles.includes("approver") && formData.approverInvoiceTypes.length === 0) {
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.username.trim() || !formData.email.trim()) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+    if (formData.role === "approver" && formData.approverInvoiceTypes.length === 0) {
       toast.error("Please select at least one invoice type for Approver")
       return
     }
@@ -432,9 +446,10 @@ export function UserManagement() {
           email: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          roles: formData.roles,
+          roles: [formData.role],
+          role: formData.role,
           status: formData.status,
-          approverInvoiceTypes: formData.roles.includes("approver") ? formData.approverInvoiceTypes : undefined,
+          approverInvoiceTypes: formData.role === "approver" ? formData.approverInvoiceTypes : undefined,
         }
       }
       return user
@@ -450,8 +465,8 @@ export function UserManagement() {
         const authUserData = JSON.parse(storedAuthUser)
         const updatedAuthUser = {
           ...authUserData,
-          role: formData.roles[0],
-          approverInvoiceTypes: formData.roles.includes("approver") ? formData.approverInvoiceTypes : undefined
+          role: formData.role,
+          approverInvoiceTypes: formData.role === "approver" ? formData.approverInvoiceTypes : undefined
         }
         localStorage.setItem("authUser", JSON.stringify(updatedAuthUser))
         // Window location reload or state update would be better, but standard for this project seems to be storage events
@@ -462,6 +477,11 @@ export function UserManagement() {
     setIsEditDialogOpen(false)
     resetForm()
     toast.success(`User ${formData.username} updated successfully`)
+    logActivity({
+      action: "Updated user",
+      module: "User Management",
+      detail: `Username: ${formData.username}, Role: ${formData.role}`
+    })
   }
 
   const handleEditUser = () => {
@@ -478,6 +498,11 @@ export function UserManagement() {
     setFilteredUsers(updatedUsers)
     setIsDeleteDialogOpen(false)
     toast.success(`User ${selectedUser.username} deleted successfully`)
+    logActivity({
+      action: "Deleted user",
+      module: "User Management",
+      detail: `Username: ${selectedUser.username}`
+    })
     setSelectedUser(null)
   }
 
@@ -498,6 +523,11 @@ export function UserManagement() {
     setFilteredUsers(updatedUsers)
     setIsPermissionDialogOpen(false)
     toast.success(`Permissions updated for ${selectedUser.username}`)
+    logActivity({
+      action: "Updated user permissions",
+      module: "User Management",
+      detail: `Username: ${selectedUser.username}, Permissions count: ${selectedPermissions.length}`
+    })
     setSelectedUser(null)
   }
 
@@ -509,7 +539,7 @@ export function UserManagement() {
       firstName: user.firstName,
       lastName: user.lastName,
       password: "",
-      roles: user.roles,
+      role: user.role || user.roles[0],
       status: user.status,
       approverInvoiceTypes: user.approverInvoiceTypes || [],
     })
@@ -532,7 +562,11 @@ export function UserManagement() {
       if (user.id === userId) {
         const newStatus = user.status === "active" ? "inactive" : "active"
         toast.success(`User ${user.username} is now ${newStatus}`)
-        return { ...user, status: newStatus as UserStatus }
+        logActivity({
+          action: "Toggled user status",
+          module: "User Management",
+          detail: `Username: ${user.username} -> ${newStatus}`
+        })
       }
       return user
     })
@@ -541,8 +575,7 @@ export function UserManagement() {
   }
 
   const handleRoleChange = (role: UserRole) => {
-    const newRoles = [role]
-    setFormData({ ...formData, roles: newRoles })
+    setFormData({ ...formData, role: role, approverInvoiceTypes: role === "approver" ? formData.approverInvoiceTypes : [] })
     setSelectedPermissions(roleDefaultPermissions[role])
   }
 
@@ -554,25 +587,19 @@ export function UserManagement() {
     }
   }
 
-  const getRoleBadge = (roles: UserRole[]) => {
-    return (
-      <div className="flex flex-wrap gap-1 justify-center">
-        {roles.map(role => {
-          switch (role) {
-            case "admin":
-              return <Badge key={role} className="bg-purple-100 text-purple-800">SuperAdmin</Badge>
-            case "admin_accountant":
-              return <Badge key={role} className="bg-green-100 text-green-800">Finance Admin</Badge>
-            case "approver":
-              return <Badge key={role} className="bg-blue-100 text-blue-800">Approver</Badge>
-            case "viewer":
-              return <Badge key={role} className="bg-gray-100 text-gray-800">View</Badge>
-            default:
-              return <Badge key={role} variant="secondary">{role}</Badge>
-          }
-        })}
-      </div>
-    )
+  const getRoleBadge = (role: UserRole) => {
+    switch (role) {
+      case "super_admin":
+        return <Badge className="bg-purple-100 text-purple-800">SuperAdmin</Badge>
+      case "admin_accountant":
+        return <Badge className="bg-green-100 text-green-800">Finance Admin</Badge>
+      case "approver":
+        return <Badge className="bg-blue-100 text-blue-800">Approver</Badge>
+      case "viewer":
+        return <Badge className="bg-gray-100 text-gray-800">View</Badge>
+      default:
+        return <Badge variant="secondary">{role}</Badge>
+    }
   }
 
   const getStatusBadge = (status: UserStatus) => {
@@ -600,7 +627,7 @@ export function UserManagement() {
   const summaryStats = {
     total: users.length,
     active: users.filter(u => u.status === "active").length,
-    admin: users.filter(u => u.roles.includes("admin")).length,
+    super_admin: users.filter(u => u.roles.includes("super_admin")).length,
     admin_accountant: users.filter(u => u.roles.includes("admin_accountant")).length,
     approver: users.filter(u => u.roles.includes("approver")).length,
     viewer: users.filter(u => u.roles.includes("viewer")).length,
@@ -640,7 +667,7 @@ export function UserManagement() {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">{t("userManagement.firstNameLabel")}</Label>
+                  <Label htmlFor="firstName">{t("userManagement.firstNameLabel")} <span className="text-destructive">*</span></Label>
                   <Input
                     id="firstName"
                     value={formData.firstName}
@@ -649,7 +676,7 @@ export function UserManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">{t("userManagement.lastNameLabel")}</Label>
+                  <Label htmlFor="lastName">{t("userManagement.lastNameLabel")} <span className="text-destructive">*</span></Label>
                   <Input
                     id="lastName"
                     value={formData.lastName}
@@ -661,7 +688,7 @@ export function UserManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">{t("userManagement.usernameLabel")}</Label>
+                  <Label htmlFor="username">{t("userManagement.usernameLabel")} <span className="text-destructive">*</span></Label>
                   <Input
                     id="username"
                     value={formData.username}
@@ -670,7 +697,7 @@ export function UserManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">{t("userManagement.emailLabel")}</Label>
+                  <Label htmlFor="email">{t("userManagement.emailLabel")} <span className="text-destructive">*</span></Label>
                   <Input
                     id="email"
                     type="email"
@@ -682,7 +709,7 @@ export function UserManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">{t("userManagement.passwordLabel")}</Label>
+                <Label htmlFor="password">{t("userManagement.passwordLabel")} <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -708,16 +735,14 @@ export function UserManagement() {
                 <div className="space-y-2">
                   <Label>{t("userManagement.rolesLabel")}</Label>
                   <Select
-                    value={formData.roles[0] ?? "viewer"}
-                    onValueChange={(value: UserRole) =>
-                      setFormData({ ...formData, roles: [value], approverInvoiceTypes: value === "approver" ? formData.approverInvoiceTypes : [] })
-                    }
+                    value={formData.role}
+                    onValueChange={handleRoleChange}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">{t("userManagement.superAdmin")}</SelectItem>
+                      <SelectItem value="super_admin">{t("userManagement.superAdmin")}</SelectItem>
                       <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
                       <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
                       <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
@@ -738,10 +763,10 @@ export function UserManagement() {
                 </div>
               </div>
 
-              {formData.roles.includes("approver") && (
+              {formData.role === "approver" && (
                 <div className="space-y-2">
                   <Label>{t("userManagement.invoiceCategories")}</Label>
-                  <p className="text-xs text-muted-foreground text-red-500">* กรุณาเลือกอย่างน้อย 1 ประเภท</p>
+                  <p className="text-xs text-muted-foreground text-red-500">* Please select at least 1 category</p>
                   <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                     {INVOICE_CATEGORIES.map(({ id, label }) => (
                       <div key={id} className="flex items-center space-x-2">
@@ -795,7 +820,7 @@ export function UserManagement() {
             <CardTitle className="text-sm font-medium">{t("userManagement.superAdmin")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{summaryStats.admin}</div>
+            <div className="text-2xl font-bold text-purple-600">{summaryStats.super_admin}</div>
           </CardContent>
         </Card>
 
@@ -864,7 +889,7 @@ export function UserManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("userManagement.allRoles")}</SelectItem>
-                  <SelectItem value="admin">{t("userManagement.superAdmin")}</SelectItem>
+                  <SelectItem value="super_admin">{t("userManagement.superAdmin")}</SelectItem>
                   <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
                   <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
                   <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
@@ -962,14 +987,14 @@ export function UserManagement() {
                   {/* Username - LEFT aligned */}
                   <TableCell align="left">{user.username}</TableCell>
                   {/* Role Badge - CENTER aligned */}
-                  <TableCell align="center">{getRoleBadge(user.roles)}</TableCell>
+                  <TableCell align="center">{getRoleBadge(user.role || user.roles[0])}</TableCell>
                   {/* Status Badge - CENTER aligned */}
                   <TableCell align="center">{getStatusBadge(user.status)}</TableCell>
                   {/* Created Date - LEFT aligned */}
-                  <TableCell align="left">{format(user.createdAt, "dd MMM yyyy")}</TableCell>
+                  <TableCell align="left">{user.createdAt ? format(new Date(user.createdAt), "dd MMM yyyy") : "-"}</TableCell>
                   {/* Last Login Date - LEFT aligned */}
                   <TableCell align="left">
-                    {user.lastLogin ? format(user.lastLogin, "dd MMM yyyy") : "-"}
+                    {user.lastLogin ? format(new Date(user.lastLogin), "dd MMM yyyy") : "-"}
                   </TableCell>
                   {/* Actions - CENTER aligned */}
                   <TableCell align="center">
@@ -997,7 +1022,7 @@ export function UserManagement() {
                           <UserCheck className="w-4 h-4 text-green-600" />
                         )}
                       </Button>
-                      {!user.roles.includes("admin") && (
+                      {!user.roles.includes("super_admin") && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1078,16 +1103,14 @@ export function UserManagement() {
               <div className="space-y-2 col-span-2">
                 <Label>{t("userManagement.rolesLabel")}</Label>
                 <Select
-                  value={formData.roles[0] ?? "viewer"}
-                  onValueChange={(value: UserRole) =>
-                    setFormData({ ...formData, roles: [value], approverInvoiceTypes: value === "approver" ? formData.approverInvoiceTypes : [] })
-                  }
+                  value={formData.role}
+                  onValueChange={handleRoleChange}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">{t("userManagement.superAdmin")}</SelectItem>
+                    <SelectItem value="super_admin">{t("userManagement.superAdmin")}</SelectItem>
                     <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
                     <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
                     <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
@@ -1109,10 +1132,10 @@ export function UserManagement() {
               </div>
             </div>
 
-            {formData.roles.includes("approver") && (
+            {formData.role === "approver" && (
               <div className="space-y-2">
                 <Label>{t("userManagement.invoiceCategories")}</Label>
-                <p className="text-xs text-muted-foreground text-red-500">* กรุณาเลือกอย่างน้อย 1 ประเภท (หากไม่เลือกจะไม่เห็นรายการในหน้า Approval Queue)</p>
+                <p className="text-xs text-muted-foreground text-red-500">* Please select at least 1 category (If not selected, items will not appear in the Approval Queue)</p>
                 <div className="grid grid-cols-2 gap-2 border rounded-md p-3 bg-muted/20">
                   {INVOICE_CATEGORIES.map(({ id, label }) => (
                     <div key={id} className="flex items-center space-x-2">

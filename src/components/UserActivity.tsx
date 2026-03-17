@@ -97,9 +97,11 @@ export function UserActivity() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Activity</h1>
-        <p className="text-gray-500 mt-1">View your recent actions and activity history</p>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">My Activity</h2>
+          <p className="text-sm text-muted-foreground">View your recent actions and activity history</p>
+        </div>
       </div>
 
       {/* Stats Cards */}

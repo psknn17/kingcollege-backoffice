@@ -324,7 +324,7 @@ export function EventReceipts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("eventReceipt.title")}</h2>
           <p className="text-sm text-muted-foreground">

@@ -11,7 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+// Tabs removed — both sections shown on same page
 import { Building, Plus, Edit, Trash2, Landmark, CheckCircle2, XCircle } from "lucide-react"
+import { logActivity } from "@/lib/activityLog"
 import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -44,7 +46,7 @@ export function BankSettings() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
     const [dialogMode, setDialogMode] = useState<'offline' | 'online'>('offline')
-    const isSuperAdmin = user?.role === 'super_admin'
+    const isSuperAdmin = user?.role === 'super_admin' || (user as any)?.roles?.includes('super_admin') || user?.role === 'admin' || (user as any)?.roles?.includes('admin')
 
     const initialFormData: Omit<BankAccount, "id"> = {
         paymentSource: "",
@@ -91,6 +93,11 @@ export function BankSettings() {
                 ))
             }
             toast.success(t("bankSettings.savedSuccess"))
+            logActivity({
+                action: "Updated bank account",
+                module: "Settings",
+                detail: `${dialogMode.toUpperCase()} | Bank: ${formData.bankName}, Account: ${formData.accountNumber}`
+            })
         } else {
             const newAccount: BankAccount = {
                 ...formData,
@@ -102,6 +109,11 @@ export function BankSettings() {
                 setAccounts(prev => [...prev, newAccount])
             }
             toast.success(t("bankSettings.savedSuccess"))
+            logActivity({
+                action: "Created bank account",
+                module: "Settings",
+                detail: `${dialogMode.toUpperCase()} | Bank: ${formData.bankName}, Account: ${formData.accountNumber}`
+            })
         }
         setIsDialogOpen(false)
     }
@@ -110,165 +122,166 @@ export function BankSettings() {
         confirmDialog.confirm(() => {
             setAccounts(prev => prev.filter(acc => acc.id !== id))
             toast.success(t("bankSettings.deletedSuccess"))
+            logActivity({
+                action: "Deleted bank account",
+                module: "Settings",
+                detail: `Account ID: ${id}`
+            })
         })
     }
 
     return (
         <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <h2 className="text-xl font-semibold">
                         {t("bankSettings.title")}
-                    </h1>
+                    </h2>
                     <p className="text-sm text-muted-foreground">{t("bankSettings.subtitle")}</p>
                 </div>
-                <Button onClick={() => handleOpenDialog()} disabled={!userCanEdit}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("bankSettings.addAccount")}
-                </Button>
             </div>
 
-            <Card>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>{t("bankSettings.paymentSource")}</TableHead>
-                                <TableHead>{t("bankSettings.bank")}</TableHead>
-                                <TableHead>{t("bankSettings.accountNumber")}</TableHead>
-                                <TableHead>{t("bankSettings.glAccount")}</TableHead>
-                                <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
-                                <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {accounts.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                        {t("bankSettings.noAccounts")}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                accounts.map((account) => (
-                                    <TableRow key={account.id}>
-                                        <TableCell className="font-medium">{account.paymentSource}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                {account.bankName}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="font-mono">{account.accountNumber}</TableCell>
-                                        <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                        <TableCell align="center" className="text-center">
-                                            {account.isActive ? (
-                                                <Badge className="bg-green-100 text-green-800 border-green-200">
-                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                    {t("common.active")}
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary" className="text-muted-foreground">
-                                                    <XCircle className="w-3 h-3 mr-1" />
-                                                    {t("common.inactive")}
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right" className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleOpenDialog(account, 'offline')}
-                                                    disabled={!userCanEdit}
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            {isSuperAdmin && (
-                <div className="mt-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <h2 className="text-2xl font-bold flex items-center gap-2">
-                                {t("bankSettings.onlinePaymentTitle") || "Online Payment Settings"}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">{t("bankSettings.onlinePaymentSubtitle") || "Manage bank accounts and GL account mappings for online payments"}</p>
-                        </div>
+            {/* ── Offline Payment (Local) ── */}
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-semibold">{t("bankSettings.offlinePaymentTitle") || "Offline Payment"}</h3>
+                        <p className="text-sm text-muted-foreground">Manage bank accounts for offline/counter payments</p>
                     </div>
-
-                    <Card>
-                        <CardContent className="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>{t("bankSettings.paymentSource")}</TableHead>
-                                        <TableHead>{t("bankSettings.bank")}</TableHead>
-                                        <TableHead>{t("bankSettings.accountNumber")}</TableHead>
-                                        <TableHead>{t("bankSettings.glAccount")}</TableHead>
-                                        <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
-                                        <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {onlineAccounts.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                                {t("bankSettings.noAccounts")}
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        onlineAccounts.map((account) => (
-                                            <TableRow key={account.id}>
-                                                <TableCell className="font-medium">{account.paymentSource}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        {account.bankName}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="font-mono">{account.accountNumber}</TableCell>
-                                                <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                                <TableCell align="center" className="text-center">
-                                                    {account.isActive ? (
-                                                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                                                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                            {t("common.active")}
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="secondary" className="text-muted-foreground">
-                                                            <XCircle className="w-3 h-3 mr-1" />
-                                                            {t("common.inactive")}
-                                                        </Badge>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell align="right" className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleOpenDialog(account, 'online')}
-                                                            disabled={!userCanEdit}
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </Button>
-                                                        {/* Delete button removed specifically for online accounts as per requirements */}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                    {isSuperAdmin && (
+                        <Button onClick={() => handleOpenDialog(undefined, 'offline')}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            {t("bankSettings.addAccount")}
+                        </Button>
+                    )}
                 </div>
-            )}
+
+                <Card>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t("bankSettings.paymentSource")}</TableHead>
+                                    <TableHead>{t("bankSettings.bank")}</TableHead>
+                                    <TableHead>{t("bankSettings.accountNumber")}</TableHead>
+                                    <TableHead>{t("bankSettings.glAccount")}</TableHead>
+                                    <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
+                                    {isSuperAdmin && <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {accounts.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground">
+                                            {t("bankSettings.noAccounts")}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    accounts.map((account) => (
+                                        <TableRow key={account.id}>
+                                            <TableCell className="font-medium">{account.paymentSource}</TableCell>
+                                            <TableCell>{account.bankName}</TableCell>
+                                            <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                                            <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
+                                            <TableCell align="center" className="text-center">
+                                                {account.isActive ? (
+                                                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                        {t("common.active")}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="text-muted-foreground">
+                                                        <XCircle className="w-3 h-3 mr-1" />
+                                                        {t("common.inactive")}
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            {isSuperAdmin && (
+                                                <TableCell align="right" className="text-right">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* ── Online Payment (Gateway) ── */}
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-semibold">{t("bankSettings.onlinePaymentTitle") || "Online Payment (Gateway)"}</h3>
+                        <p className="text-sm text-muted-foreground">{t("bankSettings.onlinePaymentSubtitle") || "Manage bank accounts and GL account mappings for online payments"}</p>
+                    </div>
+                    {isSuperAdmin && (
+                        <Button onClick={() => handleOpenDialog(undefined, 'online')}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            {t("bankSettings.addOnlineAccount") || "Add Online Account"}
+                        </Button>
+                    )}
+                </div>
+
+                <Card>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t("bankSettings.paymentSource")}</TableHead>
+                                    <TableHead>{t("bankSettings.bank")}</TableHead>
+                                    <TableHead>{t("bankSettings.accountNumber")}</TableHead>
+                                    <TableHead>{t("bankSettings.glAccount")}</TableHead>
+                                    <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
+                                    {isSuperAdmin && <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {onlineAccounts.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground">
+                                            {t("bankSettings.noAccounts")}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    onlineAccounts.map((account) => (
+                                        <TableRow key={account.id}>
+                                            <TableCell className="font-medium">{account.paymentSource}</TableCell>
+                                            <TableCell>{account.bankName}</TableCell>
+                                            <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                                            <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
+                                            <TableCell align="center" className="text-center">
+                                                {account.isActive ? (
+                                                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                        {t("common.active")}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="text-muted-foreground">
+                                                        <XCircle className="w-3 h-3 mr-1" />
+                                                        {t("common.inactive")}
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            {isSuperAdmin && (
+                                                <TableCell align="right" className="text-right">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'online')}>
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
 
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

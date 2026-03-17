@@ -270,9 +270,10 @@ export function TuitionDiscountGroups() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
-          <h1 className="text-xl font-semibold">{t("menu.studentGroups")}</h1>
+          <h2 className="text-xl font-semibold">{t("menu.studentGroups")}</h2>
+          <p className="text-sm text-muted-foreground">Manage student discount groups</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           if (!userCanEdit && open) return // Prevent opening dialog for viewers

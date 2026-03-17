@@ -1180,98 +1180,97 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
   return (
     <div className="space-y-6">
-      <div className="mb-4">
-        <h3 className="text-lg font-medium">
-          {activeTab === "credit-notes" ? t("receipt.creditNotes") : t("receipt.receiptsTab")}
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {activeTab === "credit-notes" ? t("receipt.viewManageCreditNotes") : t("receipt.viewManageReceipts")}
-        </p>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">
+            {activeTab === "credit-notes" ? t("receipt.creditNotes") : t("receipt.receiptsTab")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {activeTab === "credit-notes" ? t("receipt.viewManageCreditNotes") : t("receipt.viewManageReceipts")}
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0 items-center">
+          {(activeTab === "credit-notes" || viewMode === "credit-notes") && (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={!userCanEdit}
+              onClick={() => setIsImportDialogOpen(true)}
+            >
+              <Upload className="w-4 h-4" />
+              {t("common.import")}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={!userCanEdit}
+            onClick={exportToExcel}
+          >
+            <FileDown className="w-4 h-4" />
+            {t("common.exportAll")}
+          </Button>
+          {(activeTab !== "credit-notes" && viewMode !== "credit-notes") && (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={downloadInterfaceFile}
+            >
+              <Download className="w-4 h-4" />
+              {t("receipt.downloadInterfaceFile")}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => {
+              const allTpl = migrateTemplates()
+              const rcptTpl = allTpl.filter(t => t.type === "receipt")
+              setTemplateToEdit(rcptTpl.find(t => t.isDefault) || rcptTpl[0] || null)
+              setIsTemplateDialogOpen(true)
+            }}
+          >
+            <FileText className="w-4 h-4" />
+            {t("receipt.receiptTemplate")}
+          </Button>
+          <Button
+            className="flex items-center gap-2"
+            disabled={!userCanEdit}
+            onClick={() => {
+              const isCreditNoteMode = activeTab === "credit-notes" || viewMode === "credit-notes"
+              if (isCreditNoteMode) {
+                setCreditNoteForm({
+                  creditNoteNumber: `CN-${new Date().getFullYear()}-${String(creditNotes.length + 1).padStart(6, '0')}`,
+                  invoiceNumber: "",
+                  studentId: "",
+                  studentName: "",
+                  yearGroup: "",
+                  academicYear: "",
+                  term: "",
+                  amount: 0,
+                  reason: "",
+                  issueDate: new Date()
+                })
+                setIsCreateCreditNoteOpen(true)
+              } else {
+                setIsCreateDialogOpen(true)
+              }
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            {(activeTab === "credit-notes" || viewMode === "credit-notes") ? t("receipt.createCreditNote") : t("receipt.createReceipt")}
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs with Buttons in same row */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          {viewMode === "both" && !hideCreditNotes && (
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="receipts">{t("receipt.receiptsTab")}</TabsTrigger>
-              <TabsTrigger value="credit-notes">{t("receipt.creditNotes")}</TabsTrigger>
-            </TabsList>
-          )}
-
-          <div className="flex gap-2 shrink-0 ml-auto items-center">
-            {(activeTab === "credit-notes" || viewMode === "credit-notes") && (
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                disabled={!userCanEdit}
-                onClick={() => setIsImportDialogOpen(true)}
-              >
-                <Upload className="w-4 h-4" />
-                {t("common.import")}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={!userCanEdit}
-              onClick={exportToExcel}
-            >
-              <FileDown className="w-4 h-4" />
-              {t("common.exportAll")}
-            </Button>
-            {(activeTab !== "credit-notes" && viewMode !== "credit-notes") && (
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={downloadInterfaceFile}
-              >
-                <Download className="w-4 h-4" />
-                {t("receipt.downloadInterfaceFile")}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={() => {
-                const allTpl = migrateTemplates()
-                const rcptTpl = allTpl.filter(t => t.type === "receipt")
-                setTemplateToEdit(rcptTpl.find(t => t.isDefault) || rcptTpl[0] || null)
-                setIsTemplateDialogOpen(true)
-              }}
-            >
-              <FileText className="w-4 h-4" />
-              {t("receipt.receiptTemplate")}
-            </Button>
-            <Button
-              className="flex items-center gap-2"
-              disabled={!userCanEdit}
-              onClick={() => {
-                const isCreditNoteMode = activeTab === "credit-notes" || viewMode === "credit-notes"
-                if (isCreditNoteMode) {
-                  setCreditNoteForm({
-                    creditNoteNumber: `CN-${new Date().getFullYear()}-${String(creditNotes.length + 1).padStart(6, '0')}`,
-                    invoiceNumber: "",
-                    studentId: "",
-                    studentName: "",
-                    yearGroup: "",
-                    academicYear: "",
-                    term: "",
-                    amount: 0,
-                    reason: "",
-                    issueDate: new Date()
-                  })
-                  setIsCreateCreditNoteOpen(true)
-                } else {
-                  setIsCreateDialogOpen(true)
-                }
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              {(activeTab === "credit-notes" || viewMode === "credit-notes") ? t("receipt.createCreditNote") : t("receipt.createReceipt")}
-            </Button>
-          </div>
-        </div>
+        {viewMode === "both" && !hideCreditNotes && (
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="receipts">{t("receipt.receiptsTab")}</TabsTrigger>
+            <TabsTrigger value="credit-notes">{t("receipt.creditNotes")}</TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Receipts Tab */}
         <TabsContent value="receipts" className="space-y-6 mt-6">

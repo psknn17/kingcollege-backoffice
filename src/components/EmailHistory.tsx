@@ -21,7 +21,7 @@ const mockHistory = [
   {
     id: "h1",
     sentDate: "2026-01-20",
-    subject: "Tuition Payment Reminder",
+    subject: "Tuition Fee Receipt - Academic Year 2025/2026",
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 145,
@@ -30,7 +30,7 @@ const mockHistory = [
   {
     id: "h2",
     sentDate: "2026-01-15",
-    subject: "ECA Payment Reminder",
+    subject: "Tuition Invoice - Academic Year 2025/2026",
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 89,
@@ -39,7 +39,7 @@ const mockHistory = [
   {
     id: "h3",
     sentDate: "2026-01-10",
-    subject: "School Bus Payment Reminder",
+    subject: "ECA Registration Confirmation & Receipt",
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 67,
@@ -57,7 +57,7 @@ const mockHistory = [
   {
     id: "h5",
     sentDate: "2025-12-15",
-    subject: "Exam Payment Reminder",
+    subject: "School Bus Fee Receipt",
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 98,
@@ -192,7 +192,8 @@ export function EmailHistory() {
       academicYear: historyItem.academicYear,
       term: historyItem.term,
       recipients: recipientCount,
-      status: "sent"
+      status: "sent",
+      message: historyItem.message
     }
 
     try {
@@ -244,11 +245,13 @@ export function EmailHistory() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Email History</h2>
-        <p className="text-muted-foreground">
-          View all reminder emails sent to parents and students
-        </p>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">Email History</h2>
+          <p className="text-sm text-muted-foreground">
+            View all emails sent to parents and students
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -256,7 +259,7 @@ export function EmailHistory() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Reminders Sent</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Email Jobs</p>
                 <p className="text-2xl font-bold">{allHistory.length}</p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -270,7 +273,7 @@ export function EmailHistory() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Recipients</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Emails Dispatched</p>
                 <p className="text-2xl font-bold">
                   {allHistory.reduce((sum, item) => sum + item.recipients, 0)}
                 </p>
@@ -286,8 +289,8 @@ export function EmailHistory() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">100%</p>
+                <p className="text-sm font-medium text-muted-foreground">Delivery Success Rate</p>
+                <p className="text-2xl font-bold">98.5%</p>
               </div>
               <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-purple-600" />
@@ -364,7 +367,7 @@ export function EmailHistory() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="w-5 h-5" />
-            Reminder History
+            Email History
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -417,8 +420,8 @@ export function EmailHistory() {
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleViewRecipients(item)} className="cursor-pointer">
-                            <FileText className="w-4 h-4" />
-                            View Recipients
+                            <Users className="w-4 h-4" />
+                            View Delivery Report
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleResendReminder(item)} className="cursor-pointer">
@@ -440,7 +443,7 @@ export function EmailHistory() {
             {filteredHistory.length === 0 && (
               <div className="text-center py-12">
                 <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No reminders found</h3>
+                <h3 className="text-lg font-medium mb-2">No emails found</h3>
                 <p className="text-sm text-muted-foreground">
                   Try adjusting your search or filters
                 </p>
@@ -508,23 +511,29 @@ export function EmailHistory() {
 
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Message Preview</Label>
-                <div className="mt-2 p-6 bg-muted rounded-lg text-sm leading-relaxed">
-                  <p>Dear Parent,</p>
-                  <p className="mt-3">
-                    This is a reminder regarding your payment for {detailsDialog.subject.toLowerCase()}.
-                    Please ensure that your payment is completed on time to avoid any inconvenience.
-                  </p>
-                  <p className="mt-3">
-                    Academic Year: {formatAcademicYear(detailsDialog.academicYear)}<br />
-                    Term: {detailsDialog.term}
-                  </p>
-                  <p className="mt-3">
-                    If you have any questions, please contact our office.
-                  </p>
-                  <p className="mt-3">
-                    Best regards,<br />
-                    {schoolSettings.schoolName}
-                  </p>
+                <div className="mt-2 p-6 bg-muted rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
+                  {detailsDialog.message ? (
+                    <>{detailsDialog.message}</>
+                  ) : (
+                    <>
+                      <p>Dear Parent,</p>
+                      <p className="mt-3">
+                        This is an official communication regarding: {detailsDialog.subject}.
+                        Please review the attached documents or information below for further details.
+                      </p>
+                      <p className="mt-3">
+                        Academic Year: {formatAcademicYear(detailsDialog.academicYear)}<br />
+                        Term: {detailsDialog.term}
+                      </p>
+                      <p className="mt-3">
+                        If you have any questions, please contact our office.
+                      </p>
+                      <p className="mt-3">
+                        Best regards,<br />
+                        {schoolSettings.schoolName}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -537,7 +546,7 @@ export function EmailHistory() {
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Users className="w-6 h-6" />
-              Email Recipients
+              Delivery Report
             </DialogTitle>
             <DialogDescription className="text-base mt-2">
               {recipientsDialog?.recipients} recipients for "{recipientsDialog?.subject}"

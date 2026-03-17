@@ -207,16 +207,12 @@ export default function App() {
 
   const hasResetToDashboard = useRef(false)
 
-  // Reset to dashboard when user first logs in
+  // No forced reset to dashboard - let router handle last visited path
   useEffect(() => {
-    if (isAuthenticated && !needsRoleSelection && !hasResetToDashboard.current) {
-      navigate("/tuition-dashboard", { replace: true })
-      hasResetToDashboard.current = true
-    }
     if (!isAuthenticated) {
       hasResetToDashboard.current = false
     }
-  }, [isAuthenticated, needsRoleSelection, navigate])
+  }, [isAuthenticated])
 
   // Filter menu items based on user role
   const getFilteredMenuItems = (section: string) => {
@@ -757,27 +753,27 @@ export default function App() {
                       {(() => {
                         // 1. Invoice-related pages with category prefixes (check FIRST to override generic labels)
                         if (activeSection === "student-invoices") return "Tuition Invoice";
-                        if (activeSection === "item-management") return "Tuition Items & Templates";
+                        if (activeSection === "item-management") return "Manage Items & Templates";
                         if (activeSection === "tuition-receipts") return "Tuition Receipts";
                         if (activeSection === "student-discount-groups") return "Tuition Discount Groups";
 
-                        if (activeSection === "external-item-management") return "External Items & Templates";
+                        if (activeSection === "external-item-management") return "Manage Items & Templates";
                         if (activeSection === "external-receipts") return "External Receipts";
                         if (activeSection === "external-discount-groups") return "External Discount Groups";
 
-                        if (activeSection === "eca-item-management") return "ECA Items & Templates";
+                        if (activeSection === "eca-item-management") return "Manage Items & Templates";
                         if (activeSection === "eca-receipts") return "ECA Receipts";
                         if (activeSection === "eca-discount-groups") return "ECA Discount Groups";
 
-                        if (activeSection === "trip-item-management") return "Trip Items & Templates";
+                        if (activeSection === "trip-item-management") return "Manage Items & Templates";
                         if (activeSection === "trip-receipts") return "Trip Receipts";
                         if (activeSection === "trip-discount-groups") return "Trip Discount Groups";
 
-                        if (activeSection === "exam-item-management") return "Exam Items & Templates";
+                        if (activeSection === "exam-item-management") return "Manage Items & Templates";
                         if (activeSection === "exam-receipts") return "Exam Receipts";
                         if (activeSection === "exam-discount-groups") return "Exam Discount Groups";
 
-                        if (activeSection === "bus-item-management") return "School Bus Items & Templates";
+                        if (activeSection === "bus-item-management") return "Manage Items & Templates";
                         if (activeSection === "bus-receipts") return "School Bus Receipts";
                         if (activeSection === "bus-discount-groups") return "School Bus Discount Groups";
 
@@ -986,8 +982,9 @@ export default function App() {
                     <Route path="/user-settings" element={<UserSettings />} />
                     <Route path="/user-activity" element={<UserActivity />} />
 
-                    {/* Fallback */}
-                    <Route path="*" element={<ReportOverview />} />
+                    {/* Fallback - Redirect to Dashboard if no path or invalid path */}
+                    <Route path="/" element={<Navigate to="/tuition-dashboard" replace />} />
+                    <Route path="*" element={<Navigate to="/tuition-dashboard" replace />} />
                   </Routes>
                 </div>
               </main>

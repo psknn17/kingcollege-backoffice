@@ -251,37 +251,33 @@ export function ClientList() {
         descriptionKey={`Import ${importPreview.length} clients? ${duplicateNames.size > 0 ? `${duplicateNames.size} duplicate(s) will be skipped.` : ""}`}
       />
 
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("menu.clientList")}</h2>
+          <p className="text-sm text-muted-foreground">{t("clientList.description")}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {userCanEdit && (
+            <Button variant="outline" onClick={handleImport} className="flex items-center gap-2">
+              <Upload className="w-4 h-4" />
+              {t("clientList.import")}
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            {t("clientList.export")}
+          </Button>
+          {userCanEdit && (
+            <Button onClick={openAdd} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              {t("clientList.addClient")}
+            </Button>
+          )}
+        </div>
+      </div>
+
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                {t("menu.clientList")}
-              </CardTitle>
-              <CardDescription>{t("clientList.description")}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              {userCanEdit && (
-                <Button variant="outline" onClick={handleImport} className="flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  {t("clientList.import")}
-                </Button>
-              )}
-              <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                {t("clientList.export")}
-              </Button>
-              {userCanEdit && (
-                <Button onClick={openAdd} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  {t("clientList.addClient")}
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {/* Search */}
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

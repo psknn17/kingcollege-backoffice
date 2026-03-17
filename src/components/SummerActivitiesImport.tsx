@@ -174,11 +174,13 @@ export function SummerActivitiesImport() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="mb-2">{t("summer.importTitle")}</h2>
-        <p className="text-muted-foreground">
-          {t("summer.importDescription")}
-        </p>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("summer.importTitle")}</h2>
+          <p className="text-sm text-muted-foreground">
+            {t("summer.importDescription")}
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="import" className="space-y-6">

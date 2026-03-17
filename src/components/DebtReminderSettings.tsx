@@ -86,7 +86,7 @@ const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: "overdue", label: "Overdue" },
 ]
 
-type ReminderStatus = "draft" | "scheduled" | "sent" | "cancelled"
+type ReminderStatus = "new" | "reminded" | "cancelled"
 
 interface ReminderConfig {
   id: string
@@ -149,7 +149,7 @@ const initialReminders: ReminderConfig[] = [
     emailTitle: "",
     message: "",
     invoiceStatuses: [],
-    status: "draft"
+    status: "new"
   },
   {
     id: "2",
@@ -164,7 +164,7 @@ const initialReminders: ReminderConfig[] = [
     emailTitle: "",
     message: "",
     invoiceStatuses: [],
-    status: "draft"
+    status: "new"
   },
   {
     id: "3",
@@ -179,7 +179,7 @@ const initialReminders: ReminderConfig[] = [
     emailTitle: "",
     message: "",
     invoiceStatuses: [],
-    status: "draft"
+    status: "new"
   }
 ]
 
@@ -236,7 +236,9 @@ export function DebtReminderSettings() {
   const [previewReminder, setPreviewReminder] = useState<ReminderConfig | null>(null)
   const [isScheduledCollapsed, setIsScheduledCollapsed] = useState(false)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
-  const [reminderHistory, setReminderHistory] = useState<{ id: string; sentDate: string; subject: string; academicYear: string; term: string; recipients: number; status: string }[]>([])
+  const [reminderHistory, setReminderHistory] = useState<{ id: string; sentDate: string; subject: string; academicYear: string; term: string; recipients: number; status: string; message?: string }[]>([])
+  const [historyPage, setHistoryPage] = useState(1)
+  const historyPageSize = 10
   const [openCalendarId, setOpenCalendarId] = useState<string | null>(null)
   const [templatePickerDialog, setTemplatePickerDialog] = useState<{ isOpen: boolean; reminderId: string | null }>({ isOpen: false, reminderId: null })
   const [reminderTemplates, setReminderTemplates] = usePersistedState<DebtReminderTemplate[]>("debt-reminder:templates", DEFAULT_REMINDER_TEMPLATES)
@@ -307,10 +309,10 @@ export function DebtReminderSettings() {
       .filter(r => r.enabled && r.status !== "cancelled")
       .reduce((sum, r) => sum + (r.recipientCount || 0), 0)
 
-    const scheduledReminders = reminderList.filter(r => r.status === "scheduled")
+    const scheduledReminders = reminderList.filter(r => r.status === "new")
 
     const sentToday = reminderList.filter(r => {
-      if (r.status !== "sent" || !r.sentAt) return false
+      if (r.status !== "reminded" || !r.sentAt) return false
       const sentDate = new Date(r.sentAt)
       return sentDate >= todayStart
     }).length
@@ -345,7 +347,7 @@ export function DebtReminderSettings() {
       emailTitle: "",
       message: "",
       invoiceStatuses: [],
-      status: "draft"
+      status: "new"
     }
     setReminders((currentReminders) => [...(currentReminders || []), newReminder])
   }
@@ -410,7 +412,7 @@ export function DebtReminderSettings() {
       ...reminder,
       id: Date.now().toString(),
       name: `${reminder.name} (Copy)`,
-      status: "draft",
+      status: "new",
       sendDate: "",
       sendTime: reminder.sendTime || "09:00",
       scheduledAt: undefined,
@@ -419,18 +421,38 @@ export function DebtReminderSettings() {
     }
     setReminders((currentReminders) => [...(currentReminders || []), duplicate])
     toast.success("Reminder duplicated", {
-      description: `"${duplicate.name}" created as draft`
+      description: `"${duplicate.name}" created as scheduled`
     })
   }
 
   const handleOpenHistory = () => {
     try {
       const stored = localStorage.getItem("emailReminderHistory")
-      const history = stored ? JSON.parse(stored) : []
+      const existingHistory = stored ? JSON.parse(stored) : []
+
+      // Generate mock data and merge with existing
+      const subjects = ["Tuition Payment Reminder", "School Bus Payment Reminder", "Overdue Payment Notice", "Final Payment Reminder", "ECA Fee Reminder"]
+      const terms = ["Term 1", "Term 2", "Term 3"]
+      const years = ["2025/2026", "2024/2025"]
+      const mockHistory = Array.from({ length: 40 }, (_, i) => {
+        const date = new Date(2026, 0, 5 + Math.floor(i * 1.8))
+        return {
+          id: `mock-${i + 1}`,
+          sentDate: date.toISOString().split("T")[0],
+          subject: subjects[i % subjects.length],
+          academicYear: years[i % years.length],
+          term: terms[i % terms.length],
+          recipients: Math.floor(Math.random() * 180) + 50,
+          status: "sent"
+        }
+      })
+      const history = [...mockHistory, ...existingHistory]
+
       setReminderHistory(history)
     } catch {
       setReminderHistory([])
     }
+    setHistoryPage(1)
     setIsHistoryModalOpen(true)
   }
 
@@ -494,9 +516,9 @@ export function DebtReminderSettings() {
     }
   }
 
-  // Helper to check if reminder is locked (scheduled reminders are read-only)
+  // Helper to check if reminder is locked (reminded/sent reminders are read-only)
   const isReminderLocked = (reminder: ReminderConfig): boolean => {
-    return reminder.status === "scheduled"
+    return reminder.status === "reminded"
   }
 
   // Helper to check if scheduled send time is still in the future
@@ -538,7 +560,8 @@ export function DebtReminderSettings() {
       academicYear: academicYear?.name || reminder.academicYear,
       term: term?.name || `Term ${reminder.term}`,
       recipients: mockRecipientCount,
-      status: "sent"
+      status: "sent",
+      message: reminder.message
     }
 
     // Save to emailReminderHistory
@@ -555,7 +578,7 @@ export function DebtReminderSettings() {
     saveReminderEmailLog(reminder.subject, mockRecipientCount)
 
     // Update reminder status to sent
-    updateReminder(reminder.id, "status", "sent")
+    updateReminder(reminder.id, "status", "reminded")
     updateReminder(reminder.id, "sentAt", new Date().toISOString())
     updateReminder(reminder.id, "recipientCount", mockRecipientCount)
 
@@ -580,7 +603,7 @@ export function DebtReminderSettings() {
 
     // Set default status if not set (for old reminders)
     if (!reminder.status) {
-      updateReminder(reminder.id, "status", "draft")
+      updateReminder(reminder.id, "status", "new")
     }
 
     // Mock recipient count
@@ -603,7 +626,7 @@ export function DebtReminderSettings() {
     }
 
     // Update reminder to scheduled status
-    updateReminder(previewReminder.id, "status", "scheduled")
+    updateReminder(previewReminder.id, "status", "new")
     updateReminder(previewReminder.id, "scheduledAt", new Date().toISOString())
 
     toast.success("Reminder scheduled successfully", {
@@ -616,7 +639,7 @@ export function DebtReminderSettings() {
 
   const handleCancelSchedule = (reminder: ReminderConfig) => {
     // Only allow canceling scheduled reminders
-    if (reminder.status !== "scheduled") {
+    if (reminder.status !== "new") {
       toast.error("Cannot cancel", {
         description: "Only scheduled reminders can be cancelled"
       })
@@ -624,51 +647,44 @@ export function DebtReminderSettings() {
     }
 
     cancelConfirm.confirm(() => {
-      // Update to draft status
-      updateReminder(reminder.id, "status", "draft")
+      // Update to scheduled status
+      updateReminder(reminder.id, "status", "new")
       updateReminder(reminder.id, "scheduledAt", undefined)
 
       toast.success("Schedule cancelled", {
-        description: `${reminder.name} has been moved back to draft`
+        description: `${reminder.name} has been moved back to scheduled`
       })
     })
   }
 
   const handleEditScheduled = (reminder: ReminderConfig) => {
     // Only allow editing scheduled reminders
-    if (reminder.status !== "scheduled") {
+    if (reminder.status !== "new") {
       toast.error("Cannot edit", {
         description: "Only scheduled reminders can be edited"
       })
       return
     }
 
-    // Update to draft status to allow editing
-    updateReminder(reminder.id, "status", "draft")
+    // Update to scheduled status to allow editing
+    updateReminder(reminder.id, "status", "new")
     updateReminder(reminder.id, "scheduledAt", undefined)
 
     // Close preview modal
     setIsPreviewModalOpen(false)
 
-    toast.success("Moved to draft for editing", {
+    toast.success("Moved to scheduled for editing", {
       description: `${reminder.name} can now be edited`
     })
   }
 
   const getStatusBadge = (status: ReminderStatus | undefined) => {
     switch (status) {
-      case "scheduled":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border-2 border-blue-500 bg-blue-50 text-blue-700 shadow-sm">
-            <ClockIcon className="w-3.5 h-3.5" />
-            Scheduled
-          </span>
-        )
-      case "sent":
+      case "reminded":
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border-2 border-green-500 bg-green-50 text-green-700 shadow-sm">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Sent
+            Reminded
           </span>
         )
       case "cancelled":
@@ -678,23 +694,17 @@ export function DebtReminderSettings() {
             Cancelled
           </span>
         )
-      case "draft":
       default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border-2 border-gray-400 bg-white text-gray-700 shadow-sm">
-            <FileText className="w-3.5 h-3.5" />
-            Draft
-          </span>
-        )
+        return null
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex-1">
-          <h2 className="text-2xl font-semibold">{t("debt.reminderSettings")}</h2>
-          <p className="text-base text-muted-foreground mt-1">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("debt.reminderSettings")}</h2>
+          <p className="text-sm text-muted-foreground">
             {t("debt.reminderSettingsDesc")}
           </p>
         </div>
@@ -734,7 +744,6 @@ export function DebtReminderSettings() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">{summaryStats.sentToday}</div>
-            <p className="text-xs text-green-600 mt-1">Sent today</p>
           </CardContent>
         </Card>
 
@@ -813,7 +822,7 @@ export function DebtReminderSettings() {
 
         {/* Draft and Sent Reminders */}
         <div className="space-y-4">
-          {(reminders || []).filter(r => r.status !== "scheduled" && r.status !== "sent").map((reminder, index) => (
+          {(reminders || []).filter(r => r.status === "new" || !r.status).map((reminder, index) => (
             <Card key={reminder.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -1112,7 +1121,7 @@ export function DebtReminderSettings() {
 
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-2">
-                  {(!reminder.status || reminder.status === "draft") && (
+                  {(!reminder.status || reminder.status === "new") && (
                     <>
                       <Button
                         variant="outline"
@@ -1133,29 +1142,7 @@ export function DebtReminderSettings() {
                       </Button>
                     </>
                   )}
-                  {reminder.status === "scheduled" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => handlePreviewReminder(reminder)}
-                        className="flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View Preview
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleCancelSchedule(reminder)}
-                        disabled={!userCanEdit || !isScheduledInFuture(reminder)}
-                        title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
-                        className="flex items-center gap-2"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Cancel Schedule
-                      </Button>
-                    </>
-                  )}
-                  {reminder.status === "sent" && (
+                  {reminder.status === "reminded" && (
                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600" />
                       Sent on {reminder.sentAt ? new Date(reminder.sentAt).toLocaleString() : "Unknown"}
@@ -1168,17 +1155,17 @@ export function DebtReminderSettings() {
           ))}
         </div>
 
-        {/* Scheduled Reminders - Collapsible */}
-        {(reminders || []).filter(r => r.status === "scheduled").length > 0 && (
+        {/* Reminded - Collapsible */}
+        {false && (reminders || []).filter(r => r.status === "reminded").length > 0 && (
           <Collapsible open={!isScheduledCollapsed} onOpenChange={(open) => setIsScheduledCollapsed(!open)}>
-            <Card className="border-blue-300">
+            <Card className="border-green-300">
               <CardHeader className="pb-3">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-lg transition-colors">
                     <div className="flex items-center gap-2">
-                      <ClockIcon className="w-5 h-5 text-blue-600" />
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
                       <CardTitle className="text-base">
-                        {t("debtReminder.scheduledReminders")} ({(reminders || []).filter(r => r.status === "scheduled").length})
+                        Reminded ({(reminders || []).filter(r => r.status === "reminded").length})
                       </CardTitle>
                     </div>
                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isScheduledCollapsed ? '' : 'rotate-180'}`} />
@@ -1188,12 +1175,12 @@ export function DebtReminderSettings() {
               <CollapsibleContent>
                 <CardContent className="space-y-4 pt-0">
                   {/* Lock Warning */}
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                    <ClockIcon className="w-4 h-4 flex-shrink-0" />
-                    <p><strong>Locked:</strong> Scheduled reminders are read-only. Click "Cancel Schedule" to edit.</p>
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <p><strong>Sent:</strong> These reminders have been sent and are read-only.</p>
                   </div>
 
-                  {(reminders || []).filter(r => r.status === "scheduled").map((reminder) => (
+                  {(reminders || []).filter(r => r.status === "reminded").map((reminder) => (
                     <Card key={reminder.id} className="border-blue-200">
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
@@ -1589,7 +1576,7 @@ export function DebtReminderSettings() {
 
           <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>{t("common.close")}</Button>
-            {(!previewReminder?.status || previewReminder?.status === "draft") && (
+            {(!previewReminder?.status || previewReminder?.status === "new") && (
               <Button
                 onClick={handleScheduleReminder}
                 disabled={!userCanEdit || !previewReminder?.sendDate}
@@ -1599,7 +1586,7 @@ export function DebtReminderSettings() {
                 Save & Schedule
               </Button>
             )}
-            {previewReminder?.status === "scheduled" && (
+            {previewReminder?.status === "new" && (
               <Button onClick={() => handleEditScheduled(previewReminder)} disabled={!userCanEdit} className="gap-2">
                 <Edit className="w-4 h-4" />
                 Edit
@@ -1611,9 +1598,9 @@ export function DebtReminderSettings() {
 
       {/* Remind History Modal */}
       <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
-        <DialogContent className="max-w-4xl w-full flex flex-col p-0 gap-0">
+        <DialogContent className="w-full flex flex-col p-0 gap-0" style={{ maxWidth: "90vw", width: "820px" }}>
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b">
+          <div className="flex items-center justify-between px-8 py-4 border-b">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -1629,7 +1616,7 @@ export function DebtReminderSettings() {
           </div>
 
           {/* Body */}
-          <div className="px-6 py-2">
+          <div className="px-8 py-4">
             {reminderHistory.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <Mail className="w-12 h-12 mb-4 opacity-20" />
@@ -1638,41 +1625,43 @@ export function DebtReminderSettings() {
               </div>
             ) : (
               <div className="rounded-lg border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/60 border-b">
-                    <tr>
-                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date Sent</th>
-                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subject</th>
-                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Academic Year</th>
-                      <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Term</th>
-                      <th className="text-right py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recipients</th>
-                      <th className="text-center py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-                    </tr>
-                  </thead>
-                </table>
-                <div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
+                <div className="overflow-y-auto" style={{ maxHeight: "500px" }}>
                   <table className="w-full text-sm">
+                    <thead className="bg-muted/60 border-b sticky top-0">
+                      <tr>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Date Sent</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subject</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Academic Year</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Term</th>
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recipients</th>
+                        <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                      </tr>
+                    </thead>
                     <tbody className="divide-y">
-                      {[...reminderHistory].reverse().slice(0, 10).map((entry, idx) => (
-                        <tr key={entry.id ?? idx} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3.5 px-5 text-muted-foreground whitespace-nowrap text-sm">
-                            {entry.sentDate ? formatDisplayDate(entry.sentDate) : "-"}
-                          </td>
-                          <td className="py-3.5 px-5 font-medium text-sm">{entry.subject}</td>
-                          <td className="py-3.5 px-5 text-muted-foreground text-sm">{formatAcademicYear(entry.academicYear) || "-"}</td>
-                          <td className="py-3.5 px-5 text-muted-foreground text-sm">{entry.term || "-"}</td>
-                          <td className="py-3.5 px-5 text-right">
-                            <span className="font-semibold text-sm">{entry.recipients?.toLocaleString() ?? "-"}</span>
-                            <span className="text-xs text-muted-foreground ml-1">recipients</span>
-                          </td>
-                          <td className="py-3.5 px-5 text-center">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Sent
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {(() => {
+                        const sorted = [...reminderHistory].reverse()
+                        const start = (historyPage - 1) * historyPageSize
+                        return sorted.slice(start, start + historyPageSize).map((entry, idx) => (
+                          <tr key={entry.id ?? idx} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-3 px-4 text-muted-foreground whitespace-nowrap text-sm">
+                              {entry.sentDate ? formatDisplayDate(entry.sentDate) : "-"}
+                            </td>
+                            <td className="py-3 px-4 font-medium text-sm whitespace-nowrap">{entry.subject}</td>
+                            <td className="py-3 px-4 text-muted-foreground text-sm whitespace-nowrap">{formatAcademicYear(entry.academicYear) || "-"}</td>
+                            <td className="py-3 px-4 text-muted-foreground text-sm whitespace-nowrap">{entry.term || "-"}</td>
+                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                              <span className="font-semibold text-sm">{entry.recipients?.toLocaleString() ?? "-"}</span>
+                              <span className="text-xs text-muted-foreground ml-1">recipients</span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Sent
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -1680,8 +1669,31 @@ export function DebtReminderSettings() {
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end px-6 py-4 border-t bg-muted/20">
+          {/* Footer with Pagination */}
+          <div className="flex items-center justify-between px-8 py-4 border-t bg-muted/20">
+            {reminderHistory.length > historyPageSize ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                  disabled={historyPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {(historyPage - 1) * historyPageSize + 1}-{Math.min(historyPage * historyPageSize, reminderHistory.length)} of {reminderHistory.length} | Page {historyPage} of {Math.ceil(reminderHistory.length / historyPageSize)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHistoryPage(p => Math.min(Math.ceil(reminderHistory.length / historyPageSize), p + 1))}
+                  disabled={historyPage >= Math.ceil(reminderHistory.length / historyPageSize)}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : <div />}
             <Button variant="outline" onClick={() => setIsHistoryModalOpen(false)}>
               {t("common.close")}
             </Button>
@@ -1689,66 +1701,132 @@ export function DebtReminderSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* Create / Edit Template Dialog */}
+      {/* Create / Edit Template Dialog — with live preview */}
       <Dialog open={templateManageDialog.isOpen} onOpenChange={(open) => !open && setTemplateManageDialog({ isOpen: false, editing: null })}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader className="mb-4">
-            <DialogTitle>{templateManageDialog.editing ? t("debtReminder.editTemplate") : t("debtReminder.addTemplate")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Template Name <span className="text-destructive">*</span></Label>
-              <Input value={templateForm.name} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. First Reminder" />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input value={templateForm.description} onChange={(e) => setTemplateForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description" />
-            </div>
-            <div className="space-y-2">
-              <Label>Email Title</Label>
-              <Input value={templateForm.emailTitle} onChange={(e) => setTemplateForm(f => ({ ...f, emailTitle: e.target.value }))} placeholder="e.g. Friendly Payment Reminder" />
-            </div>
-            <div className="space-y-2">
-              <Label>Message <span className="text-destructive">*</span></Label>
-              <Textarea
-                ref={templateMessageRef}
-                value={templateForm.message}
-                onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))}
-                placeholder="Enter message template..."
-                rows={4}
-              />
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Variables:</span>
-                {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
-                  <Badge
-                    key={v}
-                    variant="outline"
-                    className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
-                    onClick={() => {
-                      const el = templateMessageRef.current
-                      if (el) {
-                        const start = el.selectionStart ?? el.value.length
-                        const end = el.selectionEnd ?? el.value.length
-                        const newVal = el.value.slice(0, start) + v + el.value.slice(end)
-                        setTemplateForm(f => ({ ...f, message: newVal }))
-                        requestAnimationFrame(() => {
-                          el.focus()
-                          el.setSelectionRange(start + v.length, start + v.length)
-                        })
-                      } else {
-                        setTemplateForm(f => ({ ...f, message: f.message + v }))
-                      }
-                    }}
-                  >
-                    {v}
-                  </Badge>
-                ))}
+        <DialogContent className="p-0 gap-0 overflow-hidden" style={{ maxWidth: "95vw", width: "1500px", minHeight: "80vh" }}>
+          <div className="grid grid-cols-2 min-h-[75vh]">
+            {/* Left Panel: Form */}
+            <div className="p-6 border-r border-gray-200 flex flex-col">
+              <div className="flex items-center gap-2 mb-5">
+                <Edit className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-semibold">{templateManageDialog.editing ? t("debtReminder.editTemplate") : t("debtReminder.addTemplate")}</h3>
+              </div>
+              <div className="flex flex-col gap-4 flex-1">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Template Name <span className="text-destructive">*</span></Label>
+                  <Input className="h-11" value={templateForm.name} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. First Reminder" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Email Title</Label>
+                  <Input className="h-11" value={templateForm.emailTitle} onChange={(e) => setTemplateForm(f => ({ ...f, emailTitle: e.target.value }))} placeholder="e.g. Friendly Payment Reminder" />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <Label className="text-sm font-medium mb-1.5">Message <span className="text-destructive">*</span></Label>
+
+                  <Textarea
+                    ref={templateMessageRef}
+                    value={templateForm.message}
+                    onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))}
+                    placeholder="Enter message template..."
+                    className="flex-1 resize-none"
+                  />
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-xs text-muted-foreground">Variables:</span>
+                    {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
+                      <Badge
+                        key={v}
+                        variant="outline"
+                        className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
+                        onClick={() => {
+                          const el = templateMessageRef.current
+                          if (el) {
+                            const start = el.selectionStart ?? el.value.length
+                            const end = el.selectionEnd ?? el.value.length
+                            const newVal = el.value.slice(0, start) + v + el.value.slice(end)
+                            setTemplateForm(f => ({ ...f, message: newVal }))
+                            requestAnimationFrame(() => {
+                              el.focus()
+                              el.setSelectionRange(start + v.length, start + v.length)
+                            })
+                          } else {
+                            setTemplateForm(f => ({ ...f, message: f.message + v }))
+                          }
+                        }}
+                      >
+                        {v}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-5 mt-4">
+                <Button variant="outline" onClick={() => setTemplateManageDialog({ isOpen: false, editing: null })}>{t("common.cancel")}</Button>
+                <Button onClick={saveTemplateForm}><Save className="w-4 h-4 mr-2" />{templateManageDialog.editing ? t("common.saveChanges") : t("debtReminder.addTemplate")}</Button>
               </div>
             </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setTemplateManageDialog({ isOpen: false, editing: null })}>{t("common.cancel")}</Button>
-            <Button onClick={saveTemplateForm}><Save className="w-4 h-4 mr-2" />{templateManageDialog.editing ? t("common.saveChanges") : t("debtReminder.addTemplate")}</Button>
+
+            {/* Right Panel: Live Email Preview */}
+            <div className="p-6 bg-white flex flex-col overflow-y-auto">
+              <div className="flex items-center gap-2 mb-4">
+                <Mail className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-semibold">Email Preview</h3>
+              </div>
+
+              {/* Email client frame */}
+              <div className="rounded-lg border border-gray-300 bg-white shadow-md flex-1 flex flex-col overflow-hidden">
+                {/* Email meta */}
+                <div className="px-6 py-4 border-b border-gray-100 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">KC</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold text-sm text-gray-900">King's College International School</span>
+                          <span className="text-xs text-gray-400 ml-2">&lt;finance@kingscollege.ac.th&gt;</span>
+                        </div>
+                        <span className="text-xs text-gray-400 flex-shrink-0">just now</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">to parent_email@example.com</div>
+                    </div>
+                  </div>
+                  <div className="font-semibold text-base text-gray-900 mt-2">
+                    {templateForm.emailTitle || <span className="text-gray-300 italic font-normal">Subject: (Email Title)</span>}
+                  </div>
+                </div>
+
+                {/* Email body */}
+                <div className="flex-1 px-6 py-5 overflow-y-auto">
+                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {(() => {
+                      const sampleVars: Record<string,string> = {
+                        "{parent_name}": "John Smith",
+                        "{student_name}": "Oliver Smith",
+                        "{amount}": "125,000 THB",
+                        "{due_date}": "30 April 2026",
+                        "{days_remaining}": "14",
+                      }
+                      const msg = templateForm.message || ""
+                      if (!msg) return <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
+                      const parts = msg.split(/(\{[a-z_]+\})/g)
+                      return parts.map((part, idx) =>
+                        sampleVars[part]
+                          ? <span key={idx} className="font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">{sampleVars[part]}</span>
+                          : <span key={idx}>{part}</span>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Email footer */}
+                <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
+                  <div className="text-center text-xs text-gray-400 leading-5">
+                    <div className="font-medium text-gray-500">King's College International School</div>
+                    <div>999 Rama 9 Road, Huai Khwang, Bangkok 10310</div>
+                    <div>Tel: +66 2 123 4567 | finance@kingscollege.ac.th</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1803,7 +1881,7 @@ export function DebtReminderSettings() {
         onOpenChange={cancelConfirm.setIsOpen}
         onConfirm={cancelConfirm.handleConfirm}
         titleKey="Cancel Schedule"
-        descriptionKey="Are you sure you want to cancel this scheduled reminder? It will be moved back to draft status."
+        descriptionKey="Are you sure you want to cancel this scheduled reminder? It will be moved back to scheduled status."
         confirmTextKey="common.confirm"
         variant="destructive"
       />

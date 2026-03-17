@@ -10,11 +10,12 @@ interface User {
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   selectRole: (roleId: string) => void
   isAuthenticated: boolean
   needsRoleSelection: boolean
+  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -64,9 +65,18 @@ const DEFAULT_ADMIN = {
   role: "Administrator"
 }
 
+// Default seed users
+const SEED_USERS = [
+  { id: "seed-001", email: "admin@school.com", firstName: "super", lastName: "admin", role: "super_admin", roles: ["super_admin"], password: "1", status: "active", createdAt: new Date().toISOString() },
+  { id: "seed-002", email: "adminfinance@gmail.com", firstName: "finance", lastName: "admin", role: "admin_accountant", roles: ["admin_accountant"], password: "1", status: "active", createdAt: new Date().toISOString() },
+  { id: "seed-003", email: "approver@gmaill.com", firstName: "test", lastName: "approver", role: "approver", roles: ["approver"], password: "1", status: "active", createdAt: new Date().toISOString() },
+  { id: "seed-004", email: "viewver@gmail.com", firstName: "test", lastName: "viewver", role: "viewer", roles: ["viewer"], password: "1", status: "active", createdAt: new Date().toISOString() },
+]
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Load user from localStorage on mount and on updates
   useEffect(() => {
@@ -83,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const migratedRole = migrateRole(userData.role)
             if (migratedRole !== userData.role) {
               userData.role = migratedRole
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+              safeSaveToStorage(STORAGE_KEY, JSON.stringify(userData))
             }
           }
 
@@ -101,37 +111,126 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Failed to load user:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
+    // Seed default users into localStorage if not present
+    try {
+      const existingUsers = localStorage.getItem(USERS_STORAGE_KEY)
+      const usersList: any[] = existingUsers ? JSON.parse(existingUsers) : []
+      let updated = false
+      for (const seed of SEED_USERS) {
+        if (!usersList.some((u: any) => u.email.toLowerCase() === seed.email.toLowerCase())) {
+          usersList.push(seed)
+          updated = true
+        }
+      }
+      if (updated) {
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList))
+      }
+    } catch (e) {
+      console.error("Failed to seed default users:", e)
+    }
+
     handleUserUpdate()
+
+    // Save current path before refresh to allow restoration
+    const handleBeforeUnload = () => {
+      if (window.location.pathname !== '/login') {
+        localStorage.setItem('lastPath', window.location.pathname + window.location.search)
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
     window.addEventListener(STORAGE_KEY + "Updated", handleUserUpdate)
     window.addEventListener("authUserUpdated", handleUserUpdate)
     
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener(STORAGE_KEY + "Updated", handleUserUpdate)
       window.removeEventListener("authUserUpdated", handleUserUpdate)
     }
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const safeSaveToStorage = (key: string, value: string) => {
     try {
-      // Create user without role - will select role next
-      const userData: User = {
-        id: `user-${Date.now()}`,
-        email: email,
-        name: email.split('@')[0] || 'User',
-        role: '' // Empty until role is selected
+      localStorage.setItem(key, value)
+    } catch (e) {
+      // If quota exceeded, clear large non-essential data and retry
+      console.warn("localStorage quota exceeded, clearing large data...")
+      const keysToRemove = ["students_v1600", "families_v1600", "emailReminderHistory", "invoiceEmailLogs"]
+      keysToRemove.forEach(k => { try { localStorage.removeItem(k) } catch {} })
+      try {
+        localStorage.setItem(key, value)
+      } catch {
+        console.error("Still unable to save to localStorage after cleanup")
+      }
+    }
+  }
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // 1. Check for Default Admin
+       console.log('check 1',DEFAULT_ADMIN)
+      if (email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password) {
+        const adminUser: User = {
+          id: DEFAULT_ADMIN.id,
+          email: DEFAULT_ADMIN.email,
+          name: DEFAULT_ADMIN.name,
+          role: "super_admin"
+        }
+        setUser(adminUser)
+        setNeedsRoleSelection(false)
+        safeSaveToStorage(STORAGE_KEY, JSON.stringify(adminUser))
+        localStorage.removeItem(ROLE_SELECTION_KEY)
+        return { success: true }
       }
 
-      setUser(userData)
-      setNeedsRoleSelection(true)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
-      localStorage.setItem(ROLE_SELECTION_KEY, "true")
-      return true
+      // 2. Check for created users in localStorage
+      const usersStored = localStorage.getItem(USERS_STORAGE_KEY)
+      console.log('check 2',usersStored)
+      if (usersStored) {
+        const usersList = JSON.parse(usersStored)
+        const matchedUser = usersList.find((u: any) => u.email.toLowerCase() === email.toLowerCase())
+
+        console.log('check 4')
+        if (matchedUser) {
+          console.log('check 5')
+          if (matchedUser.password && matchedUser.password !== password) {
+            return { success: false, error: "Invalid password" }
+          }
+
+          console.log('check 6')
+          if (matchedUser.status !== "active") {
+            return { success: false, error: "Account is not active" }
+          }
+
+          const role = Array.isArray(matchedUser.roles) ? matchedUser.roles[0] : (matchedUser.role || "viewer")
+          
+          const userData: User = {
+            id: matchedUser.id,
+            email: matchedUser.email,
+            name: `${matchedUser.firstName} ${matchedUser.lastName}`,
+            role: role,
+            approverInvoiceTypes: role === "approver" ? matchedUser.approverInvoiceTypes : undefined
+          }
+
+          console.log('check 7',userData)
+          setUser(userData)
+          setNeedsRoleSelection(false)
+          safeSaveToStorage(STORAGE_KEY, JSON.stringify(userData))
+          localStorage.removeItem(ROLE_SELECTION_KEY)
+          return { success: true }
+        }
+      }
+
+      console.log('check 3')
+      return { success: false, error: "User not found" }
     } catch (error) {
       console.error("Login error:", error)
-      return false
+      return { success: false, error: "Authentication failed" }
     }
   }
 
@@ -159,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(updatedUser)
       setNeedsRoleSelection(false)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser))
+      safeSaveToStorage(STORAGE_KEY, JSON.stringify(updatedUser))
       localStorage.removeItem(ROLE_SELECTION_KEY)
     }
   }
@@ -174,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = user !== null && !needsRoleSelection
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, selectRole, isAuthenticated, needsRoleSelection }}>
+    <AuthContext.Provider value={{ user, login, logout, selectRole, isAuthenticated, needsRoleSelection, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

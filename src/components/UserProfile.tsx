@@ -88,9 +88,11 @@ export function UserProfile() {
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-gray-500 mt-1">Manage your personal information and account settings</p>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">My Profile</h2>
+          <p className="text-sm text-muted-foreground">Manage your personal information and account settings</p>
+        </div>
       </div>
 
       {/* Profile Card */}

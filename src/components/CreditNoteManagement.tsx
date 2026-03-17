@@ -1259,7 +1259,7 @@ export function CreditNoteManagement() {
           <div className="space-y-4">
             {/* Invoice Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("creditNote.selectInvoiceLabel")}</label>
+              <label className="text-sm font-medium">{t("creditNote.selectInvoiceLabel")} <span className="text-destructive">*</span></label>
               <Select
                 value={newCreditNote.selectedInvoiceId}
                 onValueChange={handleInvoiceSelect}
@@ -1318,7 +1318,7 @@ export function CreditNoteManagement() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("creditNote.creditAmountLabel")}</label>
+                <label className="text-sm font-medium">{t("creditNote.creditAmountLabel")} <span className="text-destructive">*</span></label>
                 <Input
                   type="number"
                   placeholder="0.00"
@@ -1353,7 +1353,7 @@ export function CreditNoteManagement() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("creditNote.reasonLabel")}</label>
+              <label className="text-sm font-medium">{t("creditNote.reasonLabel")} <span className="text-destructive">*</span></label>
               <Input
                 placeholder={t("creditNote.enterReason")}
                 value={newCreditNote.reason}

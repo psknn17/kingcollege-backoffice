@@ -3764,7 +3764,7 @@ export function InvoiceManagement({
             }}
           >
             <FileText className="w-4 h-4" />
-            Invoice Template
+            Invoice Email Template
           </Button>
           <Button
             onClick={() => onNavigateToSubPage(category === 'external' ? 'external-invoice-creation' : 'invoice-creation', { category, invoiceType: category === 'tuition' ? 'student' : category })}

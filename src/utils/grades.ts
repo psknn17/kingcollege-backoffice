@@ -41,6 +41,6 @@ export const getGradeLabel = (gradeId: string) => {
 }
 
 export const getNextGrade = (currentGrade: string): string | null => {
-  const normalizedGrade = currentGrade.toLowerCase().replace(/\s+/g, "")
+  const normalizedGrade = currentGrade.toLowerCase().replace(/[\s-]/g, "")
   return gradeProgressionMap[normalizedGrade] || null
 }

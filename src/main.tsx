@@ -9,6 +9,10 @@
   import { DiscountOptionsProvider } from "./contexts/DiscountOptionsContext.tsx";
   import { TooltipProvider } from "./components/ui/tooltip.tsx";
   import "./index.css";
+  import { seedAllData } from "./utils/seedData";
+
+  // Seed mock data on startup (only fills empty keys)
+  seedAllData();
 
   createRoot(document.getElementById("root")!).render(
     <BrowserRouter>

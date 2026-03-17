@@ -271,7 +271,7 @@ export function PaymentHistorySimple() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">Payment History</h2>
           <p className="text-sm text-muted-foreground">View payment records and transaction details</p>

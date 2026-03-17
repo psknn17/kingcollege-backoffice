@@ -64,6 +64,10 @@ export function SchoolSettings() {
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = () => {
+    if (!formData.schoolName.trim() || !formData.phone.trim() || !formData.email.trim()) {
+      toast.error("Please fill in all required fields")
+      return
+    }
     setIsSaving(true)
     try {
       saveSettings(formData)
@@ -114,15 +118,10 @@ export function SchoolSettings() {
   return (
     <div className="p-6 w-full space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <School className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">School Settings</h1>
-            <p className="text-sm text-muted-foreground">Manage school information and system settings</p>
-          </div>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">School Settings</h2>
+          <p className="text-sm text-muted-foreground">Manage school information and system settings</p>
         </div>
         <Button onClick={handleSaveClick} disabled={!userCanEdit || isSaving}>
           <Save className="w-4 h-4 mr-2" />
@@ -170,7 +169,7 @@ export function SchoolSettings() {
       </Card>
 
       {/* Two Column: School Info + Address */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* School Information */}
         <Card>
           <CardHeader className="pb-3">
@@ -183,56 +182,7 @@ export function SchoolSettings() {
             {field("Email", "email", { placeholder: "info@school.com", required: true, type: "email" })}
           </CardContent>
         </Card>
-
-        {/* Address */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Address</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">
-                Address (English)<span className="text-destructive ml-0.5">*</span>
-              </Label>
-              <Textarea
-                value={formData.address}
-                onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="School address in English"
-                rows={3}
-                disabled={!userCanEdit}
-                className="resize-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">
-                Address (Thai)<span className="text-destructive ml-0.5">*</span>
-              </Label>
-              <Textarea
-                value={formData.addressThai}
-                onChange={e => setFormData(prev => ({ ...prev, addressThai: e.target.value }))}
-                placeholder="ที่อยู่โรงเรียนภาษาไทย"
-                rows={3}
-                disabled={!userCanEdit}
-                className="resize-none"
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Bank Details */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Bank Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {field("Bank Name", "bankName", { placeholder: "e.g., Kasikorn Bank", required: true })}
-            {field("Account Name", "bankAccountName", { placeholder: "Account holder name", required: true })}
-            {field("Account Number", "bankAccountNumber", { placeholder: "xxx-x-xxxxx-x", required: true })}
-          </div>
-        </CardContent>
-      </Card>
 
       <ConfirmDialog
         open={confirmDialog.isOpen}

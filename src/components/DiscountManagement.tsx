@@ -932,6 +932,23 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("menu.studentGroups")}</h2>
+          <p className="text-sm text-muted-foreground">{t("discount.activeGroups")}</p>
+        </div>
+        <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {
+          if (!userCanEdit && open) return
+          setIsGroupDialogOpen(open)
+        }}>
+          <DialogTrigger asChild>
+            <Button onClick={() => resetGroupForm()} disabled={!userCanEdit}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t("discount.createStudentGroup")}
+            </Button>
+          </DialogTrigger>
+        </Dialog>
+      </div>
       <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="space-y-6">
         <TabsContent value="overview" className="space-y-6">
           {/* Overview Dashboard */}
@@ -1081,21 +1098,10 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         </TabsContent>
 
         <TabsContent value="groups" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium">{t("menu.studentGroups")}</h3>
-            </div>
-
-            <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {
+          <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {
               if (!userCanEdit && open) return
               setIsGroupDialogOpen(open)
             }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => resetGroupForm()} disabled={!userCanEdit}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t("discount.createStudentGroup")}
-                </Button>
-              </DialogTrigger>
               <DialogContent className="max-w-3xl p-6">
                 <DialogHeader>
                   <DialogTitle>{t("discount.createStudentGroupTitle")}</DialogTitle>
@@ -1105,7 +1111,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="group-name">{t("discount.groupName")}</Label>
+                    <Label htmlFor="group-name">{t("discount.groupName")} <span className="text-destructive">*</span></Label>
                     <Input
                       id="group-name"
                       value={groupForm.name}
@@ -1116,7 +1122,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="group-discount-type">{t("discount.discountTypeLabel")}</Label>
+                      <Label htmlFor="group-discount-type">{t("discount.discountTypeLabel")} <span className="text-destructive">*</span></Label>
                       <Select
                         value={groupForm.discountType}
                         onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}
@@ -1133,7 +1139,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     </div>
                     {groupForm.discountType === "percentage" ? (
                       <div className="space-y-2">
-                        <Label htmlFor="group-discount">{t("discount.discountPercentage")}</Label>
+                        <Label htmlFor="group-discount">{t("discount.discountPercentage")} <span className="text-destructive">*</span></Label>
                         <Input
                           id="group-discount"
                           type="number"
@@ -1147,7 +1153,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Label htmlFor="group-fixed-amount">{t("discount.fixedAmountLabel")}</Label>
+                        <Label htmlFor="group-fixed-amount">{t("discount.fixedAmountLabel")} <span className="text-destructive">*</span></Label>
                         <Input
                           id="group-fixed-amount"
                           type="number"
@@ -1424,7 +1430,6 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
 
           {/* Student Groups Display */}
           <div className="space-y-4">
@@ -1619,7 +1624,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-group-name">{t("discount.groupName")}</Label>
+                  <Label htmlFor="edit-group-name">{t("discount.groupName")} <span className="text-destructive">*</span></Label>
                   <Input
                     id="edit-group-name"
                     value={groupForm.name}
@@ -1630,7 +1635,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-group-discount-type">{t("discount.discountTypeLabel")}</Label>
+                    <Label htmlFor="edit-group-discount-type">{t("discount.discountTypeLabel")} <span className="text-destructive">*</span></Label>
                     <Select
                       value={groupForm.discountType}
                       onValueChange={(value: "percentage" | "fixed") => setGroupForm({ ...groupForm, discountType: value })}

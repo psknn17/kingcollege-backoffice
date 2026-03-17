@@ -99,13 +99,19 @@ export function Login() {
       await new Promise(resolve => setTimeout(resolve, 1000))
 
       // Complete login after OTP verification using the entered password
-      const success = await login(email, password)
-      if (success) {
+      const result = await login(email, password)
+      if (result.success) {
         toast.success("Login successful!")
-        const from = (location.state as any)?.from || "/tuition-dashboard"
+        // Check for stored lastPath, otherwise default to "from" or dashboard
+        const lastPath = localStorage.getItem('lastPath')
+        const from = lastPath || (location.state as any)?.from || "/tuition-dashboard"
+        
+        // Clear lastPath so it doesn't persist across fresh logins
+        localStorage.removeItem('lastPath')
+        
         navigate(from, { replace: true })
       } else {
-        toast.error("Invalid credentials")
+        toast.error(result.error || "Invalid credentials")
       }
     } catch (error) {
       toast.error("OTP verification failed")

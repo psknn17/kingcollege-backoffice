@@ -290,6 +290,10 @@ export function FamilyGroups() {
   }
 
   const performSaveNewFamily = () => {
+    if (!formData.familyCode || !formData.familyName || !formData.email) {
+      toast.error("Please fill in all required fields")
+      return
+    }
     const newFamily: Family = {
       id: `FAM${Date.now()}`,
       ...formData,
@@ -308,6 +312,10 @@ export function FamilyGroups() {
   }
 
   const performSaveEditFamily = () => {
+    if (!formData.familyCode || !formData.familyName || !formData.email) {
+      toast.error("Please fill in all required fields")
+      return
+    }
     if (selectedFamily) {
       updateFamily(selectedFamily.id, formData)
       toast.success(t("familyGroups.familyUpdated"))

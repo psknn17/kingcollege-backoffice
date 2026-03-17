@@ -1077,10 +1077,10 @@ export function ReceiptManagementFlow({
       {!hideMainContent && (
         <>
           {/* Header */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
             <div>
               <h2 className="text-xl font-semibold">{title}</h2>
-              <p className="text-muted-foreground">{description}</p>
+              <p className="text-sm text-muted-foreground">{description}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button

@@ -85,11 +85,13 @@ export function EventImport() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="mb-2">{t("event.importTitle")}</h2>
-        <p className="text-muted-foreground">
-          {t("event.importDescription")}
-        </p>
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("event.importTitle")}</h2>
+          <p className="text-sm text-muted-foreground">
+            {t("event.importDescription")}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

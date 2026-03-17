@@ -79,8 +79,8 @@ interface StudentContextType {
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined)
 
-const STUDENTS_STORAGE_KEY = "students_v3" // เปลี่ยนชื่อ Key เพื่อบังคับ Hard Reset
-const FAMILIES_STORAGE_KEY = "families_v4" // bump to regenerate with portalStatus mock
+const STUDENTS_STORAGE_KEY = "students_v1600"
+const FAMILIES_STORAGE_KEY = "families_v1600"
 const DISCOUNT_OPTIONS_STORAGE_KEY = "discountOptions"
 const STUDENT_DATA_VERSION_KEY = "student_data_version_v3"
 const CURRENT_DATA_VERSION = "3.1" // เวอร์ชันข้อมูล - ไม่ reset ข้อมูลเมื่อเปลี่ยน version
@@ -280,7 +280,7 @@ const generateMockData = () => {
   // สร้าง 150 ครอบครัวให้ครบถ้วน
   let studentCount = 0
 
-  for (let familyIndex = 0; familyIndex < 150; familyIndex++) {
+  for (let familyIndex = 0; familyIndex < 800; familyIndex++) {
     const familyName = familyNamesList[familyIndex % familyNamesList.length]
     // ทำให้ชื่อครอบครัวไม่ซ้ำด้วยการต่อท้าย index ถ้ามีชื่อซ้ำ
     const uniqueFamilyName = familyIndex >= familyNamesList.length ? `${familyName} ${Math.floor(familyIndex / familyNamesList.length) + 1}` : familyName

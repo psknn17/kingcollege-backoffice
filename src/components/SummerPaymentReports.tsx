@@ -291,10 +291,10 @@ export function SummerPaymentReports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
-          <h2 className="mb-2">{t("summerPayment.title")}</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl font-semibold">{t("summerPayment.title")}</h2>
+          <p className="text-sm text-muted-foreground">
             {t("summerPayment.subtitle")}
           </p>
         </div>

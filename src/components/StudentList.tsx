@@ -57,6 +57,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { cn } from "./ui/utils"
 import { gradeLevels, gradeProgressionMap, getGradeLabel, getNextGrade } from "@/utils/grades"
+import { logActivity } from "@/lib/activityLog"
 
 const getStatusOptions = (t: (key: string) => string) => [
   { id: "active", label: t("studentStatus.active"), color: "bg-green-100 text-green-800" },
@@ -538,6 +539,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
   const performDeleteStudent = (student: Student) => {
     deleteStudent(student.id)
+    logActivity({
+      action: "Deleted student",
+      module: "Student Management",
+      detail: `${student.firstName} ${student.lastName} (ID: ${student.studentId})`
+    })
     toast.success("Student deleted successfully")
   }
 
@@ -547,6 +553,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const performSaveNewStudent = () => {
+    if (!formData.firstName || !formData.lastName || !formData.gradeLevel || !formData.academicYear || !formData.enrollmentTerm) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
     const now = new Date()
     const currentUser = "Admin"
 
@@ -578,6 +589,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       updatedAt: now
     }
     addStudent(newStudent)
+    logActivity({
+      action: "Created student",
+      module: "Student Management",
+      detail: `${newStudent.firstName} ${newStudent.lastName} (ID: ${newStudent.studentId})`
+    })
 
     toast.success(t("student.studentAdded"))
     setIsAddDialogOpen(false)
@@ -591,6 +607,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const performSaveEditStudent = () => {
+    if (!formData.firstName || !formData.lastName || !formData.gradeLevel || !formData.academicYear || !formData.enrollmentTerm) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
     if (selectedStudent) {
       const currentUser = "Admin"
 
@@ -612,6 +633,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         familyId: familyId,
         updatedBy: currentUser,
         updatedAt: new Date()
+      })
+
+      logActivity({
+        action: "Updated student",
+        module: "Student Management",
+        detail: `${formData.firstName} ${formData.lastName} (ID: ${formData.studentId})`
       })
 
       toast.success(t("student.studentUpdated"))
@@ -1030,17 +1057,17 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     }> = {}
 
     studentsToPromote.forEach((student: Student) => {
-      const currentGrade = student.gradeLevel.toLowerCase().replace(" ", "")
-      const nextGrade = getNextGrade(currentGrade)
+      const nextGrade = getNextGrade(student.gradeLevel)
+      const groupKey = student.gradeLevel.toLowerCase().replace(/[\s-]/g, "")
 
-      if (!gradeGroups[currentGrade]) {
-        gradeGroups[currentGrade] = {
+      if (!gradeGroups[groupKey]) {
+        gradeGroups[groupKey] = {
           students: [],
           nextGrade: nextGrade === "graduated" ? "Graduated" : getGradeLabel(nextGrade || ""),
           isGraduation: nextGrade === "graduated"
         }
       }
-      gradeGroups[currentGrade].students.push(student)
+      gradeGroups[groupKey].students.push(student)
     })
 
     // Convert to array and sort by grade order
@@ -1221,8 +1248,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     const now = new Date()
 
     studentsToPromote.forEach((student: Student) => {
-      const currentGrade = student.gradeLevel.toLowerCase().replace(" ", "")
-      const nextGrade = getNextGrade(currentGrade)
+      const nextGrade = getNextGrade(student.gradeLevel)
       const newId = `${student.id}-${promoteToYear.replace(/[^0-9]/g, "")}`
 
       if (nextGrade === "graduated") {
@@ -1261,6 +1287,22 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
     setIsPromoteDialogOpen(false)
     setPromoteConfirmed(false)
+
+    if (promotedCount > 0) {
+      logActivity({
+        action: `Promoted students`,
+        module: "Student Management",
+        detail: `Successfully promoted ${promotedCount} students to Year ${promoteToYear}`
+      })
+    }
+
+    if (graduatedCount > 0) {
+      logActivity({
+        action: `Graduated students`,
+        module: "Student Management",
+        detail: `Successfully marked ${graduatedCount} students as graduated for Year ${promoteToYear}`
+      })
+    }
 
     if (graduatedCount > 0) {
       toast.success(t("student.promotedAndGraduated").replace("{promoted}", String(promotedCount)).replace("{graduated}", String(graduatedCount)))
@@ -2560,7 +2602,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Promote Grade Dialog */}
       <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] flex flex-col p-6">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-6">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpCircle className="w-5 h-5" />

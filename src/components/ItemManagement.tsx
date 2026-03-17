@@ -2682,8 +2682,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         <div>
           <h2 className="text-xl font-semibold">
             {activeTab === "items" 
-              ? (isExternalView ? t("item.externalItems") : isSimplifiedView ? t("item.activityItems") : t("item.manageItems"))
-              : (isExternalView ? t("item.externalTemplates") : isSimplifiedView ? t("item.activityTemplates") : t("item.manageTemplates"))
+              ? (isExternalView ? t("item.externalItems") : t("item.manageItems"))
+              : (isExternalView ? t("item.externalTemplates") : t("item.manageTemplates"))
             }
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -3021,7 +3021,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           variant="ghost"
                           size="sm"
                           disabled={!userCanEdit}
-                          onClick={() => handleDeleteTemplate(template.id)}
+                          onClick={() => deleteConfirmDialog.confirm(() => handleDeleteTemplate(template.id))}
                           title="Delete Template"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -3230,7 +3230,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             {/* Hide Applicable Grades for External and Exam templates (not grade-specific) */}
             {invoiceType !== "external" && invoiceType !== "exam" && (
               <div className="space-y-2">
-                <label className="font-medium">{t("item.applicableGradesRequired")}</label>
+                <label className="font-medium">{t("item.applicableGrades") || "Applicable Grades"}</label>
                 <div className="flex flex-wrap gap-2">
                   {grades.map((grade) => (
                     <Badge
