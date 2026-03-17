@@ -36,8 +36,15 @@ export function BankSettings() {
     const confirmDialog = useConfirmDialog()
 
     const [accounts, setAccounts] = usePersistedState<BankAccount[]>(STORAGE_KEY, [])
+    const [onlineAccounts, setOnlineAccounts] = usePersistedState<BankAccount[]>("onlineBankAccounts", [
+        { id: "BA-ONLINE-1", paymentSource: "Credit Card", bankName: "Kiatnakin Phatra Bank", accountNumber: "3423423413", glAccount: "100-500", isActive: true },
+        { id: "BA-ONLINE-2", paymentSource: "Thai QR", bankName: "Kasikorn Bank", accountNumber: "Online", glAccount: "100-600", isActive: true }
+    ])
+
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
+    const [dialogMode, setDialogMode] = useState<'offline' | 'online'>('offline')
+    const isSuperAdmin = user?.role === 'super_admin'
 
     const initialFormData: Omit<BankAccount, "id"> = {
         paymentSource: "",
@@ -49,7 +56,8 @@ export function BankSettings() {
 
     const [formData, setFormData] = useState<Omit<BankAccount, "id">>(initialFormData)
 
-    const handleOpenDialog = (account?: BankAccount) => {
+    const handleOpenDialog = (account?: BankAccount, mode: 'offline' | 'online' = 'offline') => {
+        setDialogMode(mode)
         if (account) {
             setEditingAccount(account)
             setFormData({
@@ -73,16 +81,26 @@ export function BankSettings() {
         }
 
         if (editingAccount) {
-            setAccounts(prev => prev.map(acc =>
-                acc.id === editingAccount.id ? { ...formData, id: acc.id } : acc
-            ))
+            if (dialogMode === 'online') {
+                setOnlineAccounts(prev => prev.map(acc =>
+                    acc.id === editingAccount.id ? { ...formData, id: acc.id } : acc
+                ))
+            } else {
+                setAccounts(prev => prev.map(acc =>
+                    acc.id === editingAccount.id ? { ...formData, id: acc.id } : acc
+                ))
+            }
             toast.success(t("bankSettings.savedSuccess"))
         } else {
             const newAccount: BankAccount = {
                 ...formData,
                 id: `BA-${Date.now()}`
             }
-            setAccounts(prev => [...prev, newAccount])
+            if (dialogMode === 'online') {
+                setOnlineAccounts(prev => [...prev, newAccount])
+            } else {
+                setAccounts(prev => [...prev, newAccount])
+            }
             toast.success(t("bankSettings.savedSuccess"))
         }
         setIsDialogOpen(false)
@@ -100,7 +118,6 @@ export function BankSettings() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Landmark className="w-6 h-6 text-primary" />
                         {t("bankSettings.title")}
                     </h1>
                     <p className="text-sm text-muted-foreground">{t("bankSettings.subtitle")}</p>
@@ -137,7 +154,6 @@ export function BankSettings() {
                                         <TableCell className="font-medium">{account.paymentSource}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <Building className="w-4 h-4 text-muted-foreground" />
                                                 {account.bankName}
                                             </div>
                                         </TableCell>
@@ -161,19 +177,10 @@ export function BankSettings() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => handleOpenDialog(account)}
+                                                    onClick={() => handleOpenDialog(account, 'offline')}
                                                     disabled={!userCanEdit}
                                                 >
                                                     <Edit className="w-4 h-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-destructive"
-                                                    onClick={() => handleDelete(account.id)}
-                                                    disabled={!userCanEdit}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -185,10 +192,96 @@ export function BankSettings() {
                 </CardContent>
             </Card>
 
+            {isSuperAdmin && (
+                <div className="mt-8">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold flex items-center gap-2">
+                                {t("bankSettings.onlinePaymentTitle") || "Online Payment Settings"}
+                            </h2>
+                            <p className="text-sm text-muted-foreground">{t("bankSettings.onlinePaymentSubtitle") || "Manage bank accounts and GL account mappings for online payments"}</p>
+                        </div>
+                    </div>
+
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>{t("bankSettings.paymentSource")}</TableHead>
+                                        <TableHead>{t("bankSettings.bank")}</TableHead>
+                                        <TableHead>{t("bankSettings.accountNumber")}</TableHead>
+                                        <TableHead>{t("bankSettings.glAccount")}</TableHead>
+                                        <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
+                                        <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {onlineAccounts.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                                                {t("bankSettings.noAccounts")}
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        onlineAccounts.map((account) => (
+                                            <TableRow key={account.id}>
+                                                <TableCell className="font-medium">{account.paymentSource}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {account.bankName}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                                                <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
+                                                <TableCell align="center" className="text-center">
+                                                    {account.isActive ? (
+                                                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                            {t("common.active")}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary" className="text-muted-foreground">
+                                                            <XCircle className="w-3 h-3 mr-1" />
+                                                            {t("common.inactive")}
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right" className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleOpenDialog(account, 'online')}
+                                                            disabled={!userCanEdit}
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </Button>
+                                                        {/* Delete button removed specifically for online accounts as per requirements */}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-lg p-8">
                     <DialogHeader className="mb-4">
-                        <DialogTitle className="text-xl">{editingAccount ? t("bankSettings.editAccount") : t("bankSettings.addAccount")}</DialogTitle>
+                        <DialogTitle className="text-xl">
+                            {editingAccount
+                                ? t("bankSettings.editAccount")
+                                : dialogMode === 'online'
+                                    ? t("bankSettings.addOnlineAccount") || "Add Online Payment Account"
+                                    : t("bankSettings.addAccount")
+                            }
+                        </DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-6">
                         <div className="grid gap-2">

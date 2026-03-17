@@ -112,7 +112,6 @@ import { WaiveFeeYearDetails } from "./components/WaiveFeeYearDetails"
 import { UserManagement } from "./components/UserManagement"
 import { ActivityLog } from "./components/ActivityLog"
 import { ApprovalQueue } from "./components/ApprovalQueue"
-import { logActivity } from "@/lib/activityLog"
 import { StudentList } from "./components/StudentList"
 import { FamilyGroups } from "./components/FamilyGroups"
 import { SchoolSettings } from "./components/SchoolSettings"
@@ -277,38 +276,6 @@ export default function App() {
   const [globalViewModalData, setGlobalViewModalData] = useState<any>(null)
   const [globalViewModalType, setGlobalViewModalType] = useState<"invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template">("invoice")
 
-  const getModuleName = (section: string) => {
-    const sections = [
-      ...menuItems.tuition,
-      ...menuItems.debtReminder,
-      ...menuItems.eca,
-      ...menuItems.tripActivity,
-      ...menuItems.exam,
-      ...menuItems.schoolBus,
-      ...menuItems.externalInvoice,
-      ...menuItems.report,
-      ...menuItems.userManagement,
-      ...menuItems.studentManagement,
-      ...menuItems.settings
-    ]
-    const matched = sections.find(item => item.id === section)
-    if (matched) return t(matched.labelKey)
-    if (section === "approval-queue") return "Approval Queue"
-    if (section === "activity-log") return "Activity Log"
-    if (section === "invoice-creation") return "Invoice Creation"
-    if (section === "external-invoice-creation") return "External Invoice Creation"
-    if (section === "view-details") return "View Details"
-    return section
-  }
-
-  useEffect(() => {
-    const moduleName = getModuleName(activeSection)
-    logActivity({
-      action: `Viewed ${moduleName}`,
-      module: moduleName,
-      detail: `Menu: ${activeSection}`
-    })
-  }, [activeSection, t])
 
   // Redirect Approver role to approval-queue (allow profile/settings/activity)
   const approverAllowedPages = ["approval-queue", "user-profile", "user-settings", "user-activity"]

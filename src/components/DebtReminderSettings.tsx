@@ -993,29 +993,36 @@ export function DebtReminderSettings() {
 
                   <div className="space-y-2">
                     <Label>{t("debtReminder.dueDateFilter")}</Label>
-                    <Select
-                      value={reminder.dueDateFilter || "all"}
-                      onValueChange={(value) => updateReminder(reminder.id, "dueDateFilter", value)}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Due Dates" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Due Dates</SelectItem>
-                        {getAvailableDueDates(reminder).map(date => (
-                          <SelectItem key={date} value={date}>
-                            {format(new Date(date), "dd MMM yyyy")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !reminder.dueDateFilter || reminder.dueDateFilter === "all" ? "text-muted-foreground" : ""
+                          )}
+                          disabled={!userCanEdit || isReminderLocked(reminder)}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {reminder.dueDateFilter && reminder.dueDateFilter !== "all"
+                            ? format(new Date(reminder.dueDateFilter), "dd MMM yyyy")
+                            : "Select date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={reminder.dueDateFilter && reminder.dueDateFilter !== "all" ? new Date(reminder.dueDateFilter) : undefined}
+                          onSelect={(date) => updateReminder(reminder.id, "dueDateFilter", date ? format(date, "yyyy-MM-dd") : "all")}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 
                 {/* Row 3: Email Title */}
                 <div className="space-y-2">
-                  <Label>{t("debtReminder.emailSubject")}</Label>
+                  <Label>{t("debtReminder.emailTitle")}</Label>
                   <Input
                     value={reminder.emailTitle}
                     onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
@@ -1528,18 +1535,35 @@ export function DebtReminderSettings() {
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Email Title</Label>
                     <div className="p-3 bg-muted rounded border font-semibold text-lg">
-                      {previewReminder.emailTitle}
+                      {previewReminder.emailTitle
+                        ?.replace(/\{parent_name\}/g, "Mr. John Smith")
+                        .replace(/\{student_name\}/g, "James Smith")
+                        .replace(/\{amount\}/g, "฿45,000")
+                        .replace(/\{due_date\}/g, "31 Mar 2026")
+                        .replace(/\{days_remaining\}/g, "15")}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Message Body</Label>
-                    <div className="p-4 bg-muted rounded border whitespace-pre-wrap">
-                      {previewReminder.message}
+                    <div className="p-4 bg-muted rounded border">
+                      {previewReminder.message
+                        ?.replace(/\{parent_name\}/g, "Mr. John Smith")
+                        .replace(/\{student_name\}/g, "James Smith")
+                        .replace(/\{amount\}/g, "฿45,000")
+                        .replace(/\{due_date\}/g, "31 Mar 2026")
+                        .replace(/\{days_remaining\}/g, "15")
+                        .split("\n")
+                        .map((line, i) => (
+                          <span key={i}>
+                            {line}
+                            <br />
+                          </span>
+                        ))}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground p-3 bg-amber-50 border border-amber-200 rounded">
-                    <p className="font-medium text-amber-900 mb-1">Variable Placeholders:</p>
-                    <p>Variables like {"{parent_name}"}, {"{student_name}"}, {"{amount}"} will be replaced with actual values when sent.</p>
+                    <p className="font-medium text-amber-900 mb-1">Sample Data Used in Preview:</p>
+                    <p>{"{parent_name}"} → Mr. John Smith, {"{student_name}"} → James Smith, {"{amount}"} → ฿45,000, {"{due_date}"} → 31 Mar 2026, {"{days_remaining}"} → 15</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1780,6 +1804,7 @@ export function DebtReminderSettings() {
         onConfirm={cancelConfirm.handleConfirm}
         titleKey="Cancel Schedule"
         descriptionKey="Are you sure you want to cancel this scheduled reminder? It will be moved back to draft status."
+        confirmTextKey="common.confirm"
         variant="destructive"
       />
     </div>
