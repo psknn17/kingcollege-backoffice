@@ -1351,7 +1351,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>{t("student.firstNameRequired")}</Label>
+            <Label>{t("student.firstName")} <span className="text-destructive">*</span></Label>
             <Input
               value={formData.firstName}
               onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
@@ -1360,7 +1360,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             />
           </div>
           <div className="space-y-2">
-            <Label>{t("student.lastNameRequired")}</Label>
+            <Label>{t("student.lastName")} <span className="text-destructive">*</span></Label>
             <Input
               value={formData.lastName}
               onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
@@ -1472,7 +1472,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         {/* Academic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>{t("student.yearGroupRequired")}</Label>
+            <Label>{t("student.yearGroup")} <span className="text-destructive">*</span></Label>
             <Select
               value={formData.gradeLevel}
               onValueChange={(value) => setFormData(prev => ({ ...prev, gradeLevel: value }))}
@@ -1491,7 +1491,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>{t("student.academicYearRequired")}</Label>
+            <Label>{t("student.academicYear")} <span className="text-destructive">*</span></Label>
             <Select
               value={formData.academicYear}
               onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
@@ -1513,7 +1513,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>{t("student.enrollmentTermRequired")}</Label>
+            <Label>{t("student.enrollmentTerm")} <span className="text-destructive">*</span></Label>
             <Select
               value={formData.enrollmentTerm}
               onValueChange={(value: "term1" | "term2" | "term3") => setFormData(prev => ({ ...prev, enrollmentTerm: value }))}
@@ -2493,7 +2493,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="csvFile">{t("student.uploadFile")}</Label>
+              <Label htmlFor="csvFile">{t("student.uploadFile")} <span className="text-destructive">*</span></Label>
               <Input
                 id="csvFile"
                 type="file"

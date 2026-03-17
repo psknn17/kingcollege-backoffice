@@ -853,7 +853,7 @@ export function FamilyGroups() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t("familyGroups.familyCode")} *</Label>
+                <Label>{t("familyGroups.familyCode")} <span className="text-destructive">*</span></Label>
                 <Input
                   value={formData.familyCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyCode: e.target.value.toUpperCase() }))}
@@ -863,7 +863,7 @@ export function FamilyGroups() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("familyGroups.familyName")} *</Label>
+                <Label>{t("familyGroups.familyName")} <span className="text-destructive">*</span></Label>
                 <Input
                   value={formData.familyName}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyName: e.target.value }))}
@@ -883,7 +883,7 @@ export function FamilyGroups() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>{t("familyGroups.emailForInvoices")} *</Label>
+                <Label>{t("familyGroups.emailForInvoices")} <span className="text-destructive">*</span></Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -957,7 +957,7 @@ export function FamilyGroups() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t("familyGroups.familyCode")} *</Label>
+                <Label>{t("familyGroups.familyCode")} <span className="text-destructive">*</span></Label>
                 <Input
                   value={formData.familyCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyCode: e.target.value.toUpperCase() }))}
@@ -967,7 +967,7 @@ export function FamilyGroups() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("familyGroups.familyName")} *</Label>
+                <Label>{t("familyGroups.familyName")} <span className="text-destructive">*</span></Label>
                 <Input
                   value={formData.familyName}
                   onChange={(e) => setFormData(prev => ({ ...prev, familyName: e.target.value }))}
@@ -987,7 +987,7 @@ export function FamilyGroups() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>{t("familyGroups.emailForInvoices")} *</Label>
+                <Label>{t("familyGroups.emailForInvoices")} <span className="text-destructive">*</span></Label>
                 <Button
                   type="button"
                   variant="outline"

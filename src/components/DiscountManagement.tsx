@@ -1287,7 +1287,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       <TabsContent value="csv-upload" className="space-y-4">
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <Label>{t("discount.uploadStudentCSV")}</Label>
+                            <Label>{t("discount.uploadStudentCSV")} <span className="text-destructive">*</span></Label>
                             <Button
                               type="button"
                               variant="outline"
@@ -1768,7 +1768,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     <TabsContent value="csv-upload" className="space-y-3">
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-csv-file">{t("discount.uploadStudentCSV")}</Label>
+                          <Label htmlFor="edit-csv-file">{t("discount.uploadStudentCSV")} <span className="text-destructive">*</span></Label>
                           <div
                             className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary/50 transition-colors"
                             onDragOver={(e) => {

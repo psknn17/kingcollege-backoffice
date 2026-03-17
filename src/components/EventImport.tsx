@@ -109,7 +109,7 @@ export function EventImport() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="file-upload">{t("event.selectFile")}</Label>
+                <Label htmlFor="file-upload">{t("event.selectFile")} <span className="text-destructive">*</span></Label>
                 <Input
                   id="file-upload"
                   type="file"

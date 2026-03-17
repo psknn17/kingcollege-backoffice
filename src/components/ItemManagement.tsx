@@ -3386,7 +3386,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="csvFile">{t("student.uploadFile")}</Label>
+              <Label htmlFor="csvFile">{t("student.uploadFile")} <span className="text-destructive">*</span></Label>
               <Input
                 id="csvFile"
                 type="file"

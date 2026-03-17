@@ -2673,7 +2673,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="creditNoteFile">{t("student.uploadFile")}</Label>
+              <Label htmlFor="creditNoteFile">{t("student.uploadFile")} <span className="text-destructive">*</span></Label>
               <Input
                 id="creditNoteFile"
                 type="file"

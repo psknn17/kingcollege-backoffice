@@ -881,7 +881,7 @@ export function DebtReminderSettings() {
                 {/* Row 1: Academic Year & Term */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>{t("debtReminder.academicYear")}</Label>
+                    <Label>{t("debtReminder.academicYear")} <span className="text-destructive">*</span></Label>
                     <Select
                       value={reminder.academicYear}
                       onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
@@ -901,7 +901,7 @@ export function DebtReminderSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{t("debtReminder.term")}</Label>
+                    <Label>{t("debtReminder.term")} <span className="text-destructive">*</span></Label>
                     <Select
                       value={reminder.term}
                       onValueChange={(value) => updateReminder(reminder.id, "term", value)}
@@ -926,7 +926,7 @@ export function DebtReminderSettings() {
                 {/* Row 2: Email Subject, Invoice Status Filter & Due Date Filter */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>{t("debtReminder.emailSubject")}</Label>
+                    <Label>{t("debtReminder.emailSubject")} <span className="text-destructive">*</span></Label>
                     <Select
                       value={reminder.subject}
                       onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
@@ -1045,7 +1045,7 @@ export function DebtReminderSettings() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4" />
-                      {t("debtReminder.sendDate")}
+                      {t("debtReminder.sendDate")} <span className="text-destructive">*</span>
                     </Label>
                     <Popover open={openCalendarId === reminder.id} onOpenChange={(open) => setOpenCalendarId(open ? reminder.id : null)}>
                       <PopoverTrigger asChild>
@@ -1078,7 +1078,7 @@ export function DebtReminderSettings() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Settings className="w-4 h-4" />
-                      {t("debtReminder.sendTime")}
+                      {t("debtReminder.sendTime")} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       type="time"
@@ -1090,7 +1090,7 @@ export function DebtReminderSettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t("debtReminder.messageTemplate")}</Label>
+                  <Label>{t("debtReminder.messageTemplate")} <span className="text-destructive">*</span></Label>
                   <Textarea
                     value={reminder.message}
                     onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
@@ -1125,16 +1125,28 @@ export function DebtReminderSettings() {
                     <>
                       <Button
                         variant="outline"
-                        onClick={() => handlePreviewReminder(reminder)}
-                        disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
+                        onClick={() => {
+                          if (!reminder.academicYear || !reminder.term || !reminder.subject || !reminder.sendDate || !reminder.sendTime || !reminder.message) {
+                            toast.error("Please fill in all required fields (Academic Year, Term, Email Subject, Send Date, Send Time, Message)")
+                            return
+                          }
+                          handlePreviewReminder(reminder)
+                        }}
+                        disabled={!userCanEdit || !reminder.enabled}
                         className="flex items-center gap-2"
                       >
                         <Eye className="w-4 h-4" />
                         Preview & Schedule
                       </Button>
                       <Button
-                        onClick={() => handleSendNow(reminder)}
-                        disabled={!userCanEdit || !reminder.enabled || !reminder.subject || !reminder.message}
+                        onClick={() => {
+                          if (!reminder.academicYear || !reminder.term || !reminder.subject || !reminder.sendDate || !reminder.sendTime || !reminder.message) {
+                            toast.error("Please fill in all required fields (Academic Year, Term, Email Subject, Send Date, Send Time, Message)")
+                            return
+                          }
+                          handleSendNow(reminder)
+                        }}
+                        disabled={!userCanEdit || !reminder.enabled}
                         className="flex items-center gap-2"
                       >
                         <Send className="w-4 h-4" />

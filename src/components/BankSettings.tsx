@@ -298,7 +298,7 @@ export function BankSettings() {
                     </DialogHeader>
                     <div className="grid gap-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="paymentSource">{t("bankSettings.paymentSource")} *</Label>
+                            <Label htmlFor="paymentSource">{t("bankSettings.paymentSource")} <span className="text-destructive">*</span></Label>
                             <Select
                                 value={formData.paymentSource}
                                 onValueChange={(val) => setFormData({ ...formData, paymentSource: val })}
@@ -314,7 +314,7 @@ export function BankSettings() {
                             </Select>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="bankName">{t("bankSettings.bank")} *</Label>
+                            <Label htmlFor="bankName">{t("bankSettings.bank")} <span className="text-destructive">*</span></Label>
                             <Select
                                 value={formData.bankName}
                                 onValueChange={(val) => setFormData({ ...formData, bankName: val })}
@@ -330,7 +330,7 @@ export function BankSettings() {
                             </Select>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="accountNumber">{t("bankSettings.accountNumber")} *</Label>
+                            <Label htmlFor="accountNumber">{t("bankSettings.accountNumber")} <span className="text-destructive">*</span></Label>
                             <Input
                                 id="accountNumber"
                                 value={formData.accountNumber}

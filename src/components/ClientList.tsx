@@ -441,7 +441,7 @@ export function ClientList() {
 
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="clientImportFile">{t("clientList.uploadFile")}</Label>
+              <Label htmlFor="clientImportFile">{t("clientList.uploadFile")} <span className="text-destructive">*</span></Label>
               <Input
                 id="clientImportFile"
                 type="file"

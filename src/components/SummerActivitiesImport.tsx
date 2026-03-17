@@ -206,7 +206,7 @@ export function SummerActivitiesImport() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="import-type">{t("summer.importType")}</Label>
+                    <Label htmlFor="import-type">{t("summer.importType")} <span className="text-destructive">*</span></Label>
                     <Select value={importType} onValueChange={setImportType}>
                       <SelectTrigger>
                         <SelectValue />
@@ -220,7 +220,7 @@ export function SummerActivitiesImport() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="file-upload">{t("summer.selectFile")}</Label>
+                    <Label htmlFor="file-upload">{t("summer.selectFile")} <span className="text-destructive">*</span></Label>
                     <Input
                       id="file-upload"
                       type="file"
