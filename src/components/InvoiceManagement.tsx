@@ -455,7 +455,7 @@ export function InvoiceManagement({
   // Discount Options context for calculations
   const { getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears = [] } = useAcademicYears()
-  const { students, families, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
+  const { students, families, getSiblingDiscount } = useStudents()
 
   // Load invoices from localStorage
   const [invoices, setInvoices] = useState<Invoice[]>(() => loadCreatedInvoicesFromStorage())
@@ -2689,7 +2689,7 @@ export function InvoiceManagement({
         // 2. Student group discounts - use stored invoice.discounts (set at creation time)
         // Never recalculate from current group state for existing invoices
         ; (invoice.discounts || [])
-          .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+          .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
           .forEach(d => {
             if (d.amount > 0) dynamicDiscounts.push({ name: d.name, amount: d.amount, percentage: d.percentage })
           })
@@ -2944,27 +2944,12 @@ export function InvoiceManagement({
         // 2. Student group discounts - use stored invoice.discounts (set at creation time)
         // Never recalculate from current group state for existing invoices
         ; (invoice.discounts || [])
-          .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+          .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
           .forEach(d => {
             discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
           })
 
-        // 3. Fee Waiver Program
-        if (student) {
-          const feeWaiverEligibility = checkFeePrivilegeEligibility(
-            student,
-            student.academicYear || invoice.academicYear || "",
-            student.enrollmentTerm || "term1"
-          )
-          if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
-            discountLines.push({
-              name: `Registration Fee Waiver (${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term)`,
-              amount: feeWaiverEligibility.creditPerTerm
-            })
-          }
-        }
-
-        // 4. Staff Child discount
+        // 3. Staff Child discount
         if (student && student.notes?.toLowerCase().includes('staff')) {
           const staffAmount = Math.round(subtotal * 50 / 100)
           if (staffAmount > 0) {
@@ -3014,7 +2999,6 @@ export function InvoiceManagement({
         ...invoice,
         discounts: discountLines.length > 0 ? discountLines : undefined,
         registrationFees: (invoice as any).registrationFees || undefined,
-        securityDepositWaiver: (invoice as any).securityDepositWaiver || undefined,
         lateFee: undefined
       }
 
@@ -5130,28 +5114,13 @@ export function InvoiceManagement({
                       // Never recalculate from current group state for existing invoices
                       if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
                         ; (selectedInvoice.discounts || [])
-                          .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+                          .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
                           .forEach(d => {
                             discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
                           })
                       }
 
-                      // 4. Fee Waiver Program (75,000/term for eligible students)
-                      if (!isNonDiscountableInvoice && student && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                        const feeWaiverEligibility = checkFeePrivilegeEligibility(
-                          student,
-                          student.academicYear || selectedInvoice.academicYear || "",
-                          student.enrollmentTerm || "term1"
-                        )
-                        if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
-                          discountLines.push({
-                            name: `Fee Waiver Program`,
-                            amount: feeWaiverEligibility.creditPerTerm
-                          })
-                        }
-                      }
-
-                      // 5. Staff Child (50%)
+                      // 4. Staff Child (50%)
                       if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('staff')) {
                         const staffAmount = Math.round(subtotal * 50 / 100)
                         discountLines.push({
@@ -5204,22 +5173,15 @@ export function InvoiceManagement({
                       // Final total (ID Charges removed)
                       const finalTotal = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
 
-                      // Separate discounts: Fee Waiver Program vs others
-                      const feeWaiverDiscount = discountLines.find(d => d.name.includes('Fee Waiver Program'))
-                      const otherDiscounts = discountLines.filter(d => !d.name.includes('Fee Waiver Program'))
-
                       // Find specific registration fees
                       const applicationFee = savedRegistrationFees.find((f: any) => f.name.includes('Application Fee'))
                       const registrationFee = savedRegistrationFees.find((f: any) => f.name.includes('Registration Fee') && !f.name.includes('Application'))
                       const securityDeposit = savedRegistrationFees.find((f: any) => f.name.includes('Security Deposit'))
 
-                      // Check for Security Deposit Fee Waiver (stored separately or calculate)
-                      const savedSecurityDepositWaiver = (selectedInvoice as any).securityDepositWaiver || 0
-
                       return (
                         <div className="border-t">
                           {/* 1. Other Discounts (NOT Fee Waiver Program) - Green */}
-                          {otherDiscounts.map((discount, idx) => (
+                          {discountLines.map((discount, idx) => (
                             <div key={idx} className="flex justify-between items-center px-4 py-2 border-t">
                               <span className="text-sm text-green-600">
                                 {discount.name} {discount.percent ? `(${discount.percent}%)` : ''}
@@ -5246,34 +5208,13 @@ export function InvoiceManagement({
                             </div>
                           )}
 
-                          {/* 4. Registration Fee Waiver (Fee Waiver Program) - Green */}
-                          {feeWaiverDiscount && (
-                            <div className="flex justify-between items-center px-4 py-2 border-t">
-                              <span className="text-sm text-green-600">
-                                Registration Fee Waiver ({feeWaiverDiscount.amount.toLocaleString()}/term)
-                              </span>
-                              <span className="text-sm font-medium text-green-600">
-                                -{formatCurrency(feeWaiverDiscount.amount)}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* 5. Security Deposit - Orange */}
+                          {/* 4. Security Deposit - Orange */}
                           {securityDeposit && (
                             <div className="flex justify-between items-center px-4 py-2 border-t">
                               <span className="text-sm text-orange-600">{securityDeposit.name}</span>
                               <span className="text-sm font-medium text-orange-600">+{formatCurrency(securityDeposit.amount)}</span>
                             </div>
                           )}
-
-                          {/* 6. Security Deposit Fee Waiver - Green */}
-                          {savedSecurityDepositWaiver > 0 && (
-                            <div className="flex justify-between items-center px-4 py-2 border-t">
-                              <span className="text-sm text-green-600">Security Deposit Fee Waiver</span>
-                              <span className="text-sm font-medium text-green-600">-{formatCurrency(savedSecurityDepositWaiver)}</span>
-                            </div>
-                          )}
-
 
                           {/* Amount in Words + Total */}
                           <div className="border-t bg-gray-50 p-4">
@@ -6539,7 +6480,7 @@ export function InvoiceManagement({
                   // Get student group discounts - use stored invoice.discounts (set at creation time)
                   // Never recalculate from current group state for existing invoices
                   ; (selectedInvoice.discounts || [])
-                    .filter(d => !/sibling|staff child|^scholarship$|early bird|fee waiver/i.test(d.name))
+                    .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
                     .forEach(d => {
                       discounts.push({
                         name: d.name,
@@ -6547,22 +6488,6 @@ export function InvoiceManagement({
                         color: "bg-purple-100 text-purple-800"
                       })
                     })
-
-                  // Fee Waiver Program
-                  if (student) {
-                    const feeWaiverEligibility = checkFeePrivilegeEligibility(
-                      student,
-                      student.academicYear || selectedInvoice.academicYear || "",
-                      student.enrollmentTerm || "term1"
-                    )
-                    if (feeWaiverEligibility.eligible && feeWaiverEligibility.creditPerTerm) {
-                      discounts.push({
-                        name: "Fee Waiver Program",
-                        value: `${feeWaiverEligibility.creditPerTerm.toLocaleString()}/term`,
-                        color: "bg-indigo-100 text-indigo-800"
-                      })
-                    }
-                  }
 
                   // Staff Child
                   if (student?.notes?.toLowerCase().includes('staff')) {

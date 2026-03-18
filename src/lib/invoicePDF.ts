@@ -34,7 +34,6 @@ interface Invoice {
   // Additional fields for detailed breakdown
   registrationFees?: any[]
   idCharges?: number
-  securityDepositWaiver?: number
   discounts?: Array<{ name: string; amount: number; percent?: number }>
 
 }
@@ -333,18 +332,6 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
                   </tr>
                 `
           })
-        }
-
-        // Show security deposit waiver if any
-        if (invoice.securityDepositWaiver && invoice.securityDepositWaiver > 0) {
-          additionalRows += `
-                <tr>
-                  <td colspan="2" style="padding:10px 18px; color:#059669;">
-                    Security Deposit Fee Waiver
-                  </td>
-                  <td style="padding:10px 18px; text-align:right; color:#059669;">-${invoice.securityDepositWaiver.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                </tr>
-              `
         }
 
         // Show ID charges if any

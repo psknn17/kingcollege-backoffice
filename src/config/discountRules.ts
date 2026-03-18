@@ -175,7 +175,6 @@ export const INVOICE_ITEM_ORDER = [
 export const INVOICE_COLORS = {
   regularItems: "text-black",           // รายการปกติ
   newStudentFees: "text-orange-600",    // ค่าธรรมเนียมเด็กใหม่
-  securityDepositWaiver: "text-purple-700", // Security Deposit Waiver
   discounts: "text-green-700",          // ส่วนลด
   idCharges: "text-orange-600",         // ID Charges
 }

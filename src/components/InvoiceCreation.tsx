@@ -323,7 +323,6 @@ interface SavedInvoice {
   // New student fields
   isNewStudent?: boolean
   registrationFees?: { name: string, amount: number }[]
-  securityDepositWaiver?: number
   // Excel export fields
   familyCode?: string
   adultIdNo?: string // Parent's national ID or Family Code
@@ -1314,13 +1313,6 @@ interface InvoiceStudent {
     scholarship: boolean
     earlyBird: boolean
   }
-  // Fee Waiver information
-  feeWaiver?: {
-    eligible: boolean
-    creditPerTerm: number
-    termsRemaining: number // 0-3, when 0 means completed
-    reason: string
-  }
 }
 
 export function InvoiceCreation({ defaultCategory, invoiceType = "student", category = "tuition", onNavigateToEmailSending, onNavigateBack, editInvoice }: InvoiceCreationProps) {
@@ -1351,7 +1343,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const { getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
 
   // Student context
-  const { students, addStudent, families, addFamily, checkFeePrivilegeEligibility } = useStudents()
+  const { students, addStudent, families, addFamily } = useStudents()
   const { academicYears } = useAcademicYears()
 
   // Auth context for role-based access control
@@ -1409,8 +1401,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             staffChild: false,
             scholarship: false,
             earlyBird: false
-          },
-          feeWaiver: undefined
+          }
         } as InvoiceStudent
       }
 
@@ -1426,18 +1417,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const staffChild = isStaffChildStudent(student.studentId) || notes.includes('staff')
       const scholarship = hasScholarshipDiscount(student.studentId) || notes.includes('scholarship')
       const earlyBird = hasEarlyBirdDiscount(student.studentId) || notes.includes('early bird')
-
-      // Calculate Fee Waiver eligibility (same logic as Family Groups)
-      // Pass current invoice term (not enrollment term) to check if eligible NOW
-      const feeWaiverEligibility = checkFeePrivilegeEligibility(
-        student,
-        effectiveAcademicYear,  // Current academic year for invoice
-        effectiveTerm           // Current term for invoice
-      )
-
-      // Default to 3 terms remaining for eligible students
-      // In production, this should be tracked in database
-      const termsRemaining = feeWaiverEligibility.eligible ? 3 : 0
 
         // Recipient Email Logic: Priority 1: Family Email, Priority 2: First Parent Email
         const family = families.find(f => f.id === student.familyId)
@@ -1466,15 +1445,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           scholarship,
           earlyBird
         },
-        feeWaiver: feeWaiverEligibility.eligible && termsRemaining > 0 ? {
-          eligible: true,
-          creditPerTerm: feeWaiverEligibility.creditPerTerm || 75000,
-          termsRemaining,
-          reason: feeWaiverEligibility.reason
-        } : undefined
       } as InvoiceStudent
     })
-  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, checkFeePrivilegeEligibility, getSiblingDiscountPercentage, getStudentGroupDiscounts, category])
+  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, getSiblingDiscountPercentage, getStudentGroupDiscounts, category])
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
@@ -1516,17 +1489,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         "Tuition")
   )
 
-  // Update selected students' feeWaiver and discounts when term/year changes
+  // Update selected students' discounts when term/year changes
   useEffect(() => {
     if (selectedStudents.length > 0 && availableStudents.length > 0) {
       const updatedStudents = selectedStudents.map(selected => {
         // Find the updated version from availableStudents
         const updated = availableStudents.find(a => a.id === selected.id)
         if (updated) {
-          // Update feeWaiver and all discounts from the recalculated availableStudents
+          // Update discounts from the recalculated availableStudents
           return {
             ...selected,
-            feeWaiver: updated.feeWaiver,
             discounts: updated.discounts
           }
         }
@@ -1534,7 +1506,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       })
       // Only update if there are actual changes
       const hasChanges = updatedStudents.some((s, i) =>
-        s.feeWaiver?.eligible !== selectedStudents[i]?.feeWaiver?.eligible ||
         (s.discounts?.siblingDiscount ?? 0) !== (selectedStudents[i]?.discounts?.siblingDiscount ?? 0) ||
         (s.discounts?.studentGroupDiscounts?.length ?? 0) !== (selectedStudents[i]?.discounts?.studentGroupDiscounts?.length ?? 0)
       )
@@ -1704,8 +1675,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             staffChild: isStaffChildStudent(editInvoice.studentId),
             scholarship: hasScholarshipDiscount(editInvoice.studentId),
             earlyBird: hasEarlyBirdDiscount(editInvoice.studentId)
-          },
-          feeWaiver: editInvoice.feeWaiver
+          }
         }
         setSelectedStudents([student])
       }
@@ -2928,15 +2898,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         }
       }
 
-      // Calculate Security Deposit Fee Waiver (for new students eligible for fee waiver)
-      const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
-        invoiceStudent.feeWaiver?.eligible &&
-        fees.securityDeposit > 0
-        ? fees.securityDeposit
-        : 0
-
       // ID Charges removed - no longer applicable
-      const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
+      const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal
 
       // Add line numbers and itemCode to items
       const itemsWithLineNumbers = selectedItems.map((item, index) => ({
@@ -2975,7 +2938,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         // New student data
         isNewStudent: invoiceStudent.isNewStudent,
         registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
-        securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
         // Excel export fields
         familyCode: invoiceStudent.originalStudent?.familyCode || '',
         adultIdNo: invoiceStudent.originalStudent?.parents?.find((p: any) => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
@@ -3119,15 +3081,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           }
         }
 
-        // Calculate Security Deposit Fee Waiver (for new students eligible for fee waiver)
-        const securityDepositWaiverAmount = invoiceStudent.isNewStudent &&
-          invoiceStudent.feeWaiver?.eligible &&
-          fees.securityDeposit > 0
-          ? fees.securityDeposit
-          : 0
-
         // ID Charges removed - no longer applicable
-        const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal - securityDepositWaiverAmount
+        const subtotalBeforeIdCharges = subtotal - discountCalc.totalDiscountAmount + registrationFeesTotal
 
         // Add line numbers and itemCode to items
         const itemsWithLineNumbers = selectedItems.map((item, index) => ({
@@ -3167,7 +3122,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           // New student data
           isNewStudent: invoiceStudent.isNewStudent,
           registrationFees: registrationFeesList.length > 0 ? registrationFeesList : undefined,
-          securityDepositWaiver: securityDepositWaiverAmount > 0 ? securityDepositWaiverAmount : undefined,
           // Excel export fields
           familyCode: invoiceStudent.originalStudent?.familyCode || '',
           adultIdNo: invoiceStudent.originalStudent?.parents?.find((p: any) => p.isPrimary)?.nationalId || invoiceStudent.originalStudent?.familyCode || '',
@@ -5108,15 +5062,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   const issueDate = null as (Date | null) // Will be set on approval
                   const dueDate = paymentDeadline || null
 
-                  // Security Deposit Fee Waiver (for new students who are eligible for fee waiver)
-                  const securityDepositWaiver = currentStudent.isNewStudent &&
-                    currentStudent.feeWaiver?.eligible &&
-                    fees.securityDeposit > 0
-                    ? fees.securityDeposit
-                    : 0
-
                   // Calculate final total (ID Charges removed)
-                  const finalTotal = Math.max(0, discountCalc.netAmount + registrationFeesTotal - securityDepositWaiver)
+                  const finalTotal = Math.max(0, discountCalc.netAmount + registrationFeesTotal)
 
                   return (
                     <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
@@ -5226,17 +5173,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             ))}
 
 
-                            {/* Adjustment/Discount Section */}
-                            {securityDepositWaiver > 0 && (
-                              <tr className="border-b border-gray-200 text-purple-700">
-                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + 1}</td>
-                                <td className="py-1.5 px-2">Security Deposit Waiver</td>
-                                <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(securityDepositWaiver)}</td>
-                              </tr>
-                            )}
+                            {/* Discount Section */}
                             {discountCalc.discountItems.map((discount, idx) => (
                               <tr key={`discount-${idx}`} className="border-b border-gray-200 text-green-700">
-                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + (securityDepositWaiver > 0 ? 1 : 0) + idx + 1}</td>
+                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + idx + 1}</td>
                                 <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
                                   {discount.name} {discount.percentage ? `(${discount.percentage}%)` : ''}
                                 </td>

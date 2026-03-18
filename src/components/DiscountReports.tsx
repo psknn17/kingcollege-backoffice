@@ -38,30 +38,6 @@ const STUDENT_GROUPS_STORAGE_KEY = "studentGroups"
 const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
 const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
 const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
-const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
-
-// Get fee waiver terms used from invoices for a student
-const getFeeWaiverTermsFromInvoices = (studentId: string): number => {
-  try {
-    const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
-    if (!stored) return 0
-    const invoices = JSON.parse(stored)
-
-    // Count invoices for this student that have Registration Fee Waiver in discounts
-    const waiverInvoices = invoices.filter((inv: any) =>
-      inv.studentId === studentId &&
-      inv.discounts?.some((d: any) =>
-        d.name?.toLowerCase().includes('registration fee waiver') ||
-        d.name?.toLowerCase().includes('fee waiver')
-      )
-    )
-
-    return waiverInvoices.length
-  } catch {
-    return 0
-  }
-}
-
 // Helper functions to check discount types from localStorage (same as StudentList)
 const hasScholarshipDiscount = (studentId: string): boolean => {
   try {
@@ -138,15 +114,12 @@ const getStudentGroupDiscounts = (studentId: string): { name: string; discountTy
 
 // Discount item interface
 interface DiscountItem {
-  type: "sibling" | "scholarship" | "staff" | "early_bird" | "group" | "campaign" | "fee_waiver" | "school_bus"
+  type: "sibling" | "scholarship" | "staff" | "early_bird" | "group" | "campaign" | "school_bus"
   name: string
   mode: "percentage" | "fixed"
   value: number  // percentage value or fixed amount
   amount: number // calculated discount amount
   appliedTo: string[]
-  // For fee waiver - track terms
-  termsUsed?: number    // จำนวนเทอมที่ได้รับคืนไปแล้ว
-  totalTerms?: number   // จำนวนเทอมทั้งหมดที่มีสิทธิ์ได้รับ
 }
 
 // Sample student discount data
@@ -168,15 +141,14 @@ const discountTypeStyles: Record<string, React.CSSProperties> = {
   staff: { backgroundColor: "#dcfce7", color: "#166534", borderColor: "#bbf7d0" },
   early_bird: { backgroundColor: "#ffedd5", color: "#9a3412", borderColor: "#fed7aa" },
   group: { backgroundColor: "#fce7f3", color: "#9d174d", borderColor: "#fbcfe8" },
-  campaign: { backgroundColor: "#cffafe", color: "#0e7490", borderColor: "#a5f3fc" },
-  fee_waiver: { backgroundColor: "#fef9c3", color: "#a16207", borderColor: "#fef08a" }
+  campaign: { backgroundColor: "#cffafe", color: "#0e7490", borderColor: "#a5f3fc" }
 }
 
 export function DiscountReports() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
-  const { students, families, getSiblingDiscount, checkFeePrivilegeEligibility } = useStudents()
+  const { students, families, getSiblingDiscount } = useStudents()
   const { getSiblingDiscountPercentage } = useDiscountOptions()
   const { academicYears: academicYearsFromContext } = useAcademicYears()
 
@@ -189,7 +161,6 @@ export function DiscountReports() {
       early_bird: t("discountReports.earlyBird"),
       group: t("discountReports.group"),
       campaign: t("discountReports.campaign"),
-      fee_waiver: t("discountReports.feeWaiver"),
       school_bus: "School Bus Discount"
     }
     return labelMap[type] || type
@@ -708,11 +679,6 @@ export function DiscountReports() {
                               <span className="text-green-600 font-medium">
                                 {d.mode === "percentage" ? `${d.value}%` : formatCurrency(d.value)}
                               </span>
-                              {d.type === "fee_waiver" && d.termsUsed !== undefined && d.totalTerms !== undefined && (
-                                <span className="text-blue-600 ml-1">
-                                  ({d.termsUsed}/{d.totalTerms} {t("discountReports.terms") || "terms"})
-                                </span>
-                              )}
                             </div>
                           ))}
                         </div>

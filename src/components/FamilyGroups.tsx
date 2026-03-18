@@ -74,7 +74,6 @@ export function FamilyGroups() {
     updateFamily,
     deleteFamily,
     getStudentsByFamily,
-    checkFeePrivilegeEligibility,
     updateStudent
   } = useStudents()
 
