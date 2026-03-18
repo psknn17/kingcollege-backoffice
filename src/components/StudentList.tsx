@@ -234,7 +234,7 @@ interface StudentListProps {
 
 export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { t } = useLanguage()
-  const { students, families, addStudent, updateStudent, deleteStudent, addFamily, updateFamily, checkFeePrivilegeEligibility } = useStudents()
+  const { students, families, addStudent, updateStudent, deleteStudent, addFamily, updateFamily } = useStudents()
   const { academicYears } = useAcademicYears()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
@@ -2099,21 +2099,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     <TableCell align="left">
                       {(() => {
                         const discounts: any[] = []
-                        const feeWaiver = checkFeePrivilegeEligibility(student, student.academicYear, student.enrollmentTerm)
                         const groupDiscounts = getStudentGroupDiscounts(student.studentId)
                         // Check for special discounts from localStorage records (fallback to notes)
                         const isStaff = isStaffChildStudent(student.studentId) || student.notes?.toLowerCase().includes('staff')
                         const hasScholarship = hasScholarshipDiscount(student.studentId) || student.notes?.toLowerCase().includes('scholarship')
                         const hasEarlyBird = hasEarlyBirdDiscount(student.studentId) || student.notes?.toLowerCase().includes('early bird')
-
-                        // Fee Waiver (only show if eligible)
-                        if (feeWaiver.eligible) {
-                          discounts.push(
-                            <Badge key="waiver" className="bg-indigo-100 text-indigo-800 text-xs">
-                              {t("student.waiver")} ฿{(feeWaiver.creditPerTerm || 0).toLocaleString()}
-                            </Badge>
-                          )
-                        }
 
                         // Staff Child
                         if (isStaff) {
@@ -2331,35 +2321,11 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     </div>
                   )}
 
-                  {/* Registration Fee Waiver (only show if eligible) */}
-                  {(() => {
-                    const eligibility = checkFeePrivilegeEligibility(
-                      selectedStudent,
-                      selectedStudent.academicYear,
-                      selectedStudent.enrollmentTerm
-                    )
-                    if (eligibility.eligible) {
-                      return (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>{t("student.registrationFeeWaiver")}</span>
-                            <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">
-                              ฿{eligibility.creditPerTerm?.toLocaleString()}/{t("student.term")}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-indigo-600">{eligibility.reason}</p>
-                        </div>
-                      )
-                    }
-                    return null
-                  })()}
-
                   {/* No discounts message */}
                   {getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
                     !(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) &&
                     !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
-                    !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) &&
-                    !checkFeePrivilegeEligibility(selectedStudent, selectedStudent.academicYear, selectedStudent.enrollmentTerm).eligible && (
+                    !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
                       <span className="text-sm text-muted-foreground">{t("student.noDiscountsApplied")}</span>
                     )}
                 </div>

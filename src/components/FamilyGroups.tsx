@@ -720,19 +720,8 @@ export function FamilyGroups() {
                                   <div className="flex flex-wrap justify-center gap-1">
                                     {(() => {
                                       const badges = []
-                                      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-                                      const feeWaiver = checkFeePrivilegeEligibility(student, student.academicYear, student.enrollmentTerm)
-
-                                      // Fee Waiver Badge
-                                      if (feeWaiver.eligible) {
-                                        badges.push(
-                                          <Badge key="waiver" className="bg-indigo-100 text-indigo-800 text-[10px] py-0 h-5">
-                                            {t("student.waiver")} ฿{(feeWaiver.creditPerTerm || 0).toLocaleString()}
-                                          </Badge>
-                                        )
-                                      }
-
                                       // Group Discounts Badges
+                                      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
                                       groupDiscounts.forEach((d, i) => {
                                         badges.push(
                                           <Badge key={`group-${i}`} className="bg-green-100 text-green-800 text-[10px] py-0 h-5">
