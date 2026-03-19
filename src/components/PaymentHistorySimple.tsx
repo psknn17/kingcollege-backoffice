@@ -13,6 +13,7 @@ import { PaginationBar } from "./ui/pagination-bar"
 import { format } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { cn } from "./ui/utils"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -28,6 +29,7 @@ interface PaymentRecord {
   amount: number
   term: string
   paymentMethod: string
+  module: string // tuition, eca, trip, exam, bus, external
   status: "paid" | "partial" | "unpaid" | "cancelled" | "overdue"
   transactionDate: Date
   paymentProofs?: { name: string; dataUrl: string }[]
@@ -46,6 +48,7 @@ const mockPayments: PaymentRecord[] = [
     amount: 42000,
     term: "Term 1",
     paymentMethod: "Credit Card",
+    module: "tuition",
     status: "paid",
     transactionDate: new Date("2025-08-15T09:34:25")
   },
@@ -60,6 +63,7 @@ const mockPayments: PaymentRecord[] = [
     amount: 42000,
     term: "Term 1",
     paymentMethod: "Bank Transfer",
+    module: "eca",
     status: "paid",
     transactionDate: new Date("2025-08-16T10:15:30")
   },
@@ -74,6 +78,7 @@ const mockPayments: PaymentRecord[] = [
     amount: 42000,
     term: "Term 1",
     paymentMethod: "Cash",
+    module: "tuition",
     status: "partial",
     transactionDate: new Date("2025-08-17T14:30:22")
   }
@@ -88,6 +93,7 @@ export function PaymentHistorySimple() {
   const [termFilter, setTermFilter] = useState("all")
   const [academicYearFilter, setAcademicYearFilter] = useState<string>("all")
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all")
+  const [moduleFilter, setModuleFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
   const [viewingPaymentProof, setViewingPaymentProof] = useState<PaymentRecord | null>(null)
@@ -129,6 +135,7 @@ export function PaymentHistorySimple() {
                 amount: inv.netAmount || inv.finalAmount || inv.subtotal || 0,
                 term: inv.term || "-",
                 paymentMethod: inv.paymentMethod || "-",
+                module: inv.category || inv.invoiceType || "tuition",
                 status: "paid" as const,
                 transactionDate: paidDate,
                 paymentProofs: inv.paymentProofs || []
@@ -165,11 +172,12 @@ export function PaymentHistorySimple() {
     const matchesTerm = termFilter === "all" || payment.term.includes(termFilter)
     const matchesAcademicYear = academicYearFilter === "all" || true // Would need academic year field
     const matchesPaymentMethod = paymentMethodFilter === "all" || payment.paymentMethod === paymentMethodFilter
+    const matchesModule = moduleFilter === "all" || payment.module === moduleFilter
 
     const matchesDateFrom = !dateFrom || payment.transactionDate >= dateFrom
     const matchesDateTo = !dateTo || payment.transactionDate <= dateTo
 
-    return matchesSearch && matchesStatus && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesDateFrom && matchesDateTo
+    return matchesSearch && matchesStatus && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesModule && matchesDateFrom && matchesDateTo
   })
 
   const sortedPayments = useMemo(() => {
@@ -208,6 +216,10 @@ export function PaymentHistorySimple() {
         case "email":
           aVal = a.email
           bVal = b.email
+          break
+        case "module":
+          aVal = a.module
+          bVal = b.module
           break
         default:
           return 0
@@ -266,7 +278,47 @@ export function PaymentHistorySimple() {
   }
 
   const exportData = () => {
-    console.log("Exporting data...")
+    if (filteredPayments.length === 0) {
+      toast.error("No data to export")
+      return
+    }
+
+    const headers = [
+      "Timestamp",
+      "Reference Order",
+      "Student Name",
+      "Student ID",
+      "Year Group",
+      "Amount (THB)",
+      "Term",
+      "Status",
+      "Module",
+      "Payment Method",
+      "Email"
+    ]
+
+    const dataRows = filteredPayments.map(payment => [
+      format(payment.transactionDate, "dd-MM-yyyy HH:mm:ss"),
+      payment.referenceOrder || "",
+      payment.studentName,
+      payment.studentId,
+      payment.studentGrade,
+      payment.amount,
+      payment.term,
+      payment.status.charAt(0).toUpperCase() + payment.status.slice(1),
+      (payment.module || "tuition").charAt(0).toUpperCase() + (payment.module || "tuition").slice(1),
+      payment.paymentMethod,
+      payment.email || ""
+    ])
+
+    const currentDate = format(new Date(), "yyyy-MM-dd")
+    const filename = `payment-history-${currentDate}`
+    downloadAsXlsx(headers, dataRows, filename)
+
+    toast.success(`Exported ${filteredPayments.length} records`, {
+      description: `File: ${filename}.xlsx`,
+      duration: 4000,
+    })
   }
 
   return (
@@ -306,6 +358,7 @@ export function PaymentHistorySimple() {
                   setTermFilter("all")
                   setAcademicYearFilter("all")
                   setPaymentMethodFilter("all")
+                  setModuleFilter("all")
                   setDateFrom(undefined)
                   setDateTo(undefined)
                   toast.success(t("common.filtersCleared"))
@@ -406,8 +459,8 @@ export function PaymentHistorySimple() {
             </div>
           </div>
 
-          {/* Row 2: Term, Academic Year, Payment Method */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Row 2: Term, Academic Year, Payment Method, Module */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Term */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("payment.term")}</label>
@@ -454,6 +507,25 @@ export function PaymentHistorySimple() {
                   <SelectItem value="cashier-check">Cashier's Cheque</SelectItem>
                   <SelectItem value="qr">QR Payment</SelectItem>
                   <SelectItem value="bank-counter">Bank Counter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Module */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Module</label>
+              <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Modules" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  <SelectItem value="tuition">Tuition</SelectItem>
+                  <SelectItem value="eca">ECA</SelectItem>
+                  <SelectItem value="trip">Trip & Activity</SelectItem>
+                  <SelectItem value="exam">Exam</SelectItem>
+                  <SelectItem value="bus">School Bus</SelectItem>
+                  <SelectItem value="external">External</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -549,6 +621,9 @@ export function PaymentHistorySimple() {
                 <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
                   <div className="flex items-center gap-1 justify-center">{t("common.status")} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("module")}>
+                  <div className="flex items-center gap-1 justify-center">Module <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
                   <div className="flex items-center gap-1">Method <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -561,7 +636,7 @@ export function PaymentHistorySimple() {
             <TableBody>
               {filteredPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     No records found
                   </TableCell>
                 </TableRow>
@@ -589,6 +664,25 @@ export function PaymentHistorySimple() {
                     <TableCell align="right">{payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     {/* Status badge alignment */}
                     <TableCell align="center">{getStatusBadge(payment.status)}</TableCell>
+                    {/* Module badge alignment */}
+                    <TableCell align="center">
+                      {(() => {
+                        const moduleLabels: Record<string, { label: string; bg: string; text: string }> = {
+                          tuition: { label: "Tuition", bg: "bg-blue-100", text: "text-blue-800" },
+                          eca: { label: "ECA", bg: "bg-purple-100", text: "text-purple-800" },
+                          trip: { label: "Trip", bg: "bg-orange-100", text: "text-orange-800" },
+                          exam: { label: "Exam", bg: "bg-cyan-100", text: "text-cyan-800" },
+                          bus: { label: "Bus", bg: "bg-amber-100", text: "text-amber-800" },
+                          external: { label: "External", bg: "bg-gray-100", text: "text-gray-800" },
+                          student: { label: "Tuition", bg: "bg-blue-100", text: "text-blue-800" },
+                          afterschool: { label: "ECA", bg: "bg-purple-100", text: "text-purple-800" },
+                          event: { label: "Trip", bg: "bg-orange-100", text: "text-orange-800" },
+                          summer: { label: "Summer", bg: "bg-green-100", text: "text-green-800" },
+                        }
+                        const m = moduleLabels[payment.module] || { label: payment.module || "-", bg: "bg-gray-100", text: "text-gray-800" }
+                        return <Badge className={`${m.bg} ${m.text} border-0`}>{m.label}</Badge>
+                      })()}
+                    </TableCell>
                     {/* Text alignment */}
                     <TableCell align="left">{payment.paymentMethod}</TableCell>
                     {/* Text alignment */}
@@ -599,7 +693,6 @@ export function PaymentHistorySimple() {
                         size="sm"
                         variant="ghost"
                         onClick={() => setViewingPaymentProof(payment)}
-                        disabled={!payment.paymentProofs || payment.paymentProofs.length === 0}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -623,7 +716,7 @@ export function PaymentHistorySimple() {
       <Dialog open={!!viewingPaymentProof} onOpenChange={() => setViewingPaymentProof(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-8">
           <DialogHeader className="pb-6">
-            <DialogTitle className="text-xl">Payment Proof - {viewingPaymentProof?.invoiceNumber}</DialogTitle>
+            <DialogTitle className="text-xl">Payment Details - {viewingPaymentProof?.invoiceNumber}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 px-2">
             {/* Payment Details Card */}
@@ -639,6 +732,14 @@ export function PaymentHistorySimple() {
                     <span className="font-medium">{viewingPaymentProof?.studentId}</span>
                   </div>
                   <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Year Group</span>
+                    <span className="font-medium">{viewingPaymentProof?.studentGrade}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Module</span>
+                    <span className="font-medium capitalize">{viewingPaymentProof?.module || "-"}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
                     <span className="text-xs text-muted-foreground uppercase">Amount</span>
                     <span className="font-medium text-lg text-green-600">฿{viewingPaymentProof?.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
@@ -649,6 +750,18 @@ export function PaymentHistorySimple() {
                   <div className="flex flex-col space-y-1">
                     <span className="text-xs text-muted-foreground uppercase">Transaction Date</span>
                     <span className="font-medium">{viewingPaymentProof?.transactionDate && format(viewingPaymentProof.transactionDate, "dd/MM/yyyy HH:mm")}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Reference Order</span>
+                    <span className="font-medium font-mono text-sm">{viewingPaymentProof?.referenceOrder}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Term</span>
+                    <span className="font-medium">{viewingPaymentProof?.term}</span>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">Email</span>
+                    <span className="font-medium">{viewingPaymentProof?.email}</span>
                   </div>
                 </div>
               </CardContent>

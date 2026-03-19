@@ -28,6 +28,7 @@ import { PaginationBar } from "./ui/pagination-bar"
 interface CreditNote {
   id: string
   creditNoteNumber: string
+  noteType: "CN" | "OP" // CN = Credit Note, OP = Overpayment
   invoiceNumber: string
   studentName: string
   studentId: string
@@ -36,7 +37,7 @@ interface CreditNote {
   originalAmount: number
   creditAmount: number
   reason: string
-  type: "refund" | "adjustment" | "cancellation" | "discount"
+  type: "refund" | "adjustment" | "cancellation" | "discount" | "overpayment"
   status: "draft" | "issued" | "applied" | "cancelled"
   issueDate: Date
   dueDate?: Date
@@ -58,6 +59,7 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
       const parsed = JSON.parse(stored)
       const loaded = parsed.map((cn: any) => ({
         ...cn,
+        noteType: cn.noteType || (cn.creditNoteNumber?.startsWith("OP-") ? "OP" : "CN"),
         issueDate: new Date(cn.issueDate),
         dueDate: cn.dueDate ? new Date(cn.dueDate) : undefined,
         appliedDate: cn.appliedDate ? new Date(cn.appliedDate) : undefined
@@ -92,18 +94,18 @@ const loadInvoicesFromStorage = () => {
   return []
 }
 
-// Generate Credit Note Number
-const generateCreditNoteNumber = (existingNotes: CreditNote[]): string => {
+// Generate Credit Note Number with prefix (CN or OP)
+const generateCreditNoteNumber = (existingNotes: CreditNote[], prefix: "CN" | "OP" = "CN"): string => {
   const year = new Date().getFullYear()
   const existingNumbers = existingNotes
-    .filter(cn => cn.creditNoteNumber.includes(`CN-${year}`))
+    .filter(cn => cn.creditNoteNumber.startsWith(`${prefix}-${year}`))
     .map(cn => {
-      const match = cn.creditNoteNumber.match(/CN-\d{4}-(\d+)/)
+      const match = cn.creditNoteNumber.match(new RegExp(`${prefix}-\\d{4}-(\\d+)`))
       return match ? parseInt(match[1]) : 0
     })
   const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0
   const nextNumber = (maxNumber + 1).toString().padStart(6, '0')
-  return `CN-${year}-${nextNumber}`
+  return `${prefix}-${year}-${nextNumber}`
 }
 
 export function CreditNoteManagement() {
@@ -118,6 +120,7 @@ export function CreditNoteManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [noteTypeFilter, setNoteTypeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [selectedCreditNote, setSelectedCreditNote] = useState<CreditNote | null>(null)
@@ -197,6 +200,7 @@ export function CreditNoteManagement() {
   // Create new credit note form state
   const [newCreditNote, setNewCreditNote] = useState({
     selectedInvoiceId: "",
+    noteType: "CN" as "CN" | "OP",
     invoiceNumber: "",
     studentName: "",
     studentId: "",
@@ -258,6 +262,10 @@ export function CreditNoteManagement() {
       filtered = filtered.filter(cn => cn.type === typeFilter)
     }
 
+    if (noteTypeFilter !== "all") {
+      filtered = filtered.filter(cn => (cn.noteType || "CN") === noteTypeFilter)
+    }
+
     if (dateFrom) {
       filtered = filtered.filter(cn => cn.issueDate >= dateFrom)
     }
@@ -273,6 +281,7 @@ export function CreditNoteManagement() {
     setSearchTerm("")
     setStatusFilter("all")
     setTypeFilter("all")
+    setNoteTypeFilter("all")
     setDateFrom(null)
     setDateTo(null)
     setFilteredCreditNotes(creditNotes)
@@ -294,6 +303,7 @@ export function CreditNoteManagement() {
     setIsCreateModalOpen(true)
     setNewCreditNote({
       selectedInvoiceId: "",
+      noteType: "CN",
       invoiceNumber: "",
       studentName: "",
       studentId: "",
@@ -328,9 +338,11 @@ export function CreditNoteManagement() {
       return
     }
 
+    const noteType = newCreditNote.noteType
     const newNote: CreditNote = {
       id: Date.now().toString(),
-      creditNoteNumber: generateCreditNoteNumber(creditNotes),
+      creditNoteNumber: generateCreditNoteNumber(creditNotes, noteType),
+      noteType: noteType,
       invoiceNumber: newCreditNote.invoiceNumber,
       studentName: newCreditNote.studentName,
       studentId: newCreditNote.studentId,
@@ -339,7 +351,7 @@ export function CreditNoteManagement() {
       originalAmount: newCreditNote.originalAmount,
       creditAmount: creditAmount,
       reason: newCreditNote.reason,
-      type: newCreditNote.type,
+      type: noteType === "OP" ? "overpayment" : newCreditNote.type,
       status: "issued",
       issueDate: new Date(),
       issuedBy: "Finance Team",
@@ -398,6 +410,8 @@ export function CreditNoteManagement() {
         return <Badge className="bg-red-100 text-red-800">{t("creditNote.cancellation")}</Badge>
       case "discount":
         return <Badge className="bg-green-100 text-green-800">{t("creditNote.discount")}</Badge>
+      case "overpayment":
+        return <Badge className="bg-amber-100 text-amber-800">{t("creditNote.overpayment") || "Overpayment"}</Badge>
       default:
         return <Badge variant="secondary">{type}</Badge>
     }
@@ -483,7 +497,7 @@ export function CreditNoteManagement() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, typeFilter, dateFrom, dateTo, sortColumn, sortDirection])
+  }, [searchTerm, statusFilter, typeFilter, noteTypeFilter, dateFrom, dateTo, sortColumn, sortDirection])
 
   // --- Import helpers ---
   const parseImportDate = (value: any): Date => {
@@ -912,17 +926,15 @@ export function CreditNoteManagement() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoiceOverview.type")}</label>
-                    <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
+                    <label className="text-sm font-medium text-muted-foreground">{t("creditNote.noteTypeLabel") || "Note Type"}</label>
+                    <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter} disabled={!userCanEdit}>
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{t("creditNote.allTypes")}</SelectItem>
-                        <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
-                        <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
-                        <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
-                        <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
+                        <SelectItem value="CN">{t("creditNote.typeCN") || "CN - Credit Note"}</SelectItem>
+                        <SelectItem value="OP">{t("creditNote.typeOP") || "OP - Overpayment"}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -989,6 +1001,8 @@ export function CreditNoteManagement() {
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
+                      {/* Type - badge/center */}
+                      <TableHead align="center">{t("creditNote.noteTypeLabel") || "Type"}</TableHead>
                       {/* Date - date/left */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
                         <div className="flex items-center gap-1">
@@ -1029,6 +1043,14 @@ export function CreditNoteManagement() {
                         {/* Credit Note # - text/left */}
                         <TableCell align="left" className="font-mono text-sm">
                           {creditNote.creditNoteNumber}
+                        </TableCell>
+                        {/* Type - badge/center */}
+                        <TableCell align="center">
+                          {(creditNote.noteType || "CN") === "OP" ? (
+                            <Badge className="bg-amber-100 text-amber-800">OP</Badge>
+                          ) : (
+                            <Badge className="bg-blue-100 text-blue-800">CN</Badge>
+                          )}
                         </TableCell>
                         {/* Date - date/left */}
                         <TableCell align="left">{format(creditNote.issueDate, "dd MMM yyyy")}</TableCell>
@@ -1257,6 +1279,35 @@ export function CreditNoteManagement() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Note Type Selection (CN / OP) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("creditNote.noteTypeLabel") || "Note Type"} <span className="text-destructive">*</span></label>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={newCreditNote.noteType === "CN" ? "default" : "outline"}
+                  className={`flex-1 h-12 ${newCreditNote.noteType === "CN" ? "" : ""}`}
+                  onClick={() => setNewCreditNote({ ...newCreditNote, noteType: "CN", type: "refund" })}
+                >
+                  <div className="text-center">
+                    <div className="font-semibold">CN - Credit Note</div>
+                    <div className="text-xs opacity-80">{t("creditNote.cnDesc") || "Refund, adjustment, cancellation"}</div>
+                  </div>
+                </Button>
+                <Button
+                  type="button"
+                  variant={newCreditNote.noteType === "OP" ? "default" : "outline"}
+                  className={`flex-1 h-12 ${newCreditNote.noteType === "OP" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                  onClick={() => setNewCreditNote({ ...newCreditNote, noteType: "OP", type: "overpayment" })}
+                >
+                  <div className="text-center">
+                    <div className="font-semibold">OP - Overpayment</div>
+                    <div className="text-xs opacity-80">{t("creditNote.opDesc") || "Parent paid more than required"}</div>
+                  </div>
+                </Button>
+              </div>
+            </div>
+
             {/* Invoice Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium">{t("creditNote.selectInvoiceLabel")} <span className="text-destructive">*</span></label>
@@ -1333,23 +1384,32 @@ export function CreditNoteManagement() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("creditNote.creditTypeLabel")}</label>
-                <Select
-                  value={newCreditNote.type}
-                  onValueChange={(value: CreditNote["type"]) => setNewCreditNote({ ...newCreditNote, type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
-                    <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
-                    <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
-                    <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {newCreditNote.noteType === "CN" ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("creditNote.creditTypeLabel")}</label>
+                  <Select
+                    value={newCreditNote.type}
+                    onValueChange={(value: CreditNote["type"]) => setNewCreditNote({ ...newCreditNote, type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
+                      <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
+                      <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
+                      <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t("creditNote.creditTypeLabel")}</label>
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted/50">
+                    <Badge className="bg-amber-100 text-amber-800">{t("creditNote.overpayment") || "Overpayment"}</Badge>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
