@@ -162,6 +162,25 @@ const SCHOOL_YEARS = ["2024/2025", "2025/2026", "2026/2027"]
 // HELPER FUNCTIONS
 // ========================
 
+const normalizePaymentMethod = (method: string): string => {
+  if (!method || method === "-" || method === "N/A") return "N/A"
+  const m = method.toLowerCase().trim()
+  if (m.startsWith("edc")) return "EDC"
+  if (m.includes("credit") && m.includes("card")) return "Credit Card"
+  if (m.includes("bank") && m.includes("transfer")) return "Bank Transfer"
+  if (m.includes("bank") && m.includes("counter")) return "Cashier's cheque"
+  if (m.includes("wechat")) return "Thai QR"
+  if (m.includes("promptpay")) return "Thai QR"
+  if (m.includes("thai") && m.includes("qr")) return "Thai QR"
+  if (m.includes("qr")) return "Thai QR"
+  if (m.includes("cashier")) return "Cashier's cheque"
+  if (m.includes("cash")) return "Cashier's cheque"
+  if (m.includes("credit note")) return "Credit Note"
+  const validSources = ["Cashier's cheque", "Bank Transfer", "Thai QR", "Credit Card", "EDC"]
+  const found = validSources.find(s => s.toLowerCase() === m)
+  return found || method
+}
+
 const generateReceiptNo = (_menuType: string): string => {
   // Determine academic year start year from current date
   const now = new Date()
@@ -245,7 +264,12 @@ export function ReceiptManagementFlow({
   const [receipts, setReceipts] = useState<ReceiptRecord[]>(() => {
     try {
       const stored = localStorage.getItem(getStorageKey(menuType))
-      return stored ? JSON.parse(stored) : []
+      if (!stored) return []
+      const parsed: ReceiptRecord[] = JSON.parse(stored)
+      return parsed.map(r => ({
+        ...r,
+        paymentMethod: normalizePaymentMethod(r.paymentMethod || "N/A"),
+      }))
     } catch {
       return []
     }

@@ -159,7 +159,7 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         appliedCNAmount: r.invoices?.[0]?.appliedCNAmount || 0,
         appliedCNNumbers: r.invoices?.[0]?.appliedCreditNotes || [],
         outstandingAmount: r.invoices?.[0]?.outstandingAmount || 0,
-        paymentMethod: r.paymentMethod || "N/A",
+        paymentMethod: normalizePaymentMethod(r.paymentMethod || "N/A"),
         paymentChannel: "counter_bank" as const,
         transactionDate: new Date(r.receiptDate || r.createdAt),
         academicYear: academicYear,
@@ -435,6 +435,26 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     { id: "term2", name: "Term 2" },
     { id: "term3", name: "Term 3" }
   ]
+
+  // Normalize payment method to match PAYMENT_SOURCES
+  const normalizePaymentMethod = (method: string): string => {
+    if (!method || method === "-" || method === "N/A") return "N/A"
+    const m = method.toLowerCase().trim()
+    if (m.startsWith("edc")) return "EDC"
+    if (m.includes("credit") && m.includes("card")) return "Credit Card"
+    if (m.includes("bank") && m.includes("transfer")) return "Bank Transfer"
+    if (m.includes("bank") && m.includes("counter")) return "Cashier's cheque"
+    if (m.includes("wechat")) return "Thai QR"
+    if (m.includes("promptpay")) return "Thai QR"
+    if (m.includes("thai") && m.includes("qr")) return "Thai QR"
+    if (m.includes("qr")) return "Thai QR"
+    if (m.includes("cashier")) return "Cashier's cheque"
+    if (m.includes("cash")) return "Cashier's cheque"
+    if (m.includes("credit note")) return "Credit Note"
+    const validSources = ["Cashier's cheque", "Bank Transfer", "Thai QR", "Credit Card", "EDC"]
+    const found = validSources.find(s => s.toLowerCase() === m)
+    return found || method
+  }
 
   // Payment method options from system's accepted payment channels
   const paymentMethodOptions = PAYMENT_SOURCES

@@ -260,11 +260,11 @@ export function ExternalParentsApproval() {
     const complete = Object.values(documents).filter(Boolean).length
 
     if (complete === total) {
-      return <Badge className="bg-green-100 text-green-800">{t("external.complete")} ({complete}/{total})</Badge>
+      return <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>{t("external.complete")} ({complete}/{total})</Badge>
     } else if (complete > 0) {
-      return <Badge className="bg-yellow-100 text-yellow-800">{t("external.partial")} ({complete}/{total})</Badge>
+      return <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>{t("external.partial")} ({complete}/{total})</Badge>
     } else {
-      return <Badge className="bg-red-100 text-red-800">{t("external.incomplete")} ({complete}/{total})</Badge>
+      return <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>{t("external.incomplete")} ({complete}/{total})</Badge>
     }
   }
 

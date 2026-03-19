@@ -13,6 +13,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 // English translations
 const en: Record<string, string> = {
   // App - Sidebar Menu
+  "menu.general": "General",
   "menu.tuition": "Tuition Invoice",
   "menu.tuitionManagement": "Tuition Invoice",
   "menu.dashboard": "Dashboard",
@@ -3952,6 +3953,7 @@ const en: Record<string, string> = {
 // Thai translations
 const th: Record<string, string> = {
   // App - Sidebar Menu
+  "menu.general": "ทั่วไป",
   "menu.tuition": "Tuition Invoice",
   "menu.tuitionManagement": "Tuition Invoice",
   "menu.dashboard": "Dashboard",

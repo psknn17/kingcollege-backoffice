@@ -769,6 +769,7 @@ export function InvoiceManagement({
       filtered = filtered.filter(inv => {
         const paymentStatus = getPaymentStatus(inv)
         if (paymentStatusFilter === "unpaid") return paymentStatus === "unpaid"
+        if (paymentStatusFilter === "partial") return paymentStatus === "partial"
         if (paymentStatusFilter === "paid") return paymentStatus === "paid"
         if (paymentStatusFilter === "overdue") return paymentStatus === "overdue"
         return true
@@ -808,11 +809,11 @@ export function InvoiceManagement({
     }
   }
 
-  const renderSortHeader = (label: string, key: NonNullable<typeof sortKey>) => (
+  const renderSortHeader = (label: string, key: NonNullable<typeof sortKey>, align?: "left" | "center" | "right") => (
     <button
       type="button"
       onClick={() => handleSort(key)}
-      className="flex items-center gap-1 font-medium text-left"
+      className={`flex items-center gap-1 font-medium ${align === "center" ? "justify-center w-full" : align === "right" ? "justify-end w-full" : "text-left"}`}
     >
       <span>{label}</span>
       <ArrowUpDown
@@ -821,6 +822,39 @@ export function InvoiceManagement({
     </button>
   )
 
+  const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "partial" | "overdue" => {
+    if (invoice.status === "paid") return "paid"
+    if (invoice.paymentMethod === "Partial" || invoice.status === ("partial" as any) || (invoice as any).partialPaidAmount > 0) return "partial"
+    if (invoice.paidDate) return "paid"
+    const category = invoice.category || "tuition"
+    let receiptStorageKey = ""
+    if (category === "eca") receiptStorageKey = "receiptRecords_eca"
+    else if (category === "trip") receiptStorageKey = "receiptRecords_trip"
+    else if (category === "exam") receiptStorageKey = "receiptRecords_event"
+    else if (category === "bus") receiptStorageKey = "receiptRecords_summer"
+    else if (category === "external") receiptStorageKey = "receiptRecords_external"
+    else receiptStorageKey = "receiptRecords_tuition"
+    try {
+      const storedReceipts = localStorage.getItem(receiptStorageKey)
+      if (storedReceipts) {
+        const receipts = JSON.parse(storedReceipts)
+        const hasReceipt = receipts.some((receipt: any) =>
+          receipt.invoices?.some((inv: any) => inv.id === invoice.id || inv.invoiceNo === invoice.invoiceNumber)
+        )
+        if (hasReceipt) return "paid"
+      }
+    } catch (error) {
+      console.error("Error checking receipt status:", error)
+    }
+    if (invoice.status === "overdue") return "overdue"
+    const now = new Date()
+    const dueDate = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
+    if (dueDate < now && getApprovalStatus(invoice) !== "wait") {
+      return "overdue"
+    }
+    return "unpaid"
+  }
+
   // Pagination logic
   const totalPages = Math.ceil(filteredInvoices.length / pageSize)
   const sortedInvoices = useMemo(() => {
@@ -828,7 +862,7 @@ export function InvoiceManagement({
     const sorted = [...filteredInvoices]
     const direction = sortDirection === "asc" ? 1 : -1
     const invoiceStatusOrder: Record<ApprovalStatus, number> = { wait: 0, approved: 1, rejected: 2 }
-    const paymentStatusOrder: Record<"unpaid" | "paid" | "overdue", number> = { unpaid: 0, paid: 1, overdue: 2 }
+    const paymentStatusOrder: Record<"unpaid" | "paid" | "partial" | "overdue", number> = { unpaid: 0, partial: 1, paid: 2, overdue: 3 }
     sorted.sort((a, b) => {
       switch (sortKey) {
         case "invoiceNumber":
@@ -3561,58 +3595,17 @@ export function InvoiceManagement({
     return "unsent"
   }
 
-  const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
-    // Check if invoice is marked as paid
-    if (invoice.status === "paid") return "paid"
-
-    // Check if invoice has paid date (payment was recorded)
-    if (invoice.paidDate) return "paid"
-
-    // Check if a receipt exists for this invoice
-    const category = invoice.category || "tuition"
-    let receiptStorageKey = ""
-    if (category === "eca") receiptStorageKey = "receiptRecords_eca"
-    else if (category === "trip") receiptStorageKey = "receiptRecords_trip"
-    else if (category === "exam") receiptStorageKey = "receiptRecords_event"
-    else if (category === "bus") receiptStorageKey = "receiptRecords_summer"
-    else if (category === "external") receiptStorageKey = "receiptRecords_external"
-    else receiptStorageKey = "receiptRecords_tuition"
-
-    try {
-      const storedReceipts = localStorage.getItem(receiptStorageKey)
-      if (storedReceipts) {
-        const receipts = JSON.parse(storedReceipts)
-        const hasReceipt = receipts.some((receipt: any) =>
-          receipt.invoices?.some((inv: any) => inv.id === invoice.id || inv.invoiceNo === invoice.invoiceNumber)
-        )
-        if (hasReceipt) return "paid"
-      }
-    } catch (error) {
-      console.error("Error checking receipt status:", error)
-    }
-
-    // Check if overdue
-    if (invoice.status === "overdue") return "overdue"
-
-    // Check if past due date and not paid
-    const now = new Date()
-    const dueDate = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
-    if (dueDate < now && getApprovalStatus(invoice) !== "wait") {
-      return "overdue"
-    }
-
-    return "unpaid"
-  }
-
-  const getPaymentStatusBadge = (status: "unpaid" | "paid" | "overdue") => {
+  const getPaymentStatusBadge = (status: "unpaid" | "paid" | "partial" | "overdue") => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>
+        return <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>Paid</Badge>
+      case "partial":
+        return <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>Partial</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+        return <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>Overdue</Badge>
       case "unpaid":
       default:
-        return <Badge className="bg-gray-100 text-gray-800">Unpaid</Badge>
+        return <Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>Unpaid</Badge>
     }
   }
 
@@ -3669,8 +3662,9 @@ export function InvoiceManagement({
     approved: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "approved").length,
     rejected: tabFilteredInvoices.filter(inv => getApprovalStatus(inv) === "rejected").length,
     sent: tabFilteredInvoices.filter(inv => getEmailStatus(inv) === "sent").length,
-    paid: tabFilteredInvoices.filter(inv => inv.status === "paid").length,
-    overdue: tabFilteredInvoices.filter(inv => inv.status === "overdue").length,
+    partial: tabFilteredInvoices.filter(inv => getPaymentStatus(inv) === "partial").length,
+    paid: tabFilteredInvoices.filter(inv => getPaymentStatus(inv) === "paid").length,
+    overdue: tabFilteredInvoices.filter(inv => getPaymentStatus(inv) === "overdue").length,
     totalAmount: tabFilteredInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0)
   }
 
@@ -3762,7 +3756,7 @@ export function InvoiceManagement({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">{t("invoice.totalInvoices")}</CardTitle>
@@ -3796,6 +3790,15 @@ export function InvoiceManagement({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{summaryStats.sent}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Partial</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" style={{ color: "#d97706" }}>{summaryStats.partial}</div>
           </CardContent>
         </Card>
 
@@ -3906,9 +3909,10 @@ export function InvoiceManagement({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                          <SelectItem value="unpaid"><Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge></SelectItem>
-                          <SelectItem value="paid"><Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge></SelectItem>
-                          <SelectItem value="overdue"><Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge></SelectItem>
+                          <SelectItem value="unpaid"><Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>Unpaid</Badge></SelectItem>
+                          <SelectItem value="partial"><Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>Partial</Badge></SelectItem>
+                          <SelectItem value="paid"><Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>Paid</Badge></SelectItem>
+                          <SelectItem value="overdue"><Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>Overdue</Badge></SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -4071,9 +4075,10 @@ export function InvoiceManagement({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                          <SelectItem value="unpaid"><Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge></SelectItem>
-                          <SelectItem value="paid"><Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge></SelectItem>
-                          <SelectItem value="overdue"><Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge></SelectItem>
+                          <SelectItem value="unpaid"><Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>Unpaid</Badge></SelectItem>
+                          <SelectItem value="partial"><Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>Partial</Badge></SelectItem>
+                          <SelectItem value="paid"><Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>Paid</Badge></SelectItem>
+                          <SelectItem value="overdue"><Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>Overdue</Badge></SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -4227,7 +4232,7 @@ export function InvoiceManagement({
                     <TableHead align="left">{renderSortHeader(category === "external" ? "Client" : t("invoice.student"), "studentName")}</TableHead>
                     {/* Year Group - CENTER (hidden for external) */}
                     {category !== "external" && (
-                      <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade")}</TableHead>
+                      <TableHead align="center">{renderSortHeader(t("invoice.yearGroup"), "studentGrade", "center")}</TableHead>
                     )}
                     {/* Academic Year - LEFT (hidden for external) */}
                     {category !== "external" && (
@@ -4238,13 +4243,13 @@ export function InvoiceManagement({
                       <TableHead align="left">{renderSortHeader(t("invoice.term"), "term")}</TableHead>
                     )}
                     {/* Amount - RIGHT */}
-                    <TableHead align="right">{renderSortHeader(t("common.amount"), "finalAmount")}</TableHead>
+                    <TableHead align="right">{renderSortHeader(t("common.amount"), "finalAmount", "right")}</TableHead>
                     {/* Approval Status - CENTER */}
-                    <TableHead align="center">{renderSortHeader("Approval Status", "invoiceStatus")}</TableHead>
+                    <TableHead align="center">{renderSortHeader("Approval Status", "invoiceStatus", "center")}</TableHead>
                     {/* Email Status - CENTER */}
-                    <TableHead align="center">{renderSortHeader("Email Status", "emailStatus")}</TableHead>
+                    <TableHead align="center">{renderSortHeader("Email Status", "emailStatus", "center")}</TableHead>
                     {/* Invoice Status - CENTER */}
-                    <TableHead align="center">{renderSortHeader("Invoice Status", "paymentStatus")}</TableHead>
+                    <TableHead align="center">{renderSortHeader("Invoice Status", "paymentStatus", "center")}</TableHead>
                     {/* Issue Date - LEFT */}
                     <TableHead align="left">{renderSortHeader(t("invoice.issueDate"), "issueDate")}</TableHead>
                     {/* Due Date - LEFT */}
@@ -4527,13 +4532,16 @@ export function InvoiceManagement({
                     <SelectContent>
                       <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
                       <SelectItem value="unpaid">
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unpaid</Badge>
+                        <Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>Unpaid</Badge>
+                      </SelectItem>
+                      <SelectItem value="partial">
+                        <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>Partial</Badge>
                       </SelectItem>
                       <SelectItem value="paid">
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+                        <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>Paid</Badge>
                       </SelectItem>
                       <SelectItem value="overdue">
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>
+                        <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>Overdue</Badge>
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -4666,13 +4674,13 @@ export function InvoiceManagement({
                       {/* Description - LEFT */}
                       <TableHead align="left" className="font-semibold">{renderSortHeader("Description", "eventName")}</TableHead>
                       {/* Amount - RIGHT */}
-                      <TableHead align="right" className="font-semibold">{renderSortHeader("Amount", "finalAmount")}</TableHead>
+                      <TableHead align="right" className="font-semibold">{renderSortHeader("Amount", "finalAmount", "right")}</TableHead>
                       {/* Approval - CENTER */}
-                      <TableHead align="center" className="font-semibold">{renderSortHeader("Approval", "invoiceStatus")}</TableHead>
+                      <TableHead align="center" className="font-semibold">{renderSortHeader("Approval", "invoiceStatus", "center")}</TableHead>
                       {/* Email - CENTER */}
-                      <TableHead align="center" className="font-semibold">{renderSortHeader("Email", "emailStatus")}</TableHead>
+                      <TableHead align="center" className="font-semibold">{renderSortHeader("Email", "emailStatus", "center")}</TableHead>
                       {/* Payment - CENTER */}
-                      <TableHead align="center" className="font-semibold">{renderSortHeader("Payment", "paymentStatus")}</TableHead>
+                      <TableHead align="center" className="font-semibold">{renderSortHeader("Payment", "paymentStatus", "center")}</TableHead>
                       {/* Issue Date - LEFT */}
                       <TableHead align="left" className="font-semibold">{renderSortHeader("Issue Date", "issueDate")}</TableHead>
                       {/* Due Date - LEFT */}
@@ -4705,7 +4713,7 @@ export function InvoiceManagement({
                         </TableCell>
                         {/* Description - LEFT */}
                         <TableCell align="left">
-                          <Badge variant="outline">{invoice.eventName || "-"}</Badge>
+                          {invoice.eventName || invoice.items?.[0]?.description || "-"}
                         </TableCell>
                         {/* Amount - RIGHT */}
                         <TableCell align="right" className="font-medium">{getDisplayAmount(invoice).toLocaleString()}</TableCell>

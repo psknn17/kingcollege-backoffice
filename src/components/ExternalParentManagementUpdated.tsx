@@ -306,11 +306,11 @@ export function ExternalParentManagement() {
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">{t("common.paymentStatus.paid")}</Badge>
+        return <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>{t("common.paymentStatus.paid")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.paymentStatus.pending")}</Badge>
+        return <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>{t("common.paymentStatus.pending")}</Badge>
       case "not_paid":
-        return <Badge className="bg-gray-100 text-gray-800">{t("common.paymentStatus.notPaid")}</Badge>
+        return <Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>{t("common.paymentStatus.notPaid")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }

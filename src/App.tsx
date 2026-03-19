@@ -129,17 +129,24 @@ import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
 import { canAccessSection, getAccessibleMenuItems, canAccessMenuItem } from "./utils/rolePermissions"
 const menuItems = {
+  general: [
+    { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
+    { id: "approval-queue", labelKey: "menu.approvalQueue", icon: ClipboardCheck },
+    { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
+    { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
+    { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
+    { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
+    { id: "analytics-dashboard", labelKey: "menu.analytics", icon: TrendingUp },
+    { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
+    { id: "school-settings", labelKey: "menu.schoolSettings", icon: Settings2 },
+    { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
+  ],
   tuition: [
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
     { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
     { id: "tuition-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
-  ],
-  debtReminder: [
-    { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
-    { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
-    { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
   ],
   eca: [
     { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
@@ -176,17 +183,11 @@ const menuItems = {
   userManagement: [
     { id: "user-management", labelKey: "menu.users", icon: UsersRound },
     { id: "activity-log", labelKey: "menu.activityLog", icon: Activity },
-    { id: "approval-queue", labelKey: "menu.approvalQueue", icon: ClipboardCheck },
   ],
   studentManagement: [
     { id: "student-list", labelKey: "menu.studentList", icon: GraduationCap },
     { id: "family-groups", labelKey: "menu.familyGroups", icon: Users },
     { id: "credit-notes", labelKey: "invoice.creditNotes", icon: FileCheck },
-  ],
-  settings: [
-    { id: "school-settings", labelKey: "menu.schoolSettings", icon: Settings2 },
-    { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
-    { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
   ]
 }
 
@@ -230,8 +231,8 @@ export default function App() {
   const getInitialOpenGroups = () => {
     if (user?.role === "approver") {
       return {
+        general: true,
         tuition: false,
-        debtReminder: false,
         eca: false,
         tripActivity: false,
         exam: false,
@@ -240,12 +241,11 @@ export default function App() {
         report: false,
         studentManagement: false,
         userManagement: true,
-        settings: false
       }
     }
     return {
+      general: true,
       tuition: true,
-      debtReminder: false,
       eca: false,
       tripActivity: false,
       exam: false,
@@ -254,7 +254,6 @@ export default function App() {
       report: false,
       studentManagement: false,
       userManagement: false,
-      settings: false
     }
   }
 
@@ -331,46 +330,20 @@ export default function App() {
                 </SidebarHeader>
 
                 <SidebarContent>
-                  {/* Standalone Menus */}
-                  <SidebarGroup>
-                    <SidebarGroupContent>
-                      <SidebarMenu>
-                        {[
-                          { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
-                          { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
-                          { id: "analytics-dashboard", labelKey: "menu.analytics", icon: TrendingUp },
-                        ].map((item) => {
-                          if (!user?.role || !canAccessMenuItem(user.role, item.id)) return null;
-                          return (
-                            <SidebarMenuItem key={item.id}>
-                              <SidebarMenuButton
-                                onClick={() => handleMenuItemClick(item.id)}
-                                isActive={activeSection === item.id}
-                              >
-                                <item.icon className="w-4 h-4" />
-                                <span>{item.id === "student-invoices" ? "Tuition Invoice" : t(item.labelKey)}</span>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          );
-                        })}
-                      </SidebarMenu>
-                    </SidebarGroupContent>
-                  </SidebarGroup>
-
-                  {/* Debt Reminder & Email History */}
-                  {canAccessMenuSection("debtReminder") && (
-                    <Collapsible open={openGroups["debtReminder"]} onOpenChange={() => toggleGroup("debtReminder")}>
+                  {/* General */}
+                  {canAccessMenuSection("general") && (
+                    <Collapsible open={openGroups["general"]} onOpenChange={() => toggleGroup("general")}>
                       <SidebarGroup>
                         <CollapsibleTrigger className="w-full">
                           <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                            {t("menu.debtReminder")}
-                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["debtReminder"] ? "rotate-180" : ""}`} />
+                            {t("menu.general")}
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["general"] ? "rotate-180" : ""}`} />
                           </SidebarGroupLabel>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarGroupContent>
                             <SidebarMenu>
-                              {getFilteredMenuItems("debtReminder").map((item) => (
+                              {getFilteredMenuItems("general").map((item) => (
                                 <SidebarMenuItem key={item.id}>
                                   <SidebarMenuButton
                                     onClick={() => handleMenuItemClick(item.id)}
@@ -619,37 +592,6 @@ export default function App() {
                           <SidebarGroupContent>
                             <SidebarMenu>
                               {getFilteredMenuItems("userManagement").map((item) => (
-                                <SidebarMenuItem key={item.id}>
-                                  <SidebarMenuButton
-                                    onClick={() => handleMenuItemClick(item.id)}
-                                    isActive={activeSection === item.id}
-                                  >
-                                    <item.icon className="w-4 h-4" />
-                                    <span>{t(item.labelKey)}</span>
-                                  </SidebarMenuButton>
-                                </SidebarMenuItem>
-                              ))}
-                            </SidebarMenu>
-                          </SidebarGroupContent>
-                        </CollapsibleContent>
-                      </SidebarGroup>
-                    </Collapsible>
-                  )}
-
-                  {/* Settings */}
-                  {canAccessSection(user?.role || "", "settings") && (
-                    <Collapsible open={openGroups["settings"]} onOpenChange={() => toggleGroup("settings")}>
-                      <SidebarGroup>
-                        <CollapsibleTrigger className="w-full">
-                          <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
-                            {t("menu.settings")}
-                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["settings"] ? "rotate-180" : ""}`} />
-                          </SidebarGroupLabel>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarGroupContent>
-                            <SidebarMenu>
-                              {getFilteredMenuItems("settings").map((item) => (
                                 <SidebarMenuItem key={item.id}>
                                   <SidebarMenuButton
                                     onClick={() => handleMenuItemClick(item.id)}

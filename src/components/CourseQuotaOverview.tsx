@@ -354,11 +354,11 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">{t("common.paid")}</Badge>
+        return <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>{t("common.paid")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
+        return <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>{t("common.pending")}</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">{t("common.overdue")}</Badge>
+        return <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>{t("common.overdue")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }

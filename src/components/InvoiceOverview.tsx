@@ -269,17 +269,17 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">{t("common.paid")}</Badge>
+        return <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>{t("common.paid")}</Badge>
       case "unpaid":
-        return <Badge className="bg-blue-100 text-blue-800">{t("common.unpaid")}</Badge>
+        return <Badge style={{ backgroundColor: "#dbeafe", color: "#1e40af", border: "none" }}>{t("common.unpaid")}</Badge>
       case "sent":
-        return <Badge className="bg-purple-100 text-purple-800">{t("common.sent")}</Badge>
+        return <Badge style={{ backgroundColor: "#f3e8ff", color: "#6b21a8", border: "none" }}>{t("common.sent")}</Badge>
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">{t("common.pending")}</Badge>
+        return <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>{t("common.pending")}</Badge>
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">{t("common.overdue")}</Badge>
+        return <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>{t("common.overdue")}</Badge>
       case "cancelled":
-        return <Badge className="bg-gray-100 text-gray-800">{t("common.cancelled")}</Badge>
+        return <Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>{t("common.cancelled")}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -546,16 +546,16 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 <SelectContent>
                   <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
                   <SelectItem value="paid">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("common.paid")}</Badge>
+                    <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>{t("common.paid")}</Badge>
                   </SelectItem>
                   <SelectItem value="unpaid">
-                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t("common.unpaid")}</Badge>
+                    <Badge style={{ backgroundColor: "#dbeafe", color: "#1e40af", border: "none" }}>{t("common.unpaid")}</Badge>
                   </SelectItem>
                   <SelectItem value="overdue">
-                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("common.overdue")}</Badge>
+                    <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>{t("common.overdue")}</Badge>
                   </SelectItem>
                   <SelectItem value="cancelled">
-                    <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t("common.cancelled")}</Badge>
+                    <Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>{t("common.cancelled")}</Badge>
                   </SelectItem>
                 </SelectContent>
               </Select>

@@ -3,34 +3,26 @@
 export const rolePermissions = {
   super_admin: {
     name: "Admin",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "settings", "userManagement", "studentManagement", "report", "analytics"],
-    menuItems: [] as string[] // Empty means ALL items within allowed sections
+    sections: ["general", "tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "userManagement", "studentManagement", "report", "analytics"],
+    menuItems: [] as string[], // Empty means ALL items within allowed sections
+    excludedMenuItems: [] as string[]
   },
   admin_accountant: {
     name: "Finance Admin",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "settings", "studentManagement", "report", "analytics"],
-    menuItems: []
+    sections: ["general", "tuition", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "studentManagement", "report", "analytics"],
+    menuItems: [],
+    excludedMenuItems: ["approval-queue"]
   },
   viewer: {
     name: "Viewver",
-    sections: ["report", "analytics"],
-    menuItems: [] // Can view all menus (read-only access)
+    sections: ["general", "report", "analytics"],
+    menuItems: ["tuition-dashboard", "analytics-dashboard", "discount-reports"] // Can view dashboard/analytics/reports only
   },
   approver: {
     name: "Approver",
-    sections: ["userManagement"],
+    sections: ["general", "userManagement"],
     menuItems: ["approval-queue"]
   },
-  manager: {
-    name: "Manager",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "studentManagement", "report", "userManagement", "analytics"],
-    menuItems: []
-  },
-  finance_head: {
-    name: "FinanceHead",
-    sections: ["tuition", "debtReminder", "eca", "tripActivity", "exam", "schoolBus", "externalInvoice", "discount", "studentManagement", "report", "userManagement", "settings", "analytics"],
-    menuItems: [] as string[]
-  }
 }
 
 export function canAccessSection(userRole: string, section: string): boolean {
@@ -94,8 +86,6 @@ function normalizeRoleName(role: string): string {
     "Viewver": "viewer",
     "Approvalver": "approver",
     "Approver": "approver",
-    "Manager": "manager",
-    "FinanceHead": "finance_head"
   }
 
   return roleMap[role] || role.toLowerCase().replace(/[\/\s]/g, '_')

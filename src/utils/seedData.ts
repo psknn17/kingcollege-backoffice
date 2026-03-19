@@ -32,7 +32,7 @@ const TUITION: Record<string,number[]> = {
   "year13":[160000,155000,150000]
 }
 
-const PAY_METHODS = ["Credit Card","PromptPay","Bank Transfer","Bank Counter","WeChat Pay"]
+const PAY_METHODS = ["Credit Card","Thai QR","Bank Transfer","Cashier's cheque","EDC"]
 const PAY_CHANNELS: Record<string,string> = {"Credit Card":"credit_card","PromptPay":"qr_payment","Bank Transfer":"counter_bank","Bank Counter":"counter_bank","WeChat Pay":"wechat_pay"}
 
 // ── 1. Families & Students (1600 students) ───────────────────
@@ -198,19 +198,19 @@ function generateInvoices(students: any[], families: any[]) {
   const plans: { cat: string; count: number; dist: string[] }[] = [
     { cat: "tuition",     count: 150, dist: [
       // Term 1 — 50 invoices: mostly paid (school year well underway)
-      ...repeat(["paid"], 35), ...repeat(["sent"], 5), ...repeat(["overdue"], 5), ...repeat(["approved"], 5),
+      ...repeat(["paid"], 30), ...repeat(["partial"], 5), ...repeat(["sent"], 5), ...repeat(["overdue"], 5), ...repeat(["approved"], 5),
       // Term 2 — 50 invoices: mix (current term)
-      ...repeat(["paid"], 15), ...repeat(["sent"], 10), ...repeat(["overdue"], 10), ...repeat(["approved"], 5), ...repeat(["pending_approval"], 5), ...repeat(["rejected"], 5),
+      ...repeat(["paid"], 12), ...repeat(["partial"], 3), ...repeat(["sent"], 10), ...repeat(["overdue"], 10), ...repeat(["approved"], 5), ...repeat(["pending_approval"], 5), ...repeat(["rejected"], 5),
       // Term 3 — 50 invoices: mostly draft/pending (upcoming)
       ...repeat(["draft"], 25), ...repeat(["pending_approval"], 20), ...repeat(["rejected"], 5),
     ]},
-    { cat: "eca",         count: 20, dist: [...repeat(["paid"], 8), ...repeat(["sent"], 4), ...repeat(["overdue"], 3), ...repeat(["approved"], 2), ...repeat(["draft"], 2), "pending_approval"] },
-    { cat: "trip",        count: 15, dist: [...repeat(["paid"], 6), ...repeat(["sent"], 3), ...repeat(["overdue"], 2), "approved", "draft", "draft", "pending_approval", "rejected"] },
-    { cat: "exam",        count: 12, dist: [...repeat(["paid"], 5), ...repeat(["sent"], 3), "overdue", "overdue", "draft", "pending_approval"] },
-    { cat: "bus",         count: 15, dist: [...repeat(["paid"], 7), ...repeat(["sent"], 3), ...repeat(["overdue"], 2), "approved", "draft", "pending_approval"] },
+    { cat: "eca",         count: 20, dist: [...repeat(["paid"], 6), ...repeat(["partial"], 2), ...repeat(["sent"], 4), ...repeat(["overdue"], 3), ...repeat(["approved"], 2), ...repeat(["draft"], 2), "pending_approval"] },
+    { cat: "trip",        count: 15, dist: [...repeat(["paid"], 5), "partial", ...repeat(["sent"], 3), ...repeat(["overdue"], 2), "approved", "draft", "draft", "pending_approval", "rejected"] },
+    { cat: "exam",        count: 12, dist: [...repeat(["paid"], 4), "partial", ...repeat(["sent"], 3), "overdue", "overdue", "draft", "pending_approval"] },
+    { cat: "bus",         count: 15, dist: [...repeat(["paid"], 5), ...repeat(["partial"], 2), ...repeat(["sent"], 3), ...repeat(["overdue"], 2), "approved", "draft", "pending_approval"] },
     { cat: "external",    count: 8,  dist: ["paid","paid","paid","sent","sent","draft","draft","pending_approval"] },
-    { cat: "afterschool", count: 20, dist: [...repeat(["paid"], 8), ...repeat(["sent"], 4), ...repeat(["overdue"], 3), "approved", "approved", "draft", "draft", "pending_approval"] },
-    { cat: "event",       count: 10, dist: [...repeat(["paid"], 4), ...repeat(["sent"], 2), "overdue", "approved", "draft", "pending_approval"] },
+    { cat: "afterschool", count: 20, dist: [...repeat(["paid"], 6), ...repeat(["partial"], 2), ...repeat(["sent"], 4), ...repeat(["overdue"], 3), "approved", "approved", "draft", "draft", "pending_approval"] },
+    { cat: "event",       count: 10, dist: [...repeat(["paid"], 3), "partial", ...repeat(["sent"], 2), "overdue", "approved", "draft", "pending_approval"] },
   ]
 
   let invSeq = 1
@@ -224,8 +224,8 @@ function generateInvoices(students: any[], families: any[]) {
       const status = plan.dist[i % plan.dist.length]
       const termNum = (i % 3) + 1
       const termLabel = `Term ${termNum}`
-      const hasInvNum = ["approved","sent","paid","overdue"].includes(status)
-      const approvalStatus = ["approved","sent","paid","overdue"].includes(status) ? "approved" : status === "rejected" ? "rejected" : "wait"
+      const hasInvNum = ["approved","sent","paid","partial","overdue"].includes(status)
+      const approvalStatus = ["approved","sent","paid","partial","overdue"].includes(status) ? "approved" : status === "rejected" ? "rejected" : "wait"
 
       // Build items
       let items: any[] = []
@@ -271,7 +271,8 @@ function generateInvoices(students: any[], families: any[]) {
       const invYear = issueDate.substring(0, 4)
       const invNumber = hasInvNum ? `${invYear}-${pad(invSeq, 5)}` : ""
       const paidDate = status === "paid" ? randomDate(td.paidRange[0], td.paidRange[1]) : undefined
-      const payMethod = status === "paid" ? pick(PAY_METHODS) : undefined
+      const payMethod = status === "paid" ? pick(PAY_METHODS) : status === "partial" ? "Partial" : undefined
+      const partialPaidAmount = status === "partial" ? Math.round(netAmount * (0.3 + Math.random() * 0.4)) : undefined
 
       const isExternal = plan.cat === "external"
 
@@ -289,7 +290,7 @@ function generateInvoices(students: any[], families: any[]) {
         items, subtotal, discounts, totalDiscount, netAmount,
         finalAmount: netAmount, // alias used by some components
         dueDate, issueDate,
-        status, approvalStatus,
+        status: status === "partial" ? "sent" : status, approvalStatus,
         term: `${termLabel} ${CURRENT_YEAR}`,
         termName: termLabel,
         academicYear: CURRENT_YEAR,
@@ -302,6 +303,8 @@ function generateInvoices(students: any[], families: any[]) {
         adultIdNo: isExternal ? "" : s.familyCode,
         documentType: "SI",
         paidDate, paymentMethod: payMethod,
+        ...(partialPaidAmount ? { partialPaidAmount } : {}),
+        ...(isExternal ? { eventName: items[0]?.name || "External Service" } : {}),
       })
       invSeq++
     }
@@ -515,7 +518,7 @@ const BANK_ACCOUNTS_OFFLINE = [
 ]
 const BANK_ACCOUNTS_ONLINE = [
   { id: "obank-001", paymentSource: "Credit Card", bankName: "Visa/Mastercard", accountNumber: "MERCHANT-001", glAccount: "1200", isActive: true },
-  { id: "obank-002", paymentSource: "QR Payment", bankName: "PromptPay", accountNumber: "0-1234-56789", glAccount: "1201", isActive: true },
+  { id: "obank-002", paymentSource: "Thai QR", bankName: "PromptPay", accountNumber: "0-1234-56789", glAccount: "1201", isActive: true },
 ]
 
 // ── 15. Activity Logs (realistic timeline) ───────────────────
@@ -694,6 +697,21 @@ export function seedAllData() {
     }
 
     // ── Invoices (all categories) ────────────────────────────
+    // Version check: re-seed invoices when seed data structure changes
+    const INVOICE_SEED_VERSION = "2.1" // Bump when invoice seed data changes
+    const currentSeedVersion = localStorage.getItem("invoice_seed_version")
+    if (currentSeedVersion !== INVOICE_SEED_VERSION) {
+      localStorage.removeItem("createdInvoices")
+      // Also clear receipts & payment records so they match new invoices
+      for (const key of Object.keys(RECEIPT_STORAGE_MAP).map(k => RECEIPT_STORAGE_MAP[k])) {
+        localStorage.removeItem(key)
+      }
+      localStorage.removeItem("paymentRecords")
+      localStorage.removeItem("creditNotes")
+      localStorage.removeItem("creditNotesRecords")
+      localStorage.removeItem("invoiceEmailLogs")
+      localStorage.setItem("invoice_seed_version", INVOICE_SEED_VERSION)
+    }
     seedIfEmpty("createdInvoices", invoices)
 
     // ── Receipts (per category storage key) ──────────────────

@@ -461,11 +461,11 @@ export function ApprovalQueue() {
     return sortedInvoices.slice(start, start + pageSize)
   }, [sortedInvoices, currentPage, pageSize])
 
-  const renderSortHeader = (label: string, key: NonNullable<typeof sortKey>) => (
+  const renderSortHeader = (label: string, key: NonNullable<typeof sortKey>, align?: "left" | "center" | "right") => (
     <button
       type="button"
       onClick={() => handleSort(key)}
-      className="flex items-center gap-1 font-medium text-left"
+      className={`flex items-center gap-1 font-medium ${align === "center" ? "justify-center w-full" : align === "right" ? "justify-end w-full" : "text-left"}`}
     >
       <span>{label}</span>
       <ArrowUpDown
@@ -1315,11 +1315,11 @@ export function ApprovalQueue() {
                 {/* Term - left aligned */}
                 <TableHead align="left">{renderSortHeader(t("invoice.term"), "term")}</TableHead>
                 {/* Year Group - center aligned */}
-                <TableHead align="center">{renderSortHeader(t("student.yearGroup"), "studentGrade")}</TableHead>
+                <TableHead align="center">{renderSortHeader(t("student.yearGroup"), "studentGrade", "center")}</TableHead>
                 {/* Amount - right aligned */}
-                <TableHead align="right">{renderSortHeader(t("approvalQueue.amount"), "finalAmount")}</TableHead>
+                <TableHead align="right">{renderSortHeader(t("approvalQueue.amount"), "finalAmount", "right")}</TableHead>
                 {/* Approval Status - center */}
-                <TableHead align="center">{renderSortHeader(t("approvalQueue.approvalStatus"), "approvalStatus")}</TableHead>
+                <TableHead align="center">{renderSortHeader(t("approvalQueue.approvalStatus"), "approvalStatus", "center")}</TableHead>
                 {/* Email Status - center */}
                 <TableHead align="center">{t("approvalQueue.emailStatus")}</TableHead>
                 {/* Invoice Status - center */}
@@ -1394,9 +1394,10 @@ export function ApprovalQueue() {
                   <TableCell align="center">
                     {(() => {
                       const ps = getPaymentStatus(invoice)
-                      if (ps === "paid") return <Badge className="bg-green-100 text-green-800">{t("approvalQueue.paid")}</Badge>
-                      if (ps === "overdue") return <Badge className="bg-red-100 text-red-800">{t("approvalQueue.overdue")}</Badge>
-                      return <Badge className="bg-gray-100 text-gray-800">{t("approvalQueue.unpaid")}</Badge>
+                      if (ps === "paid") return <Badge style={{ backgroundColor: "#dcfce7", color: "#166534", border: "none" }}>{t("approvalQueue.paid")}</Badge>
+                      if (ps === "partial") return <Badge style={{ backgroundColor: "#fef3c7", color: "#92400e", border: "none" }}>{t("approvalQueue.partial") || "Partial"}</Badge>
+                      if (ps === "overdue") return <Badge style={{ backgroundColor: "#fee2e2", color: "#991b1b", border: "none" }}>{t("approvalQueue.overdue")}</Badge>
+                      return <Badge style={{ backgroundColor: "#f3f4f6", color: "#1f2937", border: "none" }}>{t("approvalQueue.unpaid")}</Badge>
                     })()}
                   </TableCell>
                   {/* Issue Date - left aligned */}

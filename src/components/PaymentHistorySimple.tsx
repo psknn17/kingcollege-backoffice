@@ -77,7 +77,7 @@ const mockPayments: PaymentRecord[] = [
     email: "michael.parent@email.com",
     amount: 42000,
     term: "Term 1",
-    paymentMethod: "Cash",
+    paymentMethod: "Thai QR",
     module: "tuition",
     status: "partial",
     transactionDate: new Date("2025-08-17T14:30:22")
@@ -102,6 +102,7 @@ export function PaymentHistorySimple() {
   const [sortColumn, setSortColumn] = useState<string>("transactionDate")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -109,6 +110,27 @@ export function PaymentHistorySimple() {
       setSortColumn(column)
       setSortDirection("asc")
     }
+  }
+
+  // Normalize payment method to match PAYMENT_SOURCES
+  const normalizePaymentMethod = (method: string): string => {
+    if (!method || method === "-") return "-"
+    const m = method.toLowerCase().trim()
+    if (m.startsWith("edc")) return "EDC"
+    if (m.includes("credit") && m.includes("card")) return "Credit Card"
+    if (m.includes("bank") && m.includes("transfer")) return "Bank Transfer"
+    if (m.includes("bank") && m.includes("counter")) return "Cashier's cheque"
+    if (m.includes("wechat")) return "Thai QR"
+    if (m.includes("promptpay")) return "Thai QR"
+    if (m.includes("thai") && m.includes("qr")) return "Thai QR"
+    if (m.includes("qr")) return "Thai QR"
+    if (m.includes("cashier")) return "Cashier's cheque"
+    if (m.includes("cash")) return "Cashier's cheque"
+    if (m.includes("credit note")) return "Credit Note"
+    // Return as-is if it already matches a valid source
+    const validSources = ["Cashier's cheque", "Bank Transfer", "Thai QR", "Credit Card", "EDC"]
+    const found = validSources.find(s => s.toLowerCase() === m)
+    return found || method
   }
 
   useEffect(() => {
@@ -134,7 +156,7 @@ export function PaymentHistorySimple() {
                 email: inv.parentEmail || "-",
                 amount: inv.netAmount || inv.finalAmount || inv.subtotal || 0,
                 term: inv.term || "-",
-                paymentMethod: inv.paymentMethod || "-",
+                paymentMethod: normalizePaymentMethod(inv.paymentMethod || "-"),
                 module: inv.category || inv.invoiceType || "tuition",
                 status: "paid" as const,
                 transactionDate: paidDate,
@@ -306,7 +328,7 @@ export function PaymentHistorySimple() {
       payment.amount,
       payment.term,
       payment.status.charAt(0).toUpperCase() + payment.status.slice(1),
-      (payment.module || "tuition").charAt(0).toUpperCase() + (payment.module || "tuition").slice(1),
+      ({ tuition: "Tuition Invoice", eca: "ECA Invoice", trip: "Trip & Activity Invoice", exam: "Exam Invoice", bus: "School Bus Invoice", external: "External Invoice", student: "Tuition Invoice", afterschool: "ECA Invoice", event: "Trip & Activity Invoice", summer: "Summer Activities" } as Record<string, string>)[payment.module] || payment.module || "Tuition Invoice",
       payment.paymentMethod,
       payment.email || ""
     ])
@@ -502,11 +524,11 @@ export function PaymentHistorySimple() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Methods</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                  <SelectItem value="Cashier's cheque">Cashier's cheque</SelectItem>
                   <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cashier-check">Cashier's Cheque</SelectItem>
-                  <SelectItem value="qr">QR Payment</SelectItem>
-                  <SelectItem value="bank-counter">Bank Counter</SelectItem>
+                  <SelectItem value="Thai QR">Thai QR</SelectItem>
+                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                  <SelectItem value="EDC">EDC</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -520,12 +542,12 @@ export function PaymentHistorySimple() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Modules</SelectItem>
-                  <SelectItem value="tuition">Tuition</SelectItem>
-                  <SelectItem value="eca">ECA</SelectItem>
-                  <SelectItem value="trip">Trip & Activity</SelectItem>
-                  <SelectItem value="exam">Exam</SelectItem>
-                  <SelectItem value="bus">School Bus</SelectItem>
-                  <SelectItem value="external">External</SelectItem>
+                  <SelectItem value="tuition">Tuition Invoice</SelectItem>
+                  <SelectItem value="eca">ECA Invoice</SelectItem>
+                  <SelectItem value="trip">Trip & Activity Invoice</SelectItem>
+                  <SelectItem value="exam">Exam Invoice</SelectItem>
+                  <SelectItem value="bus">School Bus Invoice</SelectItem>
+                  <SelectItem value="external">External Invoice</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -667,20 +689,20 @@ export function PaymentHistorySimple() {
                     {/* Module badge alignment */}
                     <TableCell align="center">
                       {(() => {
-                        const moduleLabels: Record<string, { label: string; bg: string; text: string }> = {
-                          tuition: { label: "Tuition", bg: "bg-blue-100", text: "text-blue-800" },
-                          eca: { label: "ECA", bg: "bg-purple-100", text: "text-purple-800" },
-                          trip: { label: "Trip", bg: "bg-orange-100", text: "text-orange-800" },
-                          exam: { label: "Exam", bg: "bg-cyan-100", text: "text-cyan-800" },
-                          bus: { label: "Bus", bg: "bg-amber-100", text: "text-amber-800" },
-                          external: { label: "External", bg: "bg-gray-100", text: "text-gray-800" },
-                          student: { label: "Tuition", bg: "bg-blue-100", text: "text-blue-800" },
-                          afterschool: { label: "ECA", bg: "bg-purple-100", text: "text-purple-800" },
-                          event: { label: "Trip", bg: "bg-orange-100", text: "text-orange-800" },
-                          summer: { label: "Summer", bg: "bg-green-100", text: "text-green-800" },
+                        const moduleLabels: Record<string, { label: string; bg: string; color: string }> = {
+                          tuition: { label: "Tuition Invoice", bg: "#dbeafe", color: "#1e40af" },
+                          eca: { label: "ECA Invoice", bg: "#f3e8ff", color: "#6b21a8" },
+                          trip: { label: "Trip & Activity Invoice", bg: "#ffedd5", color: "#9a3412" },
+                          exam: { label: "Exam Invoice", bg: "#cffafe", color: "#155e75" },
+                          bus: { label: "School Bus Invoice", bg: "#fef3c7", color: "#92400e" },
+                          external: { label: "External Invoice", bg: "#f3f4f6", color: "#1f2937" },
+                          student: { label: "Tuition Invoice", bg: "#dbeafe", color: "#1e40af" },
+                          afterschool: { label: "ECA Invoice", bg: "#f3e8ff", color: "#6b21a8" },
+                          event: { label: "Trip & Activity Invoice", bg: "#ffedd5", color: "#9a3412" },
+                          summer: { label: "Summer Activities", bg: "#dcfce7", color: "#166534" },
                         }
-                        const m = moduleLabels[payment.module] || { label: payment.module || "-", bg: "bg-gray-100", text: "text-gray-800" }
-                        return <Badge className={`${m.bg} ${m.text} border-0`}>{m.label}</Badge>
+                        const m = moduleLabels[payment.module] || { label: payment.module || "-", bg: "#f3f4f6", color: "#1f2937" }
+                        return <Badge style={{ backgroundColor: m.bg, color: m.color, border: "none" }}>{m.label}</Badge>
                       })()}
                     </TableCell>
                     {/* Text alignment */}
@@ -737,7 +759,7 @@ export function PaymentHistorySimple() {
                   </div>
                   <div className="flex flex-col space-y-1">
                     <span className="text-xs text-muted-foreground uppercase">Module</span>
-                    <span className="font-medium capitalize">{viewingPaymentProof?.module || "-"}</span>
+                    <span className="font-medium">{({ tuition: "Tuition Invoice", eca: "ECA Invoice", trip: "Trip & Activity Invoice", exam: "Exam Invoice", bus: "School Bus Invoice", external: "External Invoice", student: "Tuition Invoice", afterschool: "ECA Invoice", event: "Trip & Activity Invoice", summer: "Summer Activities" } as Record<string, string>)[viewingPaymentProof?.module || ""] || viewingPaymentProof?.module || "-"}</span>
                   </div>
                   <div className="flex flex-col space-y-1">
                     <span className="text-xs text-muted-foreground uppercase">Amount</span>
