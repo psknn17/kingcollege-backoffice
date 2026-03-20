@@ -3765,57 +3765,57 @@ export function InvoiceManagement({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoice.totalInvoices")}</p>
             <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoice.pendingApproval")}</p>
             <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingApproval}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
             <p className="text-2xl font-bold text-purple-600">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Email</p>
             <p className="text-2xl font-bold text-blue-600">{summaryStats.sent}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Partial</p>
             <p className="text-2xl font-bold" style={{ color: "#d97706" }}>{summaryStats.partial}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
             <p className="text-2xl font-bold text-green-600">{summaryStats.paid}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
             <p className="text-2xl font-bold text-red-600">{summaryStats.overdue}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoice.totalAmount")}</p>
             <p className="text-2xl font-bold">{summaryStats.totalAmount.toLocaleString()}</p>
           </CardContent>

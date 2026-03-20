@@ -797,57 +797,45 @@ export function UserManagement() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("userManagement.totalUsers")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("userManagement.totalUsers")}</p>
+            <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("userManagement.activeUsers")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.active}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("userManagement.activeUsers")}</p>
+            <p className="text-2xl font-bold text-green-600">{summaryStats.active}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("userManagement.superAdmin")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{summaryStats.super_admin}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("userManagement.superAdmin")}</p>
+            <p className="text-2xl font-bold text-purple-600">{summaryStats.super_admin}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("userManagement.financeAdmin")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.admin_accountant}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("userManagement.financeAdmin")}</p>
+            <p className="text-2xl font-bold text-green-600">{summaryStats.admin_accountant}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("userManagement.approver")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{summaryStats.approver}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("userManagement.approver")}</p>
+            <p className="text-2xl font-bold text-blue-600">{summaryStats.approver}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("userManagement.viewer")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{summaryStats.viewer}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("userManagement.viewer")}</p>
+            <p className="text-2xl font-bold text-gray-600">{summaryStats.viewer}</p>
           </CardContent>
         </Card>
       </div>

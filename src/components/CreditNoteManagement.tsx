@@ -836,36 +836,36 @@ export function CreditNoteManagement() {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Card className="rounded-xl">
-                <CardContent className="p-4">
+              <Card className="rounded-xl gap-0">
+                <CardContent className="p-4 pb-4">
                   <p className="text-sm text-muted-foreground">{t("creditNote.totalCreditNotes")}</p>
                   <p className="text-2xl font-bold">{summaryStats.total}</p>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl">
-                <CardContent className="p-4">
+              <Card className="rounded-xl gap-0">
+                <CardContent className="p-4 pb-4">
                   <p className="text-sm text-muted-foreground">{t("creditNote.draft")}</p>
                   <p className="text-2xl font-bold text-gray-600">{summaryStats.draft}</p>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl">
-                <CardContent className="p-4">
+              <Card className="rounded-xl gap-0">
+                <CardContent className="p-4 pb-4">
                   <p className="text-sm text-muted-foreground">{t("creditNote.issued")}</p>
                   <p className="text-2xl font-bold text-blue-600">{summaryStats.issued}</p>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl">
-                <CardContent className="p-4">
+              <Card className="rounded-xl gap-0">
+                <CardContent className="p-4 pb-4">
                   <p className="text-sm text-muted-foreground">{t("creditNote.applied")}</p>
                   <p className="text-2xl font-bold text-green-600">{summaryStats.applied}</p>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl">
-                <CardContent className="p-4">
+              <Card className="rounded-xl gap-0">
+                <CardContent className="p-4 pb-4">
                   <p className="text-sm text-muted-foreground">{t("creditNote.totalCreditAmount")}</p>
                   <p className="text-2xl font-bold">₿{summaryStats.totalAmount.toLocaleString()}</p>
                 </CardContent>

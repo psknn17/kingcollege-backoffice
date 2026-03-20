@@ -22,16 +22,12 @@ import {
   CreditCard,
   Clock,
   Target,
-  TrendingUp,
-  DollarSign,
   Eye,
   BarChart3,
   Filter,
   Search,
   RotateCcw,
-  Home,
   Building2,
-  GraduationCap,
   Gift
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
@@ -350,59 +346,35 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("waiveFee.totalStudents")}</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentSummary.yearlyTotal.totalStudents}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("waiveFee.receivingWaivers").replace("{year}", selectedYear)}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("waiveFee.totalStudents")}</p>
+            <p className="text-2xl font-bold">{currentSummary.yearlyTotal.totalStudents}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("waiveFee.totalFamilies")}</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentSummary.yearlyTotal.totalFamilies}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("waiveFee.familiesBenefiting")}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("waiveFee.totalFamilies")}</p>
+            <p className="text-2xl font-bold">{currentSummary.yearlyTotal.totalFamilies}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("waiveFee.totalWaiverAmount")}</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(currentSummary.yearlyTotal.totalAmount)}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("waiveFee.totalWaiversFor").replace("{year}", selectedYear)}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("waiveFee.totalWaiverAmount")}</p>
+            <p className="text-2xl font-bold">{formatCurrency(currentSummary.yearlyTotal.totalAmount)}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("waiveFee.averagePerFamily")}</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("waiveFee.averagePerFamily")}</p>
+            <p className="text-2xl font-bold">
               {currentSummary.yearlyTotal.totalFamilies > 0
                 ? formatCurrency(currentSummary.yearlyTotal.totalAmount / currentSummary.yearlyTotal.totalFamilies)
                 : '฿0'
               }
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("waiveFee.avgWaiverPerFamily")}
             </p>
           </CardContent>
         </Card>

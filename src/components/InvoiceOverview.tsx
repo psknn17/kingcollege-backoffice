@@ -404,51 +404,31 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoiceOverview.totalInvoices")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("invoiceOverview.totalValue")}: {summaryStats.totalAmount.toLocaleString()}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("invoiceOverview.totalInvoices")}</p>
+            <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoiceOverview.paidInvoices")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.paid}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((summaryStats.paid / summaryStats.total) * 100)}% {t("invoiceOverview.ofTotal")}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("invoiceOverview.paidInvoices")}</p>
+            <p className="text-2xl font-bold text-green-600">{summaryStats.paid}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoiceOverview.unpaidInvoices")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{summaryStats.unpaid}</div>
-            <p className="text-xs text-muted-foreground">
-              {invoices.filter(i => i.status === "unpaid").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.pending").toLowerCase()}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("invoiceOverview.unpaidInvoices")}</p>
+            <p className="text-2xl font-bold text-blue-600">{summaryStats.unpaid}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoiceOverview.overdueInvoices")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{summaryStats.overdue}</div>
-            <p className="text-xs text-muted-foreground">
-              {invoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.amount, 0).toLocaleString()} {t("common.overdue").toLowerCase()}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("invoiceOverview.overdueInvoices")}</p>
+            <p className="text-2xl font-bold text-red-600">{summaryStats.overdue}</p>
           </CardContent>
         </Card>
       </div>

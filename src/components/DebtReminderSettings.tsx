@@ -712,32 +712,32 @@ export function DebtReminderSettings() {
 
       {/* Summary Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Total Recipients</p>
             <p className="text-2xl font-bold">{summaryStats.totalRecipients}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Scheduled</p>
             <p className="text-2xl font-bold text-blue-700">{summaryStats.scheduledCount}</p>
           </CardContent>
         </Card>
 
         <Card
-          className="rounded-xl cursor-pointer hover:bg-green-100 transition-colors"
+          className="rounded-xl gap-0 cursor-pointer hover:bg-green-100 transition-colors"
           onClick={handleOpenHistory}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Remind History <span className="text-xs font-normal text-green-600 ml-1">(click to view)</span></p>
             <p className="text-2xl font-bold text-green-700">{summaryStats.sentToday}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Next Scheduled</p>
             {summaryStats.nextScheduled ? (
               <p className="text-2xl font-bold text-amber-700">

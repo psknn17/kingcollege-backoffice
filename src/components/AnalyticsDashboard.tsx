@@ -37,22 +37,15 @@ const fmtB = (n: number) => `฿${fmt(n)}`
 
 // ── SUMMARY CARD ──────────────────────────────────────────────────────────────
 function SummaryCard({
-  label, value, sub, accent = "#6366f1", trend
+  label, value, accent = "#6366f1"
 }: {
-  icon?: any; label: string; value: string; sub?: string
-  accent?: string; trend?: { up: boolean; text: string }
+  label: string; value: string; accent?: string
 }) {
   return (
-    <Card className="rounded-xl">
-      <CardContent className="p-4">
+    <Card className="rounded-xl gap-0">
+      <CardContent className="p-4 pb-4">
         <p className="text-sm text-muted-foreground">{label}</p>
         <p className="text-2xl font-bold" style={{ color: accent }}>{value}</p>
-        {sub && <p className="text-sm text-muted-foreground mt-0.5">{sub}</p>}
-        {trend && (
-          <div className={`flex items-center gap-1 mt-1 text-sm font-medium ${trend.up ? "text-green-600" : "text-red-500"}`}>
-            {trend.text}
-          </div>
-        )}
       </CardContent>
     </Card>
   )
@@ -98,15 +91,14 @@ function TablePagination({ page, total, onChange }: { page: number; total: numbe
 }
 
 // ── METRIC BADGE ──────────────────────────────────────────────────────────────
-function MethodCard({ method, count, percentage, amount, color }: {
+function MethodCard({ method, count, percentage, color }: {
   method: string; count: number; percentage: number; amount: number; color: string
 }) {
   return (
-    <Card className="rounded-xl">
-      <CardContent className="p-4">
+    <Card className="rounded-xl gap-0">
+      <CardContent className="p-4 pb-4">
         <p className="text-sm text-muted-foreground">{method}</p>
         <p className="text-2xl font-bold" style={{ color }}>{count.toLocaleString()} <span className="text-sm font-medium text-muted-foreground">txns · {percentage}%</span></p>
-        <p className="text-sm text-muted-foreground mt-0.5">{fmtB(amount)}</p>
       </CardContent>
     </Card>
   )
@@ -262,10 +254,8 @@ export function AnalyticsDashboard() {
       {/* ── Summary Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" />
-        <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e"
-          sub={totalGross > 0 ? `${Math.round((totalNet / totalGross) * 100)}% of gross` : undefined} />
-        <SummaryCard label="Total Discount" value={fmtB(totalDiscount)} accent="#f59e0b"
-          sub={totalGross > 0 ? `${Math.round((totalDiscount / totalGross) * 100)}% of gross` : undefined} />
+        <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e" />
+        <SummaryCard label="Total Discount" value={fmtB(totalDiscount)} accent="#f59e0b" />
         <SummaryCard label="Students"       value={String(totalStudents)} accent="#06b6d4" />
         <SummaryCard label="Transactions"   value={String(totalTxn)}      accent="#a855f7" />
         <SummaryCard label="Success Rate"   value={`${successRate}%`}     accent={successRate >= 80 ? "#22c55e" : "#f59e0b"} />

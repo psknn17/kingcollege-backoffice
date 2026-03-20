@@ -953,15 +953,15 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         <TabsContent value="overview" className="space-y-6">
           {/* Overview Dashboard */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="rounded-xl">
-              <CardContent className="p-4">
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
                 <p className="text-sm text-muted-foreground">{t("discount.studentGroupsCard")}</p>
                 <p className="text-2xl font-bold">{studentGroups.length}</p>
               </CardContent>
             </Card>
 
-            <Card className="rounded-xl">
-              <CardContent className="p-4">
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
                 <p className="text-sm text-muted-foreground">{t("discount.totalSavings")}</p>
                 <p className="text-2xl font-bold">฿127,500</p>
               </CardContent>

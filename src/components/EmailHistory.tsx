@@ -290,15 +290,15 @@ export function EmailHistory() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Total Email Jobs</p>
             <p className="text-2xl font-bold">{allHistory.length}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Total Emails Dispatched</p>
             <p className="text-2xl font-bold">
               {allHistory.reduce((sum, item) => sum + item.recipients, 0)}
@@ -306,8 +306,8 @@ export function EmailHistory() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Delivery Success Rate</p>
             <p className="text-2xl font-bold">98.5%</p>
           </CardContent>

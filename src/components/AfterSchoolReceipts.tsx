@@ -345,29 +345,29 @@ export function AfterSchoolReceipts() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
             <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
             <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
             <p className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
             <p className="text-2xl font-bold">{summaryStats.totalDownloads}</p>
           </CardContent>

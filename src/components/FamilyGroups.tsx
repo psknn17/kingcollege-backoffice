@@ -444,32 +444,32 @@ export function FamilyGroups() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Total Families</p>
             <p className="text-2xl font-bold">{stats.totalFamilies}</p>
           </CardContent>
         </Card>
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Students Assigned</p>
             <p className="text-2xl font-bold text-blue-600">{stats.totalStudentsInFamilies}</p>
           </CardContent>
         </Card>
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">With Discount</p>
             <p className="text-2xl font-bold text-green-600">{stats.studentsWithDiscount}</p>
           </CardContent>
         </Card>
-        <Card className={`rounded-xl ${studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}`}>
-          <CardContent className="p-4">
+        <Card className={`rounded-xl gap-0 ${studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}`}>
+          <CardContent className="p-4 pb-4">
             <p className={`text-sm ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`}>Unassigned</p>
             <p className={`text-2xl font-bold ${studentsWithoutFamily.length > 0 ? "text-amber-600" : ""}`}>{studentsWithoutFamily.length}</p>
           </CardContent>
         </Card>
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">Last Added</p>
             {lastAddedFamily ? (
               <p className="text-2xl font-bold leading-tight">

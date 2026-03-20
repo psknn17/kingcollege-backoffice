@@ -379,6 +379,18 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
 
+  // Persist credit notes to localStorage whenever state changes
+  useEffect(() => {
+    if (creditNotes.length > 0) {
+      const toStore = creditNotes.map(cn => ({
+        ...cn,
+        issueDate: cn.issueDate instanceof Date ? cn.issueDate.toISOString() : cn.issueDate,
+      }))
+      localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(toStore))
+      localStorage.setItem("creditNotes", JSON.stringify(toStore))
+    }
+  }, [creditNotes])
+
   // Reload credit notes when updated from another component (e.g. after applying CN in InvoiceManagement)
   useEffect(() => {
     const handleCreditNotesUpdated = () => {

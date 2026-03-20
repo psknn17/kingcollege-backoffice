@@ -47,29 +47,29 @@ export function AfterSchoolDashboard() {
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("afterschool.totalRegistrations")}</p>
             <p className="text-2xl font-bold">1,219</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
             <p className="text-2xl font-bold">฿367,600</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("afterschool.activeActivities")}</p>
             <p className="text-2xl font-bold">24</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("afterschool.averageAttendance")}</p>
             <p className="text-2xl font-bold">90.6%</p>
           </CardContent>

@@ -1782,37 +1782,28 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("student.totalStudents")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("student.totalStudents")}</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("student.activeStudents")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("student.activeStudents")}</p>
+            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("student.families")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.familyCount}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("student.families")}</p>
+            <p className="text-2xl font-bold">{stats.familyCount}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common.lastUpdated")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{format(new Date(), "dd/MM/yyyy")}</div>
-            <div className="text-xs text-muted-foreground">{format(new Date(), "HH:mm")}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("common.lastUpdated")}</p>
+            <p className="text-2xl font-bold">{format(new Date(), "dd/MM/yyyy")}</p>
           </CardContent>
         </Card>
       </div>

@@ -391,29 +391,29 @@ export function EmailDeliveryReport() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("email.totalEmails")}</p>
             <p className="text-2xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("email.deliveryRate")}</p>
             <p className="text-2xl font-bold text-green-600">{stats.deliveryRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("email.openRate")}</p>
             <p className="text-2xl font-bold text-emerald-600">{stats.openRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("email.failedEmails")}</p>
             <p className="text-2xl font-bold text-red-600">{stats.failed + stats.bounced + stats.spam}</p>
           </CardContent>

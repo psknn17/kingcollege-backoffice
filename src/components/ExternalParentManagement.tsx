@@ -322,49 +322,38 @@ export function ExternalParentManagement() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("external.totalApplications")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("external.totalApplications")}</p>
+            <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("external.pendingReview")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</div>
-            <p className="text-xs text-muted-foreground">{t("external.requireAction")}</p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("external.pendingReview")}</p>
+            <p className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("common.approved")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.approved}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            <p className="text-2xl font-bold text-green-600">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("external.onWaitlist")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{summaryStats.waitlist}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("external.onWaitlist")}</p>
+            <p className="text-2xl font-bold text-blue-600">{summaryStats.waitlist}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("external.revenueFromExternal")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <p className="text-sm text-muted-foreground">{t("external.revenueFromExternal")}</p>
+            <p className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>

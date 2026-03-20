@@ -337,43 +337,43 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("course.totalStudents")}</p>
             <p className="text-2xl font-bold">{summaryStats.totalStudents}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
             <p className="text-2xl font-bold text-green-600">{summaryStats.paidStudents}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.pending")}</p>
             <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingStudents}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
             <p className="text-2xl font-bold text-red-600">{summaryStats.overdueStudents}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.revenue")}</p>
             <p className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("course.externalParents")}</p>
             <p className="text-2xl font-bold text-blue-600">{summaryStats.externalParents}</p>
           </CardContent>

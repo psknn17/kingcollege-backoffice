@@ -320,15 +320,15 @@ export function TuitionDashboard() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.studentsPaid")}</p>
             <p className="text-2xl font-bold">2,847</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl">
-          <CardContent className="p-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
             <p className="text-2xl font-bold">฿7,350,000</p>
           </CardContent>
