@@ -563,7 +563,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                       return (
                         <div key={`${year}-${termNumber}`} className="border rounded-lg p-3 bg-card hover:bg-accent/50 transition-colors">
                           <div className="space-y-1">
-                            <div className="text-lg font-bold text-center">
+                            <div className="text-2xl font-bold text-center">
                               {formatCurrency(averagePerStudent)}
                             </div>
                             <div className="text-xs text-muted-foreground text-center">
@@ -605,7 +605,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
                   return (
                     <div key={`${year}-total`} className="border-2 border-primary/20 rounded-lg p-3 bg-primary/5">
                       <div className="space-y-1">
-                        <div className="text-lg font-bold text-center text-primary">
+                        <div className="text-2xl font-bold text-center text-primary">
                           {formatCurrency(yearAveragePerStudent)}
                         </div>
                         <div className="text-xs text-muted-foreground text-center">

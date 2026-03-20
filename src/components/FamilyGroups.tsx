@@ -444,78 +444,39 @@ export function FamilyGroups() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <Home className="w-3.5 h-3.5" />
-              Total Families
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalFamilies}</div>
-            <p className="text-xs text-muted-foreground mt-1">Family groups</p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Total Families</p>
+            <p className="text-2xl font-bold">{stats.totalFamilies}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5" />
-              Students Assigned
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalStudentsInFamilies}</div>
-            <p className="text-xs text-muted-foreground mt-1">In a family group</p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Students Assigned</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.totalStudentsInFamilies}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <Percent className="w-3.5 h-3.5" />
-              With Discount
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.studentsWithDiscount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Students with active discount</p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">With Discount</p>
+            <p className="text-2xl font-bold text-green-600">{stats.studentsWithDiscount}</p>
           </CardContent>
         </Card>
-        <Card className={studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}>
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium flex items-center gap-1.5 ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`}>
-              <UserPlus className="w-3.5 h-3.5" />
-              Unassigned
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${studentsWithoutFamily.length > 0 ? "text-amber-600" : ""}`}>
-              {studentsWithoutFamily.length}
-            </div>
-            <p className={`text-xs mt-1 ${studentsWithoutFamily.length > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
-              {studentsWithoutFamily.length > 0 ? "Need to assign" : "All assigned"}
-            </p>
+        <Card className={`rounded-xl ${studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}`}>
+          <CardContent className="p-4">
+            <p className={`text-sm ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`}>Unassigned</p>
+            <p className={`text-2xl font-bold ${studentsWithoutFamily.length > 0 ? "text-amber-600" : ""}`}>{studentsWithoutFamily.length}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              Last Added
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Last Added</p>
             {lastAddedFamily ? (
-              <>
-                <div className="text-base font-bold leading-tight">
-                  {new Date(lastAddedFamily.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(lastAddedFamily.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                  {" · "}{lastAddedFamily.familyName}
-                </p>
-              </>
+              <p className="text-2xl font-bold leading-tight">
+                {new Date(lastAddedFamily.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+              </p>
             ) : (
-              <div className="text-2xl font-bold text-muted-foreground">—</div>
+              <p className="text-2xl font-bold text-muted-foreground">—</p>
             )}
           </CardContent>
         </Card>

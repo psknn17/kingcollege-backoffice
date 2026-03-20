@@ -549,51 +549,31 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("course.totalCourses")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.totalCourses}</div>
-            <p className="text-xs text-muted-foreground">
-              {summaryStats.fullCourses} {t("course.atFullCapacity")}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("course.totalCourses")}</p>
+            <p className="text-2xl font-bold">{summaryStats.totalCourses}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("course.totalEnrollment")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.totalEnrolled}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("course.ofCapacity", { capacity: summaryStats.totalCapacity, percent: Math.round((summaryStats.totalEnrolled / summaryStats.totalCapacity) * 100) })}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("course.totalEnrollment")}</p>
+            <p className="text-2xl font-bold">{summaryStats.totalEnrolled}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("course.avgPerStudent", { amount: Math.round(summaryStats.totalRevenue / summaryStats.totalEnrolled) })}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
+            <p className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("course.performanceAlerts")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{summaryStats.lowEnrollment}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("course.lowEnrollmentCourses")}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("course.performanceAlerts")}</p>
+            <p className="text-2xl font-bold text-orange-600">{summaryStats.lowEnrollment}</p>
           </CardContent>
         </Card>
       </div>

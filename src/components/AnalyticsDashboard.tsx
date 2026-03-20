@@ -6,10 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts"
-import {
-  TrendingUp, Users, CreditCard, CheckCircle, BarChart3, DollarSign,
-  ArrowUpRight, ArrowDownRight, Info
-} from "lucide-react"
+import { BarChart3 } from "lucide-react"
 import {
   getRevenueByYearGroup, getAvgRevenueByYearGroup, getTransactionsByMethod,
   getTransactionStatus, getBankFees, getRevenueWaterfall, getFilterOptions,
@@ -40,31 +37,22 @@ const fmtB = (n: number) => `฿${fmt(n)}`
 
 // ── SUMMARY CARD ──────────────────────────────────────────────────────────────
 function SummaryCard({
-  icon: Icon, label, value, sub, accent = "#6366f1", trend
+  label, value, sub, accent = "#6366f1", trend
 }: {
-  icon: any; label: string; value: string; sub?: string
+  icon?: any; label: string; value: string; sub?: string
   accent?: string; trend?: { up: boolean; text: string }
 }) {
   return (
-    <Card className="overflow-hidden">
-      <div className="h-1 w-full" style={{ backgroundColor: accent }} />
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-medium text-muted-foreground truncate">{label}</p>
-            <p className="text-2xl font-bold mt-1 tracking-tight" style={{ color: accent }}>{value}</p>
-            {sub && <p className="text-base text-muted-foreground mt-0.5">{sub}</p>}
-            {trend && (
-              <div className={`flex items-center gap-1 mt-1 text-base font-medium ${trend.up ? "text-green-600" : "text-red-500"}`}>
-                {trend.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {trend.text}
-              </div>
-            )}
+    <Card className="rounded-xl">
+      <CardContent className="p-4">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-2xl font-bold" style={{ color: accent }}>{value}</p>
+        {sub && <p className="text-sm text-muted-foreground mt-0.5">{sub}</p>}
+        {trend && (
+          <div className={`flex items-center gap-1 mt-1 text-sm font-medium ${trend.up ? "text-green-600" : "text-red-500"}`}>
+            {trend.text}
           </div>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-3" style={{ backgroundColor: `${accent}18` }}>
-            <Icon className="w-5 h-5" style={{ color: accent }} />
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -114,19 +102,11 @@ function MethodCard({ method, count, percentage, amount, color }: {
   method: string; count: number; percentage: number; amount: number; color: string
 }) {
   return (
-    <Card className="overflow-hidden">
-      <div className="h-1 w-full" style={{ backgroundColor: color }} />
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-          <p className="text-base font-semibold leading-tight">{method}</p>
-        </div>
-        <p className="text-3xl font-bold tracking-tight">{count.toLocaleString()}</p>
-        <p className="text-base text-muted-foreground mt-0.5">transactions · <span className="font-medium" style={{ color }}>{percentage}% share</span></p>
-        <div className="mt-2 pt-2 border-t">
-          <p className="text-base font-semibold text-foreground">{fmtB(amount)}</p>
-          <p className="text-base text-muted-foreground">total amount</p>
-        </div>
+    <Card className="rounded-xl">
+      <CardContent className="p-4">
+        <p className="text-sm text-muted-foreground">{method}</p>
+        <p className="text-2xl font-bold" style={{ color }}>{count.toLocaleString()} <span className="text-sm font-medium text-muted-foreground">txns · {percentage}%</span></p>
+        <p className="text-sm text-muted-foreground mt-0.5">{fmtB(amount)}</p>
       </CardContent>
     </Card>
   )
@@ -236,7 +216,7 @@ export function AnalyticsDashboard() {
             <BarChart3 className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-tight">Analytics Dashboard</h1>
+            <h1 className="text-2xl font-bold leading-tight">Analytics Dashboard</h1>
             <p className="text-sm text-muted-foreground">Revenue insights and payment analytics</p>
           </div>
         </div>
@@ -281,14 +261,14 @@ export function AnalyticsDashboard() {
 
       {/* ── Summary Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <SummaryCard icon={DollarSign}   label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" />
-        <SummaryCard icon={TrendingUp}   label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e"
+        <SummaryCard label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" />
+        <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e"
           sub={totalGross > 0 ? `${Math.round((totalNet / totalGross) * 100)}% of gross` : undefined} />
-        <SummaryCard icon={ArrowDownRight} label="Total Discount" value={fmtB(totalDiscount)} accent="#f59e0b"
+        <SummaryCard label="Total Discount" value={fmtB(totalDiscount)} accent="#f59e0b"
           sub={totalGross > 0 ? `${Math.round((totalDiscount / totalGross) * 100)}% of gross` : undefined} />
-        <SummaryCard icon={Users}        label="Students"       value={String(totalStudents)} accent="#06b6d4" />
-        <SummaryCard icon={CreditCard}   label="Transactions"   value={String(totalTxn)}      accent="#a855f7" />
-        <SummaryCard icon={CheckCircle}  label="Success Rate"   value={`${successRate}%`}     accent={successRate >= 80 ? "#22c55e" : "#f59e0b"} />
+        <SummaryCard label="Students"       value={String(totalStudents)} accent="#06b6d4" />
+        <SummaryCard label="Transactions"   value={String(totalTxn)}      accent="#a855f7" />
+        <SummaryCard label="Success Rate"   value={`${successRate}%`}     accent={successRate >= 80 ? "#22c55e" : "#f59e0b"} />
       </div>
 
       {/* ── Tabs ── */}
@@ -530,22 +510,10 @@ export function AnalyticsDashboard() {
               {/* Status summary cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {statusData.map((s, i) => (
-                  <Card key={i} className="shadow-none border overflow-hidden">
-                    <div className="h-1 w-full" style={{ backgroundColor: STATUS_COLORS[s.status] }} />
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-base font-medium text-muted-foreground">{s.label}</p>
-                          <p className="text-3xl font-bold mt-1" style={{ color: STATUS_COLORS[s.status] }}>{s.count.toLocaleString()}</p>
-                          <p className="text-base text-muted-foreground mt-0.5">transactions</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-4xl font-bold" style={{ color: STATUS_COLORS[s.status] }}>{s.percentage}%</p>
-                          <div className="w-24 h-2 bg-muted rounded-full overflow-hidden mt-2 ml-auto">
-                            <div className="h-full rounded-full" style={{ width: `${s.percentage}%`, backgroundColor: STATUS_COLORS[s.status] }} />
-                          </div>
-                        </div>
-                      </div>
+                  <Card key={i} className="rounded-xl">
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">{s.label}</p>
+                      <p className="text-2xl font-bold" style={{ color: STATUS_COLORS[s.status] }}>{s.count.toLocaleString()} <span className="text-sm font-medium">({s.percentage}%)</span></p>
                     </CardContent>
                   </Card>
                 ))}
@@ -652,17 +620,16 @@ export function AnalyticsDashboard() {
                       const color = PALETTE[idx % PALETTE.length]
                       const bg    = PALETTE_BG[idx % PALETTE_BG.length]
                       return (
-                        <Card key={bankName} className="shadow-none border overflow-hidden">
-                          <div className="h-1 w-full" style={{ backgroundColor: color }} />
-                          <CardContent className="pt-4 pb-4" style={{ backgroundColor: bg }}>
-                            <p className="text-base font-bold mb-1" style={{ color }}>{bankName}</p>
-                            <div className="flex flex-wrap gap-1 mb-2">
+                        <Card key={bankName} className="rounded-xl">
+                          <CardContent className="p-4">
+                            <p className="text-sm text-muted-foreground">{bankName}</p>
+                            <p className="text-2xl font-bold" style={{ color }}>฿{fmt(total)}</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">{txns.toLocaleString()} transactions</p>
+                            <div className="flex flex-wrap gap-1 mt-2">
                               {sources.map(s => (
-                                <span key={s} className="text-sm bg-white/80 rounded-full px-2 py-0.5 font-medium text-muted-foreground border">{s}</span>
+                                <span key={s} className="text-xs bg-muted rounded-full px-2 py-0.5 font-medium text-muted-foreground">{s}</span>
                               ))}
                             </div>
-                            <p className="text-2xl font-bold text-foreground">฿{fmt(total)}</p>
-                            <p className="text-base text-muted-foreground mt-0.5">{txns.toLocaleString()} transactions</p>
                           </CardContent>
                         </Card>
                       )

@@ -391,56 +391,31 @@ export function EmailDeliveryReport() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Mail className="w-4 h-4" />
-              {t("email.totalEmails")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("email.totalEmails")}</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              {t("email.deliveryRate")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.deliveryRate.toFixed(1)}%</div>
-            <div className="text-sm text-muted-foreground">{stats.delivered} {t("email.status.delivered").toLowerCase()}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("email.deliveryRate")}</p>
+            <p className="text-2xl font-bold text-green-600">{stats.deliveryRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Eye className="w-4 h-4 text-emerald-600" />
-              {t("email.openRate")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{stats.openRate.toFixed(1)}%</div>
-            <div className="text-sm text-muted-foreground">{stats.opened} {t("email.status.opened").toLowerCase()}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("email.openRate")}</p>
+            <p className="text-2xl font-bold text-emerald-600">{stats.openRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <XCircle className="w-4 h-4 text-red-600" />
-              {t("email.failedEmails")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.failed + stats.bounced + stats.spam}</div>
-            <div className="text-sm text-muted-foreground">
-              {stats.failed} {t("email.status.failed").toLowerCase()}, {stats.bounced} {t("email.status.bounced").toLowerCase()}, {stats.spam} {t("email.status.spam").toLowerCase()}
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("email.failedEmails")}</p>
+            <p className="text-2xl font-bold text-red-600">{stats.failed + stats.bounced + stats.spam}</p>
           </CardContent>
         </Card>
       </div>

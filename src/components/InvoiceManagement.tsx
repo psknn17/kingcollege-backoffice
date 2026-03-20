@@ -641,6 +641,7 @@ export function InvoiceManagement({
   const [edcAccountNumber, setEdcAccountNumber] = useState("")
   const [edcAmount, setEdcAmount] = useState<string>("")
   const [ccFeePercent, setCcFeePercent] = useState<string>("")
+  const [paymentAmountInput, setPaymentAmountInput] = useState<string>("")
 
   // Auto-deselect CNs when EDC amount covers the full invoice
   useEffect(() => {
@@ -3345,7 +3346,10 @@ export function InvoiceManagement({
     try {
       const proofs = await Promise.all(paymentFiles.map(readFileAsDataUrl))
       const paidAt = new Date()
-      const isPartial = paymentMethod === "Partial"
+      const onlineMethods = ["Thai QR", "Credit Card"]
+      const enteredPayAmt = onlineMethods.includes(paymentMethod) ? 0 : (parseFloat(paymentAmountInput) || 0)
+      const isPartialByAmount = !["EDC", ...onlineMethods].includes(paymentMethod) && enteredPayAmt > 0 && enteredPayAmt < netPayableTotal
+      const isPartial = paymentMethod === "Partial" || isPartialByAmount
       
       const _edcAmt = paymentMethod === "EDC" ? (parseFloat(edcAmount) || 0) : 0
       const _ccFeePct = paymentMethod === "EDC" ? (parseFloat(ccFeePercent) || 0) : 0
@@ -3374,12 +3378,15 @@ export function InvoiceManagement({
            ? "Credit Note" 
            : paymentMethodDetailBase
 
+        const actualPaidAmount = isPartialByAmount ? (enteredPayAmt + cnForThis) : (inv.finalAmount || 0)
+
         invoiceStatusUpdates[inv.id] = {
-           status: isPartial ? inv.status : ("paid" as const),
+           status: isPartial ? ("sent" as const) : ("paid" as const),
            paidDate: isPartial ? inv.paidDate : paidAt,
            paymentMethod: paymentMethodDetail,
            receiveAccountNo: selectedGlAccount,
-           paymentProofs: proofs
+           paymentProofs: proofs,
+           ...(isPartialByAmount ? { partialPaidAmount: (((inv as any).partialPaidAmount || 0) + enteredPayAmt + cnForThis) } : {}),
         }
 
         // Save payment record
@@ -3388,13 +3395,13 @@ export function InvoiceManagement({
           const storedPayments = localStorage.getItem(paymentKey)
           const payments = storedPayments ? JSON.parse(storedPayments) : []
           const paymentRecord = {
-            id: `payment-${inv.id}`,
+            id: `payment-${inv.id}-${Date.now()}`,
             invoiceId: inv.id,
             invoiceNumber: inv.invoiceNumber,
             studentName: inv.studentName,
             studentId: inv.studentId,
             studentGrade: inv.studentGrade,
-            amount: inv.finalAmount,
+            amount: actualPaidAmount,
             term: inv.term || "-",
             paymentMethod: paymentMethodDetail,
             status: isPartial ? "partial" : "paid",
@@ -3543,6 +3550,7 @@ export function InvoiceManagement({
       setSelectedCNIdsForPaid(new Set())
       setEdcAmount("")
       setCcFeePercent("")
+      setPaymentAmountInput("")
       setEdcBank("")
       setEdcAccountNumber("")
       setSelectedGlAccount("")
@@ -3757,75 +3765,59 @@ export function InvoiceManagement({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoice.totalInvoices")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("invoice.totalInvoices")}</p>
+            <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoice.pendingApproval")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{summaryStats.pendingApproval}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("invoice.pendingApproval")}</p>
+            <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingApproval}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("common.approved")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{summaryStats.approved}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            <p className="text-2xl font-bold text-purple-600">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Email</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{summaryStats.sent}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Email</p>
+            <p className="text-2xl font-bold text-blue-600">{summaryStats.sent}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Partial</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" style={{ color: "#d97706" }}>{summaryStats.partial}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Partial</p>
+            <p className="text-2xl font-bold" style={{ color: "#d97706" }}>{summaryStats.partial}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("common.paid")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.paid}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
+            <p className="text-2xl font-bold text-green-600">{summaryStats.paid}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("common.overdue")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{summaryStats.overdue}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
+            <p className="text-2xl font-bold text-red-600">{summaryStats.overdue}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("invoice.totalAmount")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.totalAmount.toLocaleString()}</div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("invoice.totalAmount")}</p>
+            <p className="text-2xl font-bold">{summaryStats.totalAmount.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>
@@ -6087,6 +6079,10 @@ export function InvoiceManagement({
             const _netAfterCN = Math.max(0, _invoiceAmt - _totalCN)
             const _netPayable = _netAfterCN  // used for payment proof visibility
             const _fullyByCN = selectedCNIdsForPaid.size > 0 && _netAfterCN === 0
+            const _onlineMethods = ["Thai QR", "Credit Card"]
+            const _isOnline = _onlineMethods.includes(paymentMethod)
+            const _enteredAmount = _isOnline ? 0 : (parseFloat(paymentAmountInput) || 0)
+            const _isPartialPay = !_fullyByCN && !_isOnline && _enteredAmount > 0 && _enteredAmount < _netAfterCN
             const _edcAmt = paymentMethod === "EDC" ? (parseFloat(edcAmount) || 0) : 0
             const _edcCoversInvoice = paymentMethod === "EDC" && _edcAmt >= _invoiceAmt
             const _ccFeePct = paymentMethod === "EDC" ? (parseFloat(ccFeePercent) || 0) : 0
@@ -6094,10 +6090,10 @@ export function InvoiceManagement({
             const _ccFee = parseFloat((_netAfterCN * _ccFeePct / 100).toFixed(2))
             const _totalToPay = _netAfterCN + _ccFee
             const _overpay = paymentMethod === "EDC" ? Math.max(0, _edcAmt - _totalToPay) : 0
-            // Final balance due after CN + EDC
+            // Final balance due after CN + EDC + entered amount
             const _balanceDue = paymentMethod === "EDC"
               ? Math.max(0, _totalToPay - _edcAmt)
-              : _netAfterCN
+              : _enteredAmount > 0 ? Math.max(0, _netAfterCN - _enteredAmount) : _netAfterCN
 
             return (
           <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-2 theme-scrollbar">
@@ -6252,6 +6248,12 @@ export function InvoiceManagement({
                     <span>−฿{_totalCN.toLocaleString()}</span>
                   </div>
                 )}
+                {paymentMethod && !["EDC", "Thai QR", "Credit Card"].includes(paymentMethod) && _enteredAmount > 0 && (
+                  <div className="flex justify-between text-blue-700">
+                    <span>Payment Amount</span>
+                    <span>−฿{_enteredAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 {paymentMethod === "EDC" && _ccFeePct > 0 && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Transaction Fee ({_ccFeePct}%)</span>
@@ -6279,7 +6281,7 @@ export function InvoiceManagement({
                   </>
                 )}
                 <div className="flex justify-between font-bold pt-1 border-t border-gray-200">
-                  {paymentMethod === "EDC" && _edcAmt > 0 && _balanceDue === 0 ? (
+                  {(paymentMethod === "EDC" && _edcAmt > 0 && _balanceDue === 0) || (_enteredAmount > 0 && _balanceDue === 0) ? (
                     <>
                       <span className="text-green-700">Paid in Full</span>
                       <span className="text-green-700">฿0</span>
@@ -6291,6 +6293,25 @@ export function InvoiceManagement({
                     </>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Payment Amount */}
+            {!_fullyByCN && paymentMethod && !["EDC", "Thai QR", "Credit Card"].includes(paymentMethod) && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Payment Amount (฿)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder={`Full amount: ฿${_netAfterCN.toLocaleString()}`}
+                  value={paymentAmountInput}
+                  onChange={e => setPaymentAmountInput(e.target.value)}
+                  className="h-9"
+                />
+                {_isPartialPay && (
+                  <p className="text-xs text-amber-600">Partial payment — remaining ฿{(_netAfterCN - _enteredAmount).toLocaleString()} will be outstanding.</p>
+                )}
               </div>
             )}
 
@@ -6342,6 +6363,7 @@ export function InvoiceManagement({
                 setSelectedCNIdsForPaid(new Set())
                 setEdcAmount("")
                 setCcFeePercent("")
+                setPaymentAmountInput("")
               }}
             >
               Cancel
@@ -6590,7 +6612,7 @@ export function InvoiceManagement({
                     <div className="text-xs text-gray-500 mb-2 italic">{numberToWords(selectedInvoice.finalAmount)}</div>
                     <div className="flex justify-between items-center">
                       <span className="text-base font-bold text-gray-900">TOTAL</span>
-                      <span className="text-lg font-bold text-gray-900">{formatCurrency(selectedInvoice.finalAmount)}</span>
+                      <span className="text-2xl font-bold text-gray-900">{formatCurrency(selectedInvoice.finalAmount)}</span>
                     </div>
                   </div>
                 </div>

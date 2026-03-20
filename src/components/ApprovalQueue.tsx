@@ -948,59 +948,31 @@ export function ApprovalQueue() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.totalInvoices")}</p>
-                <p className="text-2xl font-bold">{totalInvoices}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("approvalQueue.totalInvoices")}</p>
+            <p className="text-2xl font-bold">{totalInvoices}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.wait")}</p>
-                <p className="text-2xl font-bold">{waitCount}</p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("approvalQueue.wait")}</p>
+            <p className="text-2xl font-bold">{waitCount}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.approved")}</p>
-                <p className="text-2xl font-bold">{approvedCount}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("approvalQueue.approved")}</p>
+            <p className="text-2xl font-bold">{approvedCount}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("approvalQueue.rejected")}</p>
-                <p className="text-2xl font-bold">{rejectedCount}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <X className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("approvalQueue.rejected")}</p>
+            <p className="text-2xl font-bold">{rejectedCount}</p>
           </CardContent>
         </Card>
       </div>

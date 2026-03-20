@@ -370,63 +370,38 @@ export function SummerActivitiesReceipts() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{t("receipt.totalReceipts")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summaryStats.total}</div>
-                <p className="text-xs text-muted-foreground">
-                  {summaryStats.earlyBird} {t("summer.earlyBirdDiscounts")}
-                </p>
+            <Card className="rounded-xl">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
+                <p className="text-2xl font-bold">{summaryStats.total}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{t("receipt.successfullyIssued")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{summaryStats.issued}</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((summaryStats.issued / summaryStats.total) * 100)}% {t("common.successRate")}
-                </p>
+            <Card className="rounded-xl">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
+                <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("common.avg")} ₿{Math.round(summaryStats.avgAmount).toLocaleString()} {t("summer.perActivity")}
-                </p>
+            <Card className="rounded-xl">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
+                <p className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{t("summer.averageAge")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{Math.round(summaryStats.avgAge)} {t("common.years")}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("summer.participantAverage")}
-                </p>
+            <Card className="rounded-xl">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{t("summer.averageAge")}</p>
+                <p className="text-2xl font-bold">{Math.round(summaryStats.avgAge)} {t("common.years")}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{t("receipt.totalDownloads")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summaryStats.totalDownloads}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("common.avg")} {(summaryStats.totalDownloads / summaryStats.total).toFixed(1)} {t("receipt.perReceipt")}
-                </p>
+            <Card className="rounded-xl">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
+                <p className="text-2xl font-bold">{summaryStats.totalDownloads}</p>
               </CardContent>
             </Card>
           </div>

@@ -345,51 +345,31 @@ export function AfterSchoolReceipts() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("receipt.totalReceipts")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {summaryStats.externalParents} {t("receipt.fromExternalParents")}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
+            <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("receipt.successfullyIssued")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summaryStats.issued}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((summaryStats.issued / summaryStats.total) * 100)}% {t("receipt.successRate")}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
+            <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("dashboard.totalRevenue")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("receipt.fromAfterSchool")}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
+            <p className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("receipt.totalDownloads")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.totalDownloads}</div>
-            <p className="text-xs text-muted-foreground">
-              {t("receipt.avgPerReceipt").replace("{avg}", (summaryStats.totalDownloads / summaryStats.total).toFixed(1))}
-            </p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
+            <p className="text-2xl font-bold">{summaryStats.totalDownloads}</p>
           </CardContent>
         </Card>
       </div>

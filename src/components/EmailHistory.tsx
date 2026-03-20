@@ -290,47 +290,26 @@ export function EmailHistory() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Email Jobs</p>
-                <p className="text-2xl font-bold">{allHistory.length}</p>
-              </div>
-              <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Mail className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Total Email Jobs</p>
+            <p className="text-2xl font-bold">{allHistory.length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Emails Dispatched</p>
-                <p className="text-2xl font-bold">
-                  {allHistory.reduce((sum, item) => sum + item.recipients, 0)}
-                </p>
-              </div>
-              <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Total Emails Dispatched</p>
+            <p className="text-2xl font-bold">
+              {allHistory.reduce((sum, item) => sum + item.recipients, 0)}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Delivery Success Rate</p>
-                <p className="text-2xl font-bold">98.5%</p>
-              </div>
-              <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Delivery Success Rate</p>
+            <p className="text-2xl font-bold">98.5%</p>
           </CardContent>
         </Card>
       </div>

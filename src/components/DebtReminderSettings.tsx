@@ -712,57 +712,39 @@ export function DebtReminderSettings() {
 
       {/* Summary Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-muted-foreground">Total Recipients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.totalRecipients}</div>
-            <p className="text-xs text-muted-foreground mt-1">Across all active reminders</p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Total Recipients</p>
+            <p className="text-2xl font-bold">{summaryStats.totalRecipients}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-blue-300 bg-blue-50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-blue-700">Scheduled</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700">{summaryStats.scheduledCount}</div>
-            <p className="text-xs text-blue-600 mt-1">Pending to send</p>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Scheduled</p>
+            <p className="text-2xl font-bold text-blue-700">{summaryStats.scheduledCount}</p>
           </CardContent>
         </Card>
 
         <Card
-          className="border-green-300 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+          className="rounded-xl cursor-pointer hover:bg-green-100 transition-colors"
           onClick={handleOpenHistory}
         >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-green-700 flex items-center gap-1">
-              Remind History
-              <span className="text-xs font-normal text-green-600 ml-1">(click to view)</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-700">{summaryStats.sentToday}</div>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Remind History <span className="text-xs font-normal text-green-600 ml-1">(click to view)</span></p>
+            <p className="text-2xl font-bold text-green-700">{summaryStats.sentToday}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-amber-300 bg-amber-50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-amber-700">Next Scheduled</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="rounded-xl">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Next Scheduled</p>
             {summaryStats.nextScheduled ? (
-              <>
-                <div className="text-sm font-bold text-amber-700">
-                  {formatDisplayDate(summaryStats.nextScheduled.sendDate)}
-                </div>
-                <p className="text-xs text-amber-600 mt-1">
-                  at {summaryStats.nextScheduled.sendTime} - {summaryStats.nextScheduled.name}
-                </p>
-              </>
+              <p className="text-2xl font-bold text-amber-700">
+                {formatDisplayDate(summaryStats.nextScheduled.sendDate)}
+              </p>
             ) : (
-              <div className="text-sm text-muted-foreground">No scheduled reminders</div>
+              <p className="text-sm text-muted-foreground">No scheduled reminders</p>
             )}
           </CardContent>
         </Card>
@@ -1507,13 +1489,13 @@ export function DebtReminderSettings() {
             <div className="flex-1 overflow-y-auto space-y-6 py-4">
               {/* Recipient Info */}
               <Card className="border-blue-300 bg-blue-50">
-                <CardContent className="pt-6">
+                <CardContent className="pt-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-blue-900">Recipient Count</h3>
                       <p className="text-sm text-blue-700">This reminder will be sent to approximately</p>
                     </div>
-                    <div className="text-3xl font-bold text-blue-700">
+                    <div className="text-2xl font-bold text-blue-700">
                       {previewReminder.recipientCount || 0}
                     </div>
                   </div>
