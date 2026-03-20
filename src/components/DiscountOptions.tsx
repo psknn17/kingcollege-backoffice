@@ -16,6 +16,7 @@ import {
 import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 // Storage key for discount options
@@ -224,6 +225,7 @@ export function DiscountOptions() {
     if (Object.keys(allData).length > 0) {
       saveToStorage(allData)
       toast.success(t("discountOptions.savedSuccess").replace("{year}", selectedYear))
+      logActivity({ action: "Save Discount Options", module: "Discount Options", detail: `Saved discount options for academic year ${selectedYear}` })
     }
   }
 

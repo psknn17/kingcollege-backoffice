@@ -45,6 +45,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { WaiveFeeManagement } from "./WaiveFeeManagement"
 import { useStudents } from "@/contexts/StudentContext"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -473,6 +474,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         setStudentGroups(updatedGroups)
 
         toast.success(`Added ${newStudents.length} students to group`)
+        logActivity({ action: "Import Students", module: "Discount Management", detail: `Imported ${newStudents.length} students via CSV to group "${updatedGroups[groupIndex].name}"` })
         setCsvUploadDialog({ isOpen: false, groupId: null })
         setCsvFile(null)
         setCsvPreviewData([])
@@ -551,6 +553,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         setStudentGroups(updatedGroups)
 
         toast.success(t("discount.studentAdded"))
+        logActivity({ action: "Add Student", module: "Discount Management", detail: `Added student "${name}" (${id}) to group` })
         setAddIndividualDialog({ isOpen: false, groupId: null })
         setIndividualStudentForm({ id: "", name: "", yearGroup: "", parentName: "" })
         clearStudentSearch()
@@ -611,6 +614,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       }))
       setStudentInput("")
       toast.success(`Added ${student.name} (${student.id}) to group`)
+      logActivity({ action: "Add Student", module: "Discount Management", detail: `Added student "${student.name}" (${student.id}) to group via ID lookup` })
     } else if (!student) {
       toast.error(`Student ID "${studentId}" not found. Available IDs: ${availableStudents.slice(0, 3).map(s => s.id).join(", ")}...`)
     } else {
@@ -687,6 +691,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
             selectedStudents: [...prev.selectedStudents, ...validStudents]
           }))
           toast.success(`Successfully imported ${validStudents.length} students`)
+          logActivity({ action: "Import Students", module: "Discount Management", detail: `Imported ${validStudents.length} students from file` })
         }
 
         if (errors.length > 0) {
@@ -720,6 +725,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       "student_ids_template"
     )
     toast.success(t("discount.studentIDTemplateDownloaded"))
+    logActivity({ action: "Download Template", module: "Discount Management", detail: "Downloaded student ID template file" })
   }
 
   const removeStudentFromGroup = (studentId: string) => {
@@ -766,6 +772,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
       setStudentGroups(prev => prev.map(g => g.id === editGroupDialog.group.id ? updatedGroup : g))
       toast.success(t("discount.groupUpdated"))
+      logActivity({ action: "Update Group", module: "Discount Management", detail: `Updated discount group "${groupForm.name}" with ${groupForm.selectedStudents.length} students` })
       setEditGroupDialog({ isOpen: false, group: null })
     } else {
       // Create new group
@@ -782,6 +789,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
       setStudentGroups(prev => [...prev, newGroup])
       toast.success(t("discount.groupCreated"))
+      logActivity({ action: "Create Group", module: "Discount Management", detail: `Created discount group "${newGroup.name}" (${newGroup.id}) with ${newGroup.students.length} students` })
       setIsGroupDialogOpen(false)
     }
     resetGroupForm()
@@ -820,6 +828,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     if (deleteConfirmDialog.group) {
       setStudentGroups(prev => prev.filter(g => g.id !== deleteConfirmDialog.group.id))
       toast.success(t("discount.groupDeleted"))
+      logActivity({ action: "Delete Group", module: "Discount Management", detail: `Deleted discount group "${deleteConfirmDialog.group.name}" (${deleteConfirmDialog.group.id})` })
       setDeleteConfirmDialog({ isOpen: false, group: null })
     }
   }
@@ -843,6 +852,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           : discount
       ))
       toast.success(t("discount.discountCodeUpdated"))
+      logActivity({ action: "Update Discount Code", module: "Discount Management", detail: `Updated discount code "${formData.code}" (${formData.type}: ${formData.value})` })
     } else {
       const newDiscount: DiscountCode = {
         id: Date.now(),
@@ -855,6 +865,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       }
       setDiscountCodes(prev => [...prev, newDiscount])
       toast.success(t("discount.discountCodeCreated"))
+      logActivity({ action: "Create Discount Code", module: "Discount Management", detail: `Created discount code "${formData.code}" (${formData.type}: ${formData.value})` })
     }
 
     setIsDialogOpen(false)
@@ -890,6 +901,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         : discount
     ))
     toast.success(t("discount.discountStatusUpdated"))
+    const toggledDiscount = discountCodes.find(d => d.id === id)
+    logActivity({ action: "Toggle Discount Status", module: "Discount Management", detail: `Toggled discount code "${toggledDiscount?.code}" to ${toggledDiscount?.isActive ? "inactive" : "active"}` })
   }
 
   const copyDiscountCode = (code: string) => {
@@ -1242,6 +1255,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                           }))
                                           setStudentInput("")
                                           toast.success(`Added ${student.name} (${student.id})`)
+                                          logActivity({ action: "Add Student", module: "Discount Management", detail: `Added student "${student.name}" (${student.id}) to group via dropdown` })
                                         }}
                                         className="group flex items-center justify-between px-4 py-3.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-2 last:mb-0 bg-white"
                                       >
@@ -1716,6 +1730,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                       }))
                                       setStudentInput("")
                                       toast.success(`Added ${student.name} (${student.id})`)
+                                      logActivity({ action: "Add Student", module: "Discount Management", detail: `Added student "${student.name}" (${student.id}) to group via dropdown` })
                                     }}
                                   >
                                     <div className="flex-1 min-w-0">

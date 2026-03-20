@@ -10,6 +10,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Search, Filter, Download, Users, Calendar, CreditCard, Mail, Phone, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -287,6 +288,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
     downloadAsXlsx(headers, rows, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_student_report`)
 
     toast.success(`Student report exported for ${course.name}`)
+    logActivity({ action: "Export Report", module: "Course Student Report", detail: `Exported student report for ${course.name} (${filteredStudents.length} records)` })
   }
 
   // Pagination calculations

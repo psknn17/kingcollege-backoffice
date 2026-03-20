@@ -30,6 +30,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
 import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
+import { logActivity } from "@/lib/activityLog"
 
 // Student data matching StudentContext
 const studentData = [
@@ -571,6 +572,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       // link.click()
 
       toast.success(t("receipt.downloadingReceipt").replace("{number}", receipt.receiptNumber))
+      logActivity({ action: "Download Receipt PDF", module: "Receipts", detail: `Receipt: ${receipt.receiptNumber}, Student: ${receipt.studentName} (${receipt.studentId}), Amount: ฿${receipt.amount.toLocaleString()}, Invoice: ${receipt.invoiceNumber}` })
 
       // Update download count
       const updatedReceipts = receipts.map(r =>
@@ -585,6 +587,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const receipt = receipts.find(r => r.id === receiptId)
     if (receipt) {
       toast.success(t("receipt.emailSentTo").replace("{name}", receipt.studentName))
+      logActivity({ action: "Send Receipt Email", module: "Receipts", detail: `Receipt: ${receipt.receiptNumber}, Student: ${receipt.studentName} (${receipt.studentId}), Amount: ฿${receipt.amount.toLocaleString()}, Payment: ${receipt.paymentMethod}` })
     }
   }
 
@@ -598,6 +601,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     // In production, this would call an API to generate a ZIP file with all PDFs
     toast.success(t("receipt.downloadingReceipts").replace("{count}", String(selectedReceipts.size)))
+    logActivity({ action: "Bulk Download Receipt PDF", module: "Receipts", detail: `Downloaded ${selectedReceipts.size} receipts: ${selectedReceiptsList.map(r => r.receiptNumber).slice(0, 5).join(", ")}${selectedReceiptsList.length > 5 ? "..." : ""}` })
 
     // Update download counts
     const updatedReceipts = receipts.map(r =>
@@ -615,6 +619,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
 
     toast.success(t("receipt.sendingEmails").replace("{count}", String(selectedReceipts.size)))
+    logActivity({ action: "Bulk Send Receipt Email", module: "Receipts", detail: `Sent emails for ${selectedReceipts.size} receipts` })
+
     setSelectedReceipts(new Set())
   }
 
@@ -716,6 +722,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     XLSX.utils.book_append_sheet(wb, ws, "Receipts")
     XLSX.writeFile(wb, `interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
     toast.success(t("receipt.interfaceFileDownloaded"))
+    logActivity({ action: "Download Interface File", module: "Receipts", detail: `Exported ${filteredReceipts.length} receipts to interface file, File: interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx` })
   }
 
   const exportToExcel = () => {
@@ -737,6 +744,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       ])
       downloadAsXlsx(headers, rows, `credit-notes-export-${format(new Date(), 'dd-MM-yyyy')}`)
       toast.success(t("receipt.creditNotesExported"))
+      logActivity({ action: "Export Excel", module: "Credit Notes", detail: `Exported ${filteredCreditNotes.length} credit notes to Excel, File: credit-notes-export-${format(new Date(), 'dd-MM-yyyy')}.xlsx` })
     } else {
       const headers = ['Receipt Number', 'Invoice Number', 'Student Name', 'Student ID', 'Grade', 'Amount', 'Payment Method', 'Date', 'Academic Year', 'Term']
       const rows = filteredReceipts.map(r => [
@@ -753,6 +761,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       ])
       downloadAsXlsx(headers, rows, `receipts-export-${format(new Date(), 'dd-MM-yyyy')}`)
       toast.success(t("receipt.receiptsExported"))
+      logActivity({ action: "Export Excel", module: "Receipts", detail: `Exported ${filteredReceipts.length} receipts to Excel, File: receipts-export-${format(new Date(), 'dd-MM-yyyy')}.xlsx` })
     }
   }
 
@@ -897,6 +906,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
       toast.success(t("receipt.downloadingCreditNote").replace("{number}", creditNote.creditNoteNumber))
+      logActivity({ action: "Download Credit Note PDF", module: "Credit Notes", detail: `CN: ${creditNote.creditNoteNumber}, Student: ${creditNote.studentName} (${creditNote.studentId}), Amount: ฿${creditNote.amount.toLocaleString()}, Status: ${creditNote.status}` })
     }
   }
 
@@ -913,6 +923,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       setCreditNotes(updatedCreditNotes)
       setFilteredCreditNotes(updatedCreditNotes)
       toast.success(t("receipt.creditNoteCancelled").replace("{number}", creditNote.creditNoteNumber))
+      logActivity({ action: "Cancel Credit Note", module: "Credit Notes", detail: `CN: ${creditNote.creditNoteNumber}, Student: ${creditNote.studentName} (${creditNote.studentId}), Amount: ฿${creditNote.amount.toLocaleString()}, Status: ${creditNote.status} → cancelled` })
     }
   }
 
@@ -922,6 +933,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return
     }
     toast.success(t("receipt.downloadingCreditNotes").replace("{count}", String(selectedCreditNotes.size)))
+    logActivity({ action: "Bulk Download Credit Note PDF", module: "Credit Notes", detail: `Downloaded ${selectedCreditNotes.size} credit notes: ${creditNotes.filter(cn => selectedCreditNotes.has(cn.id)).map(cn => cn.creditNoteNumber).slice(0, 5).join(", ")}${selectedCreditNotes.size > 5 ? "..." : ""}` })
     setSelectedCreditNotes(new Set())
   }
 
@@ -938,6 +950,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     setCreditNotes(updatedCreditNotes)
     setFilteredCreditNotes(updatedCreditNotes)
     toast.success(t("receipt.cancelledCreditNotes").replace("{count}", String(selectedCreditNotes.size)))
+    logActivity({ action: "Bulk Cancel Credit Notes", module: "Credit Notes", detail: `Cancelled ${selectedCreditNotes.size} credit notes: ${creditNotes.filter(cn => selectedCreditNotes.has(cn.id)).map(cn => cn.creditNoteNumber).slice(0, 5).join(", ")}${selectedCreditNotes.size > 5 ? "..." : ""}` })
     setSelectedCreditNotes(new Set())
   }
 
@@ -1041,6 +1054,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     setIsCreateCreditNoteOpen(false)
     toast.success(t("receipt.creditNoteCreated"))
+    logActivity({ action: "Create Credit Note", module: "Credit Notes", detail: `CN: ${creditNoteForm.creditNoteNumber}, Student: ${creditNoteForm.studentName} (${creditNoteForm.studentId}), Amount: ฿${creditNoteForm.amount.toLocaleString()}, Reason: "${creditNoteForm.reason}", Invoice: ${creditNoteForm.invoiceNumber || "-"}, Year: ${formatAcademicYear(creditNoteForm.academicYear)}, Term: ${creditNoteForm.term}` })
   }
 
   // --- Import helpers ---
@@ -1154,6 +1168,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     toast.success(duplicates > 0
       ? t("receipt.importedCreditNotesWithDuplicates").replace("{count}", String(newNotes.length)).replace("{duplicates}", String(duplicates))
       : t("receipt.importedCreditNotes").replace("{count}", String(newNotes.length)))
+    logActivity({ action: "Import Credit Notes", module: "Credit Notes", detail: `Imported ${newNotes.length} credit notes from "${importFileName}"${duplicates > 0 ? `, ${duplicates} duplicates skipped` : ""}, CN numbers: ${newNotes.map(cn => cn.creditNoteNumber).slice(0, 5).join(", ")}${newNotes.length > 5 ? "..." : ""}` })
   }
 
   const downloadTemplate = () => {

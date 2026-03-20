@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { PaginationBar } from "./ui/pagination-bar"
 
 interface EmailDeliveryRecord {
@@ -306,10 +307,12 @@ export function EmailDeliveryReport() {
 
   const retryFailedEmail = (recordId: string) => {
     toast.success(t("email.retryInitiated"))
+    logActivity({ action: "Retry Email", module: "Email Delivery Report", detail: `Retried failed email for record ID: ${recordId}` })
   }
 
   const exportReport = () => {
     toast.success(t("email.reportExported"))
+    logActivity({ action: "Export Report", module: "Email Delivery Report", detail: `Exported email delivery report with ${filteredRecords.length} records` })
   }
 
   const getStatusBadge = (status: string) => {

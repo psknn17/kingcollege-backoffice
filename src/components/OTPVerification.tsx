@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Mail, ArrowLeft, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
+import { logActivity } from "@/lib/activityLog"
 import SchoolLogo from "@/assets/Logo.png"
 import SchoolImage from "@/assets/school-bg.jpg"
 
@@ -88,6 +89,7 @@ export function OTPVerification({
     } else {
       // Mock verification
       toast.success("OTP verified successfully!")
+      logActivity({ action: "Verify OTP", module: "Authentication", detail: `OTP verified for ${email}` })
     }
   }
 
@@ -102,6 +104,7 @@ export function OTPVerification({
         onResend()
       }
       toast.success("New OTP code sent to your email")
+      logActivity({ action: "Resend OTP", module: "Authentication", detail: `OTP resent to ${email}` })
     }
   }
 

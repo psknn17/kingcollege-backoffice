@@ -24,6 +24,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { parseTuitionItemName } from "@/utils/itemAutoCreate"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { logActivity } from "@/lib/activityLog"
 
 interface Item {
   id: string
@@ -1880,6 +1881,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     saveItemsToStorage(items, invoiceType)
     saveTemplatesToStorage(templates, invoiceType)
     toast.success(t("item.changesSaved"))
+    logActivity({ action: "Save", module: "Items & Templates", detail: `Saved all changes for ${invoiceType} items and templates` })
   }
 
   // Items state
@@ -2156,11 +2158,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
       toast.success(t("item.itemUpdated"))
+      logActivity({ action: "Update", module: "Items & Templates", detail: `Updated item "${itemData.name}" (${itemData.itemCode})` })
     } else {
       const updatedItems = [...items, itemData]
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
       toast.success(t("item.itemCreated"))
+      logActivity({ action: "Create", module: "Items & Templates", detail: `Created item "${itemData.name}" (${itemData.itemCode})` })
     }
 
     closeItemModal()
@@ -2175,6 +2179,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   }
 
   const handleDeleteItem = (itemId: string) => {
+    const deletedItem = items.find(item => item.id === itemId)
     // Remove item from items list
     const updatedItems = items.filter(item => item.id !== itemId)
     setItems(updatedItems)
@@ -2196,6 +2201,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     saveTemplatesToStorage(updatedTemplates, invoiceType)
 
     toast.success(t("item.itemDeleted"))
+    logActivity({ action: "Delete", module: "Items & Templates", detail: `Deleted item "${deletedItem?.name || itemId}"` })
   }
 
   const handleBulkDelete = () => {
@@ -2222,6 +2228,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
     setSelectedItemIds(new Set())
     toast.success(t("item.bulkDeleted").replace("{count}", String(idsToDelete.length)))
+    logActivity({ action: "Delete", module: "Items & Templates", detail: `Bulk deleted ${idsToDelete.length} items` })
   }
 
   // Import functions
@@ -2251,6 +2258,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     downloadAsXlsx(headers, [exampleRow], "item_import_template")
 
     toast.success(t("item.templateDownloaded"))
+    logActivity({ action: "Export", module: "Items & Templates", detail: `Downloaded item import template (${invoiceType})` })
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2328,6 +2336,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         ? t("item.importedWithSkipped").replace("{imported}", String(imported)).replace("{skipped}", String(skipped))
         : t("item.importedItems").replace("{imported}", String(imported))
     )
+    logActivity({ action: "Import", module: "Items & Templates", detail: `Imported ${imported} items${skipped > 0 ? ` (${skipped} skipped)` : ""} for ${invoiceType}` })
   }
 
   const handleImport = () => {
@@ -2450,6 +2459,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       if (created > 0 || updated > 0) {
 
         toast.success(t("item.syncedTuitionFees").replace("{created}", String(created)).replace("{updated}", String(updated)).replace("{year}", latestYear))
+        logActivity({ action: "Sync", module: "Items & Templates", detail: `Synced tuition fees for ${latestYear}: ${created} created, ${updated} updated` })
       }
     } catch (error) {
       console.error("Failed to sync tuition fees:", error)
@@ -2523,19 +2533,23 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     if (editingTemplate) {
       setTemplates(templates.map(template => template.id === editingTemplate.id ? templateData : template))
       toast.success(t("item.templateUpdated"))
+      logActivity({ action: "Update", module: "Items & Templates", detail: `Updated template "${templateData.name}" with ${selectedItemsForTemplate.length} items` })
     } else {
       setTemplates([...templates, templateData])
       toast.success(t("item.templateCreated"))
+      logActivity({ action: "Create", module: "Items & Templates", detail: `Created template "${templateData.name}" with ${selectedItemsForTemplate.length} items` })
     }
 
     closeTemplateModal()
   }
 
   const handleDeleteTemplate = (templateId: string) => {
+    const deletedTemplate = templates.find(template => template.id === templateId)
     const updated = templates.filter(template => template.id !== templateId)
     setTemplates(updated)
     saveTemplatesToStorage(updated, invoiceType)
     toast.success(t("item.templateDeleted"))
+    logActivity({ action: "Delete", module: "Items & Templates", detail: `Deleted template "${deletedTemplate?.name || templateId}"` })
   }
 
   // View Modal functions

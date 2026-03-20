@@ -35,6 +35,7 @@ import {
   Trash2
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency as formatCurrencyUtil } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -177,6 +178,7 @@ export function ViewModal({
       onSave(editedData)
       setIsPreviewMode(false)
       toast.success("Invoice saved successfully")
+      logActivity({ action: "Save Changes", module: "Invoice Details", detail: `Saved changes to invoice #${editedData?.invoiceNumber || editedData?.id || data?.invoiceNumber || data?.id || "unknown"}` })
       onClose()
     }
   }
@@ -825,10 +827,12 @@ export function ViewModal({
       case "download":
         onDownload?.(data)
         toast.success(t("viewModal.downloading"))
+        logActivity({ action: "Download Document", module: "Invoice Details", detail: `Downloaded document for invoice #${data?.invoiceNumber || data?.id || "unknown"}` })
         break
       case "print":
         onPrint?.(data)
         toast.success(t("viewModal.preparingPrint"))
+        logActivity({ action: "Print Document", module: "Invoice Details", detail: `Printed document for invoice #${data?.invoiceNumber || data?.id || "unknown"}` })
         break
       default:
         break

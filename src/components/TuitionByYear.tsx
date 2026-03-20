@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Save, GraduationCap } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
@@ -270,6 +271,7 @@ export function TuitionByYear() {
     console.log("Saving tuition data:", tuitionData)
     saveTuitionToStorage(tuitionData)
     toast.success(t("tuition.savedSuccess"))
+    logActivity({ action: "Save Tuition Data", module: "Tuition by Year", detail: `Saved tuition data for academic year ${selectedYear}, Grand Total: ${getGrandTotal()}` })
     setIsSaveConfirmDialogOpen(false)
   }
 

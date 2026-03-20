@@ -24,6 +24,7 @@ import {
   X
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { getSortedYearGroups } from "@/utils/gradeLevels"
 
 interface Student {
@@ -169,6 +170,7 @@ export function TuitionDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group updated successfully")
+      logActivity({ action: "Update Group", module: "Student Groups", detail: `Updated group "${formData.name}" with ${formData.selectedStudents.length} students` })
     } else {
       // Create new group
       const newGroup: DiscountGroup = {
@@ -185,6 +187,7 @@ export function TuitionDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group created successfully")
+      logActivity({ action: "Create Group", module: "Student Groups", detail: `Created group "${formData.name}" with ${formData.selectedStudents.length} students` })
     }
 
     setIsDialogOpen(false)
@@ -219,7 +222,9 @@ export function TuitionDiscountGroups() {
       const updatedGroups = groups.filter(g => g.id !== groupToDelete)
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
+      const deletedGroup = groups.find(g => g.id === groupToDelete)
       toast.success("Student group deleted successfully")
+      logActivity({ action: "Delete Group", module: "Student Groups", detail: `Deleted group "${deletedGroup?.name || groupToDelete}"` })
     }
     setDeleteDialogOpen(false)
     setGroupToDelete(null)
@@ -431,6 +436,7 @@ export function TuitionDiscountGroups() {
                                     e.preventDefault()
                                     handleAddStudent(student)
                                     toast.success(`Added ${student.name} (${student.id})`)
+                                    logActivity({ action: "Add Student", module: "Student Groups", detail: `Added student "${student.name}" (${student.id}) to group` })
                                   }}
                                   className="group px-3 py-2.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-1.5 last:mb-0 bg-white"
                                 >

@@ -21,6 +21,7 @@ import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
+import { logActivity } from "@/lib/activityLog"
 
 interface Invoice {
   id: string
@@ -228,6 +229,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
     if (invoice) {
       // Update reminders sent count in a real app
       toast.success(t("invoiceOverview.reminderSent").replace("{name}", invoice.studentName))
+      logActivity({ action: "Send Reminder", module: "Invoice Overview", detail: `Sent payment reminder to ${invoice.studentName} (${invoice.invoiceNumber})` })
     }
   }
 
@@ -253,6 +255,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
       downloadAsXlsx(headers, rows, `${invoice.invoiceNumber}_invoice`)
 
       toast.success(t("invoiceOverview.invoiceDownloaded").replace("{number}", invoice.invoiceNumber))
+      logActivity({ action: "Download Invoice", module: "Invoice Overview", detail: `Downloaded invoice ${invoice.invoiceNumber} for ${invoice.studentName}` })
     }
   }
 
@@ -909,6 +912,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                   className="flex-1"
                   onClick={() => {
                     toast.success(t("invoiceOverview.downloadSuccess"))
+                    logActivity({ action: "Download Invoice", module: "Invoice Overview", detail: `Downloaded invoice ${selectedInvoice.invoiceNumber} for ${selectedInvoice.studentName}` })
                     closeModal()
                   }}
                   disabled={!userCanEdit}

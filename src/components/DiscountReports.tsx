@@ -17,6 +17,7 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"

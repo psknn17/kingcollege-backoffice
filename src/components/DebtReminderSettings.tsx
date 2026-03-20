@@ -24,6 +24,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { logActivity } from "@/lib/activityLog"
 
 interface DebtReminderTemplate {
   id: string
@@ -370,17 +371,21 @@ export function DebtReminderSettings() {
     if (templateManageDialog.editing) {
       setReminderTemplates((current) => (current || []).map(t => t.id === templateManageDialog.editing!.id ? { ...t, ...templateForm } : t))
       toast.success("Template updated")
+      logActivity({ action: "Update Template", module: "Debt Reminders", detail: `Updated template: "${templateForm.name}", Subject: "${templateForm.subject}"` })
     } else {
       const newTemplate: DebtReminderTemplate = { id: `tpl-${Date.now()}`, ...templateForm }
       setReminderTemplates((current) => [...(current || []), newTemplate])
       toast.success("Template created")
+      logActivity({ action: "Create Template", module: "Debt Reminders", detail: `Created template: "${templateForm.name}", Subject: "${templateForm.subject}"` })
     }
     setTemplateManageDialog({ isOpen: false, editing: null })
   }
 
   const deleteTemplate = (id: string) => {
+    const template = (reminderTemplates || []).find(t => t.id === id)
     setReminderTemplates((current) => (current || []).filter(t => t.id !== id))
     toast.success("Template deleted")
+    logActivity({ action: "Delete Template", module: "Debt Reminders", detail: `Deleted template: ${template?.name || id}` })
   }
 
   const applyTemplate = (reminderId: string, template: DebtReminderTemplate) => {
@@ -423,6 +428,7 @@ export function DebtReminderSettings() {
     toast.success("Reminder duplicated", {
       description: `"${duplicate.name}" created as scheduled`
     })
+    logActivity({ action: "Duplicate Reminder", module: "Debt Reminders", detail: `Duplicated from: "${reminder.name}" → "${duplicate.name}", Subject: "${duplicate.subject}"` })
   }
 
   const handleOpenHistory = () => {
@@ -585,6 +591,7 @@ export function DebtReminderSettings() {
     toast.success(`Reminder email sent to ${mockRecipientCount} recipients`, {
       description: `Subject: ${reminder.subject}`
     })
+    logActivity({ action: "Send Reminder Email", module: "Debt Reminders", detail: `Subject: "${reminder.subject}", Recipients: ${mockRecipientCount}, Academic Year: ${academicYear?.name || reminder.academicYear}, Term: ${term?.name || reminder.term}` })
   }
 
   const handlePreviewReminder = (reminder: ReminderConfig) => {
@@ -632,6 +639,7 @@ export function DebtReminderSettings() {
     toast.success("Reminder scheduled successfully", {
       description: `Will send on ${formatDisplayDate(previewReminder.sendDate)} at ${previewReminder.sendTime}`
     })
+    logActivity({ action: "Schedule Reminder", module: "Debt Reminders", detail: `Scheduled "${previewReminder.subject}" for ${formatDisplayDate(previewReminder.sendDate)} at ${previewReminder.sendTime}` })
 
     setIsPreviewModalOpen(false)
     setPreviewReminder(null)
@@ -654,6 +662,7 @@ export function DebtReminderSettings() {
       toast.success("Schedule cancelled", {
         description: `${reminder.name} has been moved back to scheduled`
       })
+      logActivity({ action: "Cancel Schedule", module: "Debt Reminders", detail: `Cancelled schedule for "${reminder.name}"` })
     })
   }
 

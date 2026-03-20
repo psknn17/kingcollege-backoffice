@@ -37,6 +37,7 @@ import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { useStudents, Family, Student } from "@/contexts/StudentContext"
+import { logActivity } from "@/lib/activityLog"
 import { cn } from "./ui/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 import { gradeLevels } from "@/utils/grades"
@@ -300,6 +301,7 @@ export function FamilyGroups() {
     }
     addFamily(newFamily)
     toast.success(t("familyGroups.familyCreated"))
+    logActivity({ action: "Create Family", module: "Family Groups", detail: `Created family "${formData.familyName}" (${formData.familyCode})` })
     setIsAddDialogOpen(false)
     setFormData(emptyFamily)
   }
@@ -318,6 +320,7 @@ export function FamilyGroups() {
     if (selectedFamily) {
       updateFamily(selectedFamily.id, formData)
       toast.success(t("familyGroups.familyUpdated"))
+      logActivity({ action: "Update Family", module: "Family Groups", detail: `Updated family "${formData.familyName}" (${formData.familyCode})` })
       setIsEditDialogOpen(false)
       setSelectedFamily(null)
     }
@@ -339,6 +342,7 @@ export function FamilyGroups() {
 
       deleteFamily(selectedFamily.id)
       toast.success(t("familyGroups.familyDeleted"))
+      logActivity({ action: "Delete Family", module: "Family Groups", detail: `Deleted family "${selectedFamily.familyName}" (${selectedFamily.familyCode})` })
       setIsDeleteDialogOpen(false)
       setSelectedFamily(null)
     }
@@ -361,6 +365,8 @@ export function FamilyGroups() {
       })
 
       toast.success(t("familyGroups.studentAdded"))
+      const addedStudent = students.find(s => s.id === selectedStudentToAdd)
+      logActivity({ action: "Add Student", module: "Family Groups", detail: `Added student "${addedStudent?.firstName || ""} ${addedStudent?.lastName || ""}" to family "${selectedFamily.familyName}" (${selectedFamily.familyCode})` })
       setIsAddStudentDialogOpen(false)
       setSelectedStudentToAdd("")
     }
@@ -385,6 +391,7 @@ export function FamilyGroups() {
         })
 
         toast.success(t("familyGroups.studentRemoved"))
+        logActivity({ action: "Remove Student", module: "Family Groups", detail: `Removed student "${student.firstName || ""} ${student.lastName || ""}" from family "${family.familyName}" (${family.familyCode})` })
       }
     }
   }
@@ -425,6 +432,7 @@ export function FamilyGroups() {
     downloadAsXlsx(headers, rows, `family_groups_${new Date().toISOString().split('T')[0]}`)
 
     toast.success(`Exported ${filteredFamilies.length} families to Excel`)
+    logActivity({ action: "Export", module: "Family Groups", detail: `Exported ${filteredFamilies.length} families to file family_groups_${new Date().toISOString().split('T')[0]}.xlsx` })
   }
 
   return (

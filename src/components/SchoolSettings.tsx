@@ -5,6 +5,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { toast } from "sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { School, Upload, Save } from "lucide-react"
@@ -73,6 +74,7 @@ export function SchoolSettings() {
       saveSettings(formData)
       window.dispatchEvent(new Event("schoolSettingsUpdated"))
       toast.success("School settings saved successfully")
+      logActivity({ action: "Update School Settings", module: "School Settings", detail: `Updated school settings for ${formData.schoolName}` })
     } catch {
       toast.error("Failed to save settings")
     } finally {

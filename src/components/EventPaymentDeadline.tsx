@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { logActivity } from "@/lib/activityLog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -133,6 +134,7 @@ export function EventPaymentDeadline() {
           : deadline
       ))
       toast.success(t("eventPayment.toast.deadlineUpdated"))
+      logActivity({ action: "Update Deadline", module: "Event Payment Deadline", detail: `Updated deadline for "${selectedEvent}" to ${selectedDate ? format(selectedDate, "dd MMM yyyy") : "N/A"}` })
     } else {
       const newDeadline: PaymentDeadline = {
         id: Date.now(),
@@ -147,6 +149,7 @@ export function EventPaymentDeadline() {
       }
       setDeadlines(prev => [...prev, newDeadline])
       toast.success(t("eventPayment.toast.deadlineCreated"))
+      logActivity({ action: "Create Deadline", module: "Event Payment Deadline", detail: `Created deadline for "${selectedEvent}" due ${selectedDate ? format(selectedDate, "dd MMM yyyy") : "N/A"}` })
     }
 
     setIsDialogOpen(false)
@@ -175,17 +178,22 @@ export function EventPaymentDeadline() {
   }
 
   const handleDelete = (id: number) => {
-    setDeadlines(prev => prev.filter(deadline => deadline.id !== id))
+    const deadline = deadlines.find(d => d.id === id)
+    setDeadlines(prev => prev.filter(d => d.id !== id))
     toast.success(t("eventPayment.toast.deadlineDeleted"))
+    logActivity({ action: "Delete Deadline", module: "Event Payment Deadline", detail: `Deleted deadline for "${deadline?.eventName || "Unknown"}"` })
   }
 
   const toggleActiveStatus = (id: number) => {
-    setDeadlines(prev => prev.map(deadline =>
-      deadline.id === id
-        ? { ...deadline, isActive: !deadline.isActive }
-        : deadline
+    const deadline = deadlines.find(d => d.id === id)
+    const newStatus = !deadline?.isActive
+    setDeadlines(prev => prev.map(d =>
+      d.id === id
+        ? { ...d, isActive: !d.isActive }
+        : d
     ))
     toast.success(t("eventPayment.toast.statusUpdated"))
+    logActivity({ action: "Update Status", module: "Event Payment Deadline", detail: `Set "${deadline?.eventName || "Unknown"}" to ${newStatus ? "Active" : "Inactive"}` })
   }
 
   const openReminderDialog = (deadline: PaymentDeadline) => {
@@ -227,6 +235,7 @@ export function EventPaymentDeadline() {
     toast.success(
       `${typeLabel} ${actionLabel} ${t("eventPayment.reminder.toRecipients")} ${reminderDetails.totalRecipients} ${t("eventPayment.reminder.forEvent")} ${reminderDetails.eventName}`
     )
+    logActivity({ action: "Update Status", module: "Event Payment Deadline", detail: `Sent ${typeLabel} to ${reminderDetails.totalRecipients} recipients for "${reminderDetails.eventName}"` })
 
     setIsReminderDialogOpen(false)
     resetReminderForm()

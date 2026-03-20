@@ -37,6 +37,7 @@ import {
   ArrowUpDown
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
@@ -412,6 +413,7 @@ export function InvoiceEmailManagement() {
 
     setIsSending(false)
     toast.success(t("invoiceEmail.emailsSent").replace("{sent}", String(newJob.sentCount)).replace("{failed}", String(newJob.failedCount)))
+    logActivity({ action: "Send Invoice Emails", module: "Invoice Email", detail: `Sent ${newJob.sentCount} emails, ${newJob.failedCount} failed out of ${targetCount} total (${emailType.replace("_", " ")})` })
   }
 
   const getJobStatusBadge = (status: string) => {

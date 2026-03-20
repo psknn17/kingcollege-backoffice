@@ -6,6 +6,7 @@ import { Label } from "./ui/label"
 import { Avatar, AvatarFallback } from "./ui/avatar"
 import { Separator } from "./ui/separator"
 import { toast } from "sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useAuth, getRoleDisplayName } from "@/contexts/AuthContext"
 import { User, Mail, Phone, Building, Calendar, Upload, Save, Lock, Eye, EyeOff } from "lucide-react"
 import { format } from "date-fns"
@@ -42,6 +43,7 @@ export function UserProfile() {
 
     // Here you would update the user profile in the backend
     toast.success("Profile updated successfully")
+    logActivity({ action: "Update Profile", module: "User Profile", detail: `Updated profile: ${formData.name} (${formData.email})` })
     setIsEditing(false)
   }
 
@@ -68,6 +70,7 @@ export function UserProfile() {
 
     // Here you would update the password in the backend
     toast.success("Password changed successfully")
+    logActivity({ action: "Change Password", module: "User Profile", detail: "Password changed successfully" })
     setShowPasswordSection(false)
     setFormData({
       ...formData,
@@ -82,6 +85,7 @@ export function UserProfile() {
     if (file) {
       // Here you would upload the avatar to the backend
       toast.success("Avatar uploaded successfully")
+      logActivity({ action: "Upload Avatar", module: "User Profile", detail: `Uploaded avatar: ${file.name}` })
     }
   }
 

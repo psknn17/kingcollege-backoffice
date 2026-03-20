@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, RefreshCw, Sun, Calendar } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { logActivity } from "@/lib/activityLog"
 
 interface ImportStatus {
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error'
@@ -143,11 +144,13 @@ export function SummerActivitiesImport() {
         errorRecords
       })
       toast.success(t("summer.activitiesImportedSuccess"))
+      logActivity({ action: "Import Activities", module: "Summer Import", detail: `Imported ${selectedFile.name} for season ${selectedSeason} — ${totalRecords - errorRecords} success, ${errorRecords} errors` })
     }, 3000)
   }
 
   const downloadTemplate = (templateType: string) => {
     toast.success(t("summer.templateDownloadedSuccess").replace("{template}", templateType))
+    logActivity({ action: "Download Template", module: "Summer Import", detail: `Downloaded template: ${templateType}` })
   }
 
   const resetImport = () => {

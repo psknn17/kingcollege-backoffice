@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Mail, Lock, ArrowRight, ArrowLeft, Globe } from "lucide-react"
 import { toast } from "sonner"
+import { logActivity } from "@/lib/activityLog"
 import SchoolLogo from "@/assets/Logo.png"
 import SchoolImage from "@/assets/school-bg.jpg"
 import { OTPVerification } from "./OTPVerification"
@@ -84,6 +85,7 @@ export function Login() {
 
       // Simulate sending OTP (already had a delay above, so we can proceed)
       toast.success("OTP sent to your email!")
+      logActivity({ action: "Send OTP", module: "Authentication", detail: `OTP sent to ${email}` })
       setLoginStep("otp")
     } catch (error) {
       toast.error("Failed to send OTP")
@@ -102,6 +104,7 @@ export function Login() {
       const result = await login(email, password)
       if (result.success) {
         toast.success("Login successful!")
+        logActivity({ action: "Login", module: "Authentication", detail: `User ${email} logged in successfully` })
         // Check for stored lastPath, otherwise default to "from" or dashboard
         const lastPath = localStorage.getItem('lastPath')
         const from = lastPath || (location.state as any)?.from || "/tuition-dashboard"
@@ -135,6 +138,7 @@ export function Login() {
     try {
       await new Promise(resolve => setTimeout(resolve, 800))
       toast.success("Password reset email sent!")
+      logActivity({ action: "Password Reset", module: "Authentication", detail: `Password reset link sent to ${email}` })
       setLoginStep("email")
       setEmail("")
     } catch (error) {
@@ -149,6 +153,7 @@ export function Login() {
       // Simulate resending OTP
       await new Promise(resolve => setTimeout(resolve, 1000))
       toast.success("New OTP sent to your email!")
+      logActivity({ action: "Send OTP", module: "Authentication", detail: `OTP resent to ${email}` })
     } catch (error) {
       toast.error("Failed to resend OTP")
     }

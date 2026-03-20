@@ -22,6 +22,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { logActivity } from "@/lib/activityLog"
 
 export function TuitionTermSettings() {
   const { academicYears, setAcademicYears, deleteAcademicYear: deleteYear, saveAcademicYears } = useAcademicYears()
@@ -154,6 +155,7 @@ export function TuitionTermSettings() {
     }, 100)
 
     toast.success(`${t("termSettings.academicYear")} ${formatAcademicYear(yearId)} ${t("termSettings.yearCreated")}`)
+    logActivity({ action: "Create Academic Year", module: "Term Settings", detail: `Created academic year ${formatAcademicYear(yearId)} with ${newYear.terms.length} terms (Term 1, Term 2, Term 3)` })
   }
 
   const deleteAcademicYear = (yearId: string) => {
@@ -170,6 +172,7 @@ export function TuitionTermSettings() {
 
       setExpandedYears(prev => prev.filter(id => id !== yearId))
       toast.success(t("termSettings.yearDeleted"))
+      logActivity({ action: "Delete Academic Year", module: "Term Settings", detail: `Deleted academic year ${formatAcademicYear(yearId)}, ${academicYears.length - 1} year(s) remaining` })
     })
   }
 
@@ -263,6 +266,8 @@ export function TuitionTermSettings() {
     deleteDialog.confirm(() => {
       updateTermsForYear(yearId, year.terms.filter(term => term.id !== termId))
       toast.success(t("termSettings.termDeleted"))
+      const deletedTerm = year.terms.find(t => t.id === termId)
+      logActivity({ action: "Delete Term", module: "Term Settings", detail: `Deleted "${deletedTerm?.name || termId}" from academic year ${formatAcademicYear(yearId)}, ${year.terms.length - 1} term(s) remaining` })
     })
   }
 
@@ -280,6 +285,7 @@ export function TuitionTermSettings() {
     setTimeout(() => {
       saveAcademicYears()
       toast.success(t("termSettings.changesSaved"))
+      logActivity({ action: "Update Term Settings", module: "Term Settings", detail: `Saved changes for academic year ${formatAcademicYear(yearId)}, Terms: ${editedYear.terms.map(t => t.name).join(", ")}` })
     }, 100)
   }
 

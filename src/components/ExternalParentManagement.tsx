@@ -13,6 +13,7 @@ import { Textarea } from "./ui/textarea"
 import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ExternalParent {
@@ -221,6 +222,7 @@ export function ExternalParentManagement() {
     const parent = parents.find(p => p.id === parentId)
     if (parent) {
       toast.success(`${parent.studentName}'s application has been ${newStatus}`)
+      logActivity({ action: "Update Status", module: "External Parents", detail: `Updated ${parent.studentName}'s application status to ${newStatus}` })
       // In a real app, this would update the backend
     }
   }
@@ -229,6 +231,7 @@ export function ExternalParentManagement() {
     const parent = parents.find(p => p.id === parentId)
     if (parent) {
       toast.success(`Email sent to ${parent.parentName} (${parent.parentEmail})`)
+      logActivity({ action: "Send Email", module: "External Parents", detail: `Sent email to ${parent.parentName} (${parent.parentEmail})` })
       // In a real app, this would send email
     }
   }
@@ -257,6 +260,7 @@ export function ExternalParentManagement() {
       downloadAsXlsx(headers, rows, `${parent.studentName.replace(/[^a-zA-Z0-9]/g, '_')}_application`)
 
       toast.success(`Application downloaded for ${parent.studentName}`)
+      logActivity({ action: "Download Application", module: "External Parents", detail: `Downloaded application for ${parent.studentName} (${parent.parentName})` })
     }
   }
 
@@ -264,6 +268,7 @@ export function ExternalParentManagement() {
     const parent = parents.find(p => p.id === parentId)
     if (parent) {
       toast.success(`Reminder email resent to ${parent.parentName} (${parent.parentEmail})`)
+      logActivity({ action: "Resend Reminder", module: "External Parents", detail: `Resent reminder email to ${parent.parentName} (${parent.parentEmail})` })
       // In a real app, this would resend email
     }
   }

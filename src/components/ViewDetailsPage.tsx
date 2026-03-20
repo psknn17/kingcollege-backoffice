@@ -34,6 +34,7 @@ import {
   Search
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
@@ -183,6 +184,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
     })
     setIsItemSelectionOpen(false)
     toast.success(t("viewModal.addedItem").replace("{item}", selectedItem.name))
+    logActivity({ action: "Add Line Item", module: "Invoice Details", detail: `Added item "${selectedItem.name}" to invoice #${data.invoiceNumber || data.id}` })
   }
 
   const addNewItem = () => {
@@ -233,6 +235,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
     onEdit?.(updatedData)
     setIsEditMode(false)
     toast.success(t("viewModal.savedSuccessfully"))
+    logActivity({ action: "Save Changes", module: "Invoice Details", detail: `Saved changes to invoice #${data.invoiceNumber || data.id}` })
   }
 
   const handleCancel = () => {
@@ -832,10 +835,12 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
       case "download":
         onDownload?.(data)
         toast.success("Downloading...")
+        logActivity({ action: "Download Document", module: "Invoice Details", detail: `Downloaded document for invoice #${data.invoiceNumber || data.id}` })
         break
       case "print":
         onPrint?.(data)
         toast.success("Preparing for print...")
+        logActivity({ action: "Print Document", module: "Invoice Details", detail: `Printed document for invoice #${data.invoiceNumber || data.id}` })
         break
       default:
         break

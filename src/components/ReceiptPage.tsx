@@ -19,6 +19,7 @@ import { Progress } from "./ui/progress"
 import { Label } from "./ui/label"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { InternalEmailManagement } from "./InternalEmailManagement"
 
 interface Receipt {
@@ -252,6 +253,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
     const receipt = receipts.find(r => r.id === receiptId)
     if (receipt) {
       toast.success(`Receipt ${receipt.receiptNumber} downloaded successfully`)
+      logActivity({ action: "Download Receipt", module: "Receipts", detail: `Downloaded receipt ${receipt.receiptNumber} for ${receipt.studentName}` })
     }
   }
 
@@ -259,6 +261,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
     const receipt = receipts.find(r => r.id === receiptId)
     if (receipt) {
       toast.success(`Receipt resent to ${receipt.studentName}'s parent`)
+      logActivity({ action: "Resend Receipt", module: "Receipts", detail: `Resent receipt ${receipt.receiptNumber} to ${receipt.studentName}'s parent` })
     }
   }
 
@@ -343,6 +346,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
     
     setBulkResendStep("complete")
     toast.success(`Bulk resend completed: ${success} sent, ${failed} failed`)
+    logActivity({ action: "Bulk Resend Receipts", module: "Receipts", detail: `Bulk resent ${total} receipts: ${success} succeeded, ${failed} failed` })
   }
 
   const emailTemplates = [

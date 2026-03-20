@@ -9,6 +9,7 @@ import { Badge } from "./ui/badge"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, RefreshCw } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ImportStatus {
@@ -69,12 +70,14 @@ export function EventImport() {
         errorRecords: 2
       })
       toast.success(t("event.eventsImportedSuccess"))
+      logActivity({ action: "Import Events", module: "Event Import", detail: `Imported ${selectedFile.name} for term ${selectedTerm} (123 success, 2 errors)` })
     }, 3000)
   }
 
   const downloadTemplate = () => {
     // Simulate template download
     toast.success(t("event.templateDownloadedSuccess"))
+    logActivity({ action: "Download Template", module: "Event Import", detail: "Downloaded event import template" })
   }
 
   const resetImport = () => {

@@ -12,6 +12,7 @@ import { Search, Filter, Eye, CheckCircle, XCircle, Clock, Mail, Phone, User, Ca
 import { Textarea } from "./ui/textarea"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { PaginationBar } from "./ui/pagination-bar"
 
 interface ExternalParentApplication {
@@ -237,6 +238,7 @@ export function ExternalParentsApproval() {
 
     const actionText = actionType === "approve" ? "approved" : actionType === "reject" ? "rejected" : "moved to review"
     toast.success(`Application for ${selectedApplication.studentName} has been ${actionText}`)
+    logActivity({ action: "Update Application Status", module: "External Parents Approval", detail: `Application for student "${selectedApplication.studentName}" (parent: ${selectedApplication.parentName}) has been ${actionText}` })
     closeModal()
   }
 

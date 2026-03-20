@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { format } from "date-fns"
+import { logActivity } from "@/lib/activityLog"
 import { PaginationBar } from "./ui/pagination-bar"
 
 export interface Client {
@@ -104,6 +105,7 @@ export function ClientList() {
         prev.map(c => c.id === editingClient.id ? { ...c, ...form } : c)
       )
       toast.success(t("clientList.clientUpdated"))
+      logActivity({ action: "Update Client", module: "Client List", detail: `Updated client "${form.clientName}" (ID: ${editingClient.clientId || "-"})` })
     } else {
       const newClient: Client = {
         id: Date.now().toString(),
@@ -112,6 +114,7 @@ export function ClientList() {
       }
       setClients(prev => [...prev, newClient])
       toast.success(t("clientList.clientAdded"))
+      logActivity({ action: "Create Client", module: "Client List", detail: `Created client "${newClient.clientName}" (ID: ${newClient.clientId || "-"})` })
     }
     setIsDialogOpen(false)
   }
@@ -120,6 +123,7 @@ export function ClientList() {
     confirmDialog.confirm(() => {
       setClients(prev => prev.filter(c => c.id !== client.id))
       toast.success(t("clientList.clientDeleted"))
+      logActivity({ action: "Delete Client", module: "Client List", detail: `Deleted client "${client.clientName}" (ID: ${client.clientId || "-"})` })
     })
   }
 
@@ -135,6 +139,7 @@ export function ClientList() {
     ])
     downloadAsXlsx(headers, rows, `clients_export_${format(new Date(), "yyyyMMdd_HHmmss")}`)
     toast.success(t("clientList.exportedCount").replace("{count}", String(filtered.length)))
+    logActivity({ action: "Export Clients", module: "Client List", detail: `Exported ${filtered.length} client(s) to Excel` })
   }
 
   // --- Import ---
@@ -206,8 +211,10 @@ export function ClientList() {
     setIsImportDialogOpen(false)
     if (duplicates > 0) {
       toast.success(t("clientList.importedWithSkipped").replace("{count}", String(imported)).replace("{skipped}", String(duplicates)))
+      logActivity({ action: "Import Clients", module: "Client List", detail: `Imported ${imported} client(s), ${duplicates} duplicate(s) skipped` })
     } else {
       toast.success(t("clientList.importedCount").replace("{count}", String(imported)))
+      logActivity({ action: "Import Clients", module: "Client List", detail: `Imported ${imported} client(s)` })
     }
   }
 
@@ -222,6 +229,7 @@ export function ClientList() {
     const exampleRow = ["ABC Company Ltd.", "CL001", "Mr. John Smith", "123 Main Street, Bangkok 10110"]
     downloadAsXlsx(headers, [exampleRow], "client_import_template")
     toast.success(t("clientList.templateDownloaded"))
+    logActivity({ action: "Download Template", module: "Client List", detail: "Downloaded client import template" })
   }
 
   // Check for duplicates in preview

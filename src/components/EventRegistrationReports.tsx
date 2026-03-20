@@ -38,6 +38,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
 import { ColumnPresets } from "@/utils/tableAlignment"
 
@@ -212,6 +213,7 @@ export function EventRegistrationReports() {
 
   const exportReport = (format: 'csv' | 'excel') => {
     toast.success(t("eventReports.exportSuccess").replace("{format}", format.toUpperCase()))
+    logActivity({ action: "Export Report", module: "Event Registration Reports", detail: `Exported report as ${format.toUpperCase()} (${filteredRegistrations.length} records)` })
   }
 
   const getTrendIcon = (trend: number) => {

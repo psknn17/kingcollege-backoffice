@@ -16,6 +16,7 @@ import {
 } from "@/services/analyticsService"
 import { FileDown, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { logActivity } from "@/lib/activityLog"
 
 // ── COLORS ────────────────────────────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
@@ -192,6 +193,7 @@ export function AnalyticsDashboard() {
         filter
       )
       toast.success("Analytics report exported successfully")
+      logActivity({ action: "Export Report", module: "Analytics", detail: `Exported analytics report for tab "${activeTab}" with filter: ${filter.academicYear || "all"} / ${filter.term || "all"}` })
     } catch (error) {
       console.error("Export failed:", error)
       toast.error("Failed to export report")

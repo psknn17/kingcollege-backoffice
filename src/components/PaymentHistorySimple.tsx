@@ -17,6 +17,7 @@ import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { cn } from "./ui/utils"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { logActivity } from "@/lib/activityLog"
 
 interface PaymentRecord {
   id: string
@@ -341,6 +342,7 @@ export function PaymentHistorySimple() {
       description: `File: ${filename}.xlsx`,
       duration: 4000,
     })
+    logActivity({ action: "Export Excel", module: "Payment History", detail: `Exported ${filteredPayments.length} payment records, File: ${filename}.xlsx` })
   }
 
   return (

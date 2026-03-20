@@ -34,6 +34,7 @@ import {
   Save
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { format } from "date-fns"
 
 interface EmailJob {
@@ -267,6 +268,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
   const handleSaveChanges = () => {
     saveEmailJobsToStorage(emailJobs, jobType)
     toast.success("Email jobs saved successfully")
+    logActivity({ action: "Save Email Job", module: "Email Jobs", detail: `Saved ${emailJobs.length} email jobs for ${jobType} type` })
   }
 
   const [searchTerm, setSearchTerm] = useState("")

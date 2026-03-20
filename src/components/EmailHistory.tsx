@@ -14,6 +14,7 @@ import { Filter, Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Ey
 import { PaginationBar } from "./ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { format } from "date-fns"
@@ -270,6 +271,7 @@ export function EmailHistory() {
     toast.success("Report downloaded successfully", {
       description: `${historyItem.recipients} recipients exported to Excel`
     })
+    logActivity({ action: "Download Report", module: "Email History", detail: `Downloaded report for "${historyItem.subject}" — ${historyItem.recipients} recipients` })
   }
 
   const filteredHistory = allHistory.filter(filterHistory)

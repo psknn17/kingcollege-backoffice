@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger, DropdownMenuSeparator,
 } from "./ui/dropdown-menu"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import {
@@ -391,6 +392,7 @@ function TemplatePanel({
       })
     )
     toast.success(t("invoiceReceiptTemplate.defaultUpdated"))
+    logActivity({ action: "Set Default Template", module: "Invoice Receipt Template", detail: `Set "${tpl.name}" as default ${type} template` })
   }
 
   const handleDuplicate = (tpl: EmailTemplate) => {
@@ -406,6 +408,7 @@ function TemplatePanel({
       version: 1,
     }])
     toast.success(t("invoiceReceiptTemplate.templateDuplicated"))
+    logActivity({ action: "Duplicate Template", module: "Invoice Receipt Template", detail: `Duplicated ${type} template "${tpl.name}"` })
   }
 
   const handleDelete = (tpl: EmailTemplate) => {
@@ -423,6 +426,7 @@ function TemplatePanel({
         return updated
       })
       toast.success(t("invoiceReceiptTemplate.templateDeleted"))
+      logActivity({ action: "Delete Template", module: "Invoice Receipt Template", detail: `Deleted ${tpl.type} template "${tpl.name}"` })
     })
   }
 
@@ -440,6 +444,7 @@ function TemplatePanel({
         }
       }))
       toast.success(t("invoiceReceiptTemplate.templateUpdated"))
+      logActivity({ action: "Update Template", module: "Invoice Receipt Template", detail: `Updated ${type} template "${form.name}"` })
     } else {
       const isFirst = filtered.length === 0
       setTemplates(prev => [...prev, {
@@ -455,6 +460,7 @@ function TemplatePanel({
         version: 1,
       }])
       toast.success(t("invoiceReceiptTemplate.templateCreated"))
+      logActivity({ action: "Create Template", module: "Invoice Receipt Template", detail: `Created new ${type} template "${form.name}"` })
     }
     setEditDialogOpen(false)
   }

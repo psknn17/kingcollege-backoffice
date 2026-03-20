@@ -6,6 +6,7 @@ import { Switch } from "./ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Separator } from "./ui/separator"
 import { toast } from "sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Settings, Bell, Globe, Moon, Sun, Monitor, Mail, Smartphone, Save } from "lucide-react"
 
@@ -24,6 +25,7 @@ export function UserSettings() {
   const handleSaveSettings = () => {
     // Here you would save settings to backend
     toast.success("Settings saved successfully")
+    logActivity({ action: "Save Settings", module: "User Settings", detail: `Saved settings — language: ${language}, theme: ${theme}` })
   }
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {

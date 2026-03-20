@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { PaginationBar } from "./ui/pagination-bar"
+import { logActivity } from "@/lib/activityLog"
 
 interface CreditNote {
   id: string
@@ -195,6 +196,7 @@ export function CreditNoteManagement() {
   const handleSaveChanges = () => {
     saveCreditNotesToStorage(creditNotes)
     toast.success(t("creditNote.savedSuccess"))
+    logActivity({ action: "Save Credit Note", module: "Credit Notes", detail: `Saved ${creditNotes.length} credit note(s) to storage` })
   }
 
   // Create new credit note form state
@@ -362,6 +364,7 @@ export function CreditNoteManagement() {
     setCreditNotes(updated)
     saveCreditNotesToStorage(updated)
     toast.success(t("creditNote.createdSuccess").replace("{number}", newNote.creditNoteNumber))
+    logActivity({ action: "Create Credit Note", module: "Credit Notes", detail: `Created ${newNote.noteType} ${newNote.creditNoteNumber} for ${newNote.studentName} — amount: ${creditAmount.toLocaleString()}` })
     closeCreateModal()
   }
 
@@ -375,6 +378,7 @@ export function CreditNoteManagement() {
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
       toast.success(t("creditNote.downloaded").replace("{number}", creditNote.creditNoteNumber))
+      logActivity({ action: "Download Credit Note", module: "Credit Notes", detail: `Downloaded credit note ${creditNote.creditNoteNumber} for ${creditNote.studentName}` })
     }
   }
 
@@ -382,6 +386,7 @@ export function CreditNoteManagement() {
     const creditNote = creditNotes.find(cn => cn.id === creditNoteId)
     if (creditNote) {
       toast.success(t("creditNote.sentTo").replace("{name}", creditNote.parentName))
+      logActivity({ action: "Send Credit Note", module: "Credit Notes", detail: `Sent credit note ${creditNote.creditNoteNumber} to ${creditNote.parentName}` })
     }
   }
 
@@ -645,8 +650,10 @@ export function CreditNoteManagement() {
 
     if (duplicates > 0) {
       toast.success(t("creditNote.importedWithDups").replace("{count}", String(newNotes.length)).replace("{dups}", String(duplicates)))
+      logActivity({ action: "Import Credit Notes", module: "Credit Notes", detail: `Imported ${newNotes.length} credit note(s), ${duplicates} duplicate(s) skipped` })
     } else {
       toast.success(t("creditNote.importedSuccess").replace("{count}", String(newNotes.length)))
+      logActivity({ action: "Import Credit Notes", module: "Credit Notes", detail: `Imported ${newNotes.length} credit note(s)` })
     }
   }
 
@@ -1512,6 +1519,7 @@ export function CreditNoteManagement() {
               <Button
                 onClick={() => {
                   toast.success(t("creditNote.receiptCreated"))
+                  logActivity({ action: "Create Receipt", module: "Credit Notes", detail: "Created a new receipt from credit note" })
                   setIsCreateReceiptModalOpen(false)
                 }}
                 className="flex-1"

@@ -15,6 +15,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Search, Filter, Users, DollarSign, AlertTriangle, CheckCircle, Clock, Edit, Eye, Upload, Plus, Minus, Save, X, FileText, Download, UserCheck, Calendar, CreditCard, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -471,6 +472,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     setFilteredCourses(filteredCourses.map(c => c.id === selectedCourse.id ? updatedCourse : c))
     
     toast.success(`Course "${selectedCourse.name}" updated successfully`)
+    logActivity({ action: "Update Course", module: "Course Quota", detail: `Updated course "${selectedCourse.name}", Capacity: ${editingCapacity}, Fee: ${editingFee}` })
     closeCourseDetail()
   }
 
@@ -496,6 +498,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     downloadAsXlsx(headers, rows, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_student_report`)
 
     toast.success(`Student report exported for ${course.name}`)
+    logActivity({ action: "Export Report", module: "Course Quota", detail: `Exported student report for course "${course.name}", ${course.enrolled} students` })
   }
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -518,7 +521,8 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     // Mock successful import
     const newCoursesCount = Math.floor(Math.random() * 5) + 1
     toast.success(`Successfully imported ${newCoursesCount} courses from CSV`)
-    
+    logActivity({ action: "Import Courses", module: "Course Quota", detail: `Imported ${newCoursesCount} courses from CSV file "${csvFile.name}"` })
+
     setIsImporting(false)
     closeManageModal()
   }
@@ -530,6 +534,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     downloadAsXlsx(headers, [exampleRow], 'course_import_template')
 
     toast.success("Excel template downloaded")
+    logActivity({ action: "Download Template", module: "Course Quota", detail: "Downloaded course import Excel template" })
   }
 
   return (

@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
@@ -693,6 +694,7 @@ export function ReceiptManagementFlow({
     }
 
     toast.success(t("receiptStatus.generatedSuccess"))
+    logActivity({ action: "Generate Receipt", module: "Receipt Management", detail: `Generated ${newReceiptRecords.length} receipt(s) for ${formData.clientName} (${formData.clientNo})` })
     setIsFormOpen(false)
     setIsPreviewOpen(false)
     setSelectedCNIds(new Set())
@@ -756,6 +758,7 @@ export function ReceiptManagementFlow({
     setReceipts(updatedReceipts)
     localStorage.setItem(getStorageKey(menuType), JSON.stringify(updatedReceipts))
     toast.success(t("receiptStatus.sentSuccess").replace("{receiptNo}", receipt.receiptNo))
+    logActivity({ action: "Send Receipt", module: "Receipt Management", detail: `Sent receipt ${receipt.receiptNo} to ${receipt.clientName}` })
   }
 
   const handleDownloadReceipt = (receipt: ReceiptRecord) => {
@@ -765,6 +768,7 @@ export function ReceiptManagementFlow({
     setReceipts(updatedReceipts)
     localStorage.setItem(getStorageKey(menuType), JSON.stringify(updatedReceipts))
     toast.success(t("receiptStatus.downloadedSuccess").replace("{receiptNo}", receipt.receiptNo))
+    logActivity({ action: "Download Receipt", module: "Receipt Management", detail: `Downloaded receipt ${receipt.receiptNo} for ${receipt.clientName}` })
   }
 
   // Filter receipts
@@ -2100,6 +2104,7 @@ export function ReceiptManagementFlow({
           saveTemplates(updated)
           setIsTemplateDialogOpen(false)
           toast.success(templateToEdit ? "Template updated" : "Template created")
+          logActivity({ action: templateToEdit ? "Update Receipt Template" : "Create Receipt Template", module: "Receipt Management", detail: `${templateToEdit ? "Updated" : "Created"} receipt template "${form.name}"` })
         }}
       />
     </div>

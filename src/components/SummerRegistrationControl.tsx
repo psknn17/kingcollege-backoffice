@@ -35,6 +35,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 
 interface PricingSettings {
   regularPrice: number
@@ -230,21 +231,27 @@ export function SummerRegistrationControl() {
   }
 
   const togglePeriodStatus = (id: number) => {
-    setRegistrationPeriods(prev => prev.map(period => 
-      period.id === id 
-        ? { ...period, isActive: !period.isActive }
-        : period
+    const period = registrationPeriods.find(p => p.id === id)
+    const newStatus = !period?.isActive
+    setRegistrationPeriods(prev => prev.map(p =>
+      p.id === id
+        ? { ...p, isActive: !p.isActive }
+        : p
     ))
     toast.success(t("summer.periodStatusUpdated"))
+    logActivity({ action: "Update Status", module: "Summer Registration", detail: `Set period "${period?.name || "Unknown"}" to ${newStatus ? "Active" : "Inactive"}` })
   }
 
   const toggleActivityStatus = (id: number) => {
-    setActivityControls(prev => prev.map(activity => 
-      activity.id === id 
-        ? { ...activity, isOpen: !activity.isOpen }
-        : activity
+    const activity = activityControls.find(a => a.id === id)
+    const newStatus = !activity?.isOpen
+    setActivityControls(prev => prev.map(a =>
+      a.id === id
+        ? { ...a, isOpen: !a.isOpen }
+        : a
     ))
     toast.success(t("summer.activityStatusUpdated"))
+    logActivity({ action: "Update Status", module: "Summer Registration", detail: `Set activity "${activity?.name || "Unknown"}" to ${newStatus ? "Open" : "Closed"}` })
   }
 
   const handleSavePeriod = () => {
@@ -266,6 +273,7 @@ export function SummerRegistrationControl() {
           : period
       ))
       toast.success(t("summer.periodUpdated"))
+      logActivity({ action: "Update Period", module: "Summer Registration", detail: `Updated period "${newPeriodName}" (${newPeriodStart ? format(newPeriodStart, "dd MMM yyyy") : "N/A"} - ${newPeriodEnd ? format(newPeriodEnd, "dd MMM yyyy") : "N/A"})` })
     } else {
       const newPeriod: RegistrationPeriod = {
         id: Date.now(),
@@ -281,6 +289,7 @@ export function SummerRegistrationControl() {
       }
       setRegistrationPeriods(prev => [...prev, newPeriod])
       toast.success(t("summer.periodCreated"))
+      logActivity({ action: "Create Period", module: "Summer Registration", detail: `Created period "${newPeriodName}" (${newPeriodStart ? format(newPeriodStart, "dd MMM yyyy") : "N/A"} - ${newPeriodEnd ? format(newPeriodEnd, "dd MMM yyyy") : "N/A"})` })
     }
 
     resetForm()
@@ -311,8 +320,10 @@ export function SummerRegistrationControl() {
   }
 
   const handleDelete = (id: number) => {
-    setRegistrationPeriods(prev => prev.filter(period => period.id !== id))
+    const period = registrationPeriods.find(p => p.id === id)
+    setRegistrationPeriods(prev => prev.filter(p => p.id !== id))
     toast.success(t("summer.periodDeleted"))
+    logActivity({ action: "Delete Period", module: "Summer Registration", detail: `Deleted period "${period?.name || "Unknown"}"` })
   }
 
   const openPriceDialog = (period: RegistrationPeriod) => {
@@ -339,6 +350,7 @@ export function SummerRegistrationControl() {
     ))
 
     toast.success(t("summer.pricingUpdated"))
+    logActivity({ action: "Update Pricing", module: "Summer Registration", detail: `Updated pricing for "${currentPeriodForPricing.name}": base ฿${pricingForm.regularPrice.toLocaleString()}, early bird -${pricingForm.earlyBirdDiscount}%, sibling -${pricingForm.siblingDiscount}%` })
     setIsPriceDialogOpen(false)
   }
 

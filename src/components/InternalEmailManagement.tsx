@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Users, Edit, Search, UserPlus, Trash2, Mail, Upload, Download, FileSpreadsheet, ArrowUpDown } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { PaginationBar } from "./ui/pagination-bar"
 
@@ -127,6 +128,7 @@ export function InternalEmailManagement({
           : email
       ))
       toast.success(t("internalEmail.emailUpdatedSuccess"))
+      logActivity({ action: "Update Contact", module: "Internal Email", detail: `Updated contact: ${emailForm.name} ${emailForm.surname} (${emailForm.email})` })
     } else {
       // Add new email
       const newEmail: InternalEmail = {
@@ -136,6 +138,7 @@ export function InternalEmailManagement({
       }
       setInternalEmails([...internalEmails, newEmail])
       toast.success(t("internalEmail.emailAddedSuccess"))
+      logActivity({ action: "Add Contact", module: "Internal Email", detail: `Added contact: ${emailForm.name} ${emailForm.surname} (${emailForm.email})` })
     }
 
     // Reset form
@@ -156,8 +159,10 @@ export function InternalEmailManagement({
   }
 
   const handleDeleteEmail = (id: string) => {
+    const deletedEmail = internalEmails.find(email => email.id === id)
     setInternalEmails(internalEmails.filter(email => email.id !== id))
     toast.success(t("internalEmail.emailRemovedSuccess"))
+    logActivity({ action: "Remove Contact", module: "Internal Email", detail: `Removed contact: ${deletedEmail?.name} ${deletedEmail?.surname} (${deletedEmail?.email})` })
   }
 
   // File Upload Functions
@@ -171,6 +176,7 @@ export function InternalEmailManagement({
       "internal-email-template"
     )
     toast.success(t("internalEmail.templateDownloadSuccess"))
+    logActivity({ action: "Download Template", module: "Internal Email", detail: "Downloaded internal email CSV template" })
   }
 
   const processCsvFile = async (file: File) => {
@@ -271,7 +277,8 @@ export function InternalEmailManagement({
       
       setInternalEmails([...internalEmails, ...newEmails])
       toast.success(`${t("internalEmail.successfullyImported")} ${newEmails.length} ${t("internalEmail.emails")}`)
-      
+      logActivity({ action: "Import Emails", module: "Internal Email", detail: `Imported ${newEmails.length} emails from file` })
+
       // Reset CSV upload state
       setIsCsvUploadOpen(false)
       setCsvFile(null)

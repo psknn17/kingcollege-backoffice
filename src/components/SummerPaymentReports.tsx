@@ -44,6 +44,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { StatusFilter, PaymentStatus, getStatusBadge, PaymentChannelFilter, PaymentChannel, getPaymentChannelLabel } from "./StatusFilter"
 import { ColumnPresets } from "@/utils/tableAlignment"
 
@@ -275,6 +276,7 @@ export function SummerPaymentReports() {
 
   const exportReport = (format: 'csv' | 'excel' | 'pdf') => {
     toast.success(t("summerPayment.exportSuccess").replace("{format}", format.toUpperCase()))
+    logActivity({ action: "Export Report", module: "Summer Payment Reports", detail: `Exported report as ${format.toUpperCase()} (${filteredPayments.length} records)` })
   }
 
   const calculateTotalRevenue = () => {

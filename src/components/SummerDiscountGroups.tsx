@@ -25,6 +25,7 @@ import {
   FileText
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { logActivity } from "@/lib/activityLog"
 import { getSortedYearGroups } from "@/utils/gradeLevels"
 
 interface Student {
@@ -174,6 +175,7 @@ export function SummerDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group updated successfully")
+      logActivity({ action: "Update Group", module: "Summer Discount Groups", detail: `Updated group "${groupForm.name}"` })
     } else {
       // Create new group
       const newGroup: DiscountGroup = {
@@ -191,6 +193,7 @@ export function SummerDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group created successfully")
+      logActivity({ action: "Create Group", module: "Summer Discount Groups", detail: `Created group "${groupForm.name}" with ${groupForm.selectedStudents.length} students` })
     }
 
     setIsGroupDialogOpen(false)
@@ -217,6 +220,7 @@ export function SummerDiscountGroups() {
     setGroups(updatedGroups)
     saveGroupsToStorage(updatedGroups)
     toast.success("Student group deleted successfully")
+    logActivity({ action: "Delete Group", module: "Summer Discount Groups", detail: `Deleted group "${groups.find(g => g.id === groupId)?.name || groupId}"` })
     setDeleteGroupId(null)
   }
 
@@ -279,6 +283,7 @@ export function SummerDiscountGroups() {
           selectedStudents: [...prev.selectedStudents, ...newStudents]
         }))
         toast.success(`Added ${newStudents.length} students from CSV`)
+        logActivity({ action: "Bulk Add Students", module: "Summer Discount Groups", detail: `Added ${newStudents.length} students from CSV file "${file.name}"` })
       }
 
       if (errors.length > 0) {
@@ -461,6 +466,7 @@ export function SummerDiscountGroups() {
                                       }))
                                       setStudentInput("")
                                       toast.success(`Added ${student.name} (${student.id})`)
+                                      logActivity({ action: "Add Student", module: "Summer Discount Groups", detail: `Added student ${student.name} (${student.id}) to group` })
                                     }}
                                     className="group px-3 py-2.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-1.5 last:mb-0 bg-white"
                                   >
