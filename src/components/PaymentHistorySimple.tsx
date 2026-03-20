@@ -481,8 +481,8 @@ export function PaymentHistorySimple() {
             </div>
           </div>
 
-          {/* Row 2: Term, Academic Year, Payment Method, Module */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Row 2: Term, Academic Year, Payment Method */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Term */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("payment.term")}</label>
@@ -532,7 +532,10 @@ export function PaymentHistorySimple() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
+          {/* Row 3: Module, Date From, Date To */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Module */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Module</label>
@@ -551,10 +554,6 @@ export function PaymentHistorySimple() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Row 3: Date From, Date To */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date From */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")} ({t("date.from")})</label>

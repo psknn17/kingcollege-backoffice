@@ -3863,8 +3863,8 @@ export function InvoiceManagement({
             <CardContent className="space-y-4">
               {category === "external" ? (
                 <>
-                  {/* External Row 1: Search | Approval Status | Email Status | Invoice Status */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* External Row 1: Search | Approval Status | Email Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                       <SearchInput
@@ -3901,6 +3901,9 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  {/* External Row 2: Invoice Status | Issue Date | Due Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                       <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
@@ -3916,9 +3919,6 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {/* External Row 2: Issue Date | Due Date */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
                       <div className="flex items-center gap-2">
@@ -3979,8 +3979,8 @@ export function InvoiceManagement({
                 </>
               ) : (
                 <>
-                  {/* Internal Row 1: Search | Academic Year | Term | Year Group */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Internal Row 1: Search | Academic Year | Term */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                       <SearchInput
@@ -4023,6 +4023,9 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  {/* Internal Row 2: Year Group | Approval Status | Email Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
                       <Select value={gradeFilter} onValueChange={setGradeFilter}>
@@ -4037,9 +4040,6 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {/* Internal Row 2: Approval Status | Email Status | Invoice Status | Issue Date | Due Date */}
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
                       <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
@@ -4067,6 +4067,9 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  {/* Internal Row 3: Invoice Status | Issue Date | Due Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                       <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
@@ -4468,8 +4471,8 @@ export function InvoiceManagement({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Row 1 */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Row 1: Search | Approval Status | Email Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Search */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
@@ -4521,7 +4524,10 @@ export function InvoiceManagement({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
+              {/* Row 2: Invoice Status | Date From | Date To */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Invoice Status */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
@@ -4546,10 +4552,6 @@ export function InvoiceManagement({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              {/* Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Date From */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("invoice.fromDate")}</label>

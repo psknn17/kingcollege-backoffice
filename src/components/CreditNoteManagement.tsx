@@ -897,7 +897,7 @@ export function CreditNoteManagement() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                     <Input

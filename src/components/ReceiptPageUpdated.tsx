@@ -1360,7 +1360,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               {/* Row 2: Year Group, Payment Channel, Status, Date Range */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
                   <Select value={gradeFilter} onValueChange={setGradeFilter}>
@@ -1969,7 +1969,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Row 1: Search, Status, Year Group */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                     <div className="relative">
@@ -2015,7 +2015,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 </div>
 
                 {/* Row 2: Term, Academic Year, Date From, Date To */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
                     <Select value={termFilter} onValueChange={setTermFilter}>
