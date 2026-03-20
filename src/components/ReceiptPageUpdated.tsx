@@ -98,6 +98,26 @@ interface CreditNote {
   usageHistory?: { invoiceId?: string; receiptNo?: string; appliedAmount: number; appliedAt: string; appliedBy?: "staff" | "parent" }[]
 }
 
+// Normalize legacy payment method names to current system values
+const normalizePaymentMethod = (method: string): string => {
+  if (!method || method === "-" || method === "N/A") return "N/A"
+  const m = method.toLowerCase().trim()
+  if (m.startsWith("edc")) return "EDC"
+  if (m.includes("credit") && m.includes("card")) return "Credit Card"
+  if (m.includes("bank") && m.includes("transfer")) return "Bank Transfer"
+  if (m.includes("bank") && m.includes("counter")) return "Cashier's cheque"
+  if (m.includes("wechat")) return "Thai QR"
+  if (m.includes("promptpay")) return "Thai QR"
+  if (m.includes("thai") && m.includes("qr")) return "Thai QR"
+  if (m.includes("qr")) return "Thai QR"
+  if (m.includes("cashier")) return "Cashier's cheque"
+  if (m.includes("cash")) return "Cashier's cheque"
+  if (m.includes("credit note")) return "Credit Note"
+  const validSources = ["Cashier's cheque", "Bank Transfer", "Thai QR", "Credit Card", "EDC"]
+  const found = validSources.find(s => s.toLowerCase() === m)
+  return found || method
+}
+
 // Function to load receipts from localStorage based on category
 const loadReceiptsFromStorage = (category?: string): Receipt[] => {
   try {
@@ -437,25 +457,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   ]
 
   // Normalize payment method to match PAYMENT_SOURCES
-  const normalizePaymentMethod = (method: string): string => {
-    if (!method || method === "-" || method === "N/A") return "N/A"
-    const m = method.toLowerCase().trim()
-    if (m.startsWith("edc")) return "EDC"
-    if (m.includes("credit") && m.includes("card")) return "Credit Card"
-    if (m.includes("bank") && m.includes("transfer")) return "Bank Transfer"
-    if (m.includes("bank") && m.includes("counter")) return "Cashier's cheque"
-    if (m.includes("wechat")) return "Thai QR"
-    if (m.includes("promptpay")) return "Thai QR"
-    if (m.includes("thai") && m.includes("qr")) return "Thai QR"
-    if (m.includes("qr")) return "Thai QR"
-    if (m.includes("cashier")) return "Cashier's cheque"
-    if (m.includes("cash")) return "Cashier's cheque"
-    if (m.includes("credit note")) return "Credit Note"
-    const validSources = ["Cashier's cheque", "Bank Transfer", "Thai QR", "Credit Card", "EDC"]
-    const found = validSources.find(s => s.toLowerCase() === m)
-    return found || method
-  }
-
   // Payment method options from system's accepted payment channels
   const paymentMethodOptions = PAYMENT_SOURCES
 
@@ -956,20 +957,32 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       toast.error(t("receipt.creditNoteNumberRequired"))
       return
     }
-    if (!creditNoteForm.invoiceNumber) {
-      toast.error(t("receipt.invoiceNumberRequired"))
+    if (!creditNoteForm.studentId) {
+      toast.error(t("receipt.familyCodeRequired") || "Family Code is required")
       return
     }
     if (!creditNoteForm.studentName) {
       toast.error(t("receipt.studentNameRequired"))
       return
     }
+    if (!creditNoteForm.yearGroup) {
+      toast.error(t("receipt.yearGroupRequired") || "Year Group is required")
+      return
+    }
+    if (!creditNoteForm.academicYear) {
+      toast.error(t("receipt.academicYearRequired") || "Academic Year is required")
+      return
+    }
+    if (!creditNoteForm.term) {
+      toast.error(t("receipt.termRequired") || "Term is required")
+      return
+    }
     if (!creditNoteForm.amount || creditNoteForm.amount <= 0) {
       toast.error(t("receipt.amountMustBePositive"))
       return
     }
-    if (!creditNoteForm.reason) {
-      toast.error(t("receipt.reasonRequired"))
+    if (!creditNoteForm.issueDate) {
+      toast.error(t("receipt.issueDateRequired") || "Issue Date is required")
       return
     }
 
@@ -1970,7 +1983,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               <CardContent className="space-y-4">
                 {/* Row 1: Search, Status, Year Group */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5 md:col-span-2">
+                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -2014,7 +2027,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </div>
                 </div>
 
-                {/* Row 2: Term, Academic Year, Date From, Date To */}
+                {/* Row 2: Term, Academic Year, Issue Date (From → To) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
@@ -2048,34 +2061,33 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.from")})</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date ?? null)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.to")})</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date ?? null)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
+                  <div className="space-y-1.5 min-w-0">
+                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.from")} → {t("date.to")})</label>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
+                            <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
+                            <span className="truncate">{dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date ?? null)} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <span className="text-muted-foreground shrink-0">→</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
+                            <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
+                            <span className="truncate">{dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date ?? null)} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -2533,7 +2545,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("receipt.invoiceNumber")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.invoiceNumber")}</Label>
                   <Input
                     placeholder="20250000001"
                     value={creditNoteForm.invoiceNumber}
@@ -2544,7 +2556,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("receipt.familyCode")}</Label>
+                  <Label>{t("receipt.familyCode")} <span className="text-red-500">*</span></Label>
                   <Input
                     placeholder="FAM001"
                     value={creditNoteForm.studentId}
@@ -2563,7 +2575,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("common.yearGroup")}</Label>
+                  <Label>{t("common.yearGroup")} <span className="text-red-500">*</span></Label>
                   <Select value={creditNoteForm.yearGroup} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, yearGroup: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("receipt.selectYearGroup")} />
@@ -2576,7 +2588,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("common.academicYear")}</Label>
+                  <Label>{t("common.academicYear")} <span className="text-red-500">*</span></Label>
                   <Select value={creditNoteForm.academicYear} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, academicYear: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("receipt.selectAcademicYear")} />
@@ -2592,7 +2604,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("common.term")}</Label>
+                  <Label>{t("common.term")} <span className="text-red-500">*</span></Label>
                   <Select value={creditNoteForm.term} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, term: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("receipt.selectTerm")} />
@@ -2616,7 +2628,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               <div className="space-y-2">
-                <Label>{t("receipt.reason")} <span className="text-red-500">*</span></Label>
+                <Label>{t("receipt.reason")}</Label>
                 <Select value={creditNoteForm.reason} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, reason: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("receipt.selectReason")} />
@@ -2633,7 +2645,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               <div className="space-y-2">
-                <Label>{t("receipt.issueDate")}</Label>
+                <Label>{t("receipt.issueDate")} <span className="text-red-500">*</span></Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">

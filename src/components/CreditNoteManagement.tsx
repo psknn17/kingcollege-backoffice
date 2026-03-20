@@ -939,7 +939,7 @@ export function CreditNoteManagement() {
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5 lg:col-span-2">
+                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
                     <div className="flex items-center gap-2">
                       <Popover>

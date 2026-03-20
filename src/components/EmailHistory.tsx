@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { cn } from "./ui/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
-import { Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
+import { Filter, Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
 import { PaginationBar } from "./ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
@@ -124,8 +125,13 @@ export function EmailHistory() {
   const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
   const [resendDialog, setResendDialog] = useState<any>(null)
   const [allHistory, setAllHistory] = useState<any[]>([])
-  const [dateFilterOpen, setDateFilterOpen] = useState(false)
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
+  const [academicYearFilter, setAcademicYearFilter] = useState("all")
+  const [termFilter, setTermFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+  const [dateFromOpen, setDateFromOpen] = useState(false)
+  const [dateToOpen, setDateToOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -142,6 +148,27 @@ export function EmailHistory() {
     return () => clearInterval(interval)
   }, [])
 
+  // Get unique academic years and terms from data
+  const academicYearOptions = useMemo(() => {
+    const years = new Set(allHistory.map(item => item.academicYear).filter(Boolean))
+    return Array.from(years).sort()
+  }, [allHistory])
+
+  const termOptions = useMemo(() => {
+    const terms = new Set(allHistory.map(item => item.term).filter(Boolean))
+    return Array.from(terms).sort()
+  }, [allHistory])
+
+  const clearFilters = () => {
+    setHistorySearch("")
+    setAcademicYearFilter("all")
+    setTermFilter("all")
+    setStatusFilter("all")
+    setDateFrom(undefined)
+    setDateTo(undefined)
+    setCurrentPage(1)
+  }
+
   const filterHistory = (item: any) => {
     if (historySearch) {
       const search = historySearch.toLowerCase()
@@ -153,10 +180,18 @@ export function EmailHistory() {
       if (!matchesSearch) return false
     }
 
-    if (dateRange.from || dateRange.to) {
+    if (academicYearFilter !== "all" && item.academicYear !== academicYearFilter) return false
+    if (termFilter !== "all" && item.term !== termFilter) return false
+    if (statusFilter !== "all" && item.status !== statusFilter) return false
+
+    if (dateFrom || dateTo) {
       const itemDate = new Date(item.sentDate)
-      if (dateRange.from && itemDate < dateRange.from) return false
-      if (dateRange.to && itemDate > dateRange.to) return false
+      if (dateFrom && itemDate < dateFrom) return false
+      if (dateTo) {
+        const endOfDay = new Date(dateTo)
+        endOfDay.setHours(23, 59, 59, 999)
+        if (itemDate > endOfDay) return false
+      }
     }
 
     return true
@@ -301,64 +336,105 @@ export function EmailHistory() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by subject, academic year, or term..."
-                value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
-                className="pl-10"
-              />
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Search className="w-4 h-4" />
+              Search & Filter
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button onClick={() => setCurrentPage(1)} className="h-9">Apply</Button>
+              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
             </div>
-            <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn(!dateRange.from && "text-muted-foreground")}>
-                  <CalendarIcon className="w-4 h-4 mr-2" />
-                  {dateRange.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "dd LLL")} - {format(dateRange.to, "dd LLL y")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "dd LLL y")
-                    )
-                  ) : (
-                    "Filter by Date"
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="range"
-                  selected={dateRange.from ? (dateRange as { from: Date; to?: Date }) : undefined}
-                  onSelect={(range) => setDateRange(range || {})}
-                  numberOfMonths={2}
-                  initialFocus
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Row 1: Search, Academic Year, Term */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by subject..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  className="pl-10"
                 />
-                <div className="border-t p-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setDateRange({})
-                      setDateFilterOpen(false)
-                    }}
-                  >
-                    Clear
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setDateFilterOpen(false)}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Academic Year</Label>
+              <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Years" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {academicYearOptions.map(year => (
+                    <SelectItem key={year} value={year}>{formatAcademicYear(year)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Term</Label>
+              <Select value={termFilter} onValueChange={setTermFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Terms" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Terms</SelectItem>
+                  {termOptions.map(term => (
+                    <SelectItem key={term} value={term}>{term}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {/* Row 2: Status, Date From → To */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Sent Date</Label>
+              <div className="flex items-center gap-2">
+                <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "From"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={dateFrom} onSelect={(d) => { setDateFrom(d); setDateFromOpen(false) }} />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-muted-foreground">→</span>
+                <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "dd/MM/yyyy") : "To"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={dateTo} onSelect={(d) => { setDateTo(d); setDateToOpen(false) }} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
