@@ -406,26 +406,110 @@ function generatePaymentRecords(invoices: any[]) {
 
 // ── 8. Credit Notes ──────────────────────────────────────────
 function generateCreditNotes(invoices: any[]) {
-  const approved = invoices.filter(inv => inv.approvalStatus === "approved" && inv.invoiceNumber)
-  const reasons = ["Overpayment refund","Course cancellation","Early withdrawal credit","Billing adjustment","Scholarship retroactive"]
-  return approved.slice(0, 5).map((inv, i) => {
-    const creditAmt = Math.round(inv.netAmount * (0.05 + Math.random() * 0.15))
-    return {
-      id: `cn-${pad(i + 1)}`, creditNoteNumber: `CN-2026-${pad(i + 1)}`,
+  const reasons = ["Overpayment refund","Course cancellation","Early withdrawal credit","Billing adjustment","Scholarship retroactive","Duplicate payment correction","Fee recalculation","Programme change credit","Transfer credit","Administrative adjustment"]
+  const types: ("refund" | "adjustment" | "discount")[] = ["refund","adjustment","discount"]
+
+  // Find students who have unpaid invoices (sent/overdue/approved) — these are students who will use credit notes at payment
+  const unpaid = invoices.filter(inv =>
+    inv.approvalStatus === "approved" &&
+    ["sent","overdue","approved"].includes(inv.status) &&
+    inv.studentId && inv.familyCode &&
+    inv.category !== "external"
+  )
+
+  // Also get some paid invoices for "applied" credit notes (historical)
+  const paid = invoices.filter(inv =>
+    inv.status === "paid" &&
+    inv.invoiceNumber &&
+    inv.studentId && inv.familyCode
+  )
+
+  const cnList: any[] = []
+  let seq = 1
+
+  // 1) Create "issued" credit notes for students with unpaid invoices (usable at payment)
+  //    Pick unique students by familyCode to avoid duplicates
+  const seenFamilies = new Set<string>()
+  const unpaidUnique = unpaid.filter(inv => {
+    if (seenFamilies.has(inv.familyCode)) return false
+    seenFamilies.add(inv.familyCode)
+    return true
+  })
+
+  for (const inv of unpaidUnique.slice(0, 8)) {
+    const creditAmt = Math.round(inv.netAmount * (0.08 + Math.random() * 0.12)) // 8-20% of invoice
+    cnList.push({
+      id: `cn-${pad(seq)}`, creditNoteNumber: `CN-2026-${pad(seq)}`,
+      invoiceNumber: "", // standalone credit note, not tied to specific invoice
+      studentName: inv.studentName, studentId: inv.studentId, studentGrade: inv.studentGrade,
+      parentName: inv.parentName,
+      originalAmount: inv.netAmount, creditAmount: creditAmt,
+      remainingBalance: creditAmt, // full balance available
+      reason: reasons[seq % reasons.length], type: types[seq % types.length],
+      status: "issued",
+      issueDate: randomDate(new Date("2025-10-01"), new Date("2026-02-28")),
+      issuedBy: "System Administrator",
+      approvedBy: "finance admin",
+      notes: `Credit note for ${inv.studentName} - ${reasons[seq % reasons.length]}`,
+      familyCode: inv.familyCode, adultIdNo: inv.familyCode,
+      academicYear: inv.academicYear || CURRENT_YEAR,
+      term: inv.term || `Term 1 ${CURRENT_YEAR}`,
+      yearGroup: inv.studentGrade,
+    })
+    seq++
+  }
+
+  // 2) Create "applied" credit notes (already used — historical records)
+  for (const inv of paid.slice(0, 3)) {
+    const creditAmt = Math.round(inv.netAmount * (0.05 + Math.random() * 0.1))
+    cnList.push({
+      id: `cn-${pad(seq)}`, creditNoteNumber: `CN-2026-${pad(seq)}`,
       invoiceNumber: inv.invoiceNumber,
       studentName: inv.studentName, studentId: inv.studentId, studentGrade: inv.studentGrade,
       parentName: inv.parentName,
       originalAmount: inv.netAmount, creditAmount: creditAmt,
-      remainingBalance: i < 2 ? 0 : creditAmt,
-      reason: reasons[i], type: pick(["refund","adjustment","discount"] as const),
-      status: i < 2 ? "applied" : i < 4 ? "issued" : "draft",
-      issueDate: randomDate(new Date("2025-10-01"), new Date("2026-03-15")),
+      remainingBalance: 0,
+      reason: reasons[seq % reasons.length], type: types[seq % types.length],
+      status: "applied",
+      issueDate: randomDate(new Date("2025-08-01"), new Date("2025-12-31")),
       issuedBy: "System Administrator",
-      approvedBy: i < 3 ? "finance admin" : undefined,
-      notes: `Credit note for ${inv.invoiceNumber}`,
-      familyCode: inv.familyCode,
-    }
-  })
+      approvedBy: "finance admin",
+      notes: `Applied to ${inv.invoiceNumber}`,
+      familyCode: inv.familyCode, adultIdNo: inv.familyCode,
+      academicYear: inv.academicYear || CURRENT_YEAR,
+      term: inv.term || `Term 1 ${CURRENT_YEAR}`,
+      yearGroup: inv.studentGrade,
+      appliedToInvoice: inv.invoiceNumber,
+      appliedDate: randomDate(new Date("2025-09-01"), new Date("2026-01-31")),
+    })
+    seq++
+  }
+
+  // 3) Create "draft" credit notes (pending approval)
+  for (const inv of unpaidUnique.slice(8, 10)) {
+    if (!inv) break
+    const creditAmt = Math.round(inv.netAmount * (0.05 + Math.random() * 0.1))
+    cnList.push({
+      id: `cn-${pad(seq)}`, creditNoteNumber: `CN-2026-${pad(seq)}`,
+      invoiceNumber: "",
+      studentName: inv.studentName, studentId: inv.studentId, studentGrade: inv.studentGrade,
+      parentName: inv.parentName,
+      originalAmount: inv.netAmount, creditAmount: creditAmt,
+      remainingBalance: creditAmt,
+      reason: reasons[seq % reasons.length], type: types[seq % types.length],
+      status: "draft",
+      issueDate: randomDate(new Date("2026-02-01"), new Date("2026-03-15")),
+      issuedBy: "System Administrator",
+      notes: `Pending credit note for ${inv.studentName}`,
+      familyCode: inv.familyCode, adultIdNo: inv.familyCode,
+      academicYear: inv.academicYear || CURRENT_YEAR,
+      term: inv.term || `Term 2 ${CURRENT_YEAR}`,
+      yearGroup: inv.studentGrade,
+    })
+    seq++
+  }
+
+  return cnList
 }
 
 // ── 9. Email Logs ────────────────────────────────────────────
@@ -698,7 +782,7 @@ export function seedAllData() {
 
     // ── Invoices (all categories) ────────────────────────────
     // Version check: re-seed invoices when seed data structure changes
-    const INVOICE_SEED_VERSION = "2.1" // Bump when invoice seed data changes
+    const INVOICE_SEED_VERSION = "2.2" // Bump when invoice seed data changes
     const currentSeedVersion = localStorage.getItem("invoice_seed_version")
     if (currentSeedVersion !== INVOICE_SEED_VERSION) {
       localStorage.removeItem("createdInvoices")
