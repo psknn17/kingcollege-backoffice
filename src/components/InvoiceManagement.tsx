@@ -470,6 +470,7 @@ export function InvoiceManagement({
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
+  const [showFilters, setShowFilters] = useState(false)
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [dueDateFrom, setDueDateFrom] = useState<Date | null>(null)
@@ -561,10 +562,10 @@ export function InvoiceManagement({
     }
   }, [])
 
-  // Re-apply filters when tab or category changes
+  // Re-apply filters reactively when any filter state changes
   useEffect(() => {
     applyFilters(invoiceTypeTab)
-  }, [invoiceTypeTab, invoices, category])
+  }, [invoiceTypeTab, invoices, category, searchTerm, academicYearFilter, termFilter, statusFilter, invoiceStatusFilter, paymentStatusFilter, gradeFilter, dateFrom, dateTo, dueDateFrom, dueDateTo])
 
   // Load email logs from localStorage
   useEffect(() => {
@@ -1417,21 +1418,19 @@ export function InvoiceManagement({
       toast.warning(`Only ${canPay.length} of ${selectedInvoices.length} selected invoices can be marked as paid.`)
     }
 
-    // Sort to apply CNs to the highest price first later
-    const sorted = [...canPay].sort((a, b) => (b.finalAmount || 0) - (a.finalAmount || 0))
-    
-    // For CN fetching, we'll try to find CNs for the reference student
-    const refInvoice = sorted[0]
+    // Use first invoice as reference
+    const refInvoice = canPay[0]
     setMarkPaidInvoice(refInvoice)
-    setMarkPaidInvoices(sorted)
-    
+    // Sorting will be done in confirmMarkPaid based on CN ownership
+    setMarkPaidInvoices(canPay)
+
     setPaymentMethod("")
     setPaymentFiles([])
     setSelectedCNIdsForPaid(new Set())
     setEdcAmount("")
     setCcFeePercent("")
 
-    // Credit Notes match logic (similar to openMarkPaidDialog)
+    // Credit Notes match logic — fetch CNs for ALL students in selected invoices (same family)
     const isExternalInvoice = refInvoice.invoiceType === "external" || refInvoice.studentId === "EXTERNAL" || refInvoice.category === "external"
     let cns: CreditNoteRecord[] = []
     if (isExternalInvoice) {
@@ -1443,9 +1442,15 @@ export function InvoiceManagement({
       const stored = localStorage.getItem("creditNotesRecords")
       if (stored) {
         const raw: any[] = JSON.parse(stored)
-        const fCode = (refInvoice.adultIdNo || "").trim().toLowerCase()
-        const sId = (refInvoice.studentId || "").trim().toLowerCase()
-        const sName = (refInvoice.studentName || "").trim().toLowerCase()
+        // Collect all family codes and student identifiers from selected invoices
+        const allFamilyCodes = new Set<string>()
+        const allStudentIds = new Set<string>()
+        const allStudentNames = new Set<string>()
+        canPay.forEach(inv => {
+          if (inv.adultIdNo) allFamilyCodes.add(inv.adultIdNo.trim().toLowerCase())
+          if (inv.studentId) allStudentIds.add(inv.studentId.trim().toLowerCase())
+          if (inv.studentName) allStudentNames.add(inv.studentName.trim().toLowerCase())
+        })
 
         cns = raw
           .filter(cn => {
@@ -1454,10 +1459,12 @@ export function InvoiceManagement({
             const cnFamilyCode = (cn.parentName || cn.familyCode || "").trim().toLowerCase()
             const cnStudentId = (cn.studentId || "").trim().toLowerCase()
             const cnStudentName = (cn.studentName || "").trim().toLowerCase()
+            // Match CN if it belongs to any student in the selected invoices or same family
             return (
-              (fCode && (cnFamilyCode === fCode || cnStudentId === fCode)) ||
-              (sId && (cnStudentId === sId || cnFamilyCode === sId)) ||
-              (sName && cnStudentName === sName)
+              (cnFamilyCode && [...allFamilyCodes].some(fc => fc === cnFamilyCode)) ||
+              (cnStudentId && [...allStudentIds].some(sid => sid === cnStudentId || sid === cnFamilyCode)) ||
+              (cnStudentId && [...allFamilyCodes].some(fc => fc === cnStudentId)) ||
+              (cnStudentName && [...allStudentNames].some(sn => sn === cnStudentName))
             )
           })
           .map(cn => ({
@@ -1544,7 +1551,7 @@ export function InvoiceManagement({
       ]
       setCsvStudents(mockCsvData)
       setSelectedStudents(mockCsvData)
-      toast.success(`Loaded ${mockCsvData.length} students from CSV`)
+      toast.success(`Loaded ${mockCsvData.length} students from Excel`)
     }
   }
 
@@ -1901,7 +1908,7 @@ export function InvoiceManagement({
     const isCsv = nameLower.endsWith(".csv")
 
     if (!isXlsx && !isCsv) {
-      toast.error("Please upload a CSV or Excel (.xlsx) file")
+      toast.error("Please upload an Excel (.xlsx) file")
       event.target.value = ""
       return
     }
@@ -3362,8 +3369,20 @@ export function InvoiceManagement({
           ? `EDC - ${edcBank} (${edcAccountNumber})`
           : paymentMethod
 
-      // Process invoices one by one (sorted by amount DESC to apply CN correctly)
-      const sortedInvoices = [...invoicesToPay].sort((a,b) => (b.finalAmount || 0) - (a.finalAmount || 0))
+      // Sort invoices: CN owner's invoices first, then siblings (same family)
+      // This ensures credit notes are applied to the student they belong to before others
+      const selectedCNStudentIds = new Set(
+        [...selectedCNIdsForPaid]
+          .map(id => availableCNsForPaid.find(c => c.id === id)?.studentId?.trim().toLowerCase())
+          .filter(Boolean) as string[]
+      )
+      const sortedInvoices = [...invoicesToPay].sort((a, b) => {
+        const aIsCNOwner = selectedCNStudentIds.has((a.studentId || "").trim().toLowerCase()) ? 1 : 0
+        const bIsCNOwner = selectedCNStudentIds.has((b.studentId || "").trim().toLowerCase()) ? 1 : 0
+        // CN owners first, then by amount DESC
+        if (bIsCNOwner !== aIsCNOwner) return bIsCNOwner - aIsCNOwner
+        return (b.finalAmount || 0) - (a.finalAmount || 0)
+      })
       let cnPoolRemaining = usedCNPool
       
       const invoiceStatusUpdates: Record<string, Partial<Invoice>> = {}
@@ -3694,30 +3713,14 @@ export function InvoiceManagement({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2"
             onClick={downloadInterfaceFile}
           >
             <Download className="w-4 h-4" />
             Download Interface File
           </Button>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => setIsImportInterfaceUploadOpen(true)}
-            disabled={!userCanEdit}
-          >
-            <Upload className="w-4 h-4" />
-            Import Interface File
-          </Button>
-          <input
-            id="import-interface-input"
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            className="hidden"
-            onChange={handleImportInterfaceFile}
-          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2" disabled={isExportingAll}>
@@ -3739,6 +3742,22 @@ export function InvoiceManagement({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setIsImportInterfaceUploadOpen(true)}
+            disabled={!userCanEdit}
+          >
+            <Upload className="w-4 h-4" />
+            Import Interface File
+          </Button>
+          <input
+            id="import-interface-input"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            className="hidden"
+            onChange={handleImportInterfaceFile}
+          />
           <Button
             variant="outline"
             className="flex items-center gap-2"
@@ -3767,56 +3786,80 @@ export function InvoiceManagement({
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("invoice.totalInvoices")}</p>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("invoice.totalInvoices")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("invoice.pendingApproval")}</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("invoice.pendingApproval")}</p>
+            </div>
             <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingApproval}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            </div>
             <p className="text-2xl font-bold text-purple-600">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Email</p>
+            <div className="flex items-center gap-1.5">
+              <Mail className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Email</p>
+            </div>
             <p className="text-2xl font-bold text-blue-600">{summaryStats.sent}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Partial</p>
+            <div className="flex items-center gap-1.5">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Partial</p>
+            </div>
             <p className="text-2xl font-bold" style={{ color: "#d97706" }}>{summaryStats.partial}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{summaryStats.paid}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
+            </div>
             <p className="text-2xl font-bold text-red-600">{summaryStats.overdue}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("invoice.totalAmount")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("invoice.totalAmount")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.totalAmount.toLocaleString()}</p>
           </CardContent>
         </Card>
@@ -3840,32 +3883,23 @@ export function InvoiceManagement({
         <TabsContent value="student" className="space-y-4">
           {/* Filters */}
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="w-4 h-4" />
-                  {t("invoice.searchFilter")}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button onClick={() => applyFilters()} className="h-9">{t("invoice.apply")}</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={t("invoice.searchPlaceholder")} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 h-9" />
                 </div>
+                <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                  <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              {showFilters && (<>
               {category === "external" ? (
                 <>
-                  {/* External Row 1: Search | Approval Status | Email Status */}
+                  {/* External Filters: Approval Status | Email Status | Invoice Status | Issue Date | Due Date */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-                      <SearchInput
-                        placeholder={t("invoice.searchPlaceholder")}
-                        value={searchTerm}
-                        onChange={setSearchTerm}
-                        className="h-9"
-                      />
-                    </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
                       <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
@@ -3893,9 +3927,6 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {/* External Row 2: Invoice Status | Issue Date | Due Date */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                       <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
@@ -3971,17 +4002,8 @@ export function InvoiceManagement({
                 </>
               ) : (
                 <>
-                  {/* Internal Row 1: Search | Academic Year | Term */}
+                  {/* Internal Filters: Academic Year | Term | Year Group | Approval Status | Email Status | Invoice Status | Issue Date | Due Date */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-                      <SearchInput
-                        placeholder={t("invoice.searchPlaceholder")}
-                        value={searchTerm}
-                        onChange={setSearchTerm}
-                        className="h-9"
-                      />
-                    </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
                       <Select value={academicYearFilter} onValueChange={(value) => {
@@ -4015,9 +4037,6 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {/* Internal Row 2: Year Group | Approval Status | Email Status */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
                       <Select value={gradeFilter} onValueChange={setGradeFilter}>
@@ -4059,9 +4078,6 @@ export function InvoiceManagement({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {/* Internal Row 3: Invoice Status | Issue Date | Due Date */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                       <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
@@ -4136,15 +4152,13 @@ export function InvoiceManagement({
                   </div>
                 </>
               )}
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+              </div>
+              </>)}
             </CardContent>
           </Card>
 
-          {/* Results Summary */}
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              {t("invoice.show")} {filteredInvoices.length} / {invoices.length} {t("invoice.entries")}
-            </p>
-          </div>
 
           {/* Bulk Action Bar */}
           {selectedInvoiceIds.size > 0 && (
@@ -4450,32 +4464,21 @@ export function InvoiceManagement({
         <TabsContent value="external" className="space-y-4">
           {/* Filters for External */}
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="w-4 h-4" />
-                  {t("invoice.searchFilter")}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button onClick={() => applyFilters("external")} className="h-9">{t("invoice.apply")}</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={t("invoice.searchPlaceholder")} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 h-9" />
                 </div>
+                <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                  <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Row 1: Search | Approval Status | Email Status */}
+              {showFilters && (<>
+              {/* Filters: Approval Status | Email Status | Invoice Status | Date From | Date To */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Search */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-                  <SearchInput
-                    placeholder={t("invoice.searchPlaceholder")}
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    className="h-9"
-                  />
-                </div>
-
                 {/* Approval Status */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
@@ -4516,10 +4519,7 @@ export function InvoiceManagement({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              {/* Row 2: Invoice Status | Date From | Date To */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Invoice Status */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
@@ -4576,6 +4576,10 @@ export function InvoiceManagement({
                   </Popover>
                 </div>
               </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+              </div>
+              </>)}
             </CardContent>
           </Card>
 
@@ -5411,8 +5415,6 @@ export function InvoiceManagement({
                           <TableRow>
                             {/* Item - LEFT */}
                             <TableHead align="left">Item</TableHead>
-                            {/* Category - CENTER */}
-                            <TableHead align="center">Category</TableHead>
                             {/* Amount - RIGHT */}
                             <TableHead align="right">Amount</TableHead>
                             {/* Actions - CENTER */}
@@ -5427,9 +5429,6 @@ export function InvoiceManagement({
                                   <p className="font-medium">{item.name}</p>
                                   <p className="text-sm text-muted-foreground">{item.description}</p>
                                 </div>
-                              </TableCell>
-                              <TableCell align="center">
-                                <Badge variant="outline">{item.category}</Badge>
                               </TableCell>
                               <TableCell align="right" className="font-medium">
                                 {item.amount.toLocaleString()}
@@ -5509,7 +5508,7 @@ export function InvoiceManagement({
                       <div className="flex items-center justify-center mb-2">
                         <FileSpreadsheet className="w-6 h-6 text-green-600" />
                       </div>
-                      <h4 className="font-medium text-center text-sm">CSV Upload</h4>
+                      <h4 className="font-medium text-center text-sm">Excel Upload</h4>
                       <p className="text-xs text-muted-foreground text-center mt-1">
                         Upload student list
                       </p>
@@ -5919,7 +5918,7 @@ export function InvoiceManagement({
                 Import Invoices from Excel
               </DialogTitle>
               <DialogDescription>
-                Upload an Excel file (.xlsx, .xls) or CSV file to import multiple invoices at once
+                Upload an Excel file (.xlsx, .xls) to import multiple invoices at once
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -7412,14 +7411,14 @@ export function InvoiceManagement({
           <DialogHeader>
             <DialogTitle>Import Interface File</DialogTitle>
             <DialogDescription>
-              Upload a CSV or Excel file in the interface format to create invoices.
+              Upload an Excel file in the interface format to create invoices.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Template download */}
             <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
               <div>
-                <p className="text-sm font-medium">CSV Template</p>
+                <p className="text-sm font-medium">Excel Template</p>
                 <p className="text-xs text-muted-foreground">Download the template with correct column headers</p>
               </div>
               <Button variant="outline" size="sm" onClick={downloadInterfaceTemplate} className="flex items-center gap-2">
@@ -7429,7 +7428,7 @@ export function InvoiceManagement({
             </div>
             {/* File upload */}
             <div>
-              <label className="block text-sm font-medium mb-2">Upload CSV / Excel File</label>
+              <label className="block text-sm font-medium mb-2">Upload Excel File</label>
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"

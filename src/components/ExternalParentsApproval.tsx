@@ -303,35 +303,50 @@ export function ExternalParentsApproval() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.totalApplications")}</p>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.totalApplications")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.pendingReview")}</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.pendingReview")}</p>
+            </div>
             <p className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.underReview")}</p>
+            <div className="flex items-center gap-1.5">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.underReview")}</p>
+            </div>
             <p className="text-2xl font-bold text-blue-600">{summaryStats.underReview}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.rejected")}</p>
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.rejected")}</p>
+            </div>
             <p className="text-2xl font-bold text-red-600">{summaryStats.rejected}</p>
           </CardContent>
         </Card>

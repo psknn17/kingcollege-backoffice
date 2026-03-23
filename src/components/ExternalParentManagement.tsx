@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown } from "lucide-react"
+import { Search, Filter, UserCheck, UserX, Eye, Mail, Phone, Calendar, Download, RotateCcw, ArrowUpDown, FileText, Clock, CheckCircle, List, DollarSign } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
@@ -329,35 +329,50 @@ export function ExternalParentManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.totalApplications")}</p>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.totalApplications")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.pendingReview")}</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.pendingReview")}</p>
+            </div>
             <p className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.onWaitlist")}</p>
+            <div className="flex items-center gap-1.5">
+              <List className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.onWaitlist")}</p>
+            </div>
             <p className="text-2xl font-bold text-blue-600">{summaryStats.waitlist}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("external.revenueFromExternal")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("external.revenueFromExternal")}</p>
+            </div>
             <p className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>

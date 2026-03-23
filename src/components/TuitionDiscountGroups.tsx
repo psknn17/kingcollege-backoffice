@@ -381,7 +381,7 @@ export function TuitionDiscountGroups() {
                 <Tabs defaultValue="individual" className="space-y-4">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="individual">Individual Input</TabsTrigger>
-                    <TabsTrigger value="csv-upload">CSV Upload</TabsTrigger>
+                    <TabsTrigger value="csv-upload">Excel Upload</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="individual" className="space-y-3">
@@ -496,7 +496,7 @@ export function TuitionDiscountGroups() {
 
                   <TabsContent value="csv-upload">
                     <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                      <p className="text-muted-foreground">CSV Upload feature coming soon</p>
+                      <p className="text-muted-foreground">Excel Upload feature coming soon</p>
                     </div>
                   </TabsContent>
                 </Tabs>

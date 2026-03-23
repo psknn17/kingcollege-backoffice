@@ -34,7 +34,8 @@ import {
   DollarSign,
   Filter,
   Search,
-  ArrowUpDown
+  ArrowUpDown,
+  Calendar
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -239,7 +240,7 @@ export function EventRegistrationReports() {
             <Download className="w-4 h-4 mr-2" />
             {t("common.exportCsv")}
           </Button>
-          <Button onClick={() => exportReport('excel')}>
+          <Button variant="outline" onClick={() => exportReport('excel')}>
             <Download className="w-4 h-4 mr-2" />
             {t("eventReports.exportExcel")}
           </Button>
@@ -255,56 +256,44 @@ export function EventRegistrationReports() {
 
         <TabsContent value="overview" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("eventReports.totalRegistrations")}</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">743</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("eventReports.percentFromLastMonth").replace("{percent}", "+12")}
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("eventReports.totalRegistrations")}</p>
+                </div>
+                <p className="text-2xl font-bold">743</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">฿265,800</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("eventReports.percentFromLastMonth").replace("{percent}", "+8")}
-                </p>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
+                </div>
+                <p className="text-2xl font-bold">฿265,800</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("eventReports.paymentRate")}</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">76.8%</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("eventReports.percentFromLastMonth").replace("{percent}", "+2.1")}
-                </p>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("eventReports.paymentRate")}</p>
+                </div>
+                <p className="text-2xl font-bold text-green-600">76.8%</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("eventReports.activeEvents")}</CardTitle>
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("eventReports.endingThisWeek").replace("{count}", "2")}
-                </p>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("eventReports.activeEvents")}</p>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">8</p>
               </CardContent>
             </Card>
           </div>

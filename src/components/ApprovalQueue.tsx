@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Input } from "./ui/input"
+import { cn } from "./ui/utils"
 import { Textarea } from "./ui/textarea"
 import { SearchInput } from "./ui/advanced-filter"
 import { PaginationBar } from "@/components/ui/pagination-bar"
@@ -22,7 +23,7 @@ import { normalizeAcademicYear, formatAcademicYear, downloadAsXlsx } from "@/uti
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePersistedState } from "@/hooks/usePersistedState"
-import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, Clock, Eye, FileText, Filter, X, Download, RefreshCw, Mail, Pencil, Trash2, DollarSign, CreditCard } from "lucide-react"
+import { ArrowUpDown, Calendar as CalendarIcon, CheckCircle, ChevronDown, Clock, Eye, FileText, Filter, Search, X, Download, RefreshCw, Mail, Pencil, Trash2, DollarSign, CreditCard, XCircle } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { formatCurrency, numberToWords, getAcademicYear, generateNextInvoiceNumber } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
@@ -215,6 +216,7 @@ export function ApprovalQueue() {
     return loaded
   })
   const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all")
@@ -414,6 +416,11 @@ export function ApprovalQueue() {
     setFilteredInvoices(invoices)
     setSelectedInvoiceIds(new Set())
   }
+
+  // Real-time filtering: apply filters whenever filter state changes
+  useEffect(() => {
+    applyFilters()
+  }, [searchTerm, academicYearFilter, termFilter, invoiceStatusFilter, gradeFilter, dateFrom, dateTo, dueDateFrom, dueDateTo, emailStatusFilter, paymentStatusFilter, invoices])
 
   const handleSort = (key: NonNullable<typeof sortKey>) => {
     if (sortKey === key) {
@@ -932,8 +939,8 @@ export function ApprovalQueue() {
   const canApproveInvoices = canPerformActions(user?.role) && (user?.role === "super_admin" || user?.role === "approver")
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+    <div className="flex flex-col h-[calc(100vh-130px)] gap-4">
+      <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex-shrink-0">
         <div>
           <h2 className="text-xl font-semibold">{t("approvalQueue.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -947,63 +954,67 @@ export function ApprovalQueue() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-shrink-0">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("approvalQueue.totalInvoices")}</p>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("approvalQueue.totalInvoices")}</p>
+            </div>
             <p className="text-2xl font-bold">{totalInvoices}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("approvalQueue.wait")}</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("approvalQueue.wait")}</p>
+            </div>
             <p className="text-2xl font-bold">{waitCount}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("approvalQueue.approved")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("approvalQueue.approved")}</p>
+            </div>
             <p className="text-2xl font-bold">{approvedCount}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("approvalQueue.rejected")}</p>
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("approvalQueue.rejected")}</p>
+            </div>
             <p className="text-2xl font-bold">{rejectedCount}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="w-4 h-4" />
-              {t("invoice.searchFilter")}
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button onClick={() => applyFilters()} className="h-9">{t("common.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+      <Card className="flex-shrink-0">
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder={t("invoice.searchPlaceholder")} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 h-9" />
             </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Row 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-              <SearchInput
-                placeholder={t("invoice.searchPlaceholder")}
-                value={searchTerm}
-                onChange={setSearchTerm}
-                className="h-9"
-              />
-            </div>
 
+          {showFilters && (
+          <div className="space-y-4">
+
+          {/* All filters in a single 3-column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Academic Year */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("invoice.academicYear")}</label>
@@ -1038,10 +1049,7 @@ export function ApprovalQueue() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Row 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Year Group */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("student.yearGroup")}</label>
@@ -1119,10 +1127,7 @@ export function ApprovalQueue() {
                 </Popover>
               </div>
             </div>
-          </div>
 
-          {/* Row 3 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Email Status */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.emailStatus")}</label>
@@ -1195,80 +1200,85 @@ export function ApprovalQueue() {
               </div>
             </div>
           </div>
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+          </div>
+          </div>
+          )}
         </CardContent>
       </Card>
 
-      {selectedInvoiceIds.size > 0 && (
-        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="text-sm font-medium text-blue-800">
-            {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
-          </div>
-          <div className="flex gap-2">
-            {(() => {
-              const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
-              const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
-              const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
+      <Card className="flex-1 min-h-0 flex flex-col">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+          {selectedInvoiceIds.size > 0 && (
+            <div className="flex items-center justify-between p-3 bg-blue-50 border-b border-blue-200 flex-shrink-0">
+              <div className="text-sm font-medium text-blue-800">
+                {selectedInvoiceIds.size} item{selectedInvoiceIds.size > 1 ? "s" : ""} selected
+              </div>
+              <div className="flex gap-2">
+                {(() => {
+                  const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+                  const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
+                  const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
 
-              if (allApprovedAndSent) {
-                return (
-                  <Button
-                    size="sm"
-                    onClick={handleBulkMarkPaid}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md px-4"
-                    style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
-                  >
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    Mark Paid
-                  </Button>
-                )
-              }
-
-              if (allDraft) {
-                return (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={approveSelectedInvoices}
-                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md px-4 transition-colors"
-                      style={{ backgroundColor: '#000000', color: '#ffffff', opacity: 1, border: 'none' }}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Approve Selected
-                    </Button>
-                    {user?.role !== "approver" && (
+                  if (allApprovedAndSent) {
+                    return (
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md px-4 transition-colors"
-                        style={{ backgroundColor: '#dc2626', color: '#ffffff', opacity: 1, border: 'none' }}
+                        onClick={handleBulkMarkPaid}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md px-4"
+                        style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
                       >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete Selected
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        Mark Paid
                       </Button>
-                    )}
-                  </div>
-                )
-              }
+                    )
+                  }
 
-              return null
-            })()}
+                  if (allDraft) {
+                    return (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={approveSelectedInvoices}
+                          className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md px-4 transition-colors"
+                          style={{ backgroundColor: '#000000', color: '#ffffff', opacity: 1, border: 'none' }}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Approve Selected
+                        </Button>
+                        {user?.role !== "approver" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md px-4 transition-colors"
+                            style={{ backgroundColor: '#dc2626', color: '#ffffff', opacity: 1, border: 'none' }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete Selected
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  }
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedInvoiceIds(new Set())}
-              className="text-blue-800 hover:bg-blue-100"
-            >
-              {t("approvalQueue.cancel")}
-            </Button>
-          </div>
-        </div>
-      )}
+                  return null
+                })()}
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedInvoiceIds(new Set())}
+                  className="text-blue-800 hover:bg-blue-100"
+                >
+                  {t("approvalQueue.cancel")}
+                </Button>
+              </div>
+            </div>
+          )}
+          <Table containerClassName="flex-1 max-h-none">
             <TableHeader>
               <TableRow>
                 {/* Checkbox - center aligned */}
@@ -1422,13 +1432,15 @@ export function ApprovalQueue() {
               )}
             </TableBody>
           </Table>
-          <PaginationBar
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={sortedInvoices.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-          />
+          <div className="flex-shrink-0 border-t">
+            <PaginationBar
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={sortedInvoices.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+            />
+          </div>
         </CardContent>
       </Card>
 

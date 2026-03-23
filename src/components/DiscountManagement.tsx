@@ -704,7 +704,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         }
       } catch (error) {
         toast.error("Failed to process file. Please check the file format.")
-        setFileParseErrors(["Failed to parse file. Please ensure it's a valid CSV file."])
+        setFileParseErrors(["Failed to parse file. Please ensure it's a valid Excel file."])
       } finally {
         setIsProcessingFile(false)
       }
@@ -1356,7 +1356,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           </div>
 
                           <div className="bg-muted/50 p-3 rounded text-xs">
-                            <strong>Example CSV content:</strong>
+                            <strong>Example Excel content:</strong>
                             <pre className="mt-1 text-muted-foreground">
                               Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                             </pre>
@@ -1790,7 +1790,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 } as unknown as React.ChangeEvent<HTMLInputElement>
                                 handleFileUpload(fakeEvent)
                               } else {
-                                toast.error("Please upload a CSV file")
+                                toast.error("Please upload an Excel file")
                               }
                             }}
                           >
@@ -1804,7 +1804,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                   {" "}or drag and drop
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  CSV file with columns: id, name, year_group, parent_name
+                                  Excel file with columns: id, name, year_group, parent_name
                                 </p>
                               </div>
                               <input
@@ -2047,7 +2047,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   if (file && file.type === 'text/csv') {
                     handleCsvUpload(file)
                   } else {
-                    toast.error("Please upload a CSV file")
+                    toast.error("Please upload an Excel file")
                   }
                 }}
               >

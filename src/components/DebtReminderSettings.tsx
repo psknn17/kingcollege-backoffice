@@ -12,8 +12,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { cn } from "./ui/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
-import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { PaginationBar } from "./ui/pagination-bar"
+import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy, Search, Filter, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -235,7 +236,6 @@ export function DebtReminderSettings() {
   })
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
   const [previewReminder, setPreviewReminder] = useState<ReminderConfig | null>(null)
-  const [isScheduledCollapsed, setIsScheduledCollapsed] = useState(false)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [reminderHistory, setReminderHistory] = useState<{ id: string; sentDate: string; subject: string; academicYear: string; term: string; recipients: number; status: string; message?: string }[]>([])
   const [historyPage, setHistoryPage] = useState(1)
@@ -244,6 +244,26 @@ export function DebtReminderSettings() {
   const [templatePickerDialog, setTemplatePickerDialog] = useState<{ isOpen: boolean; reminderId: string | null }>({ isOpen: false, reminderId: null })
   const [reminderTemplates, setReminderTemplates] = usePersistedState<DebtReminderTemplate[]>("debt-reminder:templates", DEFAULT_REMINDER_TEMPLATES)
   const [templateManageDialog, setTemplateManageDialog] = useState<{ isOpen: boolean; editing: DebtReminderTemplate | null }>({ isOpen: false, editing: null })
+  const [isTemplateListOpen, setIsTemplateListOpen] = useState(false)
+
+  // Create/Edit reminder dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingReminder, setEditingReminder] = useState<ReminderConfig | null>(null)
+
+  // Table filter state
+  const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  const [filterAcademicYear, setFilterAcademicYear] = useState("all")
+  const [filterTerm, setFilterTerm] = useState("all")
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+
+  // Sorting state
+  const [sortField, setSortField] = useState<string>("name")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = usePersistedState<number>("debt-reminder:pageSize", 10)
 
   // Get unique due dates from invoices filtered by reminder's academicYear, term, invoiceStatuses
   const getAvailableDueDates = (reminder: ReminderConfig): string[] => {
@@ -253,7 +273,7 @@ export function DebtReminderSettings() {
       const invoices: any[] = JSON.parse(stored)
       const dates = new Set<string>()
 
-      // Normalize academic year: "2025/2026" → "2025/2026"
+      // Normalize academic year: "2025/2026" -> "2025/2026"
       const normalizeYear = (y: string) => (y || "").replace("/", "-").trim()
 
       // Extract term number from any format: "Term 1", "2025-2026 - Term 1", "1", "term1"
@@ -299,6 +319,7 @@ export function DebtReminderSettings() {
   }
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", subject: "", emailTitle: "", message: "" })
   const templateMessageRef = useRef<HTMLTextAreaElement>(null)
+  const reminderMessageRef = useRef<HTMLTextAreaElement>(null)
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -306,33 +327,99 @@ export function DebtReminderSettings() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const reminderList = reminders || []
 
-    const totalRecipients = reminderList
-      .filter(r => r.enabled && r.status !== "cancelled")
-      .reduce((sum, r) => sum + (r.recipientCount || 0), 0)
+    const total = reminderList.length
 
     const scheduledReminders = reminderList.filter(r => r.status === "new")
 
-    const sentToday = reminderList.filter(r => {
-      if (r.status !== "reminded" || !r.sentAt) return false
-      const sentDate = new Date(r.sentAt)
-      return sentDate >= todayStart
-    }).length
+    const sentReminders = reminderList.filter(r => r.status === "reminded")
 
-    const nextScheduled = scheduledReminders
-      .filter(r => r.sendDate)
-      .sort((a, b) => {
-        const dateA = new Date(`${a.sendDate}T${a.sendTime || "00:00"}`)
-        const dateB = new Date(`${b.sendDate}T${b.sendTime || "00:00"}`)
-        return dateA.getTime() - dateB.getTime()
-      })[0]
+    const cancelledReminders = reminderList.filter(r => r.status === "cancelled")
 
     return {
-      totalRecipients,
+      total,
       scheduledCount: scheduledReminders.length,
-      sentToday,
-      nextScheduled
+      sentCount: sentReminders.length,
+      cancelledCount: cancelledReminders.length
     }
   }, [reminders])
+
+  // Filtered and sorted reminders for table
+  const filteredReminders = useMemo(() => {
+    let result = [...(reminders || [])]
+
+    // Search filter
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase()
+      result = result.filter(r =>
+        r.name.toLowerCase().includes(lower) ||
+        r.subject.toLowerCase().includes(lower) ||
+        r.emailTitle.toLowerCase().includes(lower)
+      )
+    }
+
+    // Academic Year filter
+    if (filterAcademicYear !== "all") {
+      result = result.filter(r => r.academicYear === filterAcademicYear)
+    }
+
+    // Term filter
+    if (filterTerm !== "all") {
+      result = result.filter(r => r.term === filterTerm)
+    }
+
+    // Status filter
+    if (filterStatus !== "all") {
+      result = result.filter(r => r.status === filterStatus)
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let cmp = 0
+      switch (sortField) {
+        case "name":
+          cmp = (a.name || "").localeCompare(b.name || "")
+          break
+        case "academicYear":
+          cmp = (a.academicYear || "").localeCompare(b.academicYear || "")
+          break
+        case "term":
+          cmp = (a.term || "").localeCompare(b.term || "")
+          break
+        case "sendDate":
+          cmp = (a.sendDate || "").localeCompare(b.sendDate || "")
+          break
+        case "sendTime":
+          cmp = (a.sendTime || "").localeCompare(b.sendTime || "")
+          break
+        case "status":
+          cmp = (a.status || "").localeCompare(b.status || "")
+          break
+        case "recipients":
+          cmp = (a.recipientCount || 0) - (b.recipientCount || 0)
+          break
+        default:
+          cmp = 0
+      }
+      return sortDirection === "asc" ? cmp : -cmp
+    })
+
+    return result
+  }, [reminders, searchTerm, filterAcademicYear, filterTerm, filterStatus, sortField, sortDirection])
+
+  // Paginated reminders
+  const paginatedReminders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredReminders.slice(start, start + pageSize)
+  }, [filteredReminders, currentPage, pageSize])
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
+    }
+  }
 
   const addReminder = () => {
     const newReminder: ReminderConfig = {
@@ -350,7 +437,40 @@ export function DebtReminderSettings() {
       invoiceStatuses: [],
       status: "new"
     }
-    setReminders((currentReminders) => [...(currentReminders || []), newReminder])
+    setEditingReminder(newReminder)
+    setIsEditDialogOpen(true)
+  }
+
+  const openEditReminder = (reminder: ReminderConfig) => {
+    setEditingReminder({ ...reminder })
+    setIsEditDialogOpen(true)
+  }
+
+  const saveEditingReminder = () => {
+    if (!editingReminder) return
+
+    // Validate required fields
+    if (!editingReminder.name.trim()) {
+      toast.error("Please enter a reminder name")
+      return
+    }
+
+    const exists = (reminders || []).find(r => r.id === editingReminder.id)
+    if (exists) {
+      // Update existing
+      setReminders((current) =>
+        (current || []).map(r => r.id === editingReminder.id ? editingReminder : r)
+      )
+      toast.success("Reminder updated")
+      logActivity({ action: "Update Reminder", module: "Debt Reminders", detail: `Updated reminder: "${editingReminder.name}"` })
+    } else {
+      // Add new
+      setReminders((current) => [...(current || []), editingReminder])
+      toast.success("Reminder created")
+      logActivity({ action: "Create Reminder", module: "Debt Reminders", detail: `Created reminder: "${editingReminder.name}"` })
+    }
+    setIsEditDialogOpen(false)
+    setEditingReminder(null)
   }
 
   const openNewTemplate = () => {
@@ -389,13 +509,18 @@ export function DebtReminderSettings() {
   }
 
   const applyTemplate = (reminderId: string, template: DebtReminderTemplate) => {
-    setReminders((current) =>
-      (current || []).map(r =>
-        r.id === reminderId
-          ? { ...r, subject: template.subject, emailTitle: template.emailTitle, message: template.message }
-          : r
+    // If editing in dialog, apply to editingReminder
+    if (editingReminder && editingReminder.id === reminderId) {
+      setEditingReminder(prev => prev ? { ...prev, subject: template.subject, emailTitle: template.emailTitle, message: template.message } : prev)
+    } else {
+      setReminders((current) =>
+        (current || []).map(r =>
+          r.id === reminderId
+            ? { ...r, subject: template.subject, emailTitle: template.emailTitle, message: template.message }
+            : r
+        )
       )
-    )
+    }
     setTemplatePickerDialog({ isOpen: false, reminderId: null })
     toast.success(`Template "${template.name}" applied`)
   }
@@ -428,7 +553,7 @@ export function DebtReminderSettings() {
     toast.success("Reminder duplicated", {
       description: `"${duplicate.name}" created as scheduled`
     })
-    logActivity({ action: "Duplicate Reminder", module: "Debt Reminders", detail: `Duplicated from: "${reminder.name}" → "${duplicate.name}", Subject: "${duplicate.subject}"` })
+    logActivity({ action: "Duplicate Reminder", module: "Debt Reminders", detail: `Duplicated from: "${reminder.name}" -> "${duplicate.name}", Subject: "${duplicate.subject}"` })
   }
 
   const handleOpenHistory = () => {
@@ -463,7 +588,7 @@ export function DebtReminderSettings() {
   }
 
   const handleDateChange = (id: string, newDate: string) => {
-    const reminder = (reminders || []).find(r => r.id === id)
+    const reminder = editingReminder?.id === id ? editingReminder : (reminders || []).find(r => r.id === id)
     if (!reminder) return
 
     // Check if reminder is locked (scheduled)
@@ -484,7 +609,11 @@ export function DebtReminderSettings() {
     }
 
     // Update the date
-    updateReminder(id, "sendDate", newDate)
+    if (editingReminder?.id === id) {
+      setEditingReminder(prev => prev ? { ...prev, sendDate: newDate } : prev)
+    } else {
+      updateReminder(id, "sendDate", newDate)
+    }
 
     // If the selected date is today, validate the time
     if (newDate === today && reminder.sendTime) {
@@ -497,7 +626,7 @@ export function DebtReminderSettings() {
   }
 
   const handleTimeChange = (id: string, newTime: string) => {
-    const reminder = (reminders || []).find(r => r.id === id)
+    const reminder = editingReminder?.id === id ? editingReminder : (reminders || []).find(r => r.id === id)
     if (!reminder) return
 
     // Check if reminder is locked (scheduled)
@@ -509,7 +638,11 @@ export function DebtReminderSettings() {
     }
 
     // Update the time
-    updateReminder(id, "sendTime", newTime)
+    if (editingReminder?.id === id) {
+      setEditingReminder(prev => prev ? { ...prev, sendTime: newTime } : prev)
+    } else {
+      updateReminder(id, "sendTime", newTime)
+    }
 
     // If the selected date is today, validate the time
     const today = getTodayString()
@@ -613,11 +746,13 @@ export function DebtReminderSettings() {
       updateReminder(reminder.id, "status", "new")
     }
 
-    // Mock recipient count
-    const mockRecipientCount = Math.floor(Math.random() * 150) + 50
-    updateReminder(reminder.id, "recipientCount", mockRecipientCount)
+    // Use existing recipient count if available, otherwise generate once
+    const recipientCount = reminder.recipientCount || (Math.floor(Math.random() * 150) + 50)
+    if (!reminder.recipientCount) {
+      updateReminder(reminder.id, "recipientCount", recipientCount)
+    }
 
-    setPreviewReminder(reminder)
+    setPreviewReminder({ ...reminder, recipientCount })
     setIsPreviewModalOpen(true)
   }
 
@@ -689,804 +824,631 @@ export function DebtReminderSettings() {
 
   const getStatusBadge = (status: ReminderStatus | undefined) => {
     switch (status) {
+      case "new":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100">
+            New
+          </Badge>
+        )
       case "reminded":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border-2 border-green-500 bg-green-50 text-green-700 shadow-sm">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+          <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-100">
             Reminded
-          </span>
+          </Badge>
         )
       case "cancelled":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border-2 border-red-500 bg-red-50 text-red-700 shadow-sm">
-            <XCircle className="w-3.5 h-3.5" />
+          <Badge className="bg-red-100 text-red-800 border-red-300 hover:bg-red-100">
             Cancelled
-          </span>
+          </Badge>
         )
       default:
-        return null
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100">
+            New
+          </Badge>
+        )
     }
+  }
+
+  const getInvoiceStatusBadges = (statuses: InvoiceStatus[]) => {
+    if (!statuses || statuses.length === 0) {
+      return <span className="text-muted-foreground text-xs">-</span>
+    }
+    return (
+      <div className="flex items-center justify-center gap-1 flex-wrap">
+        {statuses.map(s => (
+          <Badge key={s} variant="outline" className={cn(
+            "text-xs",
+            s === "unpaid" ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-red-50 text-red-700 border-red-200"
+          )}>
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </Badge>
+        ))}
+      </div>
+    )
+  }
+
+  const clearFilters = () => {
+    setSearchTerm("")
+    setFilterAcademicYear("all")
+    setFilterTerm("all")
+    setFilterStatus("all")
+    setCurrentPage(1)
+  }
+
+  const getReminderDisplayAcademicYear = (reminder: ReminderConfig) => {
+    const year = academicYears.find(y => y.id === reminder.academicYear)
+    return year ? formatAcademicYear(year.name) : reminder.academicYear || "-"
+  }
+
+  const getReminderDisplayTerm = (reminder: ReminderConfig) => {
+    const year = academicYears.find(y => y.id === reminder.academicYear)
+    const term = year?.terms.find(t => t.id === reminder.term)
+    return term?.name || (reminder.term ? `Term ${reminder.term}` : "-")
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      {/* Header */}
+      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-semibold">{t("debt.reminderSettings")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("debt.reminderSettingsDesc")}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsTemplateListOpen(true)} className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Templates Debt Reminder
+          </Button>
+          <Button onClick={addReminder} disabled={!userCanEdit} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Create Reminder
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Statistics Cards */}
+      {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Total Recipients</p>
-            <p className="text-2xl font-bold">{summaryStats.totalRecipients}</p>
+            <div className="flex items-center gap-1.5">
+              <Bell className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Reminders</p>
+            </div>
+            <p className="text-2xl font-bold text-blue-700">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Scheduled</p>
-            <p className="text-2xl font-bold text-blue-700">{summaryStats.scheduledCount}</p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="rounded-xl gap-0 cursor-pointer hover:bg-green-100 transition-colors"
-          onClick={handleOpenHistory}
-        >
-          <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Remind History <span className="text-xs font-normal text-green-600 ml-1">(click to view)</span></p>
-            <p className="text-2xl font-bold text-green-700">{summaryStats.sentToday}</p>
+            <div className="flex items-center gap-1.5">
+              <ClockIcon className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Scheduled</p>
+            </div>
+            <p className="text-2xl font-bold text-yellow-700">{summaryStats.scheduledCount}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Next Scheduled</p>
-            {summaryStats.nextScheduled ? (
-              <p className="text-2xl font-bold text-amber-700">
-                {formatDisplayDate(summaryStats.nextScheduled.sendDate)}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">No scheduled reminders</p>
-            )}
+            <div className="flex items-center gap-1.5">
+              <Send className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Sent</p>
+            </div>
+            <p className="text-2xl font-bold text-green-700">{summaryStats.sentCount}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Cancelled</p>
+            </div>
+            <p className="text-2xl font-bold text-red-700">{summaryStats.cancelledCount}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="space-y-6">
-        <div className="flex justify-end">
-          <Button onClick={addReminder} disabled={!userCanEdit} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            {t("debt.addReminder")}
-          </Button>
-        </div>
+      {/* Filter Section */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          {/* Search bar + Filters toggle */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, subject, or title..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showFilters && "rotate-180")} />
+            </Button>
+          </div>
 
-        {/* Email Templates */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-xl font-semibold">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                {t("debtReminder.templates")}
+          {/* Collapsible filters */}
+          {showFilters && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Academic Year</Label>
+                  <Select value={filterAcademicYear} onValueChange={(v) => { setFilterAcademicYear(v); setCurrentPage(1) }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Academic Years" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Academic Years</SelectItem>
+                      {academicYears.map(year => (
+                        <SelectItem key={year.id} value={year.id}>
+                          {formatAcademicYear(year.name)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Term</Label>
+                  <Select value={filterTerm} onValueChange={(v) => { setFilterTerm(v); setCurrentPage(1) }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Terms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Terms</SelectItem>
+                      {filterAcademicYear !== "all"
+                        ? academicYears.find(y => y.id === filterAcademicYear)?.terms.map(term => (
+                            <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>
+                          )) || []
+                        : academicYears.flatMap(y => y.terms).filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i).map(term => (
+                            <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>
+                          ))
+                      }
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Status</Label>
+                  <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1) }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="reminded">Reminded</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <Button size="sm" onClick={openNewTemplate} disabled={!userCanEdit} className="flex items-center gap-1.5">
-                <Plus className="w-4 h-4" />
-                {t("debtReminder.addTemplate")}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(reminderTemplates || []).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No templates yet. Create one to get started.</p>
-            ) : (
-              <div className="divide-y">
-                {(reminderTemplates || []).map((template) => (
-                  <div key={template.id} className="flex items-start justify-between py-3 gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-base">{template.name}</div>
-                      {template.description && <div className="text-sm text-muted-foreground mt-0.5">{template.description}</div>}
-                      <div className="text-sm text-muted-foreground mt-1 space-x-3">
-                        <span><span className="text-foreground font-medium">Subject:</span> {template.subject}</span>
-                        <span><span className="text-foreground font-medium">Title:</span> {template.emailTitle}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button size="sm" variant="ghost" onClick={() => openEditTemplate(template)} disabled={!userCanEdit} className="h-7 w-7 p-0">
-                        <Edit className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteTemplate(template.id)} disabled={!userCanEdit} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Draft and Sent Reminders */}
-        <div className="space-y-4">
-          {(reminders || []).filter(r => r.status === "new" || !r.status).map((reminder, index) => (
-            <Card key={reminder.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Mail className="w-5 h-5 flex-shrink-0" />
-                      <Input
-                        value={reminder.name}
-                        onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
-                        className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 flex-1"
-                        disabled={!userCanEdit || isReminderLocked(reminder)}
-                        placeholder={reminder.name || "Enter reminder name"}
-                      />
-                    </div>
-                    <div className="flex-shrink-0">
-                      {getStatusBadge(reminder.status)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setTemplatePickerDialog({ isOpen: true, reminderId: reminder.id })}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                      className="flex items-center gap-1.5"
-                    >
-                      <FileText className="w-4 h-4" />
-                      {t("debtReminder.useTemplate")}
-                    </Button>
-                    <Switch
-                      checked={reminder.enabled}
-                      onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDuplicateReminder(reminder)}
-                      disabled={!userCanEdit}
-                      title="Duplicate reminder"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => deleteReminder(reminder.id)}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Row 1: Academic Year & Term */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("debtReminder.academicYear")} <span className="text-destructive">*</span></Label>
-                    <Select
-                      value={reminder.academicYear}
-                      onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("debtReminder.selectAcademicYear")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {academicYears.map(year => (
-                          <SelectItem key={year.id} value={year.id}>
-                            {formatAcademicYear(year.name)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("debtReminder.term")} <span className="text-destructive">*</span></Label>
-                    <Select
-                      value={reminder.term}
-                      onValueChange={(value) => updateReminder(reminder.id, "term", value)}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("debtReminder.selectTerm")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {academicYears
-                          .find(y => y.id === reminder.academicYear)
-                          ?.terms.map(term => (
-                            <SelectItem key={term.id} value={term.id}>
-                              {term.name}
-                            </SelectItem>
-                          )) || []}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Row 2: Email Subject, Invoice Status Filter & Due Date Filter */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("debtReminder.emailSubject")} <span className="text-destructive">*</span></Label>
-                    <Select
-                      value={reminder.subject}
-                      onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
-                      disabled={!userCanEdit || isReminderLocked(reminder)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("debtReminder.selectEmailSubject")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRESET_EMAIL_SUBJECTS.map(subject => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("debtReminder.invoiceStatusFilter")}</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
-                          disabled={!userCanEdit || isReminderLocked(reminder)}
-                        >
-                          <span className="truncate">
-                            {reminder.invoiceStatuses?.length
-                              ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
-                              : t("debtReminder.selectInvoiceStatuses")}
-                          </span>
-                          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-2" align="start">
-                        <div className="space-y-1">
-                          {INVOICE_STATUS_OPTIONS.map(option => (
-                            <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
-                              onClick={() => {
-                                if (!userCanEdit) return
-                                const current = reminder.invoiceStatuses || []
-                                const updated = current.includes(option.value)
-                                  ? current.filter(s => s !== option.value)
-                                  : [...current, option.value]
-                                updateReminder(reminder.id, "invoiceStatuses", updated)
-                              }}
-                            >
-                              <Checkbox
-                                id={`status-${reminder.id}-${option.value}`}
-                                checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
-                                onCheckedChange={(checked) => {
-                                  const current = reminder.invoiceStatuses || []
-                                  const updated = checked
-                                    ? [...current, option.value]
-                                    : current.filter(s => s !== option.value)
-                                  updateReminder(reminder.id, "invoiceStatuses", updated)
-                                }}
-                                disabled={!userCanEdit}
-                              />
-                              <Label
-                                htmlFor={`status-${reminder.id}-${option.value}`}
-                                className="text-sm font-normal cursor-pointer flex-1"
-                              >
-                                {option.label}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("debtReminder.dueDateFilter")}</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !reminder.dueDateFilter || reminder.dueDateFilter === "all" ? "text-muted-foreground" : ""
-                          )}
-                          disabled={!userCanEdit || isReminderLocked(reminder)}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {reminder.dueDateFilter && reminder.dueDateFilter !== "all"
-                            ? format(new Date(reminder.dueDateFilter), "dd MMM yyyy")
-                            : "Select date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={reminder.dueDateFilter && reminder.dueDateFilter !== "all" ? new Date(reminder.dueDateFilter) : undefined}
-                          onSelect={(date) => updateReminder(reminder.id, "dueDateFilter", date ? format(date, "yyyy-MM-dd") : "all")}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                {/* Row 3: Email Title */}
-                <div className="space-y-2">
-                  <Label>{t("debtReminder.emailTitle")}</Label>
-                  <Input
-                    value={reminder.emailTitle}
-                    onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
-                    placeholder="Enter custom email title..."
-                    disabled={!userCanEdit || isReminderLocked(reminder)}
-                  />
-                </div>
-
-                {/* Row 4: Send Date & Send Time */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4" />
-                      {t("debtReminder.sendDate")} <span className="text-destructive">*</span>
-                    </Label>
-                    <Popover open={openCalendarId === reminder.id} onOpenChange={(open) => setOpenCalendarId(open ? reminder.id : null)}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", !reminder.sendDate && "text-muted-foreground")}
-                          disabled={!userCanEdit}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {reminder.sendDate ? format(new Date(reminder.sendDate), "dd/MM/yyyy") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={reminder.sendDate ? new Date(reminder.sendDate) : undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              handleDateChange(reminder.id, format(date, "yyyy-MM-dd"))
-                              setOpenCalendarId(null)
-                            }
-                          }}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      {t("debtReminder.sendTime")} <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="time"
-                      value={reminder.sendTime}
-                      onChange={(e) => handleTimeChange(reminder.id, e.target.value)}
-                      disabled={!userCanEdit}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("debtReminder.messageTemplate")} <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    value={reminder.message}
-                    onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
-                    placeholder="Enter reminder message template"
-                    rows={4}
-                    disabled={!userCanEdit || isReminderLocked(reminder)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Available variables: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
-                  </p>
-                </div>
-
-                {/* Preview */}
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">{t("debtReminder.scheduledReminders")}</h4>
-                  <div className="text-sm space-y-1">
-                    <p><strong>Academic Year:</strong> {formatAcademicYear(reminder.academicYear) || "Not selected"}</p>
-                    <p><strong>Term:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term || "Not selected"}</p>
-                    <p><strong>Send Date:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
-                    <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
-                    <p><strong>Status:</strong>
-                      <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-                        {reminder.enabled ? "Active" : "Disabled"}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end gap-2">
-                  {(!reminder.status || reminder.status === "new") && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          if (!reminder.academicYear || !reminder.term || !reminder.subject || !reminder.sendDate || !reminder.sendTime || !reminder.message) {
-                            toast.error("Please fill in all required fields (Academic Year, Term, Email Subject, Send Date, Send Time, Message)")
-                            return
-                          }
-                          handlePreviewReminder(reminder)
-                        }}
-                        disabled={!userCanEdit || !reminder.enabled}
-                        className="flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Preview & Schedule
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          if (!reminder.academicYear || !reminder.term || !reminder.subject || !reminder.sendDate || !reminder.sendTime || !reminder.message) {
-                            toast.error("Please fill in all required fields (Academic Year, Term, Email Subject, Send Date, Send Time, Message)")
-                            return
-                          }
-                          handleSendNow(reminder)
-                        }}
-                        disabled={!userCanEdit || !reminder.enabled}
-                        className="flex items-center gap-2"
-                      >
-                        <Send className="w-4 h-4" />
-                        Send Now
-                      </Button>
-                    </>
-                  )}
-                  {reminder.status === "reminded" && (
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      Sent on {reminder.sentAt ? new Date(reminder.sentAt).toLocaleString() : "Unknown"}
-                      {reminder.recipientCount && ` to ${reminder.recipientCount} recipients`}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Reminded - Collapsible */}
-        {false && (reminders || []).filter(r => r.status === "reminded").length > 0 && (
-          <Collapsible open={!isScheduledCollapsed} onOpenChange={(open) => setIsScheduledCollapsed(!open)}>
-            <Card className="border-green-300">
-              <CardHeader className="pb-3">
-                <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-lg transition-colors">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <CardTitle className="text-base">
-                        Reminded ({(reminders || []).filter(r => r.status === "reminded").length})
-                      </CardTitle>
-                    </div>
-                    <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isScheduledCollapsed ? '' : 'rotate-180'}`} />
-                  </div>
-                </CollapsibleTrigger>
-              </CardHeader>
-              <CollapsibleContent>
-                <CardContent className="space-y-4 pt-0">
-                  {/* Lock Warning */}
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                    <p><strong>Sent:</strong> These reminders have been sent and are read-only.</p>
-                  </div>
-
-                  {(reminders || []).filter(r => r.status === "reminded").map((reminder) => (
-                    <Card key={reminder.id} className="border-blue-200">
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <Mail className="w-5 h-5 flex-shrink-0" />
-                              <Input
-                                value={reminder.name}
-                                onChange={(e) => updateReminder(reminder.id, "name", e.target.value)}
-                                className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 flex-1"
-                                disabled={!userCanEdit || isReminderLocked(reminder)}
-                                placeholder={reminder.name || "Reminder name"}
-                              />
-                            </div>
-                            <div className="flex-shrink-0">
-                              {getStatusBadge(reminder.status)}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setTemplatePickerDialog({ isOpen: true, reminderId: reminder.id })}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                              className="flex items-center gap-1.5 text-xs"
-                            >
-                              <FileText className="w-3 h-3" />
-                              {t("debtReminder.useTemplate")}
-                            </Button>
-                            <Switch
-                              checked={reminder.enabled}
-                              onCheckedChange={(checked) => updateReminder(reminder.id, "enabled", checked)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDuplicateReminder(reminder)}
-                              disabled={!userCanEdit}
-                              title="Duplicate reminder"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteReminder(reminder.id)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                              title={isReminderLocked(reminder) ? "Cancel schedule first to delete" : "Delete reminder"}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {/* Row 1: Academic Year & Term */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>{t("common.academicYear")}</Label>
-                            <Select
-                              value={reminder.academicYear}
-                              onValueChange={(value) => updateReminder(reminder.id, "academicYear", value)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("common.selectYear")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {academicYears.map(year => (
-                                  <SelectItem key={year.id} value={year.id}>
-                                    {formatAcademicYear(year.name)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>{t("common.term")}</Label>
-                            <Select
-                              value={reminder.term}
-                              onValueChange={(value) => updateReminder(reminder.id, "term", value)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("common.selectTerm")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {academicYears
-                                  .find(y => y.id === reminder.academicYear)
-                                  ?.terms.map(term => (
-                                    <SelectItem key={term.id} value={term.id}>
-                                      {term.name}
-                                    </SelectItem>
-                                  )) || []}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        {/* Row 2: Email Subject & Invoice Status Filter */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>{t("debt.emailSubject")}</Label>
-                            <Select
-                              value={reminder.subject}
-                              onValueChange={(value) => updateReminder(reminder.id, "subject", value)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("debt.emailSubjectPlaceholder")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {PRESET_EMAIL_SUBJECTS.map(subject => (
-                                  <SelectItem key={subject} value={subject}>
-                                    {subject}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Invoice Status Filter</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap h-9 disabled:cursor-not-allowed disabled:opacity-50"
-                                  disabled={!userCanEdit || isReminderLocked(reminder)}
-                                >
-                                  <span className="truncate">
-                                    {reminder.invoiceStatuses?.length
-                                      ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")
-                                      : "Select invoice statuses"}
-                                  </span>
-                                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[200px] p-2" align="start">
-                                <div className="space-y-1">
-                                  {INVOICE_STATUS_OPTIONS.map(option => (
-                                    <div key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
-                                      onClick={() => {
-                                        if (!userCanEdit) return
-                                        const current = reminder.invoiceStatuses || []
-                                        const updated = current.includes(option.value)
-                                          ? current.filter(s => s !== option.value)
-                                          : [...current, option.value]
-                                        updateReminder(reminder.id, "invoiceStatuses", updated)
-                                      }}
-                                    >
-                                      <Checkbox
-                                        id={`status-${reminder.id}-${option.value}`}
-                                        checked={reminder.invoiceStatuses?.includes(option.value) ?? false}
-                                        onCheckedChange={(checked) => {
-                                          const current = reminder.invoiceStatuses || []
-                                          const updated = checked
-                                            ? [...current, option.value]
-                                            : current.filter(s => s !== option.value)
-                                          updateReminder(reminder.id, "invoiceStatuses", updated)
-                                        }}
-                                        disabled={!userCanEdit || isReminderLocked(reminder)}
-                                      />
-                                      <Label
-                                        htmlFor={`status-${reminder.id}-${option.value}`}
-                                        className="text-sm font-normal cursor-pointer flex-1"
-                                      >
-                                        {option.label}
-                                      </Label>
-                                    </div>
-                                  ))}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-
-                        {/* Row 3: Email Title */}
-                        <div className="space-y-2">
-                          <Label>Email Title</Label>
-                          <Input
-                            value={reminder.emailTitle}
-                            onChange={(e) => updateReminder(reminder.id, "emailTitle", e.target.value)}
-                            placeholder="Enter custom email title..."
-                            disabled={!userCanEdit || isReminderLocked(reminder)}
-                          />
-                        </div>
-
-                        {/* Row 4: Send Date & Send Time */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <CalendarIcon className="w-4 h-4" />
-                              {t("debt.sendDate")}
-                            </Label>
-                            <Popover open={openCalendarId === `scheduled-${reminder.id}`} onOpenChange={(open) => setOpenCalendarId(open ? `scheduled-${reminder.id}` : null)}>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn("w-full justify-start text-left font-normal", !reminder.sendDate && "text-muted-foreground")}
-                                  disabled={!userCanEdit || isReminderLocked(reminder)}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {reminder.sendDate ? format(new Date(reminder.sendDate), "dd/MM/yyyy") : <span>Pick a date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={reminder.sendDate ? new Date(reminder.sendDate) : undefined}
-                                  onSelect={(date) => {
-                                    if (date) {
-                                      handleDateChange(reminder.id, format(date, "yyyy-MM-dd"))
-                                      setOpenCalendarId(null)
-                                    }
-                                  }}
-                                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Settings className="w-4 h-4" />
-                              Send Time
-                            </Label>
-                            <Input
-                              type="time"
-                              value={reminder.sendTime}
-                              onChange={(e) => handleTimeChange(reminder.id, e.target.value)}
-                              disabled={!userCanEdit || isReminderLocked(reminder)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>{t("debt.messageTemplate")}</Label>
-                          <Textarea
-                            value={reminder.message}
-                            onChange={(e) => updateReminder(reminder.id, "message", e.target.value)}
-                            placeholder={t("debt.messageTemplatePlaceholder")}
-                            rows={4}
-                            disabled={!userCanEdit || isReminderLocked(reminder)}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {t("debt.availableVariables")}: {"{parent_name}"}, {"{student_name}"}, {"{amount}"}, {"{due_date}"}, {"{days_remaining}"}
-                          </p>
-                        </div>
-
-                        {/* Preview */}
-                        <div className="p-4 bg-muted rounded-lg">
-                          <h4 className="font-medium mb-2">{t("debt.reminderPreview")}</h4>
-                          <div className="text-sm space-y-1">
-                            <p><strong>{t("common.academicYear")}:</strong> {formatAcademicYear(reminder.academicYear)}</p>
-                            <p><strong>{t("common.term")}:</strong> {academicYears.find(y => y.id === reminder.academicYear)?.terms.find(t => t.id === reminder.term)?.name || reminder.term}</p>
-                            <p><strong>{t("debt.sendDate")}:</strong> {formatDisplayDate(reminder.sendDate)} {reminder.sendTime && `at ${reminder.sendTime}`}</p>
-                            <p><strong>Invoice Statuses:</strong> {reminder.invoiceStatuses?.length ? reminder.invoiceStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ") : "None selected"}</p>
-                            <p><strong>{t("common.status")}:</strong>
-                              <span className={reminder.enabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-                                {reminder.enabled ? t("common.active") : t("common.disabled")}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex justify-end gap-2">
+      {/* Data Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead align="left" className="cursor-pointer" onClick={() => handleSort("name")}>
+                    <div className="flex items-center gap-1">Name <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="left" className="cursor-pointer" onClick={() => handleSort("academicYear")}>
+                    <div className="flex items-center gap-1">Academic Year <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="left" className="cursor-pointer" onClick={() => handleSort("term")}>
+                    <div className="flex items-center gap-1">Term <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="left" className="cursor-pointer" onClick={() => handleSort("sendDate")}>
+                    <div className="flex items-center gap-1">Send Date <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="left" className="cursor-pointer" onClick={() => handleSort("sendTime")}>
+                    <div className="flex items-center gap-1">Send Time <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="center">Invoice Status</TableHead>
+                  <TableHead align="center" className="cursor-pointer" onClick={() => handleSort("status")}>
+                    <div className="flex items-center justify-center gap-1">Status <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="right" className="cursor-pointer" onClick={() => handleSort("recipients")}>
+                    <div className="flex items-center justify-end gap-1">Recipients <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  </TableHead>
+                  <TableHead align="center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedReminders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                      <Mail className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-medium">No reminders found</p>
+                      <p className="text-xs mt-1">Create a new reminder or adjust your filters</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedReminders.map((reminder) => (
+                    <TableRow key={reminder.id}>
+                      <TableCell align="left" className="font-medium">{reminder.name || "-"}</TableCell>
+                      <TableCell align="left">{getReminderDisplayAcademicYear(reminder)}</TableCell>
+                      <TableCell align="left">{getReminderDisplayTerm(reminder)}</TableCell>
+                      <TableCell align="left">{reminder.sendDate ? format(new Date(reminder.sendDate), "dd/MM/yyyy") : "-"}</TableCell>
+                      <TableCell align="left">{reminder.sendTime || "-"}</TableCell>
+                      <TableCell align="center">{getInvoiceStatusBadges(reminder.invoiceStatuses)}</TableCell>
+                      <TableCell align="center">{getStatusBadge(reminder.status)}</TableCell>
+                      <TableCell align="right">{reminder.recipientCount?.toLocaleString() || "-"}</TableCell>
+                      <TableCell align="center">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
-                            variant="outline"
-                            onClick={() => handlePreviewReminder(reminder)}
-                            className="flex items-center gap-2"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              if (!reminder.subject || !reminder.message) {
+                                toast.error("Cannot preview", { description: "Subject and message are required" })
+                                return
+                              }
+                              handlePreviewReminder(reminder)
+                            }}
+                            title="Preview"
                           >
                             <Eye className="w-4 h-4" />
-                            View Preview
                           </Button>
                           <Button
-                            variant="destructive"
-                            onClick={() => handleCancelSchedule(reminder)}
-                            disabled={!userCanEdit || !isScheduledInFuture(reminder)}
-                            title={!isScheduledInFuture(reminder) ? "Cannot cancel — scheduled time has passed" : "Cancel schedule"}
-                            className="flex items-center gap-2"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => openEditReminder(reminder)}
+                            disabled={!userCanEdit || isReminderLocked(reminder)}
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              if (!reminder.academicYear || !reminder.term || !reminder.subject || !reminder.sendDate || !reminder.sendTime || !reminder.message) {
+                                toast.error("Please fill in all required fields before sending")
+                                return
+                              }
+                              handleSendNow(reminder)
+                            }}
+                            disabled={!userCanEdit || !reminder.enabled || reminder.status === "reminded"}
+                            title="Send Now"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                            onClick={() => {
+                              updateReminder(reminder.id, "status", "cancelled")
+                              toast.success("Reminder cancelled")
+                              logActivity({ action: "Cancel Reminder", module: "Debt Reminder", detail: `Cancelled reminder "${reminder.name}"` })
+                            }}
+                            disabled={!userCanEdit || reminder.status !== "new"}
+                            title="Cancel"
                           >
                             <XCircle className="w-4 h-4" />
-                            Cancel Schedule
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            onClick={() => deleteReminder(reminder.id)}
+                            disabled={!userCanEdit || isReminderLocked(reminder)}
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={filteredReminders.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Reminder Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditDialogOpen(false)
+          setEditingReminder(null)
+        }
+      }}>
+        <DialogContent className="max-w-3xl p-6 max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              {editingReminder && (reminders || []).find(r => r.id === editingReminder.id) ? "Edit Reminder" : "Create Reminder"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {editingReminder && (
+            <div className="flex-1 overflow-y-auto space-y-4 py-4">
+              {/* Name & Enable */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 space-y-2">
+                  <Label>Reminder Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={editingReminder.name}
+                    onChange={(e) => setEditingReminder(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                    placeholder="Enter reminder name"
+                  />
+                </div>
+              </div>
+
+              {/* Academic Year & Term */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t("debtReminder.academicYear")} <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={editingReminder.academicYear}
+                    onValueChange={(value) => setEditingReminder(prev => prev ? { ...prev, academicYear: value } : prev)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("debtReminder.selectAcademicYear")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {academicYears.map(year => (
+                        <SelectItem key={year.id} value={year.id}>
+                          {formatAcademicYear(year.name)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("debtReminder.term")} <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={editingReminder.term}
+                    onValueChange={(value) => setEditingReminder(prev => prev ? { ...prev, term: value } : prev)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("debtReminder.selectTerm")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {academicYears
+                        .find(y => y.id === editingReminder.academicYear)
+                        ?.terms.map(term => (
+                          <SelectItem key={term.id} value={term.id}>
+                            {term.name}
+                          </SelectItem>
+                        )) || []}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Email Subject, Invoice Status Filter & Due Date Filter */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>{t("debtReminder.emailSubject")} <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={editingReminder.subject}
+                    onValueChange={(value) => setEditingReminder(prev => prev ? { ...prev, subject: value } : prev)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("debtReminder.selectEmailSubject")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRESET_EMAIL_SUBJECTS.map(subject => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("debtReminder.invoiceStatusFilter")}</Label>
+                  <div className="flex items-center gap-3">
+                    {INVOICE_STATUS_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={editingReminder.invoiceStatuses?.includes(option.value) ?? false}
+                          onCheckedChange={(checked) => {
+                            const current = editingReminder.invoiceStatuses || []
+                            const updated = checked
+                              ? [...current, option.value]
+                              : current.filter(s => s !== option.value)
+                            setEditingReminder(prev => prev ? { ...prev, invoiceStatuses: updated } : prev)
+                          }}
+                        />
+                        <span className="text-sm">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("debtReminder.dueDateFilter")}</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !editingReminder.dueDateFilter || editingReminder.dueDateFilter === "all" ? "text-muted-foreground" : ""
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editingReminder.dueDateFilter && editingReminder.dueDateFilter !== "all"
+                          ? format(new Date(editingReminder.dueDateFilter), "dd MMM yyyy")
+                          : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={editingReminder.dueDateFilter && editingReminder.dueDateFilter !== "all" ? new Date(editingReminder.dueDateFilter) : undefined}
+                        onSelect={(date) => setEditingReminder(prev => prev ? { ...prev, dueDateFilter: date ? format(date, "yyyy-MM-dd") : "all" } : prev)}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Email Title */}
+              <div className="space-y-2">
+                <Label>{t("debtReminder.emailTitle")}</Label>
+                <Input
+                  value={editingReminder.emailTitle}
+                  onChange={(e) => setEditingReminder(prev => prev ? { ...prev, emailTitle: e.target.value } : prev)}
+                  placeholder="Enter custom email title..."
+                />
+              </div>
+
+              {/* Send Date & Send Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    {t("debtReminder.sendDate")} <span className="text-destructive">*</span>
+                  </Label>
+                  <Popover open={openCalendarId === `edit-${editingReminder.id}`} onOpenChange={(open) => setOpenCalendarId(open ? `edit-${editingReminder.id}` : null)}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal", !editingReminder.sendDate && "text-muted-foreground")}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editingReminder.sendDate ? format(new Date(editingReminder.sendDate), "dd/MM/yyyy") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={editingReminder.sendDate ? new Date(editingReminder.sendDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            handleDateChange(editingReminder.id, format(date, "yyyy-MM-dd"))
+                            setOpenCalendarId(null)
+                          }
+                        }}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    {t("debtReminder.sendTime")} <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="time"
+                    value={editingReminder.sendTime}
+                    onChange={(e) => handleTimeChange(editingReminder.id, e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Use Template Button */}
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTemplatePickerDialog({ isOpen: true, reminderId: editingReminder.id })}
+                  className="flex items-center gap-1.5"
+                >
+                  <FileText className="w-4 h-4" />
+                  {t("debtReminder.useTemplate")}
+                </Button>
+              </div>
+
+              {/* Message */}
+              <div className="space-y-2">
+                <Label>{t("debtReminder.messageTemplate")} <span className="text-destructive">*</span></Label>
+                <Textarea
+                  ref={reminderMessageRef}
+                  value={editingReminder.message}
+                  onChange={(e) => setEditingReminder(prev => prev ? { ...prev, message: e.target.value } : prev)}
+                  placeholder="Enter reminder message template"
+                  rows={4}
+                />
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-xs text-muted-foreground">Variables:</span>
+                  {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
+                    <Badge
+                      key={v}
+                      variant="outline"
+                      className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
+                      onClick={() => {
+                        const el = reminderMessageRef.current
+                        if (el) {
+                          const start = el.selectionStart ?? el.value.length
+                          const end = el.selectionEnd ?? el.value.length
+                          const newVal = el.value.slice(0, start) + v + el.value.slice(end)
+                          setEditingReminder(prev => prev ? { ...prev, message: newVal } : prev)
+                          requestAnimationFrame(() => {
+                            el.focus()
+                            el.setSelectionRange(start + v.length, start + v.length)
+                          })
+                        } else {
+                          setEditingReminder(prev => prev ? { ...prev, message: (prev.message || "") + v } : prev)
+                        }
+                      }}
+                    >
+                      {v}
+                    </Badge>
                   ))}
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-        )}
-      </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingReminder(null) }}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={saveEditingReminder} disabled={!userCanEdit}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Reminder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Preview & Schedule Modal */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="max-w-3xl p-6 max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-4xl p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
@@ -1495,89 +1457,106 @@ export function DebtReminderSettings() {
           </DialogHeader>
 
           {previewReminder && (
-            <div className="flex-1 overflow-y-auto space-y-6 py-4">
-              {/* Recipient Info */}
-              <Card className="border-blue-300 bg-blue-50">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-blue-900">Recipient Count</h3>
-                      <p className="text-sm text-blue-700">This reminder will be sent to approximately</p>
-                    </div>
-                    <div className="text-2xl font-bold text-blue-700">
-                      {previewReminder.recipientCount || 0}
-                    </div>
-                  </div>
-                  <div className="mt-3 text-xs text-blue-600 space-y-1">
-                    <p>• Academic Year: {formatAcademicYear(previewReminder.academicYear)}</p>
-                    <p>• Term: {academicYears.find(y => y.id === previewReminder.academicYear)?.terms.find(t => t.id === previewReminder.term)?.name || previewReminder.term}</p>
-                    <p>• Invoice Status Filter: {previewReminder.invoiceStatuses?.join(", ")}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Email Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Email Preview</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Email Title</Label>
-                    <div className="p-3 bg-muted rounded border font-semibold text-lg">
-                      {previewReminder.emailTitle
-                        ?.replace(/\{parent_name\}/g, "Mr. John Smith")
-                        .replace(/\{student_name\}/g, "James Smith")
-                        .replace(/\{amount\}/g, "฿45,000")
-                        .replace(/\{due_date\}/g, "31 Mar 2026")
-                        .replace(/\{days_remaining\}/g, "15")}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Message Body</Label>
-                    <div className="p-4 bg-muted rounded border">
-                      {previewReminder.message
-                        ?.replace(/\{parent_name\}/g, "Mr. John Smith")
-                        .replace(/\{student_name\}/g, "James Smith")
-                        .replace(/\{amount\}/g, "฿45,000")
-                        .replace(/\{due_date\}/g, "31 Mar 2026")
-                        .replace(/\{days_remaining\}/g, "15")
-                        .split("\n")
-                        .map((line, i) => (
-                          <span key={i}>
-                            {line}
-                            <br />
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground p-3 bg-amber-50 border border-amber-200 rounded">
-                    <p className="font-medium text-amber-900 mb-1">Sample Data Used in Preview:</p>
-                    <p>{"{parent_name}"} → Mr. John Smith, {"{student_name}"} → James Smith, {"{amount}"} → ฿45,000, {"{due_date}"} → 31 Mar 2026, {"{days_remaining}"} → 15</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Schedule Info */}
-              {previewReminder.sendDate && (
-                <Card className="border-green-300 bg-green-50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <CalendarIcon className="w-5 h-5 text-green-700" />
+            <div className="space-y-4 py-2">
+              {/* Recipient + Schedule row */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-blue-300 bg-blue-50">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-green-900">Scheduled Send Time</h3>
-                        <p className="text-sm text-green-700">
-                          {formatDisplayDate(previewReminder.sendDate)} at {previewReminder.sendTime}
+                        <h3 className="font-semibold text-blue-900">Recipient Count</h3>
+                        <p className="text-sm text-blue-700">This reminder will be sent to approximately</p>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-700">
+                        {previewReminder.recipientCount || 0}
+                      </div>
+                    </div>
+                    <div className="mt-3 text-xs text-blue-600 space-y-1">
+                      <p>- Academic Year: {formatAcademicYear(previewReminder.academicYear)}</p>
+                      <p>- Term: {academicYears.find(y => y.id === previewReminder.academicYear)?.terms.find(t => t.id === previewReminder.term)?.name || previewReminder.term}</p>
+                      <p>- Invoice Status Filter: {previewReminder.invoiceStatuses?.join(", ") || "All"}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={previewReminder.sendDate ? "border-green-300 bg-green-50" : "border-gray-200 bg-gray-50"}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon className={cn("w-5 h-5", previewReminder.sendDate ? "text-green-700" : "text-gray-400")} />
+                      <div>
+                        <h3 className={cn("font-semibold", previewReminder.sendDate ? "text-green-900" : "text-gray-500")}>Scheduled Send Time</h3>
+                        <p className={cn("text-sm", previewReminder.sendDate ? "text-green-700" : "text-gray-400")}>
+                          {previewReminder.sendDate
+                            ? `${formatDisplayDate(previewReminder.sendDate)} at ${previewReminder.sendTime || "Not set"}`
+                            : "Not scheduled yet"}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              </div>
+
+              {/* Email Preview */}
+              <div className="rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
+                {/* Email header */}
+                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">KC</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-sm text-gray-900">King's College International School</span>
+                      <span className="text-xs text-gray-400 ml-2">&lt;finance@kingscollege.ac.th&gt;</span>
+                      <div className="text-xs text-gray-400 mt-0.5">to: Mr. John Smith &lt;parent@example.com&gt;</div>
+                    </div>
+                  </div>
+                  <div className="font-semibold text-base text-gray-900 mt-3 pl-[52px]">
+                    {previewReminder.emailTitle
+                      ? previewReminder.emailTitle
+                          .replace(/\{parent_name\}/g, "Mr. John Smith")
+                          .replace(/\{student_name\}/g, "James Smith")
+                          .replace(/\{amount\}/g, "฿45,000")
+                          .replace(/\{due_date\}/g, "31 Mar 2026")
+                          .replace(/\{days_remaining\}/g, "15")
+                      : <span className="text-gray-300 italic font-normal">(No email title)</span>}
+                  </div>
+                </div>
+
+                {/* Email body */}
+                <div className="px-6 py-6">
+                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {(() => {
+                      const sampleVars: Record<string, string> = {
+                        "{parent_name}": "Mr. John Smith",
+                        "{student_name}": "James Smith",
+                        "{amount}": "฿45,000",
+                        "{due_date}": "31 Mar 2026",
+                        "{days_remaining}": "15",
+                      }
+                      const msg = previewReminder.message || ""
+                      if (!msg) return <span className="text-gray-300 italic">No message content</span>
+                      const parts = msg.split(/(\{[a-z_]+\})/g)
+                      return parts.map((part, idx) =>
+                        sampleVars[part]
+                          ? <span key={idx} className="font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">{sampleVars[part]}</span>
+                          : <span key={idx}>{part}</span>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Email footer */}
+                <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
+                  <div className="text-center text-xs text-gray-400 leading-5">
+                    <div className="font-medium text-gray-500">King's College International School</div>
+                    <div>999 Rama 9 Road, Huai Khwang, Bangkok 10310</div>
+                    <div>Tel: +66 2 123 4567 | finance@kingscollege.ac.th</div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>{t("common.close")}</Button>
             {(!previewReminder?.status || previewReminder?.status === "new") && (
               <Button
@@ -1704,7 +1683,7 @@ export function DebtReminderSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* Create / Edit Template Dialog — with live preview */}
+      {/* Create / Edit Template Dialog -- with live preview */}
       <Dialog open={templateManageDialog.isOpen} onOpenChange={(open) => !open && setTemplateManageDialog({ isOpen: false, editing: null })}>
         <DialogContent className="p-0 gap-0 overflow-hidden" style={{ maxWidth: "95vw", width: "1500px", minHeight: "80vh" }}>
           <div className="grid grid-cols-2 min-h-[75vh]">
@@ -1866,7 +1845,7 @@ export function DebtReminderSettings() {
                       <div className="line-clamp-2"><span className="font-medium text-foreground">Message:</span> {template.message.split("\n")[0]}</div>
                     </div>
                   </div>
-                  <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap pt-0.5">Use this →</span>
+                  <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap pt-0.5">Use this</span>
                 </div>
               </button>
             ))}
@@ -1874,6 +1853,71 @@ export function DebtReminderSettings() {
           <div className="flex justify-end pt-2">
             <Button variant="outline" onClick={() => setTemplatePickerDialog({ isOpen: false, reminderId: null })}>
               {t("common.cancel")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template List Dialog */}
+      <Dialog open={isTemplateListOpen} onOpenChange={setIsTemplateListOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Templates Debt Reminder
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Create and manage email templates for debt reminders. Templates can be applied when creating or editing a reminder.
+          </p>
+          <div className="flex justify-end">
+            <Button onClick={() => { openNewTemplate() }} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create Template
+            </Button>
+          </div>
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead align="left">Name</TableHead>
+                  <TableHead align="left">Email Title</TableHead>
+                  <TableHead align="left">Description</TableHead>
+                  <TableHead align="center" className="w-[120px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(reminderTemplates || []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No templates yet. Create one to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (reminderTemplates || []).map((template) => (
+                    <TableRow key={template.id}>
+                      <TableCell align="left" className="font-medium">{template.name}</TableCell>
+                      <TableCell align="left">{template.emailTitle || "-"}</TableCell>
+                      <TableCell align="left" className="text-sm text-muted-foreground max-w-[200px] truncate">{template.description || "-"}</TableCell>
+                      <TableCell align="center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { openEditTemplate(template) }}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteTemplate(template.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button variant="outline" onClick={() => setIsTemplateListOpen(false)}>
+              {t("common.close") || "Close"}
             </Button>
           </div>
         </DialogContent>

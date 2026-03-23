@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, ChevronLeft, ChevronRight, X, User, DollarSign, Calendar as CalendarEmoji, Clock, CreditCard, CheckSquare, Square, Send, AlertCircle, CheckCircle, Receipt, Users, ArrowUpDown } from "lucide-react"
+import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, ChevronLeft, ChevronRight, X, User, DollarSign, Calendar as CalendarEmoji, Clock, CreditCard, CheckSquare, Square, Send, AlertCircle, CheckCircle, Receipt, Users, ArrowUpDown, Plus, RefreshCw, XCircle } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Separator } from "./ui/separator"
@@ -465,7 +465,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                 {t("receipt.exportAll")}
               </Button>
               <Button onClick={handleCreateReceipt} className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
+                <Plus className="w-4 h-4" />
                 Create Receipt
               </Button>
             </div>
@@ -475,35 +475,50 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
+                </div>
                 <p className="text-2xl font-bold">{summaryStats.total}</p>
               </CardContent>
             </Card>
 
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
+                </div>
                 <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
               </CardContent>
             </Card>
 
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.resent")}</p>
+                <div className="flex items-center gap-1.5">
+                  <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("receipt.resent")}</p>
+                </div>
                 <p className="text-2xl font-bold text-blue-600">{summaryStats.resent}</p>
               </CardContent>
             </Card>
 
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.failed")}</p>
+                <div className="flex items-center gap-1.5">
+                  <XCircle className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("receipt.failed")}</p>
+                </div>
                 <p className="text-2xl font-bold text-red-600">{summaryStats.failed}</p>
               </CardContent>
             </Card>
 
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
+                <div className="flex items-center gap-1.5">
+                  <Download className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
+                </div>
                 <p className="text-2xl font-bold">{summaryStats.totalDownloads}</p>
               </CardContent>
             </Card>

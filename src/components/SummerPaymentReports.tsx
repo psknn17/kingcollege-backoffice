@@ -40,7 +40,8 @@ import {
   Users,
   AlertTriangle,
   CheckCircle,
-  ArrowUpDown
+  ArrowUpDown,
+  Clock
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -310,7 +311,7 @@ export function SummerPaymentReports() {
             <Download className="w-4 h-4 mr-2" />
             {t("summerPayment.exportExcel")}
           </Button>
-          <Button onClick={() => exportReport('pdf')}>
+          <Button variant="outline" onClick={() => exportReport('pdf')}>
             <Download className="w-4 h-4 mr-2" />
             {t("summerPayment.exportPdf")}
           </Button>
@@ -327,56 +328,44 @@ export function SummerPaymentReports() {
 
         <TabsContent value="overview" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("common.totalRevenue")}</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">฿{calculateTotalRevenue().toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("summerPayment.fromLastMonth")}
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
+                </div>
+                <p className="text-2xl font-bold">฿{calculateTotalRevenue().toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("summerPayment.pendingPayments")}</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">฿{calculatePendingAmount().toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  {filteredPayments.filter(p => p.status === 'unpaid' || p.status === 'partial').length} {t("summerPayment.transactions")}
-                </p>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("summerPayment.pendingPayments")}</p>
+                </div>
+                <p className="text-2xl font-bold text-orange-500">฿{calculatePendingAmount().toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("summerPayment.successRate")}</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">92.5%</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("summerPayment.paymentSuccessRate")}
-                </p>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("summerPayment.successRate")}</p>
+                </div>
+                <p className="text-2xl font-bold text-green-600">92.5%</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("summerPayment.activePrograms")}</CardTitle>
-                <Sun className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground">
-                  {t("summerPayment.summerActivities")}
-                </p>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t("summerPayment.activePrograms")}</p>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">12</p>
               </CardContent>
             </Card>
           </div>

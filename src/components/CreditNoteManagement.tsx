@@ -13,7 +13,8 @@ import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Textarea } from "./ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight, Receipt, Printer, Upload, Save } from "lucide-react"
+import { Search, Filter, Eye, Plus, Download, Mail, CalendarIcon, DollarSign, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, CreditCard, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Receipt, Printer, Upload, Save, FilePen, FileCheck } from "lucide-react"
+import { cn } from "./ui/utils"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
@@ -119,6 +120,7 @@ export function CreditNoteManagement() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [noteTypeFilter, setNoteTypeFilter] = useState("all")
@@ -288,6 +290,11 @@ export function CreditNoteManagement() {
     setDateTo(null)
     setFilteredCreditNotes(creditNotes)
   }
+
+  // Real-time filtering: apply filters whenever filter state changes
+  useEffect(() => {
+    applyFilters()
+  }, [searchTerm, statusFilter, typeFilter, noteTypeFilter, dateFrom, dateTo, creditNotes])
 
   const openCreditNoteDetail = (creditNote: CreditNote) => {
     setSelectedCreditNote(creditNote)
@@ -845,35 +852,50 @@ export function CreditNoteManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="rounded-xl gap-0">
                 <CardContent className="p-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{t("creditNote.totalCreditNotes")}</p>
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{t("creditNote.totalCreditNotes")}</p>
+                  </div>
                   <p className="text-2xl font-bold">{summaryStats.total}</p>
                 </CardContent>
               </Card>
 
               <Card className="rounded-xl gap-0">
                 <CardContent className="p-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{t("creditNote.draft")}</p>
+                  <div className="flex items-center gap-1.5">
+                    <FilePen className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{t("creditNote.draft")}</p>
+                  </div>
                   <p className="text-2xl font-bold text-gray-600">{summaryStats.draft}</p>
                 </CardContent>
               </Card>
 
               <Card className="rounded-xl gap-0">
                 <CardContent className="p-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{t("creditNote.issued")}</p>
+                  <div className="flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{t("creditNote.issued")}</p>
+                  </div>
                   <p className="text-2xl font-bold text-blue-600">{summaryStats.issued}</p>
                 </CardContent>
               </Card>
 
               <Card className="rounded-xl gap-0">
                 <CardContent className="p-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{t("creditNote.applied")}</p>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{t("creditNote.applied")}</p>
+                  </div>
                   <p className="text-2xl font-bold text-green-600">{summaryStats.applied}</p>
                 </CardContent>
               </Card>
 
               <Card className="rounded-xl gap-0">
                 <CardContent className="p-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{t("creditNote.totalCreditAmount")}</p>
+                  <div className="flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{t("creditNote.totalCreditAmount")}</p>
+                  </div>
                   <p className="text-2xl font-bold">₿{summaryStats.totalAmount.toLocaleString()}</p>
                 </CardContent>
               </Card>
@@ -881,100 +903,102 @@ export function CreditNoteManagement() {
 
             {/* Filters */}
             <Card>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Filter className="w-4 h-4" />
-                    {t("invoiceOverview.searchFilter")}
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Button onClick={applyFilters} className="h-9">{t("invoice.apply")}</Button>
-                    <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder={t("creditNote.searchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="h-9"
+                      className="pl-10 h-9"
                       disabled={!userCanEdit}
                     />
                   </div>
+                  <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filters
+                    <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+                  </Button>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                        <SelectItem value="draft">{t("creditNote.draft")}</SelectItem>
-                        <SelectItem value="issued">{t("creditNote.issued")}</SelectItem>
-                        <SelectItem value="applied">{t("creditNote.applied")}</SelectItem>
-                        <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {showFilters && (
+                  <div className="mt-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                            <SelectItem value="draft">{t("creditNote.draft")}</SelectItem>
+                            <SelectItem value="issued">{t("creditNote.issued")}</SelectItem>
+                            <SelectItem value="applied">{t("creditNote.applied")}</SelectItem>
+                            <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("creditNote.noteTypeLabel") || "Note Type"}</label>
-                    <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter} disabled={!userCanEdit}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("creditNote.allTypes")}</SelectItem>
-                        <SelectItem value="CN">{t("creditNote.typeCN") || "CN - Credit Note"}</SelectItem>
-                        <SelectItem value="OP">{t("creditNote.typeOP") || "OP - Overpayment"}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("creditNote.noteTypeLabel") || "Note Type"}</label>
+                        <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter} disabled={!userCanEdit}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("creditNote.allTypes")}</SelectItem>
+                            <SelectItem value="CN">{t("creditNote.typeCN") || "CN - Credit Note"}</SelectItem>
+                            <SelectItem value="OP">{t("creditNote.typeOP") || "OP - Overpayment"}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFrom ? format(dateFrom, "dd/MM/yy") : t("creditNote.from")}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={dateFrom || undefined}
-                            onSelect={(date) => setDateFrom(date ?? null)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <span className="text-muted-foreground">→</span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateTo ? format(dateTo, "dd/MM/yy") : t("creditNote.to")}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={dateTo || undefined}
-                            onSelect={(date) => setDateTo(date ?? null)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")}</label>
+                        <div className="flex items-center gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateFrom ? format(dateFrom, "dd/MM/yy") : t("creditNote.from")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={dateFrom || undefined}
+                                onSelect={(date) => setDateFrom(date ?? null)}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-muted-foreground">→</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateTo ? format(dateTo, "dd/MM/yy") : t("creditNote.to")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={dateTo || undefined}
+                                onSelect={(date) => setDateTo(date ?? null)}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
                     </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

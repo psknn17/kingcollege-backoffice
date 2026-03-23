@@ -158,21 +158,20 @@ export function BankSettings() {
 
                 <Card>
                     <CardContent className="p-0">
-                        <Table>
+                        <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{t("bankSettings.paymentSource")}</TableHead>
-                                    <TableHead>{t("bankSettings.bank")}</TableHead>
-                                    <TableHead>{t("bankSettings.accountNumber")}</TableHead>
-                                    <TableHead>{t("bankSettings.glAccount")}</TableHead>
-                                    <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
-                                    {isSuperAdmin && <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>}
+                                    <TableHead className="w-[20%]">{t("bankSettings.paymentSource")}</TableHead>
+                                    <TableHead className="w-[25%]">{t("bankSettings.bank")}</TableHead>
+                                    <TableHead className="w-[25%]">{t("bankSettings.accountNumber")}</TableHead>
+                                    <TableHead className="w-[20%]">{t("bankSettings.glAccount")}</TableHead>
+                                    {isSuperAdmin && <TableHead align="center" className="w-[10%]">{t("bankSettings.actions")}</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {accounts.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground">
+                                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
@@ -183,19 +182,6 @@ export function BankSettings() {
                                             <TableCell>{account.bankName}</TableCell>
                                             <TableCell className="font-mono">{account.accountNumber}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                            <TableCell align="center" className="text-center">
-                                                {account.isActive ? (
-                                                    <Badge className="bg-green-100 text-green-800 border-green-200">
-                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                        {t("common.active")}
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="secondary" className="text-muted-foreground">
-                                                        <XCircle className="w-3 h-3 mr-1" />
-                                                        {t("common.inactive")}
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
                                             {isSuperAdmin && (
                                                 <TableCell align="right" className="text-right">
                                                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
@@ -229,21 +215,20 @@ export function BankSettings() {
 
                 <Card>
                     <CardContent className="p-0">
-                        <Table>
+                        <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{t("bankSettings.paymentSource")}</TableHead>
-                                    <TableHead>{t("bankSettings.bank")}</TableHead>
-                                    <TableHead>{t("bankSettings.accountNumber")}</TableHead>
-                                    <TableHead>{t("bankSettings.glAccount")}</TableHead>
-                                    <TableHead align="center" className="text-center">{t("bankSettings.isActive")}</TableHead>
-                                    {isSuperAdmin && <TableHead align="right" className="text-right">{t("bankSettings.actions")}</TableHead>}
+                                    <TableHead className="w-[20%]">{t("bankSettings.paymentSource")}</TableHead>
+                                    <TableHead className="w-[25%]">{t("bankSettings.bank")}</TableHead>
+                                    <TableHead className="w-[25%]">{t("bankSettings.accountNumber")}</TableHead>
+                                    <TableHead className="w-[20%]">{t("bankSettings.glAccount")}</TableHead>
+                                    {isSuperAdmin && <TableHead align="center" className="w-[10%]">{t("bankSettings.actions")}</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {onlineAccounts.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground">
+                                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
@@ -254,19 +239,6 @@ export function BankSettings() {
                                             <TableCell>{account.bankName}</TableCell>
                                             <TableCell className="font-mono">{account.accountNumber}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                            <TableCell align="center" className="text-center">
-                                                {account.isActive ? (
-                                                    <Badge className="bg-green-100 text-green-800 border-green-200">
-                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                        {t("common.active")}
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="secondary" className="text-muted-foreground">
-                                                        <XCircle className="w-3 h-3 mr-1" />
-                                                        {t("common.inactive")}
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
                                             {isSuperAdmin && (
                                                 <TableCell align="right" className="text-right">
                                                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'online')}>

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Input } from "./ui/input"
@@ -31,8 +31,12 @@ import {
   History,
   FileSpreadsheet,
   ArrowUpDown,
-  Save
+  Save,
+  ChevronDown,
+  Briefcase,
+  Loader
 } from "lucide-react"
+import { cn } from "./ui/utils"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { format } from "date-fns"
@@ -271,6 +275,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
     logActivity({ action: "Save Email Job", module: "Email Jobs", detail: `Saved ${emailJobs.length} email jobs for ${jobType} type` })
   }
 
+  const [showFilters, setShowFilters] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
@@ -443,49 +448,43 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("emailJobs.totalJobs")}</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{emailJobs.length}</div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Briefcase className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("emailJobs.totalJobs")}</p>
+            </div>
+            <p className="text-2xl font-bold">{emailJobs.length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("emailJobs.completed")}</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {emailJobs.filter(j => j.status === "completed").length}
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("emailJobs.completed")}</p>
             </div>
+            <p className="text-2xl font-bold text-green-600">{emailJobs.filter(j => j.status === "completed").length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("emailJobs.inProgress")}</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {emailJobs.filter(j => j.status === "in-progress").length}
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Loader className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("emailJobs.inProgress")}</p>
             </div>
+            <p className="text-2xl font-bold text-blue-600">{emailJobs.filter(j => j.status === "in-progress").length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("emailJobs.failed")}</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {emailJobs.filter(j => j.status === "failed").length}
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("emailJobs.failed")}</p>
             </div>
+            <p className="text-2xl font-bold text-red-600">{emailJobs.filter(j => j.status === "failed").length}</p>
           </CardContent>
         </Card>
       </div>
@@ -493,45 +492,58 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder={t("emailJobs.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className=""
+                  className="pl-10 h-9"
                   disabled={!userCanEdit}
                 />
               </div>
+              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+                <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+              </Button>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder={t("emailJobs.filterByStatus")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                <SelectItem value="completed">{t("emailJobs.completed")}</SelectItem>
-                <SelectItem value="in-progress">{t("emailJobs.inProgress")}</SelectItem>
-                <SelectItem value="failed">{t("emailJobs.failed")}</SelectItem>
-                <SelectItem value="pending">{t("common.pending")}</SelectItem>
-              </SelectContent>
-            </Select>
+            {showFilters && (<>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("emailJobs.filterByStatus")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                    <SelectItem value="completed">{t("emailJobs.completed")}</SelectItem>
+                    <SelectItem value="in-progress">{t("emailJobs.inProgress")}</SelectItem>
+                    <SelectItem value="failed">{t("emailJobs.failed")}</SelectItem>
+                    <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            {!isSimplifiedView && (
-              <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder={t("emailJobs.filterByType")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allTypes")}</SelectItem>
-                  <SelectItem value="tuition">{t("emailJobs.tuition")}</SelectItem>
-                  <SelectItem value="eca">{t("emailJobs.eca")}</SelectItem>
-                  <SelectItem value="trip">{t("emailJobs.tripActivities")}</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+                {!isSimplifiedView && (
+                  <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("emailJobs.filterByType")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("common.allTypes")}</SelectItem>
+                      <SelectItem value="tuition">{t("emailJobs.tuition")}</SelectItem>
+                      <SelectItem value="eca">{t("emailJobs.eca")}</SelectItem>
+                      <SelectItem value="trip">{t("emailJobs.tripActivities")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); setTypeFilter("all"); }} className="h-9">{t("common.clear")}</Button>
+              </div>
+            </>)}
           </div>
         </CardContent>
       </Card>

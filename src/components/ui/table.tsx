@@ -5,11 +5,15 @@ import * as React from "react";
 import { cn } from "./utils";
 import type { TableAlignment } from "@/utils/tableAlignment";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+interface TableProps extends React.ComponentProps<"table"> {
+  containerClassName?: string;
+}
+
+function Table({ className, containerClassName, ...props }: TableProps) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={cn("relative w-full overflow-auto max-h-[calc(100vh-320px)]", containerClassName)}
     >
       <table
         data-slot="table"
@@ -24,7 +28,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("[&_tr]:border-b [&_th]:sticky [&_th]:top-0 [&_th]:bg-background [&_th]:z-10 [&_tr]:shadow-[0_1px_0_0_hsl(var(--border))]", className)}
       {...props}
     />
   );

@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, Receipt, Users, ArrowUpDown } from "lucide-react"
+import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, Receipt, Users, ArrowUpDown, CheckCircle, DollarSign } from "lucide-react"
 import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
 import { InternalEmailManagement } from "./InternalEmailManagement"
@@ -347,28 +347,40 @@ export function AfterSchoolReceipts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
+            </div>
             <p className="text-2xl font-bold">฿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
+            <div className="flex items-center gap-1.5">
+              <Download className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("receipt.totalDownloads")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.totalDownloads}</p>
           </CardContent>
         </Card>

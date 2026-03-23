@@ -282,7 +282,7 @@ export function SummerDiscountGroups() {
           ...prev,
           selectedStudents: [...prev.selectedStudents, ...newStudents]
         }))
-        toast.success(`Added ${newStudents.length} students from CSV`)
+        toast.success(`Added ${newStudents.length} students from Excel`)
         logActivity({ action: "Bulk Add Students", module: "Summer Discount Groups", detail: `Added ${newStudents.length} students from CSV file "${file.name}"` })
       }
 
@@ -290,7 +290,7 @@ export function SummerDiscountGroups() {
         toast.error(`${errors.length} student IDs could not be found`)
       }
     } catch (error) {
-      toast.error("Failed to process CSV file")
+      toast.error("Failed to process Excel file")
       console.error(error)
     } finally {
       setIsProcessingFile(false)
@@ -391,7 +391,7 @@ export function SummerDiscountGroups() {
                 <Tabs defaultValue="individual" className="space-y-4">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="individual">Individual Input</TabsTrigger>
-                    <TabsTrigger value="csv-upload">CSV Upload</TabsTrigger>
+                    <TabsTrigger value="csv-upload">Excel Upload</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="individual" className="space-y-3">
@@ -498,7 +498,7 @@ export function SummerDiscountGroups() {
                   <TabsContent value="csv-upload" className="space-y-4">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label>Upload Student CSV File</Label>
+                        <Label>Upload Student Excel File</Label>
                         <Button
                           type="button"
                           variant="outline"
@@ -548,7 +548,7 @@ export function SummerDiscountGroups() {
 
                       <div className="text-xs text-muted-foreground space-y-1">
                         <p><strong>File format requirements:</strong></p>
-                        <p>• CSV file with Student ID in the first column</p>
+                        <p>• Excel file with Student ID in the first column</p>
                         <p>• Optional header row (will be automatically detected)</p>
                         <p>• Student ID format: KC2024001, KC2024002, KC2024003, etc.</p>
                         <p>• One student ID per row</p>
@@ -556,7 +556,7 @@ export function SummerDiscountGroups() {
                       </div>
 
                       <div className="bg-muted/50 p-3 rounded text-xs">
-                        <strong>Example CSV content:</strong>
+                        <strong>Example Excel content:</strong>
                         <pre className="mt-1 text-muted-foreground">
                           Student ID{'\n'}KC2024001{'\n'}KC2024002{'\n'}KC2024003
                         </pre>

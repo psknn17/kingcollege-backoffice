@@ -202,3 +202,11 @@ html {
   -webkit-backdrop-filter: none !important;
   z-index: 2000 !important;
 }
+
+/* Black overlay behind modals */
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-overlay"],
+[data-slot="sheet-overlay"] {
+  z-index: 1999 !important;
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}

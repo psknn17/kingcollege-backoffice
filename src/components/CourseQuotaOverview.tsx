@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { downloadAsXlsx } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -12,13 +12,14 @@ import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { PaginationBar } from "@/components/ui/pagination-bar"
-import { Search, Filter, Users, DollarSign, AlertTriangle, CheckCircle, Clock, Edit, Eye, Upload, Plus, Minus, Save, X, FileText, Download, UserCheck, Calendar, CreditCard, ArrowUpDown } from "lucide-react"
+import { Search, Filter, ChevronDown, Users, DollarSign, AlertTriangle, CheckCircle, Clock, Edit, Eye, Upload, Plus, Minus, Save, X, FileText, Download, UserCheck, Calendar, CreditCard, ArrowUpDown, BookOpen } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { cn } from "./ui/utils"
 
 interface Course {
   id: string
@@ -207,6 +208,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const [showFilters, setShowFilters] = useState(false)
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -291,11 +293,12 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     })
   }
 
-  const applyFilters = () => {
+  // Reactive filtering - runs whenever filter state changes
+  useEffect(() => {
     let filtered = courses
 
     if (searchTerm) {
-      filtered = filtered.filter(course => 
+      filtered = filtered.filter(course =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.location.toLowerCase().includes(searchTerm.toLowerCase())
@@ -325,8 +328,8 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     })
 
     setFilteredCourses(filtered)
-    setCurrentPage(1) // Reset to first page when filters are applied
-  }
+    setCurrentPage(1)
+  }, [searchTerm, categoryFilter, statusFilter, sortBy, courses])
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -520,7 +523,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     
     // Mock successful import
     const newCoursesCount = Math.floor(Math.random() * 5) + 1
-    toast.success(`Successfully imported ${newCoursesCount} courses from CSV`)
+    toast.success(`Successfully imported ${newCoursesCount} courses from Excel`)
     logActivity({ action: "Import Courses", module: "Course Quota", detail: `Imported ${newCoursesCount} courses from CSV file "${csvFile.name}"` })
 
     setIsImporting(false)
@@ -556,28 +559,40 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("course.totalCourses")}</p>
+            <div className="flex items-center gap-1.5">
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("course.totalCourses")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.totalCourses}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("course.totalEnrollment")}</p>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("course.totalEnrollment")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.totalEnrolled}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.totalRevenue")}</p>
+            </div>
             <p className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("course.performanceAlerts")}</p>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("course.performanceAlerts")}</p>
+            </div>
             <p className="text-2xl font-bold text-orange-600">{summaryStats.lowEnrollment}</p>
           </CardContent>
         </Card>
@@ -585,80 +600,77 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
       {/* Filters */}
       <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="w-4 h-4" />
-              {t("common.searchAndFilter")}
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={t("course.searchPlaceholder")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9"
+              />
             </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.search")}</label>
-              <div className="relative">
-                <Input
-                  placeholder={t("course.searchPlaceholder")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className=""
-                />
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("common.category")}</label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allCategories")}</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category.toLowerCase()}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("common.status")}</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                    <SelectItem value="active">{t("common.active")}</SelectItem>
+                    <SelectItem value="full">{t("course.full")}</SelectItem>
+                    <SelectItem value="upcoming">{t("settings.upcoming")}</SelectItem>
+                    <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("common.sortBy")}</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">{t("course.courseName")}</SelectItem>
+                    <SelectItem value="enrollment">{t("course.enrollment")}</SelectItem>
+                    <SelectItem value="revenue">{t("common.revenue")}</SelectItem>
+                    <SelectItem value="capacity">{t("course.capacityUtilization")}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.category")}</label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allCategories")}</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.status")}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                  <SelectItem value="active">{t("common.active")}</SelectItem>
-                  <SelectItem value="full">{t("course.full")}</SelectItem>
-                  <SelectItem value="upcoming">{t("settings.upcoming")}</SelectItem>
-                  <SelectItem value="cancelled">{t("common.cancelled")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.sortBy")}</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">{t("course.courseName")}</SelectItem>
-                  <SelectItem value="enrollment">{t("course.enrollment")}</SelectItem>
-                  <SelectItem value="revenue">{t("common.revenue")}</SelectItem>
-                  <SelectItem value="capacity">{t("course.capacityUtilization")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          </>)}
         </CardContent>
       </Card>
 

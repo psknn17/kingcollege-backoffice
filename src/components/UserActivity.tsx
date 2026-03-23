@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
+import { Card, CardContent } from "./ui/card"
 import { Input } from "./ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
@@ -8,13 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { useAuth } from "@/contexts/AuthContext"
-import { Activity, Search, Filter, Calendar, Clock } from "lucide-react"
+import { Search, Filter, Calendar, Clock, ChevronDown, Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react"
+import { Button } from "./ui/button"
+import { cn } from "./ui/utils"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { PaginationBar } from "./ui/pagination-bar"
 
 export function UserActivity() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [filterModule, setFilterModule] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [activityLogs, setActivityLogs] = usePersistedState<ActivityLogEntry[]>("user-activity-logs", [])
@@ -24,10 +27,15 @@ export function UserActivity() {
     setActivityLogs(logs)
   }, [])
 
-  // Filter activities for current user only
+  // Filter activities for current user only (match by name or email)
   const userActivities = useMemo(() => {
-    return activityLogs.filter(log => log.user === user?.name)
-  }, [activityLogs, user?.name])
+    if (!user) return []
+    const matchValues = [user.name, user.email].filter(Boolean).map(v => v.toLowerCase())
+    return activityLogs.filter(log => {
+      const logUser = log.user.toLowerCase()
+      return matchValues.some(v => v === logUser || logUser.includes(v))
+    })
+  }, [activityLogs, user])
 
   const filteredLogs = useMemo(() => {
     return userActivities.filter(log => {
@@ -106,118 +114,109 @@ export function UserActivity() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Activities</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-1">{userActivities.length}</h3>
-              </div>
-              <Activity className="w-8 h-8 text-blue-500" />
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Activities</p>
             </div>
+            <p className="text-2xl font-bold">{userActivities.length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Success</p>
-                <h3 className="text-2xl font-bold text-green-600 mt-1">
-                  {userActivities.filter(log => log.status === "success").length}
-                </h3>
-              </div>
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-xl">✓</span>
-              </div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Success</p>
             </div>
+            <p className="text-2xl font-bold text-green-600">{userActivities.filter(log => log.status === "success").length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Warnings</p>
-                <h3 className="text-2xl font-bold text-yellow-600 mt-1">
-                  {userActivities.filter(log => log.status === "warning").length}
-                </h3>
-              </div>
-              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span className="text-xl">⚠</span>
-              </div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Warnings</p>
             </div>
+            <p className="text-2xl font-bold text-yellow-600">{userActivities.filter(log => log.status === "warning").length}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Errors</p>
-                <h3 className="text-2xl font-bold text-red-600 mt-1">
-                  {userActivities.filter(log => log.status === "error").length}
-                </h3>
-              </div>
-              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <span className="text-xl">✕</span>
-              </div>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Errors</p>
             </div>
+            <p className="text-2xl font-bold text-red-600">{userActivities.filter(log => log.status === "error").length}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Activity Log Table */}
+      {/* Search + Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Activity History</CardTitle>
-          <CardDescription>
-            Track all your actions and changes in the system
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-4 space-y-4">
+          {/* Search + Filters Toggle */}
+          <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search activities..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
-
-            <Select value={filterModule} onValueChange={setFilterModule}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="All Modules" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Modules</SelectItem>
-                {modules.map((module) => (
-                  <SelectItem key={module} value={module}>
-                    {module}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
 
-          {/* Table */}
+          {/* Filter Dropdowns */}
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Select value={filterModule} onValueChange={setFilterModule}>
+                <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="All Modules" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  {modules.map((module) => (
+                    <SelectItem key={module} value={module}>
+                      {module}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="success">Success</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => { setSearchQuery(""); setFilterModule("all"); setFilterStatus("all"); }} className="h-9">Clear Filters</Button>
+            </div>
+          </>)}
+        </CardContent>
+      </Card>
+
+      {/* Activity Log Table */}
+      <Card>
+        <CardContent className="p-0">
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
@@ -282,13 +281,15 @@ export function UserActivity() {
               </TableBody>
             </Table>
           </div>
-          <PaginationBar
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={filteredLogs.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-          />
+          <div className="p-4">
+            <PaginationBar
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={filteredLogs.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -14,8 +14,13 @@ import {
   Percent,
   DollarSign,
   GraduationCap,
-  ArrowUpDown
+  ArrowUpDown,
+  ChevronDown,
+  Search,
+  TrendingDown,
+  Tag
 } from "lucide-react"
+import { cn } from "./ui/utils"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { useStudents } from "@/contexts/StudentContext"
@@ -168,6 +173,7 @@ export function DiscountReports() {
   }
 
   const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [filterType, setFilterType] = useState<string>("all")
 
   // Load discount group names from sub-menu (studentGroups localStorage)
@@ -443,156 +449,169 @@ export function DiscountReports() {
             {t("discountReports.subtitle")}
           </p>
         </div>
-        <Button onClick={handleExport} className="flex items-center gap-2">
+        <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
           {t("discountReports.exportCsv")}
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("discountReports.totalStudents")}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-muted-foreground">{t("discountReports.withDiscountsApplied")}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Students</p>
+            </div>
+            <p className="text-2xl font-bold">{totalStudents}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("discountReports.totalDiscount")}</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalDiscountAmountSum)}</div>
-            <p className="text-xs text-muted-foreground">{t("discountReports.totalSavingsProvided")}</p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Percent className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Discount</p>
+            </div>
+            <p className="text-2xl font-bold text-orange-500">฿{totalDiscountAmountSum.toLocaleString()}</p>
           </CardContent>
         </Card>
 
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <TrendingDown className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Avg. Discount / Student</p>
+            </div>
+            <p className="text-2xl font-bold text-blue-600">฿{totalStudents > 0 ? Math.round(totalDiscountAmountSum / totalStudents).toLocaleString() : "0"}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Discount Types</p>
+            </div>
+            <p className="text-2xl font-bold text-purple-600">{new Set(filteredStudents.flatMap(s => s.discounts.map(d => d.type))).size}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="w-4 h-4" />
-              {t("discountReports.searchFilter")}
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button onClick={() => toast.success(t("common.filtersApplied"))} className="h-9">{t("common.apply")}</Button>
-              <Button variant="outline" onClick={() => { clearFilters(); toast.success(t("common.filtersCleared")); }} className="h-9">{t("common.clear")}</Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.search")}</label>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={t("discountReports.nameOrId")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9"
+                className="pl-10 h-9"
               />
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.academicYear")}</label>
-              <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t("discountReports.allAcademicYears") || "All Academic Years"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("discountReports.allAcademicYears") || "All Academic Years"}</SelectItem>
-                  {academicYears.map(year => (
-                    <SelectItem key={year} value={year}>{formatAcademicYear(year)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.term")}</label>
-              <Select value={filterTerm} onValueChange={setFilterTerm}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t("discountReports.allTerms") || "All Terms"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("discountReports.allTerms") || "All Terms"}</SelectItem>
-                  <SelectItem value="Term 1">Term 1</SelectItem>
-                  <SelectItem value="Term 2">Term 2</SelectItem>
-                  <SelectItem value="Term 3">Term 3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.yearGroup")}</label>
-              <Select value={filterYearGroup} onValueChange={setFilterYearGroup}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t("discountReports.allYearGroups")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("discountReports.allYearGroups")}</SelectItem>
-                  {yearGroups.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.discountType")}</label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t("discountReports.allTypes")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
-                  {discountGroupNames.map(name => (
-                    <SelectItem key={name} value={name}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">{t("discountReports.studentStatus") || "Student Status"}</label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t("discountReports.allStatus")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("discountReports.allStatus")}</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="graduated">Graduated</SelectItem>
-                  <SelectItem value="withdrawn">Withdrawn</SelectItem>
-                  <SelectItem value="on_leave">On Leave</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
+
+          {showFilters && (
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("discountReports.academicYear")}</label>
+                  <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("discountReports.allAcademicYears") || "All Academic Years"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("discountReports.allAcademicYears") || "All Academic Years"}</SelectItem>
+                      {academicYears.map(year => (
+                        <SelectItem key={year} value={year}>{formatAcademicYear(year)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("discountReports.term")}</label>
+                  <Select value={filterTerm} onValueChange={setFilterTerm}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("discountReports.allTerms") || "All Terms"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("discountReports.allTerms") || "All Terms"}</SelectItem>
+                      <SelectItem value="Term 1">Term 1</SelectItem>
+                      <SelectItem value="Term 2">Term 2</SelectItem>
+                      <SelectItem value="Term 3">Term 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("discountReports.yearGroup")}</label>
+                  <Select value={filterYearGroup} onValueChange={setFilterYearGroup}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("discountReports.allYearGroups")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("discountReports.allYearGroups")}</SelectItem>
+                      {yearGroups.map(year => (
+                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("discountReports.discountType")}</label>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("discountReports.allTypes")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
+                      {discountGroupNames.map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("discountReports.studentStatus") || "Student Status"}</label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("discountReports.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("discountReports.allStatus")}</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="graduated">Graduated</SelectItem>
+                      <SelectItem value="withdrawn">Withdrawn</SelectItem>
+                      <SelectItem value="on_leave">On Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { clearFilters(); toast.success(t("common.filtersCleared")); }} className="h-9">{t("common.clear")}</Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Student Discount Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>{t("discountReports.studentDiscountDetails")}</CardTitle>
-          <CardDescription>
-            {t("discountReports.showingOf").replace("{shown}", String(filteredStudents.length)).replace("{total}", String(studentDiscounts.length))}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg overflow-hidden">
+        <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow>
                   {/* Student ID - LEFT aligned (text/ID) */}
                   <TableHead align="left" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("studentId")}>
                     <div className="flex items-center gap-1">
@@ -703,9 +722,6 @@ export function DiscountReports() {
                 )}
               </TableBody>
             </Table>
-          </div>
-
-          {/* Pagination */}
           <PaginationBar
             currentPage={currentPage}
             pageSize={pageSize}

@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-import { DollarSign, Users, TrendingUp, AlertCircle, RotateCcw, GraduationCap, BookOpen, Bus, FileText, Globe, ClipboardCheck } from "lucide-react"
+import { RotateCcw, GraduationCap, BookOpen, Bus, FileText, Globe, ClipboardCheck, DollarSign, CheckCircle, AlertTriangle, Users } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
+import { AnalyticsDashboard } from "./AnalyticsDashboard"
 
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
@@ -243,6 +245,13 @@ export function ReportOverview() {
 
   return (
     <div className="space-y-6">
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="w-full h-auto bg-muted/50 rounded-xl p-1 gap-1">
+          <TabsTrigger value="dashboard" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Dashboard</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="mt-6 space-y-6">
       {/* Filter Bar */}
       <Card className="shadow-sm">
         <CardContent className="pt-6">
@@ -295,55 +304,103 @@ export function ReportOverview() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("report.totalRevenue")}</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatFullCurrency(totals.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">{t("report.allModules")}</p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("report.totalRevenue")}</p>
+            </div>
+            <p className="text-2xl font-bold">{formatFullCurrency(totals.totalRevenue)}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("report.totalCollected")}</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatFullCurrency(totals.totalCollected)}</div>
-            <p className="text-xs text-muted-foreground">
-              {totals.totalRevenue > 0
-                ? `${((totals.totalCollected / totals.totalRevenue) * 100).toFixed(1)}% ${t("report.collectionRate")}`
-                : t("report.noData")}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("report.totalCollected")}</p>
+            </div>
+            <p className="text-2xl font-bold text-green-600">{formatFullCurrency(totals.totalCollected)}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("report.totalOutstanding")}</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{formatFullCurrency(totals.totalOutstanding)}</div>
-            <p className="text-xs text-muted-foreground">
-              {totals.totalRevenue > 0
-                ? `${((totals.totalOutstanding / totals.totalRevenue) * 100).toFixed(1)}% ${t("report.ofTotal")}`
-                : t("report.noData")}
-            </p>
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("report.totalOutstanding")}</p>
+            </div>
+            <p className="text-2xl font-bold text-orange-500">{formatFullCurrency(totals.totalOutstanding)}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("report.totalStudents")}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("report.totalStudents")}</p>
+            </div>
+            <p className="text-2xl font-bold">{totals.totalStudents.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Collection by Module Bar Chart */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">{t("report.collected")} vs {t("report.outstanding")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totals.totalStudents.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{t("report.uniqueStudents")}</p>
+            {barChartData.some(d => d.collected > 0 || d.outstanding > 0) ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={barChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
+                  <Legend />
+                  <Bar dataKey="collected" name={t("report.collected")} fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="outstanding" name={t("report.outstanding")} fill="#f97316" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-12 text-sm">{t("report.noData")}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Collection Distribution Pie Chart */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">{t("report.collected")} — {t("report.moduleBreakdown")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pieChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                    label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-12 text-sm">{t("report.noData")}</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -412,6 +469,12 @@ export function ReportOverview() {
         </div>
       </div>
 
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-6">
+          <AnalyticsDashboard />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

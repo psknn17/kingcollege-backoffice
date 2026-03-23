@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -27,8 +27,10 @@ import {
   Users,
   Loader2,
   FileText,
-  ArrowUpDown
+  ArrowUpDown,
+  ChevronDown
 } from "lucide-react"
+import { cn } from "./ui/utils"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
@@ -175,7 +177,6 @@ const grades = [
 export function EmailDeliveryReport() {
   const { t } = useLanguage()
   const [records] = useState<EmailDeliveryRecord[]>(mockDeliveryRecords)
-  const [filteredRecords, setFilteredRecords] = useState<EmailDeliveryRecord[]>(mockDeliveryRecords)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
@@ -186,6 +187,7 @@ export function EmailDeliveryReport() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [sortColumn, setSortColumn] = useState<string>("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -242,18 +244,11 @@ export function EmailDeliveryReport() {
     })
   }
 
-  const sortedRecords = useMemo(() => getSortedRecords(filteredRecords), [filteredRecords, sortColumn, sortDirection])
-
-  const paginatedRecords = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return sortedRecords.slice(start, start + pageSize)
-  }, [sortedRecords, currentPage, pageSize])
-
-  const applyFilters = () => {
+  const filteredRecords = useMemo(() => {
     let filtered = records
 
     if (searchTerm) {
-      filtered = filtered.filter(record => 
+      filtered = filtered.filter(record =>
         record.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.familyCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -282,8 +277,20 @@ export function EmailDeliveryReport() {
       filtered = filtered.filter(record => record.sentAt <= dateTo)
     }
 
-    setFilteredRecords(filtered)
-  }
+    return filtered
+  }, [records, searchTerm, statusFilter, gradeFilter, languageFilter, dateFrom, dateTo])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, gradeFilter, languageFilter, dateFrom, dateTo])
+
+  const sortedRecords = useMemo(() => getSortedRecords(filteredRecords), [filteredRecords, sortColumn, sortDirection])
+
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedRecords.slice(start, start + pageSize)
+  }, [sortedRecords, currentPage, pageSize])
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -292,7 +299,6 @@ export function EmailDeliveryReport() {
     setLanguageFilter("all")
     setDateFrom(null)
     setDateTo(null)
-    setFilteredRecords(records)
   }
 
   const openRecordDetail = (record: EmailDeliveryRecord) => {
@@ -396,28 +402,40 @@ export function EmailDeliveryReport() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("email.totalEmails")}</p>
+            <div className="flex items-center gap-1.5">
+              <Mail className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("email.totalEmails")}</p>
+            </div>
             <p className="text-2xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("email.deliveryRate")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("email.deliveryRate")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{stats.deliveryRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("email.openRate")}</p>
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("email.openRate")}</p>
+            </div>
             <p className="text-2xl font-bold text-emerald-600">{stats.openRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("email.failedEmails")}</p>
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("email.failedEmails")}</p>
+            </div>
             <p className="text-2xl font-bold text-red-600">{stats.failed + stats.bounced + stats.spam}</p>
           </CardContent>
         </Card>
@@ -425,118 +443,118 @@ export function EmailDeliveryReport() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            {t("common.searchAndFilter")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.search")}</label>
-              <div className="relative">
-                <Input
-                  placeholder={t("email.searchPlaceholder")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className=""
-                />
-              </div>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={t("email.searchPlaceholder")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9"
+              />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.status")}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                  <SelectItem value="sent">{t("email.status.sent")}</SelectItem>
-                  <SelectItem value="delivered">{t("email.status.delivered")}</SelectItem>
-                  <SelectItem value="opened">{t("email.status.opened")}</SelectItem>
-                  <SelectItem value="failed">{t("email.status.failed")}</SelectItem>
-                  <SelectItem value="bounced">{t("email.status.bounced")}</SelectItem>
-                  <SelectItem value="spam">{t("email.status.spam")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("student.yearGroup")}</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("payment.allYearGroups")}</SelectItem>
-                  {grades.map(grade => (
-                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("email.language")}</label>
-              <Select value={languageFilter} onValueChange={setLanguageFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("email.allLanguages")}</SelectItem>
-                  <SelectItem value="en">{t("email.languageEnglish")}</SelectItem>
-                  <SelectItem value="th">{t("email.languageThai")}</SelectItem>
-                  <SelectItem value="zh">{t("email.languageChinese")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("payment.dateRange")}</label>
-              <div className="flex gap-1">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateFrom ? format(dateFrom, "dd/MM") : t("common.from")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom || undefined}
-                      onSelect={(date) => setDateFrom(date ?? null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <CalendarIcon className="mr-1 h-3 w-3" />
-                      {dateTo ? format(dateTo, "dd/MM") : t("common.to")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo || undefined}
-                      onSelect={(date) => setDateTo(date ?? null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <Button onClick={applyFilters} size="sm">{t("common.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} size="sm">{t("common.clear")}</Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
+
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("common.status")}</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                    <SelectItem value="sent">{t("email.status.sent")}</SelectItem>
+                    <SelectItem value="delivered">{t("email.status.delivered")}</SelectItem>
+                    <SelectItem value="opened">{t("email.status.opened")}</SelectItem>
+                    <SelectItem value="failed">{t("email.status.failed")}</SelectItem>
+                    <SelectItem value="bounced">{t("email.status.bounced")}</SelectItem>
+                    <SelectItem value="spam">{t("email.status.spam")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("student.yearGroup")}</label>
+                <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("payment.allYearGroups")}</SelectItem>
+                    {grades.map(grade => (
+                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("email.language")}</label>
+                <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("email.allLanguages")}</SelectItem>
+                    <SelectItem value="en">{t("email.languageEnglish")}</SelectItem>
+                    <SelectItem value="th">{t("email.languageThai")}</SelectItem>
+                    <SelectItem value="zh">{t("email.languageChinese")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("payment.dateRange")}</label>
+                <div className="flex gap-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {dateFrom ? format(dateFrom, "dd/MM") : t("common.from")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={dateFrom || undefined}
+                        onSelect={(date) => setDateFrom(date ?? null)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {dateTo ? format(dateTo, "dd/MM") : t("common.to")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={dateTo || undefined}
+                        onSelect={(date) => setDateTo(date ?? null)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+            </div>
+          </>)}
         </CardContent>
       </Card>
 

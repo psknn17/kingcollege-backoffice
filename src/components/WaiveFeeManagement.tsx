@@ -28,7 +28,10 @@ import {
   Search,
   RotateCcw,
   Building2,
-  Gift
+  Gift,
+  DollarSign,
+  Home,
+  Calculator
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { Switch } from "./ui/switch"
@@ -348,28 +351,40 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("waiveFee.totalStudents")}</p>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("waiveFee.totalStudents")}</p>
+            </div>
             <p className="text-2xl font-bold">{currentSummary.yearlyTotal.totalStudents}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("waiveFee.totalFamilies")}</p>
+            <div className="flex items-center gap-1.5">
+              <Home className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("waiveFee.totalFamilies")}</p>
+            </div>
             <p className="text-2xl font-bold">{currentSummary.yearlyTotal.totalFamilies}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("waiveFee.totalWaiverAmount")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("waiveFee.totalWaiverAmount")}</p>
+            </div>
             <p className="text-2xl font-bold">{formatCurrency(currentSummary.yearlyTotal.totalAmount)}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("waiveFee.averagePerFamily")}</p>
+            <div className="flex items-center gap-1.5">
+              <Calculator className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("waiveFee.averagePerFamily")}</p>
+            </div>
             <p className="text-2xl font-bold">
               {currentSummary.yearlyTotal.totalFamilies > 0
                 ? formatCurrency(currentSummary.yearlyTotal.totalAmount / currentSummary.yearlyTotal.totalFamilies)

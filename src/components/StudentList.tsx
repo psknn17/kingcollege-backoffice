@@ -45,7 +45,9 @@ import {
   ChevronLeft,
   Minus,
   ArrowUpDown,
-  RotateCcw
+  RotateCcw,
+  UserCheck,
+  Home
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -1761,13 +1763,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleImport} disabled={!userCanEdit} className="flex items-center gap-2">
-            <Upload className="w-4 h-4" />
-            {t("common.import")}
-          </Button>
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
             {t("common.export")}
+          </Button>
+          <Button variant="outline" onClick={handleImport} disabled={!userCanEdit} className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            {t("common.import")}
           </Button>
           <Button variant="outline" onClick={handleOpenPromoteDialog} disabled={!userCanEdit} className="flex items-center gap-2">
             <ArrowUpCircle className="w-4 h-4" />
@@ -1784,25 +1786,37 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("student.totalStudents")}</p>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("student.totalStudents")}</p>
+            </div>
             <p className="text-2xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("student.activeStudents")}</p>
+            <div className="flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("student.activeStudents")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{stats.active}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("student.families")}</p>
+            <div className="flex items-center gap-1.5">
+              <Home className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("student.families")}</p>
+            </div>
             <p className="text-2xl font-bold">{stats.familyCount}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.lastUpdated")}</p>
+            <div className="flex items-center gap-1.5">
+              <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.lastUpdated")}</p>
+            </div>
             <p className="text-2xl font-bold">{format(new Date(), "dd/MM/yyyy")}</p>
           </CardContent>
         </Card>

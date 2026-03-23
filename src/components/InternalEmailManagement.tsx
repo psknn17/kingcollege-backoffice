@@ -665,7 +665,7 @@ export function InternalEmailManagement({
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                  <TableHead align="right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -689,7 +689,7 @@ export function InternalEmailManagement({
                         {email.createdAt.toLocaleDateString()}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell align="right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           size="sm"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
-import { Filter, Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Badge } from "./ui/badge"
+import { Filter, Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle, ChevronDown } from "lucide-react"
 import { PaginationBar } from "./ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
@@ -122,6 +124,7 @@ export function EmailHistory() {
   const { t } = useLanguage()
   const schoolSettings = useSchoolSettings()
   const [historySearch, setHistorySearch] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
   const [recipientsDialog, setRecipientsDialog] = useState<any>(null)
   const [resendDialog, setResendDialog] = useState<any>(null)
@@ -294,14 +297,20 @@ export function EmailHistory() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Total Email Jobs</p>
+            <div className="flex items-center gap-1.5">
+              <Mail className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Email Jobs</p>
+            </div>
             <p className="text-2xl font-bold">{allHistory.length}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Total Emails Dispatched</p>
+            <div className="flex items-center gap-1.5">
+              <Send className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Emails Dispatched</p>
+            </div>
             <p className="text-2xl font-bold">
               {allHistory.reduce((sum, item) => sum + item.recipients, 0)}
             </p>
@@ -310,44 +319,41 @@ export function EmailHistory() {
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Delivery Success Rate</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Delivery Success Rate</p>
+            </div>
             <p className="text-2xl font-bold">98.5%</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Search className="w-4 h-4" />
-              Search & Filter
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button onClick={() => setCurrentPage(1)} className="h-9">Apply</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">Clear</Button>
+        <CardContent className="p-4 space-y-4">
+          {/* Search + Filters Toggle */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by subject..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="pl-10 h-9"
+              />
             </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Row 1: Search, Academic Year, Term */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by subject..."
-                  value={historySearch}
-                  onChange={(e) => setHistorySearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Academic Year</Label>
+
+          {/* Filter Dropdowns */}
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="All Years" />
                 </SelectTrigger>
                 <SelectContent>
@@ -357,11 +363,10 @@ export function EmailHistory() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Term</Label>
+
               <Select value={termFilter} onValueChange={setTermFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="All Terms" />
                 </SelectTrigger>
                 <SelectContent>
@@ -371,14 +376,10 @@ export function EmailHistory() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-          {/* Row 2: Status, Date From → To */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Status</Label>
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,12 +389,11 @@ export function EmailHistory() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Sent Date</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-2">
                 <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal h-9", !dateFrom && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "From"}
                     </Button>
@@ -405,7 +405,7 @@ export function EmailHistory() {
                 <span className="text-muted-foreground">→</span>
                 <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal h-9", !dateTo && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateTo ? format(dateTo, "dd/MM/yyyy") : "To"}
                     </Button>
@@ -416,104 +416,89 @@ export function EmailHistory() {
                 </Popover>
               </div>
             </div>
-          </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+            </div>
+          </>)}
+
         </CardContent>
       </Card>
 
+      {/* Data Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="w-5 h-5" />
-            Email History
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 font-semibold text-sm">{t("common.date")}</th>
-                  <th className="text-left p-4 font-semibold text-sm">Subject</th>
-                  <th className="text-left p-4 font-semibold text-sm">{t("common.academicYear")}</th>
-                  <th className="text-left p-4 font-semibold text-sm">{t("common.term")}</th>
-                  <th className="text-right p-4 font-semibold text-sm">Recipients</th>
-                  <th className="text-center p-4 font-semibold text-sm">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedHistory.map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{formatDisplayDate(item.sentDate)}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span>{item.subject}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-muted-foreground">{formatAcademicYear(item.academicYear)}</td>
-                    <td className="p-4 text-muted-foreground">{item.term}</td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-semibold">{item.recipients}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <MoreVertical className="w-4 h-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleViewDetails(item)} className="cursor-pointer">
-                            <Eye className="w-4 h-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleViewRecipients(item)} className="cursor-pointer">
-                            <Users className="w-4 h-4" />
-                            View Delivery Report
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleResendReminder(item)} className="cursor-pointer">
-                            <Send className="w-4 h-4" />
-                            Resend
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDownloadReport(item)} className="cursor-pointer">
-                            <Download className="w-4 h-4" />
-                            Download Report
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredHistory.length === 0 && (
-              <div className="text-center py-12">
-                <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No emails found</h3>
-                <p className="text-sm text-muted-foreground">
-                  Try adjusting your search or filters
-                </p>
-              </div>
-            )}
+        <CardContent className="p-0">
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead align="left">{t("common.date")}</TableHead>
+                  <TableHead align="left">Subject</TableHead>
+                  <TableHead align="left">{t("common.academicYear")}</TableHead>
+                  <TableHead align="left">{t("common.term")}</TableHead>
+                  <TableHead align="right">Recipients</TableHead>
+                  <TableHead align="center">{t("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <History className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-medium">No emails found</p>
+                      <p className="text-xs mt-1">Try adjusting your search or filters</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedHistory.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell align="left" className="font-medium">{formatDisplayDate(item.sentDate)}</TableCell>
+                      <TableCell align="left">{item.subject}</TableCell>
+                      <TableCell align="left">{formatAcademicYear(item.academicYear)}</TableCell>
+                      <TableCell align="left">{item.term}</TableCell>
+                      <TableCell align="right" className="font-semibold">{item.recipients}</TableCell>
+                      <TableCell align="center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleViewDetails(item)} className="cursor-pointer">
+                              <Eye className="w-4 h-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewRecipients(item)} className="cursor-pointer">
+                              <Users className="w-4 h-4" />
+                              View Delivery Report
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleResendReminder(item)} className="cursor-pointer">
+                              <Send className="w-4 h-4" />
+                              Resend
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadReport(item)} className="cursor-pointer">
+                              <Download className="w-4 h-4" />
+                              Export Excel
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <PaginationBar
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={filteredHistory.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-          />
+          <div className="p-4">
+            <PaginationBar
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={filteredHistory.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -641,7 +626,7 @@ export function EmailHistory() {
                             ) : (
                               <X className="w-3 h-3" />
                             )}
-                            {recipient.status?.charAt(0).toUpperCase() + recipient.status?.slice(1)}
+                            {recipient.status === "delivered" ? "Sent" : recipient.status?.charAt(0).toUpperCase() + recipient.status?.slice(1)}
                           </span>
                         </td>
                         <td className="p-3 text-sm">
@@ -655,21 +640,6 @@ export function EmailHistory() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Total: {recipientsDialog.recipientList.length} recipients
-                  <span className="ml-4">
-                    Delivered: {recipientsDialog.recipientList.filter((r: any) => r.status === "delivered").length}
-                  </span>
-                  <span className="ml-4">
-                    Failed: {recipientsDialog.recipientList.filter((r: any) => r.status === "failed").length}
-                  </span>
-                </div>
-                <Button onClick={() => handleDownloadReport(recipientsDialog)} variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </Button>
               </div>
             </div>
           )}

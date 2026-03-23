@@ -131,26 +131,26 @@ export function SchoolSettings() {
         </Button>
       </div>
 
-      {/* School Logo */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">School Logo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            {formData.logoUrl ? (
-              <div className="w-20 h-20 border-2 border-dashed rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                <img src={formData.logoUrl} alt="School Logo" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div className="w-20 h-20 border-2 border-dashed rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                <School className="w-8 h-8 text-muted-foreground/40" />
-              </div>
-            )}
-            <div className="flex items-center gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* School Logo */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">School Logo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center gap-4">
+              {formData.logoUrl ? (
+                <div className="w-28 h-28 border-2 border-dashed rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                  <img src={formData.logoUrl} alt="School Logo" className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-28 h-28 border-2 border-dashed rounded-lg bg-muted flex items-center justify-center">
+                  <School className="w-10 h-10 text-muted-foreground/40" />
+                </div>
+              )}
               <input
                 type="file"
-                accept="image/*"
+                accept=".png,.jpg,.jpeg"
                 onChange={handleLogoUpload}
                 className="hidden"
                 id="logo-upload"
@@ -164,24 +164,29 @@ export function SchoolSettings() {
                   </span>
                 </Button>
               </label>
-              <p className="text-sm text-muted-foreground">PNG, JPG up to 2MB</p>
+              <div className="text-xs text-muted-foreground space-y-0.5 text-center">
+                <p>Support .png, .jpg and .jpeg file</p>
+                <p>Recommended 200x200 px (1:1 ratio)</p>
+                <p>Maximum file size 3 MB</p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Two Column: School Info + Address */}
-      <div className="grid grid-cols-1 gap-6">
         {/* School Information */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">School Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {field("School Name (English)", "schoolName", { placeholder: "School name in English", required: true })}
-            {field("School Name (Thai)", "schoolNameThai", { placeholder: "ชื่อโรงเรียนภาษาไทย", required: true })}
-            {field("Phone", "phone", { placeholder: "02-xxx-xxxx", required: true })}
-            {field("Email", "email", { placeholder: "info@school.com", required: true, type: "email" })}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {field("School Name (English)", "schoolName", { placeholder: "School name in English" })}
+              {field("School Name (Thai)", "schoolNameThai", { placeholder: "ชื่อโรงเรียนภาษาไทย" })}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {field("Phone", "phone", { placeholder: "02-xxx-xxxx" })}
+              {field("Email", "email", { placeholder: "info@school.com", type: "email" })}
+            </div>
           </CardContent>
         </Card>
       </div>

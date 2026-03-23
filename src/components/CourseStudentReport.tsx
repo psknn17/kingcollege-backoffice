@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import { PaginationBar } from "@/components/ui/pagination-bar"
-import { Search, Filter, Download, Users, Calendar, CreditCard, Mail, Phone, ArrowUpDown } from "lucide-react"
+import { Search, Filter, ChevronDown, Download, Users, Calendar, CreditCard, Mail, Phone, ArrowUpDown, CheckCircle, Clock, AlertTriangle, DollarSign, UserPlus } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { cn } from "./ui/utils"
 
 interface Course {
   id: string
@@ -139,6 +140,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
   const [pageSize, setPageSize] = useState(10)
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [showFilters, setShowFilters] = useState(false)
 
   const course = mockCourses.find(c => c.id === courseId) || mockCourses[0]
 
@@ -201,11 +203,12 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
     setFilteredStudents(students)
   }, [courseId, course.enrolled])
 
-  const applyFilters = () => {
+  // Reactive filtering - runs whenever filter state changes
+  useEffect(() => {
     let filtered = studentRegistrations
 
     if (searchTerm) {
-      filtered = filtered.filter(student => 
+      filtered = filtered.filter(student =>
         student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -227,7 +230,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
     setFilteredStudents(filtered)
     setCurrentPage(1)
-  }
+  }, [searchTerm, paymentStatusFilter, parentTypeFilter, yearGroupFilter, studentRegistrations])
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -331,7 +334,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
             {course.location} • {course.ageGroup}
           </p>
         </div>
-        <Button onClick={exportStudentReport} className="flex items-center gap-2">
+        <Button variant="outline" onClick={exportStudentReport} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
           {t("common.exportCsv")}
         </Button>
@@ -341,42 +344,60 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("course.totalStudents")}</p>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("course.totalStudents")}</p>
+            </div>
             <p className="text-2xl font-bold">{summaryStats.totalStudents}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{summaryStats.paidStudents}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.pending")}</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.pending")}</p>
+            </div>
             <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingStudents}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
+            </div>
             <p className="text-2xl font-bold text-red-600">{summaryStats.overdueStudents}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("common.revenue")}</p>
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("common.revenue")}</p>
+            </div>
             <p className="text-2xl font-bold">₿{summaryStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">{t("course.externalParents")}</p>
+            <div className="flex items-center gap-1.5">
+              <UserPlus className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t("course.externalParents")}</p>
+            </div>
             <p className="text-2xl font-bold text-blue-600">{summaryStats.externalParents}</p>
           </CardContent>
         </Card>
@@ -384,80 +405,75 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            {t("course.searchFilterStudents")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.search")}</label>
-              <div className="relative">
-                <Input
-                  placeholder={t("course.studentSearchPlaceholder")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className=""
-                />
-              </div>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={t("course.studentSearchPlaceholder")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9"
+              />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.paymentStatus")}</label>
-              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                  <SelectItem value="paid">{t("common.paid")}</SelectItem>
-                  <SelectItem value="pending">{t("common.pending")}</SelectItem>
-                  <SelectItem value="overdue">{t("common.overdue")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("receipt.parentType")}</label>
-              <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allTypes")}</SelectItem>
-                  <SelectItem value="internal">{t("common.internal")}</SelectItem>
-                  <SelectItem value="external">{t("common.external")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("student.yearGroup")}</label>
-              <Select value={yearGroupFilter} onValueChange={setYearGroupFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allYears")}</SelectItem>
-                  {yearGroups.map(year => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium invisible">{t("common.actions")}</label>
-              <div className="flex gap-2">
-                <Button onClick={applyFilters}>{t("common.apply")}</Button>
-                <Button variant="outline" onClick={clearFilters}>{t("common.clear")}</Button>
-              </div>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("common.paymentStatus")}</label>
+                <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                    <SelectItem value="paid">{t("common.paid")}</SelectItem>
+                    <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                    <SelectItem value="overdue">{t("common.overdue")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("receipt.parentType")}</label>
+                <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allTypes")}</SelectItem>
+                    <SelectItem value="internal">{t("common.internal")}</SelectItem>
+                    <SelectItem value="external">{t("common.external")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("student.yearGroup")}</label>
+                <Select value={yearGroupFilter} onValueChange={setYearGroupFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allYears")}</SelectItem>
+                    {yearGroups.map(year => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+            </div>
+          </>)}
         </CardContent>
       </Card>
 

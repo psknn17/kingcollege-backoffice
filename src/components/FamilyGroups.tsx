@@ -32,6 +32,9 @@ import {
   ArrowUpDown,
   Download,
   Calendar,
+  Filter,
+  UserCheck,
+  UserX,
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -81,6 +84,7 @@ export function FamilyGroups() {
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedFamilies, setExpandedFamilies] = useState<string[]>([])
   const [yearGroupFilter, setYearGroupFilter] = useState("all")
+  const [showFilters, setShowFilters] = useState(false)
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState("")
@@ -444,41 +448,62 @@ export function FamilyGroups() {
             {t("familyGroups.subtitle")}
           </p>
         </div>
-        <Button onClick={handleAddFamily} disabled={!userCanEdit} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          {t("familyGroups.addFamily")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV} className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Export Excel
+          </Button>
+          <Button onClick={handleAddFamily} disabled={!userCanEdit} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            {t("familyGroups.addFamily")}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Total Families</p>
+            <div className="flex items-center gap-1.5">
+              <Home className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Families</p>
+            </div>
             <p className="text-2xl font-bold">{stats.totalFamilies}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Students Assigned</p>
+            <div className="flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Students Assigned</p>
+            </div>
             <p className="text-2xl font-bold text-blue-600">{stats.totalStudentsInFamilies}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">With Discount</p>
+            <div className="flex items-center gap-1.5">
+              <Percent className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">With Discount</p>
+            </div>
             <p className="text-2xl font-bold text-green-600">{stats.studentsWithDiscount}</p>
           </CardContent>
         </Card>
         <Card className={`rounded-xl gap-0 ${studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}`}>
           <CardContent className="p-4 pb-4">
-            <p className={`text-sm ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`}>Unassigned</p>
+            <div className="flex items-center gap-1.5">
+              <UserX className={`w-4 h-4 ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`} />
+              <p className={`text-sm ${studentsWithoutFamily.length > 0 ? "text-amber-700" : "text-muted-foreground"}`}>Unassigned</p>
+            </div>
             <p className={`text-2xl font-bold ${studentsWithoutFamily.length > 0 ? "text-amber-600" : ""}`}>{studentsWithoutFamily.length}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
-            <p className="text-sm text-muted-foreground">Last Added</p>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Last Added</p>
+            </div>
             {lastAddedFamily ? (
               <p className="text-2xl font-bold leading-tight">
                 {new Date(lastAddedFamily.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
@@ -493,19 +518,26 @@ export function FamilyGroups() {
       {/* Search & Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={t("familyGroups.searchFamilies")}
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
+          </div>
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <Select value={yearGroupFilter} onValueChange={(val) => { setYearGroupFilter(val); setCurrentPage(1) }}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger>
                   <SelectValue placeholder="All Year Groups" />
                 </SelectTrigger>
                 <SelectContent>
@@ -515,16 +547,11 @@ export function FamilyGroups() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                onClick={handleExportCSV}
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </Button>
             </div>
-          </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => { setSearchTerm(""); setYearGroupFilter("all"); setCurrentPage(1); }} className="h-9">Clear Filters</Button>
+            </div>
+          </>)}
         </CardContent>
       </Card>
 
@@ -687,7 +714,7 @@ export function FamilyGroups() {
                                 <TableCell align="center">
                                   <div className="flex flex-wrap justify-center gap-1">
                                     {(() => {
-                                      const badges = []
+                                      const badges: React.ReactNode[] = []
                                       // Group Discounts Badges
                                       const groupDiscounts = getStudentGroupDiscounts(student.studentId)
                                       groupDiscounts.forEach((d, i) => {

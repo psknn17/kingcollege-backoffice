@@ -3776,8 +3776,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <TableRow>
                             {/* Item Name - text */}
                             <TableHead align="left">{t("table.item")}</TableHead>
-                            {/* Category - badge */}
-                            <TableHead align="center">{t("table.category")}</TableHead>
                             {/* Amount - currency */}
                             <TableHead align="right">{t("table.amount")}</TableHead>
                             {/* Actions - buttons */}
@@ -3808,18 +3806,6 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                     </div>
                                     <p className="text-sm text-muted-foreground">{item.description}</p>
                                   </div>
-                                </TableCell>
-                                {/* Category - badge */}
-                                <TableCell align="center">
-                                  <Badge
-                                    variant="outline"
-                                    className={`${item.category === "Tuition" ? "border-blue-300 text-blue-700" :
-                                      item.category === "ECA" ? "border-green-300 text-green-700" :
-                                        "border-orange-300 text-orange-700"
-                                      }`}
-                                  >
-                                    {item.category}
-                                  </Badge>
                                 </TableCell>
                                 {/* Amount - currency */}
                                 <TableCell align="right" className="font-medium">
@@ -4050,7 +4036,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <div className="flex items-center justify-center mb-2">
                               <FileSpreadsheet className="w-6 h-6 text-green-600" />
                             </div>
-                            <h4 className="font-medium text-center text-sm">CSV Upload</h4>
+                            <h4 className="font-medium text-center text-sm">Excel Upload</h4>
                             <p className="text-xs text-muted-foreground text-center mt-1">
                               Upload student list
                             </p>
@@ -4206,7 +4192,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
                         <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
                           <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">Upload CSV file with student information</p>
+                          <p className="text-sm text-muted-foreground mb-2">Upload Excel file with student information</p>
                           <Input
                             type="file"
                             accept=".xlsx,.xls,.csv"
