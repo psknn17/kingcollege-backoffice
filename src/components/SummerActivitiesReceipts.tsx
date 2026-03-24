@@ -363,7 +363,7 @@ export function SummerActivitiesReceipts() {
               </Button>
               <Button className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                {t("common.exportAll")}
+                {t("common.exportCsv")}
               </Button>
             </div>
           </div>

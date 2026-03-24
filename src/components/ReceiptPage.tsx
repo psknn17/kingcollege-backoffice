@@ -462,7 +462,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                 className="flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
-                {t("receipt.exportAll")}
+                {t("common.exportCsv")}
               </Button>
               <Button onClick={handleCreateReceipt} className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />

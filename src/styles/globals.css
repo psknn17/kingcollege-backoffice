@@ -203,10 +203,86 @@ html {
   z-index: 2000 !important;
 }
 
+/* ── Table page layout: sticky header + fixed pagination, scrollable body ── */
+
+/* Page roots fill the content area */
+[data-content-area] > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Pages WITH paginated tables: Gmail-style layout ── */
+[data-content-area] > *:has([data-slot="pagination-bar"]) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 1.5rem;
+}
+
+/* Reset margins (gap handles spacing) */
+[data-content-area] > *:has([data-slot="pagination-bar"]) > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Children WITHOUT pagination: stay fixed size */
+[data-content-area] > *:has([data-slot="pagination-bar"]) > *:not(:has([data-slot="pagination-bar"])) {
+  flex-shrink: 0;
+}
+
+/* Children WITH pagination: fill remaining space */
+[data-content-area] > *:has([data-slot="pagination-bar"]) > *:has([data-slot="pagination-bar"]) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Pages WITHOUT paginated tables: scroll normally ── */
+[data-content-area] > *:not(:has([data-slot="pagination-bar"])) {
+  overflow-y: auto;
+}
+
+/* ── Tabs support: propagate flex through Tabs → TabsContent → Card ── */
+[data-content-area] [data-slot="tabs"]:has([data-slot="pagination-bar"]) {
+  min-height: 0;
+}
+
+[data-content-area] [data-slot="tabs-content"][data-state="active"]:has([data-slot="pagination-bar"]) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 1rem;
+}
+
+[data-content-area] [data-slot="tabs-content"]:has([data-slot="pagination-bar"]) > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+[data-content-area] [data-slot="tabs-content"] > *:not(:has([data-slot="pagination-bar"])) {
+  flex-shrink: 0;
+}
+
+[data-content-area] [data-slot="tabs-content"] > *:has([data-slot="pagination-bar"]) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Card with paginated table ── */
+[data-content-area] [data-slot="card"]:has([data-slot="pagination-bar"]) {
+  min-height: 200px;
+}
+
+[data-content-area] [data-slot="card-content"]:has([data-slot="pagination-bar"]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* Black overlay behind modals */
 [data-slot="dialog-overlay"],
 [data-slot="alert-dialog-overlay"],
 [data-slot="sheet-overlay"] {
   z-index: 1999 !important;
-  background-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: rgba(0, 0, 0, 0.9) !important;
 }

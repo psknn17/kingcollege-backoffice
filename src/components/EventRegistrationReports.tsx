@@ -578,10 +578,6 @@ export function EventRegistrationReports() {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-
-          {/* Pagination */}
           <PaginationBar
             currentPage={currentPage}
             pageSize={pageSize}
@@ -589,6 +585,8 @@ export function EventRegistrationReports() {
             onPageChange={setCurrentPage}
             onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
           />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

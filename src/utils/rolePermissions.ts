@@ -16,11 +16,11 @@ export const rolePermissions = {
   viewer: {
     name: "Viewver",
     sections: ["general", "report", "analytics"],
-    menuItems: ["tuition-dashboard", "analytics-dashboard", "discount-reports"] // Can view dashboard/analytics/reports only
+    menuItems: ["tuition-dashboard", "discount-reports"] // Can view dashboard (includes analytics tab) and reports only
   },
   approver: {
     name: "Approver",
-    sections: ["general", "userManagement"],
+    sections: ["general"],
     menuItems: ["approval-queue"]
   },
 }

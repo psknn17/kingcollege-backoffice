@@ -827,8 +827,6 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                       <TableRow>
                         {/* Item Name - text */}
                         <TableHead align="left">Item</TableHead>
-                        {/* Category - badge */}
-                        <TableHead align="center">Category</TableHead>
                         {/* Amount - currency */}
                         <TableHead align="right">Amount</TableHead>
                         {/* Actions - buttons */}
@@ -852,15 +850,6 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                                   <p className="text-sm text-muted-foreground">{itemDescription}</p>
                                 )}
                               </div>
-                            </TableCell>
-                            {/* Category - badge */}
-                            <TableCell align="center">
-                              <Badge
-                                variant="outline"
-                                className="border-orange-300 text-orange-700"
-                              >
-                                External
-                              </Badge>
                             </TableCell>
                             {/* Amount - currency */}
                             <TableCell align="right" className="font-medium">

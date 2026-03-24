@@ -694,16 +694,15 @@ export function ExternalParentManagement() {
               ))}
             </TableBody>
           </Table>
+        <PaginationBar
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={filteredParents.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        />
         </CardContent>
       </Card>
-
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalCount={filteredParents.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
     </div>
   )
 }

@@ -689,16 +689,15 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               </p>
             </div>
           )}
+        <PaginationBar
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={sortedJobs.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        />
         </CardContent>
       </Card>
-
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalCount={sortedJobs.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
     </div>
   )
 }

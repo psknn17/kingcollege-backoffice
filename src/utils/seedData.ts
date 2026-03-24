@@ -248,14 +248,44 @@ function generateInvoices(students: any[], families: any[]) {
         subtotal = chosen.amount
       }
 
-      // Sibling discount (tuition only, 3rd child+)
+      // Discounts (tuition only)
       const discounts: any[] = []
       let totalDiscount = 0
-      if (plan.cat === "tuition" && s.childOrder >= 3) {
-        const pct = s.childOrder === 3 ? 5 : s.childOrder === 4 ? 10 : 20
-        const discAmt = Math.round(subtotal * pct / 100)
-        discounts.push({ name: `Sibling Discount (${pct}%)`, amount: discAmt, percentage: pct })
-        totalDiscount += discAmt
+      if (plan.cat === "tuition") {
+        // Sibling discount (3rd child+)
+        if (s.childOrder >= 3) {
+          const pct = s.childOrder === 3 ? 5 : s.childOrder === 4 ? 10 : 20
+          const discAmt = Math.round(subtotal * pct / 100)
+          discounts.push({ name: `Sibling Discount (${pct}%)`, amount: discAmt, percentage: pct })
+          totalDiscount += discAmt
+        }
+        // Student group discounts (based on student index in active list)
+        const activeIdx = students.filter(st => st.status === "active").findIndex(st => st.studentId === s.studentId)
+        if (activeIdx >= 0 && activeIdx < 25) {
+          // Staff Children — 50%
+          const amt = Math.round(subtotal * 50 / 100)
+          discounts.push({ name: "Staff Children", amount: amt, percentage: 50 })
+          totalDiscount += amt
+        } else if (activeIdx >= 25 && activeIdx < 45) {
+          // Scholarship Recipients — 100%
+          const amt = subtotal
+          discounts.push({ name: "Scholarship Recipients", amount: amt, percentage: 100 })
+          totalDiscount += amt
+        } else if (activeIdx >= 45 && activeIdx < 85) {
+          // Partial Scholarship — 25%
+          const amt = Math.round(subtotal * 25 / 100)
+          discounts.push({ name: "Partial Scholarship", amount: amt, percentage: 25 })
+          totalDiscount += amt
+        } else if (activeIdx >= 85 && activeIdx < 235) {
+          // Early Bird — fixed 10,000
+          discounts.push({ name: "Early Bird 2025/2026", amount: 10000 })
+          totalDiscount += 10000
+        } else if (activeIdx >= 235 && activeIdx < 295) {
+          // Corporate Partner — 10%
+          const amt = Math.round(subtotal * 10 / 100)
+          discounts.push({ name: "Corporate Partner Families", amount: amt, percentage: 10 })
+          totalDiscount += amt
+        }
       }
 
       const netAmount = subtotal - totalDiscount
@@ -325,9 +355,7 @@ const RECEIPT_STORAGE_MAP: Record<string,string> = {
   summer: "receiptRecords_summer",
   external: "receiptRecords_external",
 }
-const RECEIPT_PREFIX: Record<string,string> = {
-  tuition:"TUI", eca:"ECA", afterschool:"ECA", trip:"TRP", exam:"EXM", event:"EXM", bus:"BUS", summer:"SUM", external:"EXT"
-}
+
 
 function generateReceipts(invoices: any[]) {
   const paid = invoices.filter(inv => inv.status === "paid")
@@ -340,14 +368,14 @@ function generateReceipts(invoices: any[]) {
   paid.forEach((inv, idx) => {
     const cat = inv.category || "tuition"
     const storageKey = RECEIPT_STORAGE_MAP[cat] || "receiptRecords_tuition"
-    const prefix = RECEIPT_PREFIX[cat] || "TUI"
     const payMethod = inv.paymentMethod || pick(PAY_METHODS)
     const rcpDate = inv.paidDate || randomDate(new Date("2025-09-01"), new Date("2026-03-15"))
+    const rcpYear = new Date(rcpDate).getFullYear()
 
     // ReceiptPageUpdated expected format
     receipts[storageKey].push({
       id: `rcp-${pad(idx + 1)}`,
-      receiptNo: `${prefix}-2603-${pad(idx + 1)}`,
+      receiptNo: `R${rcpYear}-${String(idx + 1).padStart(5, "0")}`,
       receiptDate: rcpDate,
       clientType: cat === "external" ? "external" : "student",
       clientNo: inv.studentId || inv.familyCode || "",
@@ -782,7 +810,7 @@ export function seedAllData() {
 
     // ── Invoices (all categories) ────────────────────────────
     // Version check: re-seed invoices when seed data structure changes
-    const INVOICE_SEED_VERSION = "2.4" // Bump when invoice seed data changes
+    const INVOICE_SEED_VERSION = "2.6" // Bump when invoice seed data changes
     const currentSeedVersion = localStorage.getItem("invoice_seed_version")
     if (currentSeedVersion !== INVOICE_SEED_VERSION) {
       localStorage.removeItem("createdInvoices")

@@ -581,17 +581,6 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          {t("payment.showingRecords", { from: startIndex + 1, to: Math.min(endIndex, filteredPayments.length), total: filteredPayments.length })}
-          {filteredPayments.length < payments.length && ` (${t("payment.filteredFrom", { total: payments.length })})`}
-        </p>
-        <div className="text-sm text-muted-foreground">
-          {t("payment.totalAmount")}: ₿{filteredPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString()}
-        </div>
-      </div>
-
       {/* Payment Table */}
       <Card>
         <CardContent className="p-0">
@@ -847,17 +836,15 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               ))}
             </TableBody>
           </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={sortedPayments.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </CardContent>
       </Card>
-
-      {/* Pagination */}
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalCount={sortedPayments.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
     </div>
   )
 }

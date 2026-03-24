@@ -521,26 +521,26 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                   <TableHeader>
                     <TableRow>
                       {/* Item column: align="left" */}
-                      <TableHead className="text-left">{t("table.item")}</TableHead>
+                      <TableHead align="left">{t("table.item")}</TableHead>
                       {/* Description column: align="left" */}
-                      <TableHead className="text-left">{t("table.description")}</TableHead>
+                      <TableHead align="left">{t("table.description")}</TableHead>
                       {/* Quantity (number) column: align="right" */}
-                      <TableHead className="text-right">{t("table.quantity")}</TableHead>
+                      <TableHead align="right">{t("table.quantity")}</TableHead>
                       {/* Amount (currency) column: align="right" */}
-                      <TableHead className="text-right">{t("table.amount")}</TableHead>
+                      <TableHead align="right">{t("table.amount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data.items.map((item: any, index: number) => (
                       <TableRow key={index}>
                         {/* Item cell: align="left" (matches header) */}
-                        <TableCell className="font-medium text-left">{item.name}</TableCell>
+                        <TableCell align="left" className="font-medium">{item.name}</TableCell>
                         {/* Description cell: align="left" (matches header) */}
-                        <TableCell className="text-muted-foreground text-left">{item.description}</TableCell>
+                        <TableCell align="left" className="text-muted-foreground">{item.description}</TableCell>
                         {/* Quantity cell: align="right" (matches header) */}
-                        <TableCell className="text-right">{item.quantity || 1}</TableCell>
+                        <TableCell align="right">{item.quantity || 1}</TableCell>
                         {/* Amount cell: align="right" (matches header) */}
-                        <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
+                        <TableCell align="right" className="font-medium">{formatCurrency(item.amount)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

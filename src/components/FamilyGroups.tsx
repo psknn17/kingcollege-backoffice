@@ -789,15 +789,14 @@ export function FamilyGroups() {
             )
           })
         )}
+        <PaginationBar
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={sortedFamilies.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        />
       </div>
-
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalCount={sortedFamilies.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
 
       {/* Students without family */}
       {

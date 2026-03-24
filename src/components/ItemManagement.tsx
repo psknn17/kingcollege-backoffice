@@ -2238,7 +2238,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       "Name",
       "Description",
       "Amount",
-      "Category",
       "Nominal Code",
       "Document Type",
       "Status"
@@ -2249,7 +2248,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       "Sample Item",
       "This is a sample item description",
       "50000",
-      categories[0],
       "4110001",
       "SI",
       "active"
@@ -2261,23 +2259,60 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     logActivity({ action: "Export", module: "Items & Templates", detail: `Downloaded item import template (${invoiceType})` })
   }
 
+  const handleExportItems = () => {
+    const headers = ["Item Code", "Name", "Description", "Amount", "Nominal Code", "Document Type", "Status"]
+    const rows = filteredItems.map(item => [
+      item.itemCode,
+      item.name,
+      item.description,
+      item.amount,
+      item.nominalCode || "",
+      item.documentType || "SI",
+      item.isActive ? "active" : "inactive"
+    ])
+    downloadAsXlsx(headers, rows, `items_export_${invoiceType}_${new Date().toISOString().split("T")[0]}`)
+    toast.success(`Exported ${rows.length} items`)
+    logActivity({ action: "Export", module: "Items & Templates", detail: `Exported ${rows.length} items for ${invoiceType}` })
+  }
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
     try {
-      const rows = await parseXlsxOrCsvFile(file)
-      if (rows.length === 0) {
+      const rawRows = await parseXlsxOrCsvFile(file)
+      if (rawRows.length === 0) {
         setImportError(t("item.fileHasNoData"))
         return
       }
 
+      // Auto-map BC column names to our system column names
+      const columnMapping: Record<string, string> = {
+        "No.": "Item Code",
+        "Gen. Prod. Posting Group": "Nominal Code",
+        "Description": "Name",
+        "Price": "Amount",
+      }
+
+      const fileHeaders = Object.keys(rawRows[0])
+      const needsMapping = fileHeaders.some(h => h in columnMapping)
+
+      const rows = needsMapping
+        ? rawRows.map(row => {
+            const mapped: Record<string, any> = {}
+            for (const [key, value] of Object.entries(row)) {
+              mapped[columnMapping[key] || key] = value
+            }
+            return mapped
+          })
+        : rawRows
+
       const requiredHeaders = ["Item Code", "Name", "Amount"]
-      const fileHeaders = Object.keys(rows[0])
-      const missingHeaders = requiredHeaders.filter(h => !fileHeaders.includes(h))
+      const mappedHeaders = Object.keys(rows[0])
+      const missingHeaders = requiredHeaders.filter(h => !mappedHeaders.includes(h))
 
       if (missingHeaders.length > 0) {
-        setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${fileHeaders.join(", ")}`)
+        setImportError(`Missing required columns: ${missingHeaders.join(", ")}. Found columns: ${mappedHeaders.join(", ")}`)
         return
       }
 
@@ -2713,6 +2748,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             <>
               <Button
                 variant="outline"
+                onClick={handleExportItems}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              <Button
+                variant="outline"
                 disabled={!userCanEdit}
                 onClick={handleImport}
                 className="flex items-center gap-2"
@@ -2766,10 +2809,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Items Tab */}
       {activeTab === "items" && (
+        <>
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="p-4 space-y-4">
             {/* Filters */}
-            <div className="flex gap-4 mb-6">
+            <div className="flex gap-4">
               <div className="flex-1 relative">
                 <Input
                   placeholder={t("item.searchItemsPlaceholder")}
@@ -2779,32 +2823,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   disabled={!userCanEdit}
                 />
               </div>
-              <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1) }} disabled={!userCanEdit}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t("item.allCategories")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("item.allCategories")}</SelectItem>
-                  {Array.from(new Set(items.map(item => item.category).filter((c): c is string => Boolean(c)))).map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedDocType} onValueChange={(val) => { setSelectedDocType(val); setCurrentPage(1) }} disabled={!userCanEdit}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder={t("item.allTypes")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("item.allTypes")}</SelectItem>
-                  <SelectItem value="SI">SI</SelectItem>
-                  <SelectItem value="CI">CI</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Bulk Delete Bar */}
             {selectedItemIds.size > 0 && (
-              <div className="flex items-center justify-end gap-3 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <span className="text-sm font-medium text-red-800">
                   {t("item.itemsSelected").replace("{count}", String(selectedItemIds.size))}
                 </span>
@@ -2827,7 +2850,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardContent className="p-0">
             {/* Items Table */}
             <div className="border rounded-lg">
               <Table>
@@ -2975,15 +3002,18 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             </div>
 
             {/* Pagination Controls */}
-            <PaginationBar
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalCount={filteredItems.length}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-            />
+            <div className="p-4">
+              <PaginationBar
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={filteredItems.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
+            </div>
           </CardContent>
         </Card>
+        </>
       )}
 
       {/* Templates Tab */}
@@ -3449,7 +3479,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           <TableHead align="left" className="w-32">{t("table.itemCode")}</TableHead>
                           <TableHead align="left">{t("table.itemName")}</TableHead>
                           <TableHead align="right" className="w-32">{t("table.amount")}</TableHead>
-                          <TableHead align="left" className="w-32">{t("table.category")}</TableHead>
+
                           <TableHead align="center" className="w-24">{t("table.status")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3466,9 +3496,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                                 <span className="block truncate" title={row["Name"]}>{row["Name"]}</span>
                               </TableCell>
                               <TableCell align="right" className="whitespace-nowrap">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
-                              <TableCell align="left" className="whitespace-nowrap">
-                                <Badge variant="outline">{row["Category"] || "-"}</Badge>
-                              </TableCell>
                               <TableCell align="center" className="whitespace-nowrap">
                                 <Badge variant="outline">{row["Status"] || "active"}</Badge>
                               </TableCell>

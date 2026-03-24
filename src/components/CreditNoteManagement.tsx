@@ -699,14 +699,6 @@ export function CreditNoteManagement() {
             </TabsList>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleSaveChanges} className="flex items-center gap-2" disabled={!userCanEdit}>
-                <Save className="w-4 h-4" />
-                {t("creditNote.saveChanges")}
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                {t("invoice.exportReport")}
-              </Button>
               <input
                 ref={importFileInputRef}
                 type="file"

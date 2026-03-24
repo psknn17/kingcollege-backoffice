@@ -374,27 +374,20 @@ const saveInvoiceToStorage = (invoice: SavedInvoice, invoiceType: string = "stud
 // Auto-generate receipt for paid invoice
 const generateReceiptForPaidInvoice = (invoice: SavedInvoice) => {
   try {
-    // Determine receipt storage key and prefix based on category
+    // Determine receipt storage key based on category
     let receiptStorageKey = ""
-    let receiptPrefix = ""
 
     const category = invoice.category
     if (category === "trip") {
       receiptStorageKey = "receiptRecords_afterschool"
-      receiptPrefix = "TRP"
     } else if (category === "eca") {
       receiptStorageKey = "receiptRecords_afterschool"
-      receiptPrefix = "ECA"
     } else if (category === "exam") {
       receiptStorageKey = "receiptRecords_event"
-      receiptPrefix = "EXM"
     } else if (category === "bus") {
       receiptStorageKey = "receiptRecords_summer"
-      receiptPrefix = "BUS"
     } else {
-      // For tuition and other categories
       receiptStorageKey = "receiptRecords_tuition"
-      receiptPrefix = "TUI"
     }
 
     // Get existing receipts
@@ -408,11 +401,16 @@ const generateReceiptForPaidInvoice = (invoice: SavedInvoice) => {
       return
     }
 
-    // Generate receipt number
+    // Generate receipt number — R{year}-{5 digits} with global running number
     const now = new Date()
-    const yearMonth = format(now, "yyMM")
-    const nextNumber = receipts.length + 1
-    const receiptNo = `${receiptPrefix}-${yearMonth}-${String(nextNumber).padStart(4, "0")}`
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    const acYearStart = month >= 8 ? year : year - 1
+    const runningKey = `receipt_running_no_${acYearStart}`
+    const currentRunning = parseInt(localStorage.getItem(runningKey) || "0", 10)
+    const nextRunning = currentRunning + 1
+    localStorage.setItem(runningKey, nextRunning.toString())
+    const receiptNo = `R${acYearStart}-${String(nextRunning).padStart(5, "0")}`
 
     // Create receipt record
     const receiptRecord = {

@@ -33,8 +33,10 @@ import {
   Send,
   ArrowUpDown,
   Eye,
-  History
+  History,
+  ChevronDown
 } from "lucide-react"
+import { cn } from "@/components/ui/utils"
 import { ColumnPresets } from "@/utils/tableAlignment"
 
 interface AttemptRecord {
@@ -225,6 +227,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = usePersistedState("email-history-view:pageSize", 15)
   const itemsPerPage = pageSize
@@ -235,6 +238,12 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
   // Generate mock data based on job data
   const emailHistory = useMemo(() => generateMockEmailHistory(jobData), [jobData])
+
+  const clearFilters = () => {
+    setSearchTerm("")
+    setStatusFilter("all")
+    setCurrentPage(1)
+  }
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -372,7 +381,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
 
   const handleExportCSV = () => {
     const headers = ["Recipient Name", "Recipient Email", "Student Name", "Year Group", "Status", "Sent At", "Attempts"]
-    const rows = emailHistory.map(record => [
+    const rows = sortedHistory.map(record => [
       record.recipientName,
       record.recipientEmail,
       record.studentName,
@@ -515,32 +524,45 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Input
-                  placeholder={t("emailHistory.searchPlaceholder")}
-                  value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
-                  className=""
-                />
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={t("emailHistory.searchPlaceholder")}
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                className="pl-10 h-9"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
+          </div>
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("common.status")}</label>
+                <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1) }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("common.status")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                    <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                    <SelectItem value="delivered">{t("emailHistory.delivered")}</SelectItem>
+                    <SelectItem value="opened">{t("emailHistory.opened")}</SelectItem>
+                    <SelectItem value="failed">{t("emailHistory.failed")}</SelectItem>
+                    <SelectItem value="bounced">{t("emailHistory.bounced")}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-
-            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1) }}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder={t("common.status")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                <SelectItem value="pending">{t("common.pending")}</SelectItem>
-                <SelectItem value="delivered">{t("emailHistory.delivered")}</SelectItem>
-                <SelectItem value="opened">{t("emailHistory.opened")}</SelectItem>
-                <SelectItem value="failed">{t("emailHistory.failed")}</SelectItem>
-                <SelectItem value="bounced">{t("emailHistory.bounced")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+            </div>
+          </>)}
         </CardContent>
       </Card>
 
@@ -689,17 +711,15 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
               </p>
             </div>
           )}
+        <PaginationBar
+          currentPage={currentPage}
+          pageSize={itemsPerPage}
+          totalCount={sortedHistory.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        />
         </CardContent>
       </Card>
-
-      {/* Pagination */}
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={itemsPerPage}
-        totalCount={sortedHistory.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
 
       {/* Failure Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>

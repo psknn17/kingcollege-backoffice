@@ -836,17 +836,15 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               })}
             </TableBody>
           </Table>
+        <PaginationBar
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={filteredCourses.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        />
         </CardContent>
       </Card>
-
-      {/* Pagination */}
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalCount={filteredCourses.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
 
       {/* Performance Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

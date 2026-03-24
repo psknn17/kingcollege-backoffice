@@ -592,17 +592,15 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
               ))}
             </TableBody>
           </Table>
+        <PaginationBar
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={filteredStudents.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        />
         </CardContent>
       </Card>
-
-      {/* Pagination */}
-      <PaginationBar
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalCount={filteredStudents.length}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      />
     </div>
   )
 }

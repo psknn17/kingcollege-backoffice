@@ -265,16 +265,16 @@ export function ClientList() {
           <p className="text-sm text-muted-foreground">{t("clientList.description")}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            {t("clientList.export")}
+          </Button>
           {userCanEdit && (
             <Button variant="outline" onClick={handleImport} className="flex items-center gap-2">
               <Upload className="w-4 h-4" />
               {t("clientList.import")}
             </Button>
           )}
-          <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            {t("clientList.export")}
-          </Button>
           {userCanEdit && (
             <Button onClick={openAdd} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
@@ -285,7 +285,7 @@ export function ClientList() {
       </div>
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="p-4 space-y-4">
           {/* Search */}
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -296,37 +296,41 @@ export function ClientList() {
               className="pl-9 h-9"
             />
           </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardContent className="p-0">
           {/* Table */}
-          <div className="rounded-md border">
+          <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-left">#</TableHead>
-                  <TableHead className="text-left">{t("clientList.clientId")}</TableHead>
-                  <TableHead className="text-left">{t("clientList.clientName")}</TableHead>
-                  <TableHead className="text-left">{t("clientList.contactName")}</TableHead>
-                  <TableHead className="text-left">{t("clientList.address")}</TableHead>
-                  {userCanEdit && <TableHead className="text-center">{t("common.actions")}</TableHead>}
+                  <TableHead align="left">#</TableHead>
+                  <TableHead align="left">{t("clientList.clientId")}</TableHead>
+                  <TableHead align="left">{t("clientList.clientName")}</TableHead>
+                  <TableHead align="left">{t("clientList.contactName")}</TableHead>
+                  <TableHead align="left">{t("clientList.address")}</TableHead>
+                  {userCanEdit && <TableHead align="center">{t("common.actions")}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={userCanEdit ? 5 : 4} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={userCanEdit ? 5 : 4} align="center" className="py-12 text-muted-foreground">
                       {searchTerm ? t("clientList.noMatchSearch") : t("clientList.noClients")}
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedClients.map((client, idx) => (
                     <TableRow key={client.id}>
-                      <TableCell className="text-left text-muted-foreground">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
-                      <TableCell className="text-left">{client.clientId || "-"}</TableCell>
-                      <TableCell className="text-left font-medium">{client.clientName}</TableCell>
-                      <TableCell className="text-left">{client.contactName || "-"}</TableCell>
-                      <TableCell className="text-left">{client.address || "-"}</TableCell>
+                      <TableCell align="left" className="text-muted-foreground">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
+                      <TableCell align="left">{client.clientId || "-"}</TableCell>
+                      <TableCell align="left" className="font-medium">{client.clientName}</TableCell>
+                      <TableCell align="left">{client.contactName || "-"}</TableCell>
+                      <TableCell align="left">{client.address || "-"}</TableCell>
                       {userCanEdit && (
-                        <TableCell className="text-center">
+                        <TableCell align="center">
                           <div className="flex items-center justify-center gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>
                               <Edit className="w-4 h-4" />
@@ -343,16 +347,18 @@ export function ClientList() {
               </TableBody>
             </Table>
           </div>
-          <PaginationBar
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={filtered.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-          />
-          <p className="text-sm text-muted-foreground">
-            {t("clientList.clientsCount").replace("{filtered}", String(filtered.length)).replace("{total}", String(clients.length))}
-          </p>
+          <div className="p-4 space-y-4">
+            <PaginationBar
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={filtered.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+            />
+            <p className="text-sm text-muted-foreground">
+              {t("clientList.clientsCount").replace("{filtered}", String(filtered.length)).replace("{total}", String(clients.length))}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -482,10 +488,10 @@ export function ClientList() {
                   <Table className="min-w-[480px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-left">{t("clientList.clientName")}</TableHead>
-                        <TableHead className="text-left">{t("clientList.clientId")}</TableHead>
-                        <TableHead className="text-left">{t("clientList.contactName")}</TableHead>
-                        <TableHead className="text-left">{t("clientList.address")}</TableHead>
+                        <TableHead align="left">{t("clientList.clientName")}</TableHead>
+                        <TableHead align="left">{t("clientList.clientId")}</TableHead>
+                        <TableHead align="left">{t("clientList.contactName")}</TableHead>
+                        <TableHead align="left">{t("clientList.address")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -493,13 +499,13 @@ export function ClientList() {
                         const isDuplicate = duplicateNames.has((row["Client Name"] || "").trim().toLowerCase())
                         return (
                           <TableRow key={index} className={isDuplicate ? "bg-yellow-50" : ""}>
-                            <TableCell className="text-left font-medium">
+                            <TableCell align="left" className="font-medium">
                               {row["Client Name"] || ""}
                               {isDuplicate && <span className="ml-2 text-xs text-yellow-600">{t("clientList.duplicate")}</span>}
                             </TableCell>
-                            <TableCell className="text-left">{row["Client ID"] || "-"}</TableCell>
-                            <TableCell className="text-left">{row["Contact Name"] || "-"}</TableCell>
-                            <TableCell className="text-left">{row["Address"] || "-"}</TableCell>
+                            <TableCell align="left">{row["Client ID"] || "-"}</TableCell>
+                            <TableCell align="left">{row["Contact Name"] || "-"}</TableCell>
+                            <TableCell align="left">{row["Address"] || "-"}</TableCell>
                           </TableRow>
                         )
                       })}

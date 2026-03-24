@@ -39,7 +39,7 @@ export function PaginationBar({
   if (totalCount === 0) return null
 
   return (
-    <div className="flex items-center justify-between border-t p-4">
+    <div data-slot="pagination-bar" className="flex items-center justify-between p-4 shrink-0 border-t">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>Show</span>
         <Select

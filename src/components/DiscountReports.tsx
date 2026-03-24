@@ -176,17 +176,6 @@ export function DiscountReports() {
   const [showFilters, setShowFilters] = useState(false)
   const [filterType, setFilterType] = useState<string>("all")
 
-  // Load discount group names from sub-menu (studentGroups localStorage)
-  const discountGroupNames = useMemo(() => {
-    try {
-      const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
-      if (!stored) return []
-      const groups: { name: string; isActive?: boolean }[] = JSON.parse(stored)
-      return groups.filter(g => g.isActive !== false).map(g => g.name)
-    } catch {
-      return []
-    }
-  }, [])
   const [filterYearGroup, setFilterYearGroup] = useState<string>("all")
   const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
   const [filterTerm, setFilterTerm] = useState<string>("all")
@@ -206,87 +195,193 @@ export function DiscountReports() {
     setCurrentPage(1)
   }, [searchTerm, filterType, filterYearGroup, filterAcademicYear, filterTerm, filterStatus])
 
-  // Build discount entries directly from discount groups (iterate groups → students)
+  // Build discount entries from real invoice data (createdInvoices in localStorage)
   const studentDiscounts: StudentDiscount[] = useMemo(() => {
-    const TERMS = ["Term 1", "Term 2", "Term 3"]
-    const baseTuition = 450000
+    const result: StudentDiscount[] = []
 
-    // Read groups directly from localStorage
-    let groups: any[] = []
-    try {
-      const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
-      if (stored) groups = JSON.parse(stored).filter((g: any) => g.isActive !== false)
-    } catch { groups = [] }
+    // --- Source 1: Real invoices with stored discounts ---
+    const INVOICE_KEYS = ["createdInvoices", "createdInvoices_eca", "createdInvoices_trip", "createdInvoices_exam", "createdInvoices_bus", "createdInvoices_external"]
+    const seenInvoiceIds = new Set<string>()
 
-    if (groups.length === 0) return []
+    INVOICE_KEYS.forEach(key => {
+      try {
+        const stored = localStorage.getItem(key)
+        if (!stored) return
+        const invoices: any[] = JSON.parse(stored)
+        invoices.forEach((inv: any) => {
+          if (seenInvoiceIds.has(inv.id)) return
+          seenInvoiceIds.add(inv.id)
 
-    // Merge discounts per student (a student may be in multiple groups)
-    const studentMap = new Map<string, {
-      info: any
-      discounts: DiscountItem[]
-      contextStudent: any
-    }>()
+          const discountsArr: any[] = inv.discounts || []
+          if (discountsArr.length === 0 || discountsArr.every((d: any) => !d.amount || d.amount <= 0)) return
 
-    groups.forEach(group => {
-      const groupStudents: any[] = group.students || []
-      groupStudents.forEach(gs => {
-        const sid: string = gs.id || gs.studentId || ""
-        if (!sid) return
+          const discountItems: DiscountItem[] = discountsArr
+            .filter((d: any) => d.amount > 0)
+            .map((d: any) => {
+              let type: DiscountItem["type"] = "group"
+              const nameLower = (d.name || "").toLowerCase()
+              if (nameLower.includes("sibling")) type = "sibling"
+              else if (nameLower.includes("scholarship")) type = "scholarship"
+              else if (nameLower.includes("staff")) type = "staff"
+              else if (nameLower.includes("early bird") || nameLower.includes("early_bird")) type = "early_bird"
+              else if (nameLower.includes("bus")) type = "school_bus"
+              else if (nameLower.includes("campaign")) type = "campaign"
 
-        if (!studentMap.has(sid)) {
-          const ctx = students.find(s => s.studentId === sid)
-          studentMap.set(sid, { info: gs, discounts: [], contextStudent: ctx })
-        }
+              return {
+                type,
+                name: d.name || "Discount",
+                mode: (d.percentage ? "percentage" : "fixed") as DiscountItem["mode"],
+                value: d.percentage || d.amount,
+                amount: d.amount,
+                appliedTo: ["Tuition"]
+              }
+            })
 
-        const entry = studentMap.get(sid)!
-        if (group.discountType === "percentage" && (group.discountPercentage || 0) > 0) {
-          const amount = Math.round(baseTuition * group.discountPercentage / 100)
-          entry.discounts.push({
-            type: "group",
-            name: group.name,
-            mode: "percentage",
-            value: group.discountPercentage,
-            amount,
-            appliedTo: ["Tuition"]
+          if (discountItems.length === 0) return
+
+          const totalDiscountAmount = discountItems.reduce((sum, d) => sum + d.amount, 0)
+
+          // Parse term display name
+          const termName = inv.termName || inv.term || ""
+          const termDisplay = termName.toLowerCase().includes("term")
+            ? termName.replace(/^.*?(term\s*\d+)/i, "$1").replace(/term(\d)/i, "Term $1")
+            : termName
+
+          const ctx = students.find(s => s.studentId === inv.studentId)
+
+          result.push({
+            id: inv.id,
+            studentId: inv.studentId || "",
+            studentName: inv.studentName || (ctx ? `${ctx.firstName} ${ctx.lastName}` : ""),
+            yearGroup: inv.studentGrade || ctx?.gradeLevel || "",
+            academicYear: inv.academicYear || ctx?.academicYear || "",
+            term: termDisplay,
+            discounts: discountItems,
+            totalDiscountAmount,
+            status: (ctx?.status || "active") as StudentDiscount["status"]
           })
-        } else if (group.discountType === "fixed" && (group.fixedAmount || 0) > 0) {
-          entry.discounts.push({
-            type: "group",
-            name: group.name,
-            mode: "fixed",
-            value: group.fixedAmount,
-            amount: group.fixedAmount,
-            appliedTo: ["Tuition"]
-          })
-        }
-      })
+        })
+      } catch { /* skip invalid storage */ }
     })
 
-    // Expand each student × 3 terms
-    const result: StudentDiscount[] = []
-    studentMap.forEach((data, sid) => {
-      if (data.discounts.length === 0) return
-      const ctx = data.contextStudent
-      const gs = data.info
-      const totalDiscountAmount = data.discounts.reduce((sum, d) => sum + d.amount, 0)
+    // --- Source 2: Student groups (students with active group discounts not yet invoiced) ---
+    try {
+      const stored = localStorage.getItem(STUDENT_GROUPS_STORAGE_KEY)
+      if (stored) {
+        const groups: any[] = JSON.parse(stored).filter((g: any) => g.isActive !== false)
+        const invoicedStudentIds = new Set(result.map(r => r.studentId))
 
-      TERMS.forEach((term, idx) => {
-        result.push({
-          id: `grp-${sid}-${idx}`,
-          studentId: sid,
-          studentName: gs.name || (ctx ? `${ctx.firstName} ${ctx.lastName}` : sid),
-          yearGroup: gs.yearGroup || ctx?.gradeLevel || "",
-          academicYear: ctx?.academicYear || "2025/2026",
-          term,
-          discounts: data.discounts,
-          totalDiscountAmount,
-          status: (ctx?.status || gs.isActive === false ? "withdrawn" : "active") as StudentDiscount["status"]
+        // Collect group discounts per student
+        const groupMap = new Map<string, { info: any; discounts: DiscountItem[]; ctx: any }>()
+
+        groups.forEach(group => {
+          (group.students || []).forEach((gs: any) => {
+            const sid = gs.id || gs.studentId || ""
+            if (!sid || invoicedStudentIds.has(sid)) return
+
+            if (!groupMap.has(sid)) {
+              const ctx = students.find(s => s.studentId === sid)
+              groupMap.set(sid, { info: gs, discounts: [], ctx })
+            }
+
+            const entry = groupMap.get(sid)!
+            if (group.discountType === "percentage" && (group.discountPercentage || 0) > 0) {
+              entry.discounts.push({
+                type: "group",
+                name: group.name,
+                mode: "percentage",
+                value: group.discountPercentage,
+                amount: 0, // no invoice yet, amount unknown
+                appliedTo: ["Tuition"]
+              })
+            } else if (group.discountType === "fixed" && (group.fixedAmount || 0) > 0) {
+              entry.discounts.push({
+                type: "group",
+                name: group.name,
+                mode: "fixed",
+                value: group.fixedAmount,
+                amount: group.fixedAmount,
+                appliedTo: ["Tuition"]
+              })
+            }
+          })
         })
-      })
+
+        groupMap.forEach((data, sid) => {
+          if (data.discounts.length === 0) return
+          const ctx = data.ctx
+          const gs = data.info
+          const totalDiscountAmount = data.discounts.reduce((sum, d) => sum + d.amount, 0)
+
+          result.push({
+            id: `grp-${sid}`,
+            studentId: sid,
+            studentName: gs.name || (ctx ? `${ctx.firstName} ${ctx.lastName}` : sid),
+            yearGroup: gs.yearGroup || ctx?.gradeLevel || "",
+            academicYear: ctx?.academicYear || "",
+            term: "-",
+            discounts: data.discounts,
+            totalDiscountAmount,
+            status: (ctx?.status || "active") as StudentDiscount["status"]
+          })
+        })
+      }
+    } catch { /* skip */ }
+
+    // --- Source 3: Scholarship, Staff Child, Early Bird records (not yet invoiced) ---
+    const invoicedStudentIds = new Set(result.map(r => r.studentId))
+    const specialRecords: { key: string; type: DiscountItem["type"]; name: string; percentage: number }[] = [
+      { key: SCHOLARSHIP_RECORDS_KEY, type: "scholarship", name: "Scholarship", percentage: 100 },
+      { key: STAFF_CHILD_RECORDS_KEY, type: "staff", name: "Staff Child Discount", percentage: 50 },
+      { key: EARLY_BIRD_RECORDS_KEY, type: "early_bird", name: "Early Bird Discount", percentage: 5 },
+    ]
+
+    specialRecords.forEach(({ key, type, name, percentage }) => {
+      try {
+        const stored = localStorage.getItem(key)
+        if (!stored) return
+        const records: any[] = JSON.parse(stored)
+        records.forEach((rec: any) => {
+          const sid = rec.studentId || rec
+          if (typeof sid !== "string" || invoicedStudentIds.has(sid)) return
+
+          const ctx = students.find(s => s.studentId === sid)
+          if (!ctx) return
+
+          result.push({
+            id: `${type}-${sid}`,
+            studentId: sid,
+            studentName: `${ctx.firstName} ${ctx.lastName}`,
+            yearGroup: ctx.gradeLevel || "",
+            academicYear: ctx.academicYear || "",
+            term: "-",
+            discounts: [{
+              type,
+              name,
+              mode: "percentage",
+              value: percentage,
+              amount: 0,
+              appliedTo: ["Tuition"]
+            }],
+            totalDiscountAmount: 0,
+            status: (ctx.status || "active") as StudentDiscount["status"]
+          })
+          invoicedStudentIds.add(sid) // avoid duplicates across sources
+        })
+      } catch { /* skip */ }
     })
 
     return result
   }, [students])
+
+  // Collect all unique discount names from real data for the filter
+  const discountNameOptions = useMemo(() => {
+    const names = new Set<string>()
+    studentDiscounts.forEach(sd => {
+      sd.discounts.forEach(d => names.add(d.name))
+    })
+    return [...names].sort()
+  }, [studentDiscounts])
 
   // Clear all filters
   const clearFilters = () => {
@@ -574,7 +669,7 @@ export function DiscountReports() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
-                      {discountGroupNames.map(name => (
+                      {discountNameOptions.map(name => (
                         <SelectItem key={name} value={name}>{name}</SelectItem>
                       ))}
                     </SelectContent>

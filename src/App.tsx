@@ -58,7 +58,6 @@ import {
   DollarSign,
   Percent,
   Tag,
-  TrendingUp,
   TrendingDown,
   FileCheck,
   FileText as FileInvoice,
@@ -116,7 +115,6 @@ import { StudentList } from "./components/StudentList"
 import { FamilyGroups } from "./components/FamilyGroups"
 import { SchoolSettings } from "./components/SchoolSettings"
 import { ReportOverview } from "./components/ReportOverview"
-import { AnalyticsDashboard } from "./components/AnalyticsDashboard"
 import { UserProfile } from "./components/UserProfile"
 import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
@@ -132,12 +130,11 @@ const menuItems = {
   general: [
     { id: "tuition-dashboard", labelKey: "menu.dashboard", icon: BarChart3 },
     { id: "approval-queue", labelKey: "menu.approvalQueue", icon: ClipboardCheck },
-    { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "debt-reminder-settings", labelKey: "menu.debtReminderSettings", icon: Bell },
+    { id: "payment-history", labelKey: "menu.paymentHistory", icon: CreditCard },
     { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
-    { id: "analytics-dashboard", labelKey: "menu.analytics", icon: TrendingUp },
-    { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
+{ id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
     { id: "school-settings", labelKey: "menu.schoolSettings", icon: Settings2 },
     { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
   ],
@@ -730,7 +727,6 @@ export default function App() {
                         if (activeSection === "payment-history") return t("menu.paymentHistory");
                         if (activeSection === "credit-notes") return "Credit Notes";
                         if (activeSection === "discount-reports") return t("menu.reports");
-                        if (activeSection === "analytics-dashboard") return "Analytics";
 
                         // 4. Special cases
                         if (activeSection === "invoice-creation") {
@@ -773,13 +769,12 @@ export default function App() {
 
                 </header>
 
-                <div className="flex-1 p-6 overflow-auto">
+                <div className="flex-1 min-h-0 p-6 flex flex-col" data-content-area>
                   <Routes>
                     {/* Dashboard */}
                     <Route path="/" element={<ReportOverview />} />
                     <Route path="/tuition-dashboard" element={<ReportOverview />} />
                     <Route path="/discount-reports" element={<DiscountReports />} />
-                    <Route path="/analytics-dashboard" element={<AnalyticsDashboard />} />
 
                     {/* Debt Reminder */}
                     <Route path="/debt-reminder-settings" element={<DebtReminderSettings />} />

@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
-import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer, FileText } from "lucide-react"
+import { CalendarIcon, Download, Filter, Eye, Mail, ArrowUpDown, Plus, FileDown, X, CheckSquare, Search, Upload, Printer, FileText, ChevronDown } from "lucide-react"
+import { cn } from "./ui/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { Checkbox } from "./ui/checkbox"
 import { format } from "date-fns"
@@ -404,6 +405,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   }, [])
 
   // Filter states
+  const [showFilters, setShowFilters] = useState(false)
+  const [showCreditNoteFilters, setShowCreditNoteFilters] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [academicYearFilter, setAcademicYearFilter] = useState("all")
   const [termFilter, setTermFilter] = useState("all")
@@ -441,6 +444,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [creditNoteForm, setCreditNoteForm] = useState({
     creditNoteNumber: `CN-${new Date().getFullYear()}-${String(mockCreditNotes.length + 1).padStart(6, '0')}`,
     invoiceNumber: "",
+    familyCode: "",
     studentId: "",
     studentName: "",
     yearGroup: "",
@@ -494,7 +498,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
   }, [activeTab, receipts, creditNotes])
 
-  const applyFilters = () => {
+  // Reactive filtering for receipts - runs whenever filter state changes
+  useEffect(() => {
+    if (activeTab !== "receipts") return
+
     let filtered = receipts
 
     if (searchTerm) {
@@ -538,8 +545,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
 
     setFilteredReceipts(filtered)
-    setCurrentPage(1) // Reset to first page when filtering
-  }
+    setCurrentPage(1)
+  }, [searchTerm, academicYearFilter, termFilter, gradeFilter, paymentChannelFilter, statusFilter, dateFrom, dateTo, receipts, activeTab, academicYears])
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -728,19 +735,25 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const exportToExcel = () => {
     const isCreditNoteMode = activeTab === "credit-notes" || viewMode === "credit-notes"
     if (isCreditNoteMode) {
-      const headers = ['Credit Note No.', 'Invoice Number', 'Student Name', 'Student ID', 'Year Group', 'Amount (THB)', 'Reason', 'Issue Date', 'Academic Year', 'Term', 'Status']
+      const headers = ['No.', 'Sell-to Customer No.', 'Customer Name', 'Year Group Code', 'Posting Date', 'Due Date', 'Amount', 'Amount Including VAT', 'Remaining Amount', 'Paid', 'Currency Code', 'Bill-to Customer No.', 'Cancelled', 'Corrective', 'Location Code', 'No. Printed', 'Description']
       const rows = filteredCreditNotes.map(cn => [
         cn.creditNoteNumber,
-        cn.invoiceNumber,
-        cn.studentName,
         cn.studentId,
+        cn.studentName,
         cn.studentGrade,
-        cn.amount,
-        cn.reason,
         format(cn.issueDate, 'dd/MM/yyyy'),
-        formatAcademicYear(cn.academicYear),
-        cn.term,
-        cn.status
+        format(cn.issueDate, 'dd/MM/yyyy'),
+        cn.amount,
+        cn.amount,
+        cn.remainingBalance != null ? -cn.remainingBalance : 0,
+        cn.status === "used" || cn.remainingBalance === 0 ? "TRUE" : "FALSE",
+        "",
+        cn.familyCode || "",
+        cn.status === "cancelled" ? "TRUE" : "",
+        "",
+        "",
+        "",
+        cn.reason
       ])
       downloadAsXlsx(headers, rows, `credit-notes-export-${format(new Date(), 'dd-MM-yyyy')}`)
       toast.success(t("receipt.creditNotesExported"))
@@ -838,7 +851,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   }
 
   // ===== Credit Note Functions =====
-  const applyCreditNoteFilters = () => {
+  // Reactive filtering for credit notes - runs whenever filter state changes
+  useEffect(() => {
+    if (activeTab !== "creditNotes") return
+
     let filtered = creditNotes
 
     if (searchTerm) {
@@ -880,7 +896,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     setFilteredCreditNotes(filtered)
     setCnCurrentPage(1)
-  }
+  }, [searchTerm, academicYearFilter, termFilter, gradeFilter, statusFilter, dateFrom, dateTo, creditNotes, activeTab, academicYears])
 
   const clearCreditNoteFilters = () => {
     setSearchTerm("")
@@ -982,7 +998,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       toast.error(t("receipt.creditNoteNumberRequired"))
       return
     }
-    if (!creditNoteForm.studentId) {
+    if (!creditNoteForm.familyCode) {
       toast.error(t("receipt.familyCodeRequired") || "Family Code is required")
       return
     }
@@ -1011,26 +1027,27 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return
     }
 
-    // Derive familyCode from matching invoice
+    // Derive studentId from matching invoice if available
     const invoicesStored = localStorage.getItem("createdInvoices")
     const allInvoices = invoicesStored ? JSON.parse(invoicesStored) : []
     const matchingInvoice = allInvoices.find((inv: any) => inv.invoiceNumber === creditNoteForm.invoiceNumber)
-    const derivedFamilyCode = matchingInvoice?.adultIdNo || matchingInvoice?.familyCode || ""
+    const derivedStudentId = creditNoteForm.studentId || matchingInvoice?.pupilId || matchingInvoice?.studentId || ""
 
     const newCreditNote: CreditNote = {
       id: `cn-${Date.now()}`,
       creditNoteNumber: creditNoteForm.creditNoteNumber,
       invoiceNumber: creditNoteForm.invoiceNumber,
       studentName: creditNoteForm.studentName,
-      studentId: creditNoteForm.studentId,
+      studentId: derivedStudentId,
       studentGrade: creditNoteForm.yearGroup,
       amount: creditNoteForm.amount,
+      remainingBalance: creditNoteForm.amount,
       reason: creditNoteForm.reason,
       issueDate: creditNoteForm.issueDate,
       academicYear: creditNoteForm.academicYear,
       term: creditNoteForm.term,
       status: "issued",
-      familyCode: derivedFamilyCode
+      familyCode: creditNoteForm.familyCode
     }
 
     const updated = [newCreditNote, ...creditNotes]
@@ -1042,6 +1059,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     setCreditNoteForm({
       creditNoteNumber: `CN-${new Date().getFullYear()}-${String(creditNotes.length + 2).padStart(6, '0')}`,
       invoiceNumber: "",
+      familyCode: "",
       studentId: "",
       studentName: "",
       yearGroup: "",
@@ -1054,7 +1072,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     setIsCreateCreditNoteOpen(false)
     toast.success(t("receipt.creditNoteCreated"))
-    logActivity({ action: "Create Credit Note", module: "Credit Notes", detail: `CN: ${creditNoteForm.creditNoteNumber}, Student: ${creditNoteForm.studentName} (${creditNoteForm.studentId}), Amount: ฿${creditNoteForm.amount.toLocaleString()}, Reason: "${creditNoteForm.reason}", Invoice: ${creditNoteForm.invoiceNumber || "-"}, Year: ${formatAcademicYear(creditNoteForm.academicYear)}, Term: ${creditNoteForm.term}` })
+    logActivity({ action: "Create Credit Note", module: "Credit Notes", detail: `CN: ${creditNoteForm.creditNoteNumber}, Student: ${creditNoteForm.studentName}, Family: ${creditNoteForm.familyCode}, Amount: ฿${creditNoteForm.amount.toLocaleString()}, Reason: "${creditNoteForm.reason}", Invoice: ${creditNoteForm.invoiceNumber || "-"}, Year: ${formatAcademicYear(creditNoteForm.academicYear)}, Term: ${creditNoteForm.term}` })
   }
 
   // --- Import helpers ---
@@ -1107,9 +1125,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           const studentName = String(row["Customer Name"] || "").trim()
           const yearGroup = normalizeYearGroup(String(row["Year Group Code"] || "").trim())
           const amount = parseFloat(String(row["Amount"] || "0").replace(/,/g, ""))
+          const remainingAmt = parseFloat(String(row["Remaining Amount"] || "0").replace(/,/g, ""))
           const cancelled = row["Cancelled"]
           const description = String(row["Description"] || "").trim()
           const postingDate = row["Posting Date"]
+          const familyCode = String(row["Bill-to Customer No."] || "").trim()
 
           if (!creditNoteNumber) { errors.push(`Row ${index + 2}: Missing Credit Note Number`); return }
           if (!studentId && !studentName) { errors.push(`Row ${index + 2}: Missing Student ID/Name`); return }
@@ -1125,11 +1145,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             studentId,
             studentGrade: yearGroup,
             amount,
+            remainingBalance: isNaN(remainingAmt) ? undefined : Math.abs(remainingAmt),
             reason: description || "Imported Credit Note",
             issueDate: parseImportDate(postingDate),
             academicYear: "",
             term: "",
             status,
+            familyCode: familyCode || undefined,
           })
         })
 
@@ -1268,7 +1290,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             onClick={exportToExcel}
           >
             <FileDown className="w-4 h-4" />
-            {t("common.exportAll")}
+            {t("common.exportCsv")}
           </Button>
           {(activeTab !== "credit-notes" && viewMode !== "credit-notes") && (
             <Button
@@ -1280,19 +1302,21 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               {t("receipt.downloadInterfaceFile")}
             </Button>
           )}
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => {
-              const allTpl = migrateTemplates()
-              const rcptTpl = allTpl.filter(t => t.type === "receipt")
-              setTemplateToEdit(rcptTpl.find(t => t.isDefault) || rcptTpl[0] || null)
-              setIsTemplateDialogOpen(true)
-            }}
-          >
-            <FileText className="w-4 h-4" />
-            {t("receipt.receiptTemplate")}
-          </Button>
+          {activeTab !== "credit-notes" && viewMode !== "credit-notes" && (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                const allTpl = migrateTemplates()
+                const rcptTpl = allTpl.filter(t => t.type === "receipt")
+                setTemplateToEdit(rcptTpl.find(t => t.isDefault) || rcptTpl[0] || null)
+                setIsTemplateDialogOpen(true)
+              }}
+            >
+              <FileText className="w-4 h-4" />
+              {t("receipt.receiptTemplate")}
+            </Button>
+          )}
           <Button
             className="flex items-center gap-2"
             disabled={!userCanEdit}
@@ -1336,157 +1360,155 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         <TabsContent value="receipts" className="space-y-6 mt-6">
           {/* Filters */}
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="w-4 h-4" />
-                  {t("common.searchAndFilter")}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
-                  <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Row 1: Search, Academic Year, Term */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
+            <CardContent className="pt-6 pb-4 space-y-4">
+              {/* Search bar + Filters toggle - always visible */}
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder={t("receipt.searchPlaceholder")}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-9"
+                    className="pl-10 h-9"
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
-                  <Select value={academicYearFilter} onValueChange={(value) => {
-                    setAcademicYearFilter(value)
-                    setTermFilter("all")
-                  }}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("common.allYears")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("common.allYears")}</SelectItem>
-                      {academicYears.map((year) => (
-                        <SelectItem key={year.id} value={year.id}>
-                          {formatAcademicYear(year.name)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
-                  <Select value={termFilter} onValueChange={setTermFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("common.allTerms")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("common.allTerms")}</SelectItem>
-                      {termOptions.map((term) => (
-                        <SelectItem key={term.name} value={term.name}>
-                          {term.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                  <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+                </Button>
               </div>
 
-              {/* Row 2: Year Group, Payment Channel, Status, Date Range */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
-                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("common.allYearGroups")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("common.allYearGroups")}</SelectItem>
-                      {gradeOptions.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                          {grade}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Collapsible filter dropdowns */}
+              {showFilters && (<>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
+                      <Select value={academicYearFilter} onValueChange={(value) => {
+                        setAcademicYearFilter(value)
+                        setTermFilter("all")
+                      }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("common.allYears")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("common.allYears")}</SelectItem>
+                          {academicYears.map((year) => (
+                            <SelectItem key={year.id} value={year.id}>
+                              {formatAcademicYear(year.name)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.paymentChannel")}</label>
-                  <Select value={paymentChannelFilter} onValueChange={setPaymentChannelFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("common.allChannels")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("common.allChannels")}</SelectItem>
-                      {paymentMethodOptions.map(method => (
-                        <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
+                      <Select value={termFilter} onValueChange={setTermFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("common.allTerms")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("common.allTerms")}</SelectItem>
+                          {termOptions.map((term) => (
+                            <SelectItem key={term.name} value={term.name}>
+                              {term.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder={t("receipt.allStatuses")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("receipt.allStatuses")}</SelectItem>
-                      <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
-                      <SelectItem value="resent">{t("receipt.statusResent")}</SelectItem>
-                      <SelectItem value="failed">{t("receipt.statusFailed")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
+                      <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("common.allYearGroups")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("common.allYearGroups")}</SelectItem>
+                          {gradeOptions.map((grade) => (
+                            <SelectItem key={grade} value={grade}>
+                              {grade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")}</label>
-                  <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={dateFrom || undefined}
-                          onSelect={(date) => setDateFrom(date ?? null)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <span className="text-muted-foreground">→</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={dateTo || undefined}
-                          onSelect={(date) => setDateTo(date ?? null)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.paymentChannel")}</label>
+                      <Select value={paymentChannelFilter} onValueChange={setPaymentChannelFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("common.allChannels")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("common.allChannels")}</SelectItem>
+                          {paymentMethodOptions.map(method => (
+                            <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t("receipt.allStatuses")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("receipt.allStatuses")}</SelectItem>
+                          <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
+                          <SelectItem value="resent">{t("receipt.statusResent")}</SelectItem>
+                          <SelectItem value="failed">{t("receipt.statusFailed")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")}</label>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={dateFrom || undefined}
+                              onSelect={(date) => setDateFrom(date ?? null)}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <span className="text-muted-foreground">→</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="flex-1 justify-start h-9 font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={dateTo || undefined}
+                              onSelect={(date) => setDateTo(date ?? null)}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                  <div className="flex justify-end mt-4">
+                    <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+                  </div>
+              </>)}
             </CardContent>
           </Card>
 
@@ -1741,17 +1763,15 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   ))}
                 </TableBody>
               </Table>
+              <PaginationBar
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={sortedReceipts.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
-
-          {/* Pagination */}
-          <PaginationBar
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={sortedReceipts.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-          />
 
           {/* View Receipt Dialog - Official Receipt Template */}
           <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
@@ -1995,128 +2015,122 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           !hideCreditNotes && <TabsContent value="credit-notes" className="space-y-6 mt-6">
             {/* Filters for Credit Notes */}
             <Card>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Filter className="w-4 h-4" />
-                    {t("common.searchAndFilter")}
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Button onClick={applyCreditNoteFilters} className="h-9">{t("common.apply")}</Button>
-                    <Button variant="outline" onClick={clearCreditNoteFilters} className="h-9">{t("common.clear")}</Button>
+              <CardContent className="pt-6 pb-4 space-y-4">
+                {/* Search bar + Filters toggle - always visible */}
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t("receipt.searchCreditNotePlaceholder")}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-9"
+                    />
                   </div>
+                  <Button variant="outline" size="sm" onClick={() => setShowCreditNoteFilters(!showCreditNoteFilters)} className="shrink-0">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filters
+                    <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showCreditNoteFilters && "rotate-180")} />
+                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Row 1: Search, Status, Year Group */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.search")}</label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder={t("receipt.searchCreditNotePlaceholder")}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 h-9"
-                      />
+
+                {/* Collapsible filter dropdowns */}
+                {showCreditNoteFilters && (<>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t("receipt.allStatus")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("receipt.allStatus")}</SelectItem>
+                            <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
+                            <SelectItem value="pending">{t("receipt.statusPending")}</SelectItem>
+                            <SelectItem value="cancelled">{t("receipt.statusCancelled")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
+                        <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t("common.allYearGroups")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("common.allYearGroups")}</SelectItem>
+                            {gradeOptions.map(grade => (
+                              <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
+                        <Select value={termFilter} onValueChange={setTermFilter}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t("common.allTerms")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("common.allTerms")}</SelectItem>
+                            {termOptions.map(term => (
+                              <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
+                        <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t("common.allYears")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
+                            {academicYears && academicYears.length > 0 ? (
+                              academicYears.map(year => (
+                                <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
+                              ))
+                            ) : null}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1.5 min-w-0">
+                        <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.from")} → {t("date.to")})</label>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
+                                <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
+                                <span className="truncate">{dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date ?? null)} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-muted-foreground shrink-0">→</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
+                                <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
+                                <span className="truncate">{dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date ?? null)} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("receipt.allStatus")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("receipt.allStatus")}</SelectItem>
-                        <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
-                        <SelectItem value="pending">{t("receipt.statusPending")}</SelectItem>
-                        <SelectItem value="cancelled">{t("receipt.statusCancelled")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
-                    <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("common.allYearGroups")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("common.allYearGroups")}</SelectItem>
-                        {gradeOptions.map(grade => (
-                          <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Row 2: Term, Academic Year, Issue Date (From → To) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
-                    <Select value={termFilter} onValueChange={setTermFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("common.allTerms")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("common.allTerms")}</SelectItem>
-                        {termOptions.map(term => (
-                          <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
-                    <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("common.allYears")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
-                        {academicYears && academicYears.length > 0 ? (
-                          academicYears.map(year => (
-                            <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
-                          ))
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5 min-w-0">
-                    <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.from")} → {t("date.to")})</label>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
-                            <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
-                            <span className="truncate">{dateFrom ? format(dateFrom, "dd/MM/yy") : t("common.from")}</span>
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={dateFrom || undefined} onSelect={(date) => setDateFrom(date ?? null)} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                      <span className="text-muted-foreground shrink-0">→</span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
-                            <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
-                            <span className="truncate">{dateTo ? format(dateTo, "dd/MM/yy") : t("common.to")}</span>
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={dateTo || undefined} onSelect={(date) => setDateTo(date ?? null)} initialFocus />
-                        </PopoverContent>
-                      </Popover>
+                    <div className="flex justify-end mt-4">
+                      <Button variant="outline" onClick={clearCreditNoteFilters} className="h-9">{t("common.clear")}</Button>
                     </div>
-                  </div>
-                </div>
+                </>)}
               </CardContent>
             </Card>
 
@@ -2354,17 +2368,15 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     ))}
                   </TableBody>
                 </Table>
+                <PaginationBar
+                  currentPage={cnCurrentPage}
+                  pageSize={cnPageSize}
+                  totalCount={sortedCreditNotes.length}
+                  onPageChange={setCnCurrentPage}
+                  onPageSizeChange={(size) => { setCnPageSize(size); setCnCurrentPage(1) }}
+                />
               </CardContent>
             </Card>
-
-            {/* Pagination for Credit Notes */}
-            <PaginationBar
-              currentPage={cnCurrentPage}
-              pageSize={cnPageSize}
-              totalCount={sortedCreditNotes.length}
-              onPageChange={setCnCurrentPage}
-              onPageSizeChange={(size) => { setCnPageSize(size); setCnCurrentPage(1) }}
-            />
 
             {/* View Credit Note Dialog */}
             <Dialog open={isViewDialogOpen && viewingCreditNote !== null} onOpenChange={setIsViewDialogOpen}>
@@ -2586,8 +2598,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   <Label>{t("receipt.familyCode")} <span className="text-red-500">*</span></Label>
                   <Input
                     placeholder="FAM001"
-                    value={creditNoteForm.studentId}
-                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, studentId: e.target.value })}
+                    value={creditNoteForm.familyCode}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, familyCode: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">

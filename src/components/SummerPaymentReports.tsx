@@ -684,17 +684,15 @@ export function SummerPaymentReports() {
                   ))}
                 </TableBody>
               </Table>
+              <PaginationBar
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={filteredPayments.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              />
             </CardContent>
           </Card>
-
-          {/* Pagination */}
-          <PaginationBar
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={filteredPayments.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-          />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

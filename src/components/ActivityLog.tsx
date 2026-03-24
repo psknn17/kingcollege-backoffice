@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
-import { Button } from "./ui/button"
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { ChevronDown, ChevronRight, List, LayoutGrid } from "lucide-react"
 
 // Module grouping: map raw module names to display groups
 const MODULE_GROUP_MAP: Record<string, string> = {
@@ -79,28 +77,6 @@ const MODULE_GROUP_MAP: Record<string, string> = {
   "Reports": "Analytics & Reports",
 }
 
-// Preferred display order
-const MODULE_GROUP_ORDER = [
-  "Login & Authentication",
-  "User Management",
-  "School Settings",
-  "Bank Settings",
-  "Students & Families",
-  "Tuition Settings",
-  "Payment Reminders",
-  "Payment History",
-  "Invoice Management",
-  "Approval Queue",
-  "Receipts & Credit Notes",
-  "Item & Template Management",
-  "Email Management",
-  "Discount Management",
-  "After School Activities",
-  "Event Management",
-  "Summer Activities",
-  "Client Management",
-  "Analytics & Reports",
-]
 
 const mockActivityLogs: ActivityLogEntry[] = [
   {
@@ -167,9 +143,6 @@ function getModuleGroup(module: string): string {
 export function ActivityLog() {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
-  const [viewMode, setViewMode] = useState<"flat" | "grouped">("flat")
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
-  const [groupFilter, setGroupFilter] = useState<string>("all")
 
   const getStatusBadge = (status: ActivityLogEntry["status"]) => {
     switch (status) {
@@ -191,60 +164,18 @@ export function ActivityLog() {
   const filteredLogs = useMemo(() => {
     const logsWithoutViewed = logs.filter(log => !log.action.toLowerCase().startsWith("viewed"))
 
-    let filtered = logsWithoutViewed
-    if (searchTerm) {
-      const needle = searchTerm.toLowerCase()
-      filtered = filtered.filter(log =>
-        log.user.toLowerCase().includes(needle) ||
-        log.action.toLowerCase().includes(needle) ||
-        log.module.toLowerCase().includes(needle) ||
-        log.detail.toLowerCase().includes(needle) ||
-        log.ip.toLowerCase().includes(needle) ||
-        log.device.toLowerCase().includes(needle)
-      )
-    }
+    if (!searchTerm) return logsWithoutViewed
 
-    if (viewMode === "grouped" && groupFilter !== "all") {
-      filtered = filtered.filter(log => getModuleGroup(log.module) === groupFilter)
-    }
-
-    return filtered
-  }, [searchTerm, logs, viewMode, groupFilter])
-
-  // Grouped logs by module
-  const groupedLogs = useMemo(() => {
-    const groups: Record<string, ActivityLogEntry[]> = {}
-    for (const log of filteredLogs) {
-      const group = getModuleGroup(log.module)
-      if (!groups[group]) groups[group] = []
-      groups[group].push(log)
-    }
-
-    // Sort by preferred order
-    const sorted = MODULE_GROUP_ORDER
-      .filter(g => groups[g])
-      .map(g => ({ group: g, logs: groups[g] }))
-
-    // Add any groups not in the predefined order
-    const remaining = Object.keys(groups).filter(g => !MODULE_GROUP_ORDER.includes(g))
-    for (const g of remaining.sort()) {
-      sorted.push({ group: g, logs: groups[g] })
-    }
-
-    return sorted
-  }, [filteredLogs])
-
-  // Available group names for filter dropdown
-  const availableGroups = useMemo(() => {
-    const allLogs = logs.filter(log => !log.action.toLowerCase().startsWith("viewed"))
-    const groups = new Set<string>()
-    for (const log of allLogs) {
-      groups.add(getModuleGroup(log.module))
-    }
-    return MODULE_GROUP_ORDER.filter(g => groups.has(g)).concat(
-      [...groups].filter(g => !MODULE_GROUP_ORDER.includes(g)).sort()
+    const needle = searchTerm.toLowerCase()
+    return logsWithoutViewed.filter(log =>
+      log.user.toLowerCase().includes(needle) ||
+      log.action.toLowerCase().includes(needle) ||
+      log.module.toLowerCase().includes(needle) ||
+      log.detail.toLowerCase().includes(needle) ||
+      log.ip.toLowerCase().includes(needle) ||
+      log.device.toLowerCase().includes(needle)
     )
-  }, [logs])
+  }, [searchTerm, logs])
 
   useEffect(() => {
     const load = () => {
@@ -257,24 +188,7 @@ export function ActivityLog() {
     return () => window.removeEventListener("activityLogsUpdated", handleUpdate)
   }, [])
 
-  useEffect(() => { setCurrentPage(1) }, [searchTerm, groupFilter])
-
-  const toggleGroup = (group: string) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev)
-      if (next.has(group)) next.delete(group)
-      else next.add(group)
-      return next
-    })
-  }
-
-  const expandAll = () => {
-    setExpandedGroups(new Set(groupedLogs.map(g => g.group)))
-  }
-
-  const collapseAll = () => {
-    setExpandedGroups(new Set())
-  }
+  useEffect(() => { setCurrentPage(1) }, [searchTerm])
 
   const totalCount = filteredLogs.length
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -289,29 +203,10 @@ export function ActivityLog() {
               {t("activityLog.subtitle")}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "flat" ? "default" : "outline"}
-              size="sm"
-              onClick={() => { setViewMode("flat"); setGroupFilter("all") }}
-              className="gap-1.5"
-            >
-              <List className="h-4 w-4" />
-              All Logs
-            </Button>
-            <Button
-              variant={viewMode === "grouped" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("grouped")}
-              className="gap-1.5"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              By Module
-            </Button>
-          </div>
         </div>
       </div>
 
+      {/* Search + Module Filter */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-4">
@@ -324,154 +219,59 @@ export function ActivityLog() {
                 className="h-9"
               />
             </div>
-            {viewMode === "grouped" && (
-              <div className="flex-shrink-0">
-                <CardTitle className="text-base mb-2">Filter Module</CardTitle>
-                <select
-                  value={groupFilter}
-                  onChange={(e) => setGroupFilter(e.target.value)}
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="all">All Modules ({availableGroups.length})</option>
-                  {availableGroups.map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
         </CardHeader>
       </Card>
 
-      {viewMode === "flat" ? (
-        /* ===== FLAT VIEW (original) ===== */
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead align="left" className="pl-6">{t("activityLog.timestamp")}</TableHead>
-                  <TableHead align="left">{t("activityLog.user")}</TableHead>
-                  <TableHead align="left">{t("activityLog.module")}</TableHead>
-                  <TableHead align="left">{t("activityLog.action")}</TableHead>
-                  <TableHead align="left">{t("activityLog.detail")}</TableHead>
-                  <TableHead align="left">{t("activityLog.ip")}</TableHead>
-                  <TableHead align="center">{t("common.status")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedLogs.map(log => (
-                  <TableRow key={log.id}>
-                    <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "dd MMM yyyy HH:mm")}</TableCell>
-                    <TableCell align="left" className="font-medium">{log.user}</TableCell>
-                    <TableCell align="left">{log.module}</TableCell>
-                    <TableCell align="left">{log.action}</TableCell>
-                    <TableCell align="left" className="max-w-[360px] truncate" title={log.detail}>{log.detail}</TableCell>
-                    <TableCell align="left">{log.ip}</TableCell>
-                    <TableCell align="center">{getStatusBadge(log.status)}</TableCell>
-                  </TableRow>
-                ))}
-                {filteredLogs.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
-                      {t("activityLog.noLogsFound")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            <PaginationBar
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalCount={totalCount}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        /* ===== GROUPED VIEW ===== */
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {groupedLogs.length} module{groupedLogs.length !== 1 ? "s" : ""} &middot; {filteredLogs.length} log{filteredLogs.length !== 1 ? "s" : ""}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
-              <Button variant="outline" size="sm" onClick={collapseAll}>Collapse All</Button>
-            </div>
-          </div>
-
-          {groupedLogs.map(({ group, logs: groupLogs }) => {
-            const isExpanded = expandedGroups.has(group)
-            return (
-              <Card key={group}>
-                <div
-                  className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => toggleGroup(group)}
-                >
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <h3 className="font-semibold text-sm">{group}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {groupLogs.length} log{groupLogs.length !== 1 ? "s" : ""}
+      {/* Activity Log Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead align="left" className="pl-6">{t("activityLog.timestamp")}</TableHead>
+                <TableHead align="left">{t("activityLog.user")}</TableHead>
+                <TableHead align="left">{t("activityLog.module")}</TableHead>
+                <TableHead align="left">{t("activityLog.action")}</TableHead>
+                <TableHead align="left">{t("activityLog.detail")}</TableHead>
+                <TableHead align="left">{t("activityLog.ip")}</TableHead>
+                <TableHead align="center">{t("common.status")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedLogs.map(log => (
+                <TableRow key={log.id}>
+                  <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "dd MMM yyyy HH:mm")}</TableCell>
+                  <TableCell align="left" className="font-medium">{log.user}</TableCell>
+                  <TableCell align="left">
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {getModuleGroup(log.module)}
                     </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {groupLogs.filter(l => l.status === "success").length > 0 && (
-                      <span className="text-green-600">{groupLogs.filter(l => l.status === "success").length} success</span>
-                    )}
-                    {groupLogs.filter(l => l.status === "warning").length > 0 && (
-                      <span className="text-yellow-600">{groupLogs.filter(l => l.status === "warning").length} warning</span>
-                    )}
-                    {groupLogs.filter(l => l.status === "error").length > 0 && (
-                      <span className="text-red-600">{groupLogs.filter(l => l.status === "error").length} error</span>
-                    )}
-                  </div>
-                </div>
-                {isExpanded && (
-                  <CardContent className="p-0 border-t">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead align="left" className="pl-6">{t("activityLog.timestamp")}</TableHead>
-                          <TableHead align="left">{t("activityLog.user")}</TableHead>
-                          <TableHead align="left">{t("activityLog.action")}</TableHead>
-                          <TableHead align="left">{t("activityLog.detail")}</TableHead>
-                          <TableHead align="center">{t("common.status")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupLogs.map(log => (
-                          <TableRow key={log.id}>
-                            <TableCell align="left" className="pl-6 whitespace-nowrap">{format(new Date(log.timestamp), "dd MMM yyyy HH:mm")}</TableCell>
-                            <TableCell align="left" className="font-medium">{log.user}</TableCell>
-                            <TableCell align="left">{log.action}</TableCell>
-                            <TableCell align="left" className="max-w-[400px] truncate" title={log.detail}>{log.detail}</TableCell>
-                            <TableCell align="center">{getStatusBadge(log.status)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                )}
-              </Card>
-            )
-          })}
-
-          {groupedLogs.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                {t("activityLog.noLogsFound")}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+                  </TableCell>
+                  <TableCell align="left">{log.action}</TableCell>
+                  <TableCell align="left" className="max-w-[360px] truncate" title={log.detail}>{log.detail}</TableCell>
+                  <TableCell align="left">{log.ip}</TableCell>
+                  <TableCell align="center">{getStatusBadge(log.status)}</TableCell>
+                </TableRow>
+              ))}
+              {filteredLogs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                    {t("activityLog.noLogsFound")}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 }
