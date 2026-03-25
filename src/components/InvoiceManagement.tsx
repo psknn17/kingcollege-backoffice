@@ -2798,7 +2798,6 @@ export function InvoiceManagement({
       "RV no. series",
       "Receive date",
       "Payment method",
-      "Payment option",
       "Sell-to-customer No.",
       "Receive Account no.",
       "Year group",
@@ -2857,16 +2856,6 @@ export function InvoiceManagement({
       return method
     }
 
-    const mapPaymentOption = (method: string): string => {
-      if (!method) return ""
-      const m = method.toLowerCase()
-      if (m.includes("bank transfer")) return "Transfer"
-      if (m.startsWith("edc") || m.includes("credit card")) return "Credit Card"
-      if (m.includes("cheque") || m.includes("check")) return "Cheque"
-      if (m.includes("cash")) return "Cash"
-      return method
-    }
-
     // Get GL account from BankSettings by matching payment method
     const getReceiveAccountNo = (paymentMethod: string): string => {
       if (!paymentMethod) return ""
@@ -2914,7 +2903,6 @@ export function InvoiceManagement({
 
       const receiveDate = inv.paidDate ? format(new Date(inv.paidDate), "dd/MM/yyyy") : ""
       const paymentMethod = mapPaymentMethod(inv.paymentMethod || "")
-      const paymentOption = mapPaymentOption(inv.paymentMethod || "")
       const schoolYear = (inv.academicYear || "").replace(/-/g, "/")
       const yearGroup = inv.studentGrade || ""
 
@@ -2928,7 +2916,6 @@ export function InvoiceManagement({
         "AR-RV",
         receiveDate,
         paymentMethod,
-        paymentOption,
         studentIdStr,
         receiveAccountNo,
         yearGroup,
@@ -5314,9 +5301,9 @@ export function InvoiceManagement({
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Step 1: Select Grade */}
+            {/* Step 1: Select Year Group */}
             <div className="space-y-3">
-              <h3 className="font-medium">1. Select Grade</h3>
+              <h3 className="font-medium">1. Select Year Group</h3>
               <Select value={selectedGrade} onValueChange={handleGradeChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose grade level" />

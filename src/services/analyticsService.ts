@@ -314,6 +314,7 @@ const sortByYearGroup = <T extends { yearGroup: string }>(arr: T[]): T[] =>
 export interface AnalyticsFilter {
   academicYear?: string
   term?: string
+  category?: string   // "all" | "tuition" | "eca" | "trip" | "sport" | "exam" | "bus" | "others"
 }
 
 /** Report 1: YoY / Term-on-Term Revenue by Year Group */
@@ -349,12 +350,57 @@ export interface AvgRevenueByYearGroup {
   }
 }
 
+/** Matrix row: Year Group × Term columns (for Tab 1 left table) */
+export interface RevenueTermMatrixRow {
+  yearGroup: string
+  termCols: Record<string, number>   // key = "2024/2025 Term 1", value = netRevenue
+}
+
+/** Matrix row: Year Group × Academic Year columns (for Tab 1 right table) */
+export interface RevenueYearMatrixRow {
+  yearGroup: string
+  yearCols: Record<string, number>   // key = "2024/2025", value = netRevenue
+}
+
+/** Row for Avg Revenue Tab — one row per year group */
+export interface AvgTermMatrixRow {
+  yearGroup: string
+  studentCount: number
+  termCols: Record<string, number>   // key = "2024/2025 Term 1", value = avg net per student
+}
+
+export interface AvgYearMatrixRow {
+  yearGroup: string
+  studentCount: number
+  yearCols: Record<string, number>   // key = "2024/2025", value = avg net per student
+}
+
 /** Report 3: Transaction count by payment method */
 export interface TransactionByMethod {
   method: string
   count: number
   totalAmount: number
   percentage: number
+}
+
+/** Year Group × Method matrix row (for Tab 3) */
+export interface TransactionYearGroupMethodRow {
+  yearGroup: string
+  methods: Record<string, number>    // key = method name, value = count
+  total: number
+}
+
+/** Bank fees: Year Group × Term/Year matrix rows (for Tab 5) */
+export interface BankFeeTermMatrixRow {
+  bankName: string
+  paymentSource: string
+  termCols: Record<string, number>   // key = "2024/2025 Term 1"
+}
+
+export interface BankFeeYearMatrixRow {
+  bankName: string
+  paymentSource: string
+  yearCols: Record<string, number>   // key = "2024/2025"
 }
 
 /** Report 4: Declined vs Successful transactions */
@@ -392,6 +438,11 @@ function loadInvoices(filter: AnalyticsFilter): any[] {
   return cachedMockInvoices().filter(inv => {
     if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
     if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    if (filter.category && filter.category !== "all") {
+      const cat = inv.category || "tuition"
+      if (cat !== filter.category) return false
+    }
+    if (inv.status === "cancelled") return false
     return true
   })
 }
@@ -489,6 +540,170 @@ export async function getAvgRevenueByYearGroup(filter: AnalyticsFilter): Promise
   return sortByYearGroup(result)
 }
 
+// ── REPORT 1b: Revenue Term Matrix (dual-table left) ──────────────────────────
+
+/**
+ * Returns rows of [ yearGroup, { "2024/2025 Term 1": netRev, ... } ]
+ * Used for "Compare by Term" left table in Tab 1.
+ */
+export async function getRevenueTermMatrix(filter: AnalyticsFilter): Promise<{
+  rows: RevenueTermMatrixRow[]
+  termKeys: string[]
+}> {
+  // Load without term filter (we want all terms as columns)
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
+    if (inv.status === "cancelled") return false
+    return true
+  })
+
+  const termKeySet = new Set<string>()
+  const map = new Map<string, Record<string, number>>()
+
+  invoices.forEach(inv => {
+    const yg = inv.studentGrade || "Unknown"
+    const key = `${inv.academicYear} ${inv.term}`
+    termKeySet.add(key)
+    if (!map.has(yg)) map.set(yg, {})
+    const row = map.get(yg)!
+    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+    row[key] = (row[key] ?? 0) + net
+  })
+
+  const termKeys = Array.from(termKeySet).sort()
+  const rows: RevenueTermMatrixRow[] = []
+  map.forEach((termCols, yearGroup) => {
+    rows.push({ yearGroup, termCols })
+  })
+
+  return { rows: sortByYearGroup(rows), termKeys }
+}
+
+/**
+ * Returns rows of [ yearGroup, { "2024/2025": netRev, ... } ]
+ * Used for "Compare by Academic Year" right table in Tab 1.
+ */
+export async function getRevenueYearMatrix(filter: AnalyticsFilter): Promise<{
+  rows: RevenueYearMatrixRow[]
+  yearKeys: string[]
+}> {
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
+    if (inv.status === "cancelled") return false
+    return true
+  })
+
+  const yearKeySet = new Set<string>()
+  const map = new Map<string, Record<string, number>>()
+
+  invoices.forEach(inv => {
+    const yg = inv.studentGrade || "Unknown"
+    const ay = inv.academicYear || "-"
+    yearKeySet.add(ay)
+    if (!map.has(yg)) map.set(yg, {})
+    const row = map.get(yg)!
+    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+    row[ay] = (row[ay] ?? 0) + net
+  })
+
+  const yearKeys = Array.from(yearKeySet).sort()
+  const rows: RevenueYearMatrixRow[] = []
+  map.forEach((yearCols, yearGroup) => {
+    rows.push({ yearGroup, yearCols })
+  })
+
+  return { rows: sortByYearGroup(rows), yearKeys }
+}
+
+// ── REPORT 2b: Avg Revenue Term/Year Matrix ────────────────────────────────────
+
+export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
+  rows: AvgTermMatrixRow[]
+  termKeys: string[]
+}> {
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
+    if (inv.status === "cancelled") return false
+    return true
+  })
+
+  const termKeySet = new Set<string>()
+  // Map: yearGroup → termKey → { total, students }
+  const map = new Map<string, { termTotals: Record<string, number>; termStudents: Record<string, Set<string>>; allStudents: Set<string> }>()
+
+  invoices.forEach(inv => {
+    const yg = inv.studentGrade || "Unknown"
+    const key = `${inv.academicYear} ${inv.term}`
+    termKeySet.add(key)
+    if (!map.has(yg)) map.set(yg, { termTotals: {}, termStudents: {}, allStudents: new Set() })
+    const row = map.get(yg)!
+    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+    row.termTotals[key] = (row.termTotals[key] ?? 0) + net
+    if (!row.termStudents[key]) row.termStudents[key] = new Set()
+    if (inv.studentId) {
+      row.termStudents[key].add(inv.studentId)
+      row.allStudents.add(inv.studentId)
+    }
+  })
+
+  const termKeys = Array.from(termKeySet).sort()
+  const rows: AvgTermMatrixRow[] = []
+  map.forEach((v, yearGroup) => {
+    const termCols: Record<string, number> = {}
+    termKeys.forEach(k => {
+      const cnt = v.termStudents[k]?.size || 1
+      termCols[k] = Math.round((v.termTotals[k] ?? 0) / cnt)
+    })
+    rows.push({ yearGroup, studentCount: v.allStudents.size, termCols })
+  })
+
+  return { rows: sortByYearGroup(rows), termKeys }
+}
+
+export async function getAvgYearMatrix(filter: AnalyticsFilter): Promise<{
+  rows: AvgYearMatrixRow[]
+  yearKeys: string[]
+}> {
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
+    if (inv.status === "cancelled") return false
+    return true
+  })
+
+  const yearKeySet = new Set<string>()
+  const map = new Map<string, { yearTotals: Record<string, number>; yearStudents: Record<string, Set<string>>; allStudents: Set<string> }>()
+
+  invoices.forEach(inv => {
+    const yg = inv.studentGrade || "Unknown"
+    const ay = inv.academicYear || "-"
+    yearKeySet.add(ay)
+    if (!map.has(yg)) map.set(yg, { yearTotals: {}, yearStudents: {}, allStudents: new Set() })
+    const row = map.get(yg)!
+    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+    row.yearTotals[ay] = (row.yearTotals[ay] ?? 0) + net
+    if (!row.yearStudents[ay]) row.yearStudents[ay] = new Set()
+    if (inv.studentId) {
+      row.yearStudents[ay].add(inv.studentId)
+      row.allStudents.add(inv.studentId)
+    }
+  })
+
+  const yearKeys = Array.from(yearKeySet).sort()
+  const rows: AvgYearMatrixRow[] = []
+  map.forEach((v, yearGroup) => {
+    const yearCols: Record<string, number> = {}
+    yearKeys.forEach(k => {
+      const cnt = v.yearStudents[k]?.size || 1
+      yearCols[k] = Math.round((v.yearTotals[k] ?? 0) / cnt)
+    })
+    rows.push({ yearGroup, studentCount: v.allStudents.size, yearCols })
+  })
+
+  return { rows: sortByYearGroup(rows), yearKeys }
+}
+
 // ── REPORT 3: Transaction count by payment method ─────────────────────────────
 
 /**
@@ -530,6 +745,124 @@ export async function getTransactionsByMethod(filter: AnalyticsFilter): Promise<
     })
     return result.sort((a, b) => b.count - a.count)
   } catch { return [] }
+}
+
+// ── REPORT 3b: Transactions by Year Group × Method matrix ─────────────────────
+
+/**
+ * Returns Year Group × Method matrix.
+ * Uses mock payment records + year group assignment.
+ */
+export async function getTransactionsByYearGroupAndMethod(filter: AnalyticsFilter): Promise<{
+  rows: TransactionYearGroupMethodRow[]
+  methodKeys: string[]
+}> {
+  // Build a map of studentId → yearGroup from invoices
+  const allInvoices = cachedMockInvoices().filter(inv => {
+    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+    if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    if (inv.status === "cancelled") return false
+    return true
+  })
+
+  const studentGradeMap = new Map<string, string>()
+  allInvoices.forEach(inv => {
+    if (inv.studentId && inv.studentGrade) studentGradeMap.set(inv.studentId, inv.studentGrade)
+  })
+
+  // Distribute mock payment records across year groups proportionally
+  // by assigning each record to a random student from the known pool
+  const studentIds = Array.from(studentGradeMap.keys())
+  const payments = cachedMockPayments()
+  const methodKeySet = new Set<string>()
+  // yearGroup → method → count
+  const matrixMap = new Map<string, Record<string, number>>()
+
+  YEAR_GROUP_ORDER.forEach(yg => matrixMap.set(yg, {}))
+
+  payments.forEach((p, idx) => {
+    const sid = studentIds[idx % studentIds.length]
+    const yg = studentGradeMap.get(sid) || "Unknown"
+    const method = p.paymentMethod || "Unknown"
+    methodKeySet.add(method)
+    if (!matrixMap.has(yg)) matrixMap.set(yg, {})
+    const row = matrixMap.get(yg)!
+    row[method] = (row[method] ?? 0) + 1
+  })
+
+  const methodKeys = Array.from(methodKeySet).sort()
+  const rows: TransactionYearGroupMethodRow[] = []
+  matrixMap.forEach((methods, yearGroup) => {
+    if (Object.keys(methods).length === 0) return
+    const total = Object.values(methods).reduce((s, v) => s + v, 0)
+    rows.push({ yearGroup, methods, total })
+  })
+
+  return { rows: sortByYearGroup(rows), methodKeys }
+}
+
+// ── REPORT 5b: Bank Fees Term/Year Matrix ─────────────────────────────────────
+
+export async function getBankFeeTermMatrix(filter: AnalyticsFilter): Promise<{
+  rows: BankFeeTermMatrixRow[]
+  termKeys: string[]
+}> {
+  // Load all rows ignoring term filter (terms become columns)
+  const filterNoTerm: AnalyticsFilter = { academicYear: filter.academicYear }
+  const allRows = getMockBankFees(filterNoTerm)
+
+  const termKeySet = new Set<string>()
+  // bankName+paymentSource → termKey → feeAmount
+  const map = new Map<string, Record<string, number>>()
+  const sourceMap = new Map<string, string>()
+
+  allRows.forEach(r => {
+    const id = `${r.bankName}|${r.paymentSource}`
+    const key = `${r.academicYear} ${r.term}`
+    termKeySet.add(key)
+    if (!map.has(id)) map.set(id, {})
+    sourceMap.set(id, r.paymentSource)
+    const row = map.get(id)!
+    row[key] = (row[key] ?? 0) + r.feeAmount
+  })
+
+  const termKeys = Array.from(termKeySet).sort()
+  const rows: BankFeeTermMatrixRow[] = []
+  map.forEach((termCols, id) => {
+    const [bankName] = id.split("|")
+    rows.push({ bankName, paymentSource: sourceMap.get(id) || "", termCols })
+  })
+
+  return { rows, termKeys }
+}
+
+export async function getBankFeeYearMatrix(filter: AnalyticsFilter): Promise<{
+  rows: BankFeeYearMatrixRow[]
+  yearKeys: string[]
+}> {
+  const allRows = getMockBankFees({})
+
+  const yearKeySet = new Set<string>()
+  const map = new Map<string, Record<string, number>>()
+  const sourceMap = new Map<string, string>()
+
+  allRows.forEach(r => {
+    const id = `${r.bankName}|${r.paymentSource}`
+    yearKeySet.add(r.academicYear)
+    if (!map.has(id)) map.set(id, {})
+    sourceMap.set(id, r.paymentSource)
+    const row = map.get(id)!
+    row[r.academicYear] = (row[r.academicYear] ?? 0) + r.feeAmount
+  })
+
+  const yearKeys = Array.from(yearKeySet).sort()
+  const rows: BankFeeYearMatrixRow[] = []
+  map.forEach((yearCols, id) => {
+    const [bankName] = id.split("|")
+    rows.push({ bankName, paymentSource: sourceMap.get(id) || "", yearCols })
+  })
+
+  return { rows, yearKeys }
 }
 
 // ── REPORT 4: Transaction status (success vs declined) ────────────────────────
@@ -685,115 +1018,273 @@ export async function getFilterOptions(): Promise<{ academicYears: string[]; ter
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
 
-export async function exportToExcel(
-  activeTab: string,
-  revenueData: RevenueByYearGroup[],
-  avgData: AvgRevenueByYearGroup[],
-  methodData: TransactionByMethod[],
-  statusData: TransactionStatus[],
-  bankFeeData: BankFeeRow[],
-  waterfallData: RevenueWaterfall[],
+export interface ExportPayload {
+  activeTab: string
   filter: AnalyticsFilter
-) {
+  // Tab 1
+  termMatrixRows: RevenueTermMatrixRow[]
+  termMatrixKeys: string[]
+  yearMatrixRows: RevenueYearMatrixRow[]
+  yearMatrixKeys: string[]
+  // Tab 2
+  avgTermRows: AvgTermMatrixRow[]
+  avgTermKeys: string[]
+  avgYearRows: AvgYearMatrixRow[]
+  avgYearKeys: string[]
+  avgToggle: "person" | "yearGroup"
+  // Tab 3
+  txnMatrixRows: TransactionYearGroupMethodRow[]
+  txnMethodKeys: string[]
+  methodData: TransactionByMethod[]
+  // Tab 4
+  statusData: TransactionStatus[]
+  // Tab 5
+  bankFeeData: BankFeeRow[]
+  feeTermRows: BankFeeTermMatrixRow[]
+  feeTermKeys: string[]
+  feeYearRows: BankFeeYearMatrixRow[]
+  feeYearKeys: string[]
+  // Tab 6
+  waterfallData: RevenueWaterfall[]
+}
+
+export async function exportToExcel(payload: ExportPayload) {
+  const { activeTab, filter } = payload
   const wb = XLSX.utils.book_new()
   let filename = "Analytics_Report"
 
   if (activeTab === "revenue") {
-    const revSheet = XLSX.utils.json_to_sheet(revenueData.map(r => ({
-      "Year Group": r.yearGroup,
-      "Academic Year": r.academicYear,
-      "Term": r.term,
-      "Invoices": r.studentCount,
-      "Gross Revenue": r.grossRevenue,
-      "Discount": r.discountAmount,
-      "Net Revenue": r.netRevenue
-    })))
-    XLSX.utils.book_append_sheet(wb, revSheet, "Revenue Comparison")
+    // Sheet 1: เปรียบเทียบรายเทอม (Compare by Term)
+    const termHeaders = ["Year Group", ...payload.termMatrixKeys, "Total"]
+    const termRows = payload.termMatrixRows.map(r => {
+      const row: any = { "Year Group": r.yearGroup }
+      let total = 0
+      payload.termMatrixKeys.forEach(k => {
+        row[k] = r.termCols[k] ?? 0
+        total += r.termCols[k] ?? 0
+      })
+      row["Total"] = total
+      return row
+    })
+    // Total row
+    const termTotalRow: any = { "Year Group": "Total" }
+    let grandTotal = 0
+    payload.termMatrixKeys.forEach(k => {
+      const colTotal = payload.termMatrixRows.reduce((s, r) => s + (r.termCols[k] ?? 0), 0)
+      termTotalRow[k] = colTotal
+      grandTotal += colTotal
+    })
+    termTotalRow["Total"] = grandTotal
+    termRows.push(termTotalRow)
+    const termSheet = XLSX.utils.json_to_sheet(termRows, { header: termHeaders })
+    XLSX.utils.book_append_sheet(wb, termSheet, "Compare by Term")
+
+    // Sheet 2: เปรียบเทียบปีการศึกษา (Compare by Year)
+    const yearHeaders = ["Year Group", ...payload.yearMatrixKeys, "Total"]
+    const yearRows = payload.yearMatrixRows.map(r => {
+      const row: any = { "Year Group": r.yearGroup }
+      let total = 0
+      payload.yearMatrixKeys.forEach(k => {
+        row[k] = r.yearCols[k] ?? 0
+        total += r.yearCols[k] ?? 0
+      })
+      row["Total"] = total
+      return row
+    })
+    const yearTotalRow: any = { "Year Group": "Total" }
+    let yearGrandTotal = 0
+    payload.yearMatrixKeys.forEach(k => {
+      const colTotal = payload.yearMatrixRows.reduce((s, r) => s + (r.yearCols[k] ?? 0), 0)
+      yearTotalRow[k] = colTotal
+      yearGrandTotal += colTotal
+    })
+    yearTotalRow["Total"] = yearGrandTotal
+    yearRows.push(yearTotalRow)
+    const yearSheet = XLSX.utils.json_to_sheet(yearRows, { header: yearHeaders })
+    XLSX.utils.book_append_sheet(wb, yearSheet, "Compare by Year")
+
     filename = "Revenue_Comparison"
-  } 
+  }
   else if (activeTab === "avg") {
-    const avgSheet = XLSX.utils.json_to_sheet(avgData.map(r => ({
-      "Year Group": r.yearGroup,
-      "Students": r.studentCount,
-      "Total Revenue": r.totalRevenue,
-      "Avg / Student": r.avgPerStudent,
-      "Tuition Fee": r.breakdown.tuition,
-      "ECA": r.breakdown.eca,
-      "Trip/Sport/Others": r.breakdown.trip + r.breakdown.sport + r.breakdown.others
-    })))
-    XLSX.utils.book_append_sheet(wb, avgSheet, "Avg_Revenue_Per_Student")
-    filename = "Avg_Revenue_Per_Student"
+    const mode = payload.avgToggle === "person" ? "Per Person" : "Per Year Group"
+
+    // Sheet 1: AVG by Term
+    const termHeaders = ["Year Group", "No. of Students", ...payload.avgTermKeys]
+    const termRows = payload.avgTermRows.map(r => {
+      const row: any = { "Year Group": r.yearGroup, "No. of Students": r.studentCount }
+      payload.avgTermKeys.forEach(k => { row[k] = r.termCols[k] ?? 0 })
+      return row
+    })
+    const termTotalRow: any = { "Year Group": "Total", "No. of Students": payload.avgTermRows.reduce((s, r) => s + r.studentCount, 0) }
+    payload.avgTermKeys.forEach(k => {
+      const sum = payload.avgTermRows.reduce((s, r) => s + (r.termCols[k] ?? 0), 0)
+      termTotalRow[k] = payload.avgToggle === "person" ? Math.round(sum / (payload.avgTermRows.length || 1)) : sum
+    })
+    termRows.push(termTotalRow)
+    const termSheet = XLSX.utils.json_to_sheet(termRows, { header: termHeaders })
+    XLSX.utils.book_append_sheet(wb, termSheet, `AVG by Term (${mode})`)
+
+    // Sheet 2: AVG by Year
+    const yearHeaders = ["Year Group", "No. of Students", ...payload.avgYearKeys]
+    const yearRows = payload.avgYearRows.map(r => {
+      const row: any = { "Year Group": r.yearGroup, "No. of Students": r.studentCount }
+      payload.avgYearKeys.forEach(k => { row[k] = r.yearCols[k] ?? 0 })
+      return row
+    })
+    const yearTotalRow: any = { "Year Group": "Total", "No. of Students": payload.avgYearRows.reduce((s, r) => s + r.studentCount, 0) }
+    payload.avgYearKeys.forEach(k => {
+      const sum = payload.avgYearRows.reduce((s, r) => s + (r.yearCols[k] ?? 0), 0)
+      yearTotalRow[k] = payload.avgToggle === "person" ? Math.round(sum / (payload.avgYearRows.length || 1)) : sum
+    })
+    yearRows.push(yearTotalRow)
+    const yearSheet = XLSX.utils.json_to_sheet(yearRows, { header: yearHeaders })
+    XLSX.utils.book_append_sheet(wb, yearSheet, `AVG by Year (${mode})`)
+
+    filename = "AVG_Amount"
   }
   else if (activeTab === "methods") {
-    const methodSheet = XLSX.utils.json_to_sheet(methodData.map(m => ({
+    // Sheet 1: Year Group × Method matrix
+    const matrixHeaders = ["Year Group", ...payload.txnMethodKeys, "Total"]
+    const matrixRows = payload.txnMatrixRows.map(r => {
+      const row: any = { "Year Group": r.yearGroup }
+      payload.txnMethodKeys.forEach(k => { row[k] = r.methods[k] ?? 0 })
+      row["Total"] = r.total
+      return row
+    })
+    const matrixTotalRow: any = { "Year Group": "Total" }
+    let matrixGrandTotal = 0
+    payload.txnMethodKeys.forEach(k => {
+      const colTotal = payload.txnMatrixRows.reduce((s, r) => s + (r.methods[k] ?? 0), 0)
+      matrixTotalRow[k] = colTotal
+      matrixGrandTotal += colTotal
+    })
+    matrixTotalRow["Total"] = matrixGrandTotal
+    matrixRows.push(matrixTotalRow)
+    const matrixSheet = XLSX.utils.json_to_sheet(matrixRows, { header: matrixHeaders })
+    XLSX.utils.book_append_sheet(wb, matrixSheet, "No. of Trans")
+
+    // Sheet 2: Summary
+    const summarySheet = XLSX.utils.json_to_sheet(payload.methodData.map(m => ({
       "Payment Method": m.method,
       "Transactions": m.count,
       "Share (%)": m.percentage,
       "Total Amount": m.totalAmount
     })))
-    XLSX.utils.book_append_sheet(wb, methodSheet, "Payment Methods")
-    filename = "Transactions_By_Method"
+    XLSX.utils.book_append_sheet(wb, summarySheet, "Summary")
+
+    filename = "No_of_Transactions"
   }
   else if (activeTab === "status") {
-    const statusRows: any[] = []
-    statusData.forEach(s => {
-      if (s.byMethod) {
-        Object.entries(s.byMethod).forEach(([method, v]) => {
-          statusRows.push({
-            "Status": s.label,
-            "Method": method,
-            "Successful": v.success,
-            "Declined": v.declined,
-            "Total": v.success + v.declined
-          })
-        })
-      } else {
-        statusRows.push({
-          "Status": s.label,
-          "Count": s.count,
-          "Percentage": s.percentage
-        })
-      }
-    })
-    const statusSheet = XLSX.utils.json_to_sheet(statusRows)
-    XLSX.utils.book_append_sheet(wb, statusSheet, "Transaction Status")
-    filename = "Transaction_Status"
+    // Sheet 1: Overview
+    const overviewSheet = XLSX.utils.json_to_sheet(payload.statusData.map(s => ({
+      "Status": s.label,
+      "Count": s.count,
+      "Percentage (%)": s.percentage
+    })))
+    XLSX.utils.book_append_sheet(wb, overviewSheet, "Declined vs Successful")
+
+    // Sheet 2: By Method breakdown
+    if (payload.statusData[0]?.byMethod) {
+      const methodRows = Object.entries(payload.statusData[0].byMethod).map(([method, v]) => ({
+        "Method": method,
+        "Successful": v.success,
+        "Declined": v.declined,
+        "Total": v.success + v.declined,
+        "Success Rate (%)": (v.success + v.declined) > 0 ? Math.round((v.success / (v.success + v.declined)) * 100) : 0
+      }))
+      const methodSheet = XLSX.utils.json_to_sheet(methodRows)
+      XLSX.utils.book_append_sheet(wb, methodSheet, "By Method")
+    }
+
+    filename = "Declined_vs_Successful"
   }
   else if (activeTab === "fees") {
-    const feeSheet = XLSX.utils.json_to_sheet(bankFeeData.map(r => ({
-      "Bank": r.bankName,
-      "Payment Source": r.paymentSource,
-      "Academic Year": r.academicYear,
-      "Term": r.term,
-      "Transactions": r.transactionCount,
-      "Fee Amount": r.feeAmount
-    })))
-    XLSX.utils.book_append_sheet(wb, feeSheet, "Bank Fees")
+    // Sheet 1: Bank Fees by Term
+    const feeTermHeaders = ["Bank Name", "Payment Source", ...payload.feeTermKeys, "Total"]
+    const feeTermRows = payload.feeTermRows.map(r => {
+      const row: any = { "Bank Name": r.bankName, "Payment Source": r.paymentSource }
+      let total = 0
+      payload.feeTermKeys.forEach(k => {
+        row[k] = r.termCols[k] ?? 0
+        total += r.termCols[k] ?? 0
+      })
+      row["Total"] = total
+      return row
+    })
+    const feeTotalRow: any = { "Bank Name": "Total", "Payment Source": "" }
+    let feeGrandTotal = 0
+    payload.feeTermKeys.forEach(k => {
+      const colTotal = payload.feeTermRows.reduce((s, r) => s + (r.termCols[k] ?? 0), 0)
+      feeTotalRow[k] = colTotal
+      feeGrandTotal += colTotal
+    })
+    feeTotalRow["Total"] = feeGrandTotal
+    feeTermRows.push(feeTotalRow)
+    const feeTermSheet = XLSX.utils.json_to_sheet(feeTermRows, { header: feeTermHeaders })
+    XLSX.utils.book_append_sheet(wb, feeTermSheet, "Bank Fees by Term")
+
+    // Sheet 2: Bank Fees by Year
+    const feeYearHeaders = ["Bank Name", "Payment Source", ...payload.feeYearKeys, "Total"]
+    const feeYearRows = payload.feeYearRows.map(r => {
+      const row: any = { "Bank Name": r.bankName, "Payment Source": r.paymentSource }
+      let total = 0
+      payload.feeYearKeys.forEach(k => {
+        row[k] = r.yearCols[k] ?? 0
+        total += r.yearCols[k] ?? 0
+      })
+      row["Total"] = total
+      return row
+    })
+    const feeYearTotalRow: any = { "Bank Name": "Total", "Payment Source": "" }
+    let feeYearGrandTotal = 0
+    payload.feeYearKeys.forEach(k => {
+      const colTotal = payload.feeYearRows.reduce((s, r) => s + (r.yearCols[k] ?? 0), 0)
+      feeYearTotalRow[k] = colTotal
+      feeYearGrandTotal += colTotal
+    })
+    feeYearTotalRow["Total"] = feeYearGrandTotal
+    feeYearRows.push(feeYearTotalRow)
+    const feeYearSheet = XLSX.utils.json_to_sheet(feeYearRows, { header: feeYearHeaders })
+    XLSX.utils.book_append_sheet(wb, feeYearSheet, "Bank Fees by Year")
+
     filename = "Bank_Fees"
   }
   else if (activeTab === "waterfall") {
-    const waterfallRows = waterfallData.map(r => {
+    const discKeys = payload.waterfallData.length > 0 ? Object.keys(payload.waterfallData[0].discounts) : []
+    const wfHeaders = ["Year Group", "Students", "Gross Revenue", ...discKeys.map(k => `Discount: ${k}`), "Bank Fees", "Net Revenue"]
+    const wfRows = payload.waterfallData.map(r => {
       const row: any = {
         "Year Group": r.yearGroup,
         "Students": r.studentCount,
         "Gross Revenue": r.grossRevenue
       }
-      Object.entries(r.discounts).forEach(([name, amt]) => {
-        row[`Discount: ${name}`] = amt
-      })
+      discKeys.forEach(k => { row[`Discount: ${k}`] = r.discounts[k] ?? 0 })
       row["Bank Fees"] = r.bankFees
       row["Net Revenue"] = r.netRevenue
       return row
     })
-    const wfSheet = XLSX.utils.json_to_sheet(waterfallRows)
-    XLSX.utils.book_append_sheet(wb, wfSheet, "Revenue Waterfall")
-    filename = "Revenue_Waterfall"
+    // Total row
+    const wfTotalRow: any = {
+      "Year Group": "Total",
+      "Students": payload.waterfallData.reduce((s, r) => s + r.studentCount, 0),
+      "Gross Revenue": payload.waterfallData.reduce((s, r) => s + r.grossRevenue, 0)
+    }
+    discKeys.forEach(k => {
+      wfTotalRow[`Discount: ${k}`] = payload.waterfallData.reduce((s, r) => s + (r.discounts[k] ?? 0), 0)
+    })
+    wfTotalRow["Bank Fees"] = payload.waterfallData.reduce((s, r) => s + r.bankFees, 0)
+    wfTotalRow["Net Revenue"] = payload.waterfallData.reduce((s, r) => s + r.netRevenue, 0)
+    wfRows.push(wfTotalRow)
+    const wfSheet = XLSX.utils.json_to_sheet(wfRows, { header: wfHeaders })
+    XLSX.utils.book_append_sheet(wb, wfSheet, "Net vs Gross Revenue")
+
+    filename = "Net_vs_Gross_Revenue"
   }
 
   // Generate and Save
   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" })
   const data = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8" })
-  
+
   const filterDesc = `AY${filter.academicYear?.replace("/", "-") || "All"}_${filter.term || "All"}`
   saveAs(data, `${filename}_${filterDesc}_${new Date().toISOString().split("T")[0]}.xlsx`)
 }

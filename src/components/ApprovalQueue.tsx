@@ -899,7 +899,7 @@ export function ApprovalQueue() {
       "Invoice No.",
       "Student Name",
       "Student ID",
-      "Grade",
+      "Year Group",
       "Parent Name",
       "Academic Year",
       "Term",

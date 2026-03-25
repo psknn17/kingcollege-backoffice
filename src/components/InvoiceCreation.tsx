@@ -1341,7 +1341,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const { getRegistrationFees, getSiblingDiscountPercentage } = useDiscountOptions()
 
   // Student context
-  const { students, addStudent, families, addFamily } = useStudents()
+  const { students, addStudent, families, addFamily, getStudentsForAcademicYear } = useStudents()
   const { academicYears } = useAcademicYears()
 
   // Auth context for role-based access control
@@ -1369,12 +1369,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const effectiveTerm = selectedTerm || term
 
   const availableStudents = useMemo(() => {
-    return students.filter(student => student.status === "active").map(student => {
-      // Convert gradeLevel ID to label format (e.g., "year2" -> "Year 2")
-      const gradeLabel = getGradeLabel(student.gradeLevel)
+    // ดึงนักเรียนตาม Academic Year ที่เลือก (เช็คทั้ง current + gradeHistory)
+    const yearStudents = effectiveAcademicYear
+      ? getStudentsForAcademicYear(effectiveAcademicYear)
+      : students.filter(s => s.status === "active").map(s => ({ ...s, effectiveGrade: s.gradeLevel, effectiveRoom: s.room || "" }))
 
-      // Get room/section from student if available, or leave empty for "All Rooms"
-      const studentRoom = (student as any).section || (student as any).room || ""
+    return yearStudents.filter(student => student.status === "active").map(student => {
+      // Use effectiveGrade (grade for the selected academic year)
+      const gradeLabel = getGradeLabel(student.effectiveGrade)
+      const studentRoom = student.effectiveRoom || ""
 
       // For simplified views (Trip/Activity, Exam, School Bus), don't calculate discounts or fee waivers
       if (isSimplifiedView) {
@@ -1423,8 +1426,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         return {
           id: student.studentId,
           name: `${student.firstName} ${student.lastName}`,
-          grade: gradeLabel, // Convert to label format to match Create Invoice dropdown
-          room: studentRoom, // Use actual room/section, empty means "All Rooms"
+          grade: gradeLabel, // Grade for the selected academic year
+          room: studentRoom,
           parentName: student.parents?.[0]?.name || "Parent",
           email: recipientEmail,
         originalStudent: student,
@@ -1445,7 +1448,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         },
       } as InvoiceStudent
     })
-  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, getSiblingDiscountPercentage, getStudentGroupDiscounts, category])
+  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, getSiblingDiscountPercentage, getStudentGroupDiscounts, category, getStudentsForAcademicYear])
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
@@ -2567,6 +2570,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       familyId: familyId,
       childOrder: newStudentFamilyType === "existing" ? childOrder : newStudentChildOrder,
       parents: [parentInfo],
+      room: "",
       enrollmentDate: now,
       notes: "New student - added via Invoice Creation",
       createdBy: "system",
@@ -3293,7 +3297,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   </Select>
                 </div>
               ) : (
-                // Step 2 for others: Select Grade
+                // Step 2 for others: Select Year Group
                 <div className="space-y-3">
                   <h3 className="font-medium">2. {t("invoiceCreate.selectGrade")}</h3>
                   <Select disabled={!userCanEdit} value={selectedGrade} onValueChange={handleGradeChange}>
@@ -3310,7 +3314,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               )
             )}
 
-            {/* Step 3: Select Grade (for Trip & Activity/School Bus) or Term (for others) */}
+            {/* Step 3: Select Year Group (for Trip & Activity/School Bus) or Term (for others) */}
             {!isSimplifiedView && selectedAcademicYear && (
               (invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") ? (
                 // Step 3 for Trip & Activity and School Bus: Multi-select Grades

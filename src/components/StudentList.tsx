@@ -54,7 +54,7 @@ import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
-import { useStudents, Student, Parent, Family, convertTermFormat } from "@/contexts/StudentContext"
+import { useStudents, Student, Parent, Family, GradeHistoryEntry, convertTermFormat } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
 import { cn } from "./ui/utils"
@@ -206,11 +206,13 @@ const emptyStudent: Omit<Student, "id"> = {
   dateOfBirth: null,
   gender: "male",
   gradeLevel: "",
+  room: "",
   academicYear: "",
   enrollmentTerm: "term1",
   status: "active",
   withdrawalAcademicYear: undefined,
   withdrawalTerm: undefined,
+  gradeHistory: [],
   familyId: "",
   childOrder: 1,
   parents: [],
@@ -241,6 +243,32 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
 
+  // Auto-detect enrollment term from enrollment date + academic year term settings
+  const getTermFromDate = (date: Date | null, yearName?: string): "term1" | "term2" | "term3" => {
+    if (!date) return "term1"
+    const d = new Date(date)
+    // Find academic year settings
+    const ay = academicYears.find(y => y.name === yearName)
+    if (ay && ay.terms.length > 0) {
+      for (const term of ay.terms) {
+        if (term.startDate && term.endDate) {
+          const start = new Date(term.startDate)
+          const end = new Date(term.endDate)
+          if (d >= start && d <= end) {
+            // term.id is like "term-xxx", map to "term1"/"term2"/"term3" by index
+            const idx = ay.terms.indexOf(term)
+            return (`term${idx + 1}` as "term1" | "term2" | "term3")
+          }
+        }
+      }
+    }
+    // Fallback: month-based — Aug-Nov=term1, Dec-Mar=term2, Apr-Jul=term3
+    const month = d.getMonth() // 0-based
+    if (month >= 7 && month <= 10) return "term1"   // Aug-Nov
+    if (month >= 11 || month <= 2) return "term2"    // Dec-Mar
+    return "term3"                                    // Apr-Jul
+  }
+
   // Confirmation dialog hooks
   const addConfirmDialog = useConfirmDialog()
   const editConfirmDialog = useConfirmDialog()
@@ -248,6 +276,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   const deleteConfirmDialog = useConfirmDialog()
 
   const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [filterGrade, setFilterGrade] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterAcademicYear, setFilterAcademicYear] = useState("all")
@@ -372,6 +401,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         case "gradeLevel":
           aValue = a.gradeLevel
           bValue = b.gradeLevel
+          break
+        case "room":
+          aValue = a.room || ""
+          bValue = b.room || ""
           break
         case "academicYear":
           aValue = a.academicYear
@@ -555,13 +588,16 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const performSaveNewStudent = () => {
-    if (!formData.firstName || !formData.lastName || !formData.gradeLevel || !formData.academicYear || !formData.enrollmentTerm) {
+    if (!formData.firstName || !formData.lastName || !formData.gradeLevel || !formData.academicYear) {
       toast.error("Please fill in all required fields")
       return
     }
 
     const now = new Date()
     const currentUser = "Admin"
+
+    // Auto-calculate enrollmentTerm from enrollmentDate
+    const autoTerm = getTermFromDate(formData.enrollmentDate, formData.academicYear)
 
     const primaryParent = formData.parents.find(p => p.isPrimary)
     const parentEmail = primaryParent?.email || ""
@@ -584,6 +620,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     const newStudent: Student = {
       id: studentId,
       ...formData,
+      enrollmentTerm: autoTerm,
       familyId: familyId,
       createdBy: currentUser,
       createdAt: now,
@@ -609,13 +646,16 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const performSaveEditStudent = () => {
-    if (!formData.firstName || !formData.lastName || !formData.gradeLevel || !formData.academicYear || !formData.enrollmentTerm) {
+    if (!formData.firstName || !formData.lastName || !formData.gradeLevel || !formData.academicYear) {
       toast.error("Please fill in all required fields")
       return
     }
 
     if (selectedStudent) {
       const currentUser = "Admin"
+
+      // Auto-calculate enrollmentTerm from enrollmentDate
+      const autoTerm = getTermFromDate(formData.enrollmentDate, formData.academicYear)
 
       const primaryParent = formData.parents.find(p => p.isPrimary)
       const parentEmail = primaryParent?.email || ""
@@ -632,6 +672,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       updateStudent(selectedStudent.id, {
         ...formData,
+        enrollmentTerm: autoTerm,
         familyId: familyId,
         updatedBy: currentUser,
         updatedAt: new Date()
@@ -686,6 +727,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "Date of Birth",
       "Gender",
       "Year Group",
+      "Room",
       "Academic Year",
       "Status",
       "Family Code",
@@ -719,6 +761,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         student.dateOfBirth ? format(student.dateOfBirth, "dd/MM/yyyy") : "",
         student.gender,
         student.gradeLevel,
+        student.room || "",
         formatAcademicYear(student.academicYear),
         student.status,
         family?.familyName || "",
@@ -814,6 +857,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         "Date of Birth": first["Date of Birth"] || "",
         "Gender": String(first["Gender"] || "").trim().toLowerCase(),
         "Year Group": yearGroup,
+        "Room": String(first["Form"] || "").trim(),
         "Academic Year": academicYear,
         "Family Code": String(first["Student Billing Account Code"] || "").trim(),
         "Enrollment Date": first["Enrolment Date"] || "",
@@ -894,6 +938,19 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       return
     }
 
+    // เช็คว่า Academic Year ในไฟล์มีใน Term Settings หรือยัง
+    const missingYears = new Set<string>()
+    importPreview.forEach(row => {
+      const ay = (row["Academic Year"] || row["Year"] || "").replace(/-/g, "/")
+      if (ay && !availableYears.includes(ay)) {
+        missingYears.add(ay)
+      }
+    })
+    if (missingYears.size > 0) {
+      toast.error(`Academic Year ${Array.from(missingYears).join(", ")} has not been created in Term Settings yet. Please create it first.`)
+      return
+    }
+
     const now = new Date()
     const currentUser = "Admin"
     let imported = 0
@@ -943,13 +1000,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         dateOfBirth: row["Date of Birth"] ? new Date(row["Date of Birth"]) : null,
         gender: (row["Gender"]?.toLowerCase() || "other") as "male" | "female" | "other",
         gradeLevel: row["Year Group"]?.toLowerCase().replace(" ", "") || "",
+        room: row["Room"] || "",
         academicYear,
         status: (row["Status"]?.toLowerCase() || "active") as "active" | "graduated" | "withdrawn" | "on_leave",
         familyId: familyId,
         familyCode: familyCode,
         childOrder: parseInt(row["Child Order"]) || 1,
         parents: [],
-        enrollmentTerm: "term1",
+        enrollmentTerm: getTermFromDate(row["Enrollment Date"] ? new Date(row["Enrollment Date"]) : null, academicYear),
         enrollmentDate: row["Enrollment Date"] ? new Date(row["Enrollment Date"]) : null,
         notes: row["Notes"] || "",
         createdBy: currentUser,
@@ -1019,6 +1077,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "Full Name",
       "Year Code",
       "School Code",
+      "Form",
       "Student Billing Account Code",
       "Contact Billing Account Code",
       "Gender",
@@ -1230,6 +1289,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       return
     }
 
+    // Prevent promotion to non-existent academic year
+    if (!availableYears.includes(promoteToYear)) {
+      toast.error(`Academic Year ${promoteToYear} has not been created in Term Settings yet.`)
+      return
+    }
+
     // Prevent double promotion
     if (isYearAlreadyPromoted(promoteToYear)) {
       toast.error(t("student.alreadyPromoted").replace("{year}", promoteToYear))
@@ -1251,33 +1316,36 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
     studentsToPromote.forEach((student: Student) => {
       const nextGrade = getNextGrade(student.gradeLevel)
-      const newId = `${student.id}-${promoteToYear.replace(/[^0-9]/g, "")}`
+
+      // บันทึกชั้นปัจจุบันลง gradeHistory ก่อนเลื่อน
+      const currentHistory = student.gradeHistory || []
+      const newHistoryEntry: GradeHistoryEntry = {
+        grade: student.gradeLevel,
+        academicYear: student.academicYear,
+        room: student.room || undefined,
+        enrollmentTerm: student.enrollmentTerm || undefined
+      }
+      const updatedHistory = [...currentHistory, newHistoryEntry]
 
       if (nextGrade === "graduated") {
-        // Year 13 → create new record as graduated
-        addStudent({
-          ...student,
-          id: newId,
-          gradeLevel: "Year 13",
+        // Year 13 → mark as graduated (update in place)
+        updateStudent(student.id, {
+          gradeHistory: updatedHistory,
           status: "graduated",
           academicYear: promoteToYear,
-          enrollmentTerm: "term1",
           updatedBy: user?.name || "Admin",
           updatedAt: now,
-          createdAt: now
         })
         graduatedCount++
       } else if (nextGrade) {
-        // Promote to next grade → create new record, keep old record intact
-        addStudent({
-          ...student,
-          id: newId,
+        // เลื่อนชั้น → update record เดิม
+        updateStudent(student.id, {
+          gradeHistory: updatedHistory,
           gradeLevel: nextGrade,
           academicYear: promoteToYear,
-          enrollmentTerm: "term1",
+          room: "", // ห้องใหม่ยังไม่กำหนด
           updatedBy: user?.name || "Admin",
           updatedAt: now,
-          createdAt: now
         })
         promotedCount++
       }
@@ -1474,6 +1542,45 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         {/* Academic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
+            <Label>{t("student.academicYear")} <span className="text-destructive">*</span></Label>
+            <Select
+              value={formData.academicYear}
+              onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
+              disabled={!userCanEdit}
+            >
+              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                <SelectValue placeholder={t("student.selectYear")} />
+              </SelectTrigger>
+              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("student.enrollmentTerm")}</Label>
+            <Select
+              value={formData.enrollmentTerm || getTermFromDate(formData.enrollmentDate, formData.academicYear)}
+              onValueChange={(value: "term1" | "term2" | "term3") => setFormData(prev => ({ ...prev, enrollmentTerm: value }))}
+              disabled={!userCanEdit}
+            >
+              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                {getTermOptions(t).map(term => (
+                  <SelectItem key={term.id} value={term.id}>{term.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
             <Label>{t("student.yearGroup")} <span className="text-destructive">*</span></Label>
             <Select
               value={formData.gradeLevel}
@@ -1493,45 +1600,36 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>{t("student.academicYear")} <span className="text-destructive">*</span></Label>
-            <Select
-              value={formData.academicYear}
-              onValueChange={(year: string) => setFormData((prev: any) => ({ ...prev, academicYear: year }))}
+            <Label>{t("student.room")}</Label>
+            <Input
+              value={formData.room}
+              onChange={(e) => setFormData(prev => ({ ...prev, room: e.target.value }))}
+              placeholder="e.g. 3P, 5B"
               disabled={!userCanEdit}
-            >
-              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                <SelectValue placeholder={t("student.selectYear")} />
-              </SelectTrigger>
-              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>{t("student.enrollmentTerm")} <span className="text-destructive">*</span></Label>
-            <Select
-              value={formData.enrollmentTerm}
-              onValueChange={(value: "term1" | "term2" | "term3") => setFormData(prev => ({ ...prev, enrollmentTerm: value }))}
-              disabled={!userCanEdit}
-            >
-              <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
-                <SelectValue placeholder={t("student.selectTerm")} />
-              </SelectTrigger>
-              <SelectContent onPointerDown={(e) => e.stopPropagation()}>
-                {getTermOptions(t).map(term => (
-                  <SelectItem key={term.id} value={term.id}>
-                    {term.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>{t("student.enrollmentDate")}</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!userCanEdit}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.enrollmentDate ? format(formData.enrollmentDate, "PPP") : t("student.pickADate")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={formData.enrollmentDate || undefined}
+                  onSelect={(date) => setFormData(prev => ({ ...prev, enrollmentDate: date || null }))}
+                  initialFocus
+                  disabled={!userCanEdit}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label>{t("student.status")}</Label>
@@ -1540,7 +1638,6 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               onValueChange={(value: "active" | "graduated" | "withdrawn" | "on_leave") => setFormData(prev => ({
                 ...prev,
                 status: value,
-                // Clear withdrawal fields when switching away from "withdrawn"
                 withdrawalAcademicYear: value === "withdrawn" ? prev.withdrawalAcademicYear : undefined,
                 withdrawalTerm: value === "withdrawn" ? prev.withdrawalTerm : undefined,
               }))}
@@ -1609,48 +1706,122 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>{t("student.enrollmentDate")}</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!userCanEdit}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.enrollmentDate ? format(formData.enrollmentDate, "PPP") : t("student.pickADate")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.enrollmentDate || undefined}
-                  onSelect={(date) => setFormData(prev => ({ ...prev, enrollmentDate: date || null }))}
-                  initialFocus
-                  disabled={!userCanEdit}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="space-y-2">
-            <Label>{t("student.familyCode")}</Label>
-            <Input
-              value={formData.familyCode || ""}
-              onChange={(e) => {
-                const inputCode = e.target.value
-                setFormData(prev => ({ ...prev, familyCode: inputCode }))
-              }}
-              placeholder={t("student.familyCodePlaceholder")}
-              disabled={!userCanEdit}
-              className="font-mono"
-            />
-            <p className="text-xs text-muted-foreground">
-              {formData.familyCode && families.find((f: Family) => f.familyCode === formData.familyCode)
-                ? `✓ Existing family: ${families.find((f: Family) => f.familyCode === formData.familyCode)?.familyName}`
-                : formData.familyCode
-                ? "⚠ New family will be created"
-                : t("student.optionalFamilyCode")}
-            </p>
-          </div>
+        <div className="space-y-2">
+          <Label>{t("student.familyCode")}</Label>
+          <Input
+            value={formData.familyCode || ""}
+            onChange={(e) => {
+              const inputCode = e.target.value
+              setFormData(prev => ({ ...prev, familyCode: inputCode }))
+            }}
+            placeholder={t("student.familyCodePlaceholder")}
+            disabled={!userCanEdit}
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            {formData.familyCode && families.find((f: Family) => f.familyCode === formData.familyCode)
+              ? `✓ Existing family: ${families.find((f: Family) => f.familyCode === formData.familyCode)?.familyName}`
+              : formData.familyCode
+              ? "⚠ New family will be created"
+              : t("student.optionalFamilyCode")}
+          </p>
         </div>
+
+        {/* Grade History */}
+        {formData.gradeHistory && formData.gradeHistory.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-sm flex items-center gap-2 text-blue-800">
+                <GraduationCap className="w-4 h-4" />
+                Year Group History
+              </h4>
+            </div>
+            {formData.gradeHistory.map((entry: GradeHistoryEntry, idx: number) => (
+              <div key={idx} className="border rounded-lg p-4 bg-muted/30 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">{t("student.academicYear")}</Label>
+                    <Select
+                      value={entry.academicYear}
+                      onValueChange={(value) => {
+                        const updated = [...(formData.gradeHistory || [])]
+                        updated[idx] = { ...updated[idx], academicYear: value }
+                        setFormData(prev => ({ ...prev, gradeHistory: updated }))
+                      }}
+                      disabled={!userCanEdit}
+                    >
+                      <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                        {availableYears.map((year: string) => (
+                          <SelectItem key={year} value={year}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">{t("student.enrollmentTerm")}</Label>
+                    <Select
+                      value={entry.enrollmentTerm || getTermFromDate(formData.enrollmentDate, entry.academicYear)}
+                      onValueChange={(value) => {
+                        const updated = [...(formData.gradeHistory || [])]
+                        updated[idx] = { ...updated[idx], enrollmentTerm: value }
+                        setFormData(prev => ({ ...prev, gradeHistory: updated }))
+                      }}
+                      disabled={!userCanEdit}
+                    >
+                      <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                        {getTermOptions(t).map(term => (
+                          <SelectItem key={term.id} value={term.id}>{term.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">{t("student.yearGroup")}</Label>
+                    <Select
+                      value={entry.grade}
+                      onValueChange={(value) => {
+                        const updated = [...(formData.gradeHistory || [])]
+                        updated[idx] = { ...updated[idx], grade: value }
+                        setFormData(prev => ({ ...prev, gradeHistory: updated }))
+                      }}
+                      disabled={!userCanEdit}
+                    >
+                      <SelectTrigger onPointerDown={(e) => e.stopPropagation()}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent onPointerDown={(e) => e.stopPropagation()}>
+                        {gradeLevels.map(grade => (
+                          <SelectItem key={grade.id} value={grade.id}>{grade.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">{t("student.room")}</Label>
+                    <Input
+                      value={entry.room || ""}
+                      onChange={(e) => {
+                        const updated = [...(formData.gradeHistory || [])]
+                        updated[idx] = { ...updated[idx], room: e.target.value }
+                        setFormData(prev => ({ ...prev, gradeHistory: updated }))
+                      }}
+                      placeholder="e.g. 3P, 5B"
+                      disabled={!userCanEdit}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       </TabsContent>
 
@@ -1824,87 +1995,84 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[250px]">
-              <SearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 placeholder={t("student.searchPlaceholder")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9"
               />
             </div>
-            <Select value={filterGrade} onValueChange={setFilterGrade}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder={t("student.yearGroup")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
-                {gradeLevels.map(grade => (
-                  <SelectItem key={grade.id} value={grade.label}>
-                    {grade.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder={t("common.status")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                {getStatusOptions(t).map(status => (
-                  <SelectItem key={status.id} value={status.id}>
-                    {status.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
-              <SelectTrigger className="w-[180px]">
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                <SelectValue placeholder={t("common.academicYear")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
-                {availableYears.map((year: string) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterTerm} onValueChange={setFilterTerm}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t("student.term")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.allTerms")}</SelectItem>
-                {getTermOptions(t).map(term => (
-                  <SelectItem key={term.id} value={term.id}>
-                    {term.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {(searchTerm || filterGrade !== "all" || filterStatus !== "all" || filterAcademicYear !== "all" || filterTerm !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm("")
-                  setFilterGrade("all")
-                  setFilterStatus("all")
-                  setFilterAcademicYear("all")
-                  setFilterTerm("all")
-                }}
-                className="text-muted-foreground"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+            </Button>
+          </div>
+          {showFilters && (<>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Select value={filterGrade} onValueChange={setFilterGrade}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("student.yearGroup")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("invoice.allYearGroups")}</SelectItem>
+                  {gradeLevels.map(grade => (
+                    <SelectItem key={grade.id} value={grade.label}>
+                      {grade.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("common.status")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
+                  {getStatusOptions(t).map(status => (
+                    <SelectItem key={status.id} value={status.id}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("common.academicYear")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
+                  {availableYears.map((year: string) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterTerm} onValueChange={setFilterTerm}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("student.term")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.allTerms")}</SelectItem>
+                  {getTermOptions(t).map(term => (
+                    <SelectItem key={term.id} value={term.id}>
+                      {term.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => { setSearchTerm(""); setFilterGrade("all"); setFilterStatus("all"); setFilterAcademicYear("all"); setFilterTerm("all") }}>
                 {t("common.clearFilters")}
               </Button>
-            )}
-          </div>
+            </div>
+          </>)}
         </CardContent>
       </Card>
 
@@ -1979,6 +2147,13 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
+                {/* Room - Left */}
+                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("room")} align="left">
+                  <div className="flex items-center gap-1">
+                    {t("student.room")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
                 {/* Academic Year - Left */}
                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")} align="left">
                   <div className="flex items-center gap-1">
@@ -2028,7 +2203,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <TableBody>
               {paginatedStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="p-0">
+                  <TableCell colSpan={12} className="p-0">
                     {searchTerm || filterGrade !== "all" || filterStatus !== "all" ? (
                       <EmptySearchResults
                         onClear={() => {
@@ -2075,6 +2250,8 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     </TableCell>
                     {/* Year Group - Left */}
                     <TableCell align="left">{getGradeLabel(student.gradeLevel)}</TableCell>
+                    {/* Room - Left */}
+                    <TableCell align="left">{student.room || "-"}</TableCell>
                     {/* Academic Year - Left */}
                     <TableCell align="left">{formatAcademicYear(student.academicYear)}</TableCell>
                     {/* Term - Center (Badge) */}
@@ -2100,63 +2277,39 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                         {getFamilyCode(student.familyId, student.familyCode)}
                       </Badge>
                     </TableCell>
-                    {/* Discounts/Benefits - Left */}
+                    {/* Discounts/Benefits - Left (category tags only) */}
                     <TableCell align="left">
                       {(() => {
-                        const discounts: any[] = []
+                        const tags = new Set<string>()
                         const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-                        // Check for special discounts from localStorage records (fallback to notes)
                         const isStaff = isStaffChildStudent(student.studentId) || student.notes?.toLowerCase().includes('staff')
                         const hasScholarship = hasScholarshipDiscount(student.studentId) || student.notes?.toLowerCase().includes('scholarship')
                         const hasEarlyBird = hasEarlyBirdDiscount(student.studentId) || student.notes?.toLowerCase().includes('early bird')
 
-                        // Staff Child
-                        if (isStaff) {
-                          discounts.push(
-                            <Badge key="staff" className="bg-blue-100 text-blue-800 text-xs">
-                              {t("student.staff")} 50%
-                            </Badge>
-                          )
-                        }
-
-                        // Scholarship
-                        if (hasScholarship) {
-                          discounts.push(
-                            <Badge key="scholarship" className="bg-purple-100 text-purple-800 text-xs">
-                              {t("student.scholarship")}
-                            </Badge>
-                          )
-                        }
-
-                        // Early Bird
-                        if (hasEarlyBird) {
-                          discounts.push(
-                            <Badge key="earlybird" className="bg-amber-100 text-amber-800 text-xs">
-                              {t("student.earlyBird")} 5%
-                            </Badge>
-                          )
-                        }
-
-                        // Student Group Discounts
-                        groupDiscounts.forEach((group: any, idx: number) => {
-                          const discountLabel = group.discountType === "fixed"
-                            ? `฿${(group.fixedAmount || 0).toLocaleString()}`
-                            : `${group.discountPercentage}%`
-                          const categoryLabel = group.category === "tuition" ? "" : ` (${group.category?.toUpperCase()})`
-                          discounts.push(
-                            <Badge key={`group-${idx}`} className="bg-teal-100 text-teal-800 text-xs">
-                              {group.name} {discountLabel}{categoryLabel}
-                            </Badge>
-                          )
+                        // Staff, Scholarship, Early Bird → Tuition category
+                        if (isStaff || hasScholarship || hasEarlyBird) tags.add("Tuition")
+                        groupDiscounts.forEach((g: any) => {
+                          const label = g.category === "tuition" ? "Tuition" : g.category === "eca" ? "ECA" : g.category === "trip" ? "Trip & Activity" : g.category === "exam" ? "Exam" : g.category === "bus" ? "School Bus" : g.category
+                          tags.add(label)
                         })
 
-                        if (discounts.length === 0) {
-                          return <span className="text-muted-foreground">-</span>
+                        if (tags.size === 0) return <span className="text-muted-foreground">-</span>
+
+                        const colorMap: Record<string, string> = {
+                          Tuition: "!bg-teal-100 !text-teal-800",
+                          ECA: "!bg-indigo-100 !text-indigo-800",
+                          "Trip & Activity": "!bg-orange-100 !text-orange-800",
+                          Exam: "!bg-pink-100 !text-pink-800",
+                          "School Bus": "!bg-cyan-100 !text-cyan-800",
                         }
 
                         return (
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {discounts}
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from(tags).map(tag => (
+                              <Badge key={tag} className={`${colorMap[tag] || "!bg-gray-100 !text-gray-800"} border-transparent text-xs`}>
+                                {tag}
+                              </Badge>
+                            ))}
                           </div>
                         )
                       })()}
@@ -2250,27 +2403,19 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           {selectedStudent && (
             <div className="space-y-6">
               {/* Basic Info */}
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold">
-                    {selectedStudent.firstName} {selectedStudent.lastName}
-                  </h3>
-                  {selectedStudent.nickname && (
-                    <p className="text-muted-foreground">({selectedStudent.nickname})</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline">{selectedStudent.studentId}</Badge>
-                    {getStatusBadge(selectedStudent.status)}
-                  </div>
-                </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-lg font-mono text-muted-foreground">{selectedStudent.studentId}</span>
+                <h3 className="text-xl font-semibold">
+                  {selectedStudent.firstName} {selectedStudent.lastName}
+                </h3>
+                {selectedStudent.nickname && (
+                  <span className="text-muted-foreground">({selectedStudent.nickname})</span>
+                )}
+                {getStatusBadge(selectedStudent.status)}
               </div>
 
               {/* Academic Info */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="text-sm text-muted-foreground">{t("student.yearGroup")}</p>
-                  <p className="font-medium">{getGradeLabel(selectedStudent.gradeLevel)}</p>
-                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t("common.academicYear")}</p>
                   <p className="font-medium">{formatAcademicYear(selectedStudent.academicYear)}</p>
@@ -2280,10 +2425,54 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   <p className="font-medium">{getTermLabel(selectedStudent.enrollmentTerm)}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">{t("student.yearGroup")}</p>
+                  <p className="font-medium">{getGradeLabel(selectedStudent.gradeLevel)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{t("student.room")}</p>
+                  <p className="font-medium">{selectedStudent.room || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{t("student.enrollmentDate")}</p>
+                  <p className="font-medium">{selectedStudent.enrollmentDate ? format(selectedStudent.enrollmentDate, "PPP") : "-"}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">{t("student.familyCode")}</p>
                   <p className="font-medium">{getFamilyCode(selectedStudent.familyId, selectedStudent.familyCode)} ({t("student.child")} #{selectedStudent.childOrder})</p>
                 </div>
               </div>
+
+              {/* Grade History */}
+              {selectedStudent.gradeHistory && selectedStudent.gradeHistory.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2 text-blue-800">
+                    <GraduationCap className="w-4 h-4" />
+                    Year Group History
+                  </h4>
+                  {selectedStudent.gradeHistory.map((entry: GradeHistoryEntry, idx: number) => (
+                    <div key={idx} className="border rounded-lg p-4 bg-muted/30">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t("common.academicYear")}</p>
+                          <p className="font-medium">{entry.academicYear}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t("student.enrollmentTerm")}</p>
+                          <p className="font-medium">{getTermLabel(entry.enrollmentTerm || getTermFromDate(selectedStudent.enrollmentDate, entry.academicYear))}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t("student.yearGroup")}</p>
+                          <p className="font-medium">{getGradeLabel(entry.grade)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t("student.room")}</p>
+                          <p className="font-medium">{entry.room || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Discounts & Benefits */}
               <div className="border rounded-lg p-4 bg-green-50/50">
@@ -2291,49 +2480,66 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   <Percent className="w-4 h-4" />
                   {t("student.discountsBenefits")}
                 </h4>
-                <div className="space-y-2">
-                  {/* Student Group Discounts */}
-                  {getStudentGroupDiscounts(selectedStudent.studentId).map((group, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>{group.name}</span>
-                      <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">
-                        {group.discountType === "percentage" ? `${group.discountPercentage}% ` : `฿${group.fixedAmount.toLocaleString()} `}
-                      </Badge>
-                    </div>
-                  ))}
+                {(() => {
+                  const groupDiscounts = getStudentGroupDiscounts(selectedStudent.studentId)
+                  const isStaff = isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')
+                  const hasScholarship = hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')
+                  const hasEarlyBird = hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')
 
-                  {/* Staff Child Discount */}
-                  {(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) && (
-                    <div className="flex justify-between text-sm">
-                      <span>{t("student.staffChild")}</span>
-                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">50%</Badge>
-                    </div>
-                  )}
+                  // Group by category (5 categories only: Tuition, ECA, Trip & Activity, Exam, School Bus)
+                  const byCategory = new Map<string, { name: string; label: string }[]>()
 
-                  {/* Scholarship */}
-                  {(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) && (
-                    <div className="flex justify-between text-sm">
-                      <span>{t("student.scholarship")}</span>
-                      <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{t("student.yes")}</Badge>
-                    </div>
-                  )}
+                  // Staff, Scholarship, Early Bird → Tuition category
+                  const tuitionSpecial: { name: string; label: string }[] = []
+                  if (isStaff) tuitionSpecial.push({ name: t("student.staffChild"), label: "50%" })
+                  if (hasScholarship) tuitionSpecial.push({ name: t("student.scholarship"), label: t("student.yes") })
+                  if (hasEarlyBird) tuitionSpecial.push({ name: t("student.earlyBird"), label: "5%" })
+                  if (tuitionSpecial.length > 0) byCategory.set("Tuition", tuitionSpecial)
 
-                  {/* Early Bird */}
-                  {(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
-                    <div className="flex justify-between text-sm">
-                      <span>{t("student.earlyBird")}</span>
-                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">5%</Badge>
-                    </div>
-                  )}
+                  groupDiscounts.forEach(g => {
+                    const cat = g.category === "tuition" ? "Tuition" : g.category === "eca" ? "ECA" : g.category === "trip" ? "Trip & Activity" : g.category === "exam" ? "Exam" : g.category === "bus" ? "School Bus" : g.category
+                    const discountLabel = g.discountType === "fixed" ? `฿${g.fixedAmount.toLocaleString()}` : `${g.discountPercentage}%`
+                    if (!byCategory.has(cat)) byCategory.set(cat, [])
+                    byCategory.get(cat)!.push({ name: g.name, label: discountLabel })
+                  })
 
-                  {/* No discounts message */}
-                  {getStudentGroupDiscounts(selectedStudent.studentId).length === 0 &&
-                    !(isStaffChildStudent(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('staff')) &&
-                    !(hasScholarshipDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('scholarship')) &&
-                    !(hasEarlyBirdDiscount(selectedStudent.studentId) || selectedStudent.notes?.toLowerCase().includes('early bird')) && (
-                      <span className="text-sm text-muted-foreground">{t("student.noDiscountsApplied")}</span>
-                    )}
-                </div>
+                  if (byCategory.size === 0) {
+                    return <span className="text-sm text-muted-foreground">{t("student.noDiscountsApplied")}</span>
+                  }
+
+                  const catColors: Record<string, string> = {
+                    Tuition: "!bg-teal-100 !text-teal-800",
+                    ECA: "!bg-indigo-100 !text-indigo-800",
+                    "Trip & Activity": "!bg-orange-100 !text-orange-800",
+                    Exam: "!bg-pink-100 !text-pink-800",
+                    "School Bus": "!bg-cyan-100 !text-cyan-800",
+                  }
+                  const borderColors: Record<string, string> = {
+                    Tuition: "border-teal-300",
+                    ECA: "border-indigo-300",
+                    "Trip & Activity": "border-orange-300",
+                    Exam: "border-pink-300",
+                    "School Bus": "border-cyan-300",
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Array.from(byCategory).map(([cat, items]) => (
+                        <div key={cat} className={`rounded-lg border-l-4 ${borderColors[cat] || "border-gray-300"} bg-white p-3 shadow-sm`}>
+                          <Badge className={`${catColors[cat] || "!bg-gray-100 !text-gray-800"} border-transparent text-xs mb-2`}>{cat}</Badge>
+                          <div className="space-y-1.5">
+                            {items.map((item, i) => (
+                              <div key={i} className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">{item.name}</span>
+                                <span className="font-medium">{item.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Parents */}
@@ -2484,6 +2690,23 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
             {/* Warning: Missing Parent 1 Email */}
             {importPreview.length > 0 && (() => {
+              const missingYearsSet = new Set<string>()
+              importPreview.forEach(row => {
+                const ay = (row["Academic Year"] || row["Year"] || "").replace(/-/g, "/")
+                if (ay && !availableYears.includes(ay)) missingYearsSet.add(ay)
+              })
+              if (missingYearsSet.size === 0) return null
+              return (
+                <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  <p className="font-semibold mb-1">
+                    ⚠ ไม่มีปีการศึกษารองรับในระบบ — กรุณาสร้างใน Term Settings ก่อน
+                  </p>
+                  <p>ปีที่ไม่มี: <strong>{Array.from(missingYearsSet).join(", ")}</strong></p>
+                </div>
+              )
+            })()}
+
+            {importPreview.length > 0 && (() => {
               const missingEmail = importPreview.filter(row => !row["Parent 1 Email"])
               if (missingEmail.length === 0) return null
               return (
@@ -2562,7 +2785,10 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Button>
             <Button
               onClick={handleConfirmImport}
-              disabled={!userCanEdit || importPreview.length === 0 || !!importError}
+              disabled={!userCanEdit || importPreview.length === 0 || !!importError || importPreview.some(row => {
+                const ay = (row["Academic Year"] || row["Year"] || "").replace(/-/g, "/")
+                return ay && !availableYears.includes(ay)
+              })}
             >
               <Upload className="w-4 h-4 mr-2" />
               {importPreview.length > 0 ? t("student.importCount").replace("{count}", String(importPreview.length)) : t("common.import")}
@@ -2732,7 +2958,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
           {/* Footer */}
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-            {promoteToYear && isYearAlreadyPromoted(promoteToYear) && (
+            {promoteToYear && !availableYears.includes(promoteToYear) && (
+              <p className="text-sm text-destructive font-medium mr-auto">
+                ⚠ Academic Year {promoteToYear} has not been created in Term Settings yet. Please create it first.
+              </p>
+            )}
+            {promoteToYear && availableYears.includes(promoteToYear) && isYearAlreadyPromoted(promoteToYear) && (
               <p className="text-sm text-destructive font-medium mr-auto">
                 {t("student.alreadyPromoted").replace("{year}", promoteToYear)}
               </p>
@@ -2742,7 +2973,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Button>
             <Button
               onClick={handleConfirmPromotion}
-              disabled={!userCanEdit || totalStudentsToPromote === 0 || !promoteConfirmed || !promoteToYear || isYearAlreadyPromoted(promoteToYear)}
+              disabled={!userCanEdit || totalStudentsToPromote === 0 || !promoteConfirmed || !promoteToYear || !availableYears.includes(promoteToYear) || isYearAlreadyPromoted(promoteToYear)}
               className="gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />

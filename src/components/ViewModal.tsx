@@ -878,7 +878,7 @@ export function ViewModal({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Grade</Label>
+                  <Label className="text-xs">Year Group</Label>
                   <Input
                     value={editedData.grade || editedData.studentGrade || ""}
                     onChange={(e) => handleFieldChange("grade", e.target.value)}

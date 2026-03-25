@@ -10,6 +10,13 @@ export interface Parent {
   nationalId?: string // Parent's national ID / passport number
 }
 
+export interface GradeHistoryEntry {
+  grade: string       // e.g. "year4", "year5"
+  academicYear: string // e.g. "2025/2026"
+  room?: string
+  enrollmentTerm?: string // e.g. "term1", "term2", "term3"
+}
+
 export interface Student {
   id: string
   studentId: string
@@ -19,11 +26,13 @@ export interface Student {
   dateOfBirth: Date | null
   gender: "male" | "female" | "other"
   gradeLevel: string
+  room: string
   academicYear: string
   enrollmentTerm: "term1" | "term2" | "term3" // Term when student enrolled
   status: "active" | "graduated" | "withdrawn" | "on_leave"
   withdrawalAcademicYear?: string // e.g. "2025/2026" — term withdrawal takes effect FROM
   withdrawalTerm?: string         // e.g. "term1" | "term2" | "term3"
+  gradeHistory?: GradeHistoryEntry[] // ประวัติชั้นเรียนที่ผ่านมา
   familyId: string
   familyCode?: string // Added for easier display and search
   childOrder: number // 1 = first child, 2 = second child, etc.
@@ -66,6 +75,7 @@ interface StudentContextType {
   updateFamily: (familyId: string, updates: Partial<Family>) => void
   deleteFamily: (familyId: string) => void
   getStudentsByFamily: (familyId: string) => Student[]
+  getStudentsForAcademicYear: (academicYear: string) => (Student & { effectiveGrade: string; effectiveRoom: string })[]
   getSiblingDiscount: (student: Student, term?: string, billingAcademicYear?: string) => number
   checkFeePrivilegeEligibility: (student: Student, currentYear: string, term: string) => {
     eligible: boolean
@@ -323,6 +333,7 @@ const generateMockData = () => {
         status: "active",
         familyId: familyId,
         familyCode: familyCode, // ใส่ Family Code โดยตรงตามคำขอ
+        room: "",
         childOrder: i + 1,
         parents: familyParents,
         enrollmentDate: new Date(),
@@ -437,6 +448,24 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     return students
       .filter(s => s.familyId === familyId)
       .sort((a, b) => a.childOrder - b.childOrder)
+  }
+
+  // ดึงรายชื่อนักเรียนตาม Academic Year — เช็คทั้ง current และ gradeHistory
+  const getStudentsForAcademicYear = (academicYear: string): (Student & { effectiveGrade: string; effectiveRoom: string })[] => {
+    const results: (Student & { effectiveGrade: string; effectiveRoom: string })[] = []
+    students.forEach(student => {
+      // ถ้า academicYear ปัจจุบันตรง → ใช้ gradeLevel ปัจจุบัน
+      if (student.academicYear === academicYear) {
+        results.push({ ...student, effectiveGrade: student.gradeLevel, effectiveRoom: student.room || "" })
+        return
+      }
+      // ถ้าไม่ตรง → หาจาก gradeHistory
+      const historyEntry = (student.gradeHistory || []).find(h => h.academicYear === academicYear)
+      if (historyEntry) {
+        results.push({ ...student, effectiveGrade: historyEntry.grade, effectiveRoom: historyEntry.room || "" })
+      }
+    })
+    return results
   }
 
   const getSiblingDiscount = (student: Student, term: string = "term1", billingAcademicYear?: string): number => {
@@ -662,6 +691,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
       updateFamily,
       deleteFamily,
       getStudentsByFamily,
+      getStudentsForAcademicYear,
       getSiblingDiscount,
       checkFeePrivilegeEligibility,
       saveToLocalStorage

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import * as XLSX from "xlsx"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
@@ -275,6 +276,86 @@ export function SummerActivitiesReceipts() {
     // In a real app, this would open receipt in modal or new tab
   }
 
+  const downloadInterfaceFile = () => {
+    if (filteredReceipts.length === 0) {
+      return
+    }
+
+    const mapPaymentMethod = (method: string): string => {
+      if (!method) return ""
+      const m = method.toLowerCase()
+      if (m.includes("bank transfer") || m === "bank") return "BANK"
+      if (m.startsWith("edc") || m.includes("pos") || m.includes("qr") || m.includes("credit card")) return "POS (QR/CC)"
+      if (m.includes("cheque") || m.includes("check")) return "CHEQUE"
+      if (m.includes("cash")) return "CASH"
+      return method.toUpperCase()
+    }
+
+    const bankAccountsStored = localStorage.getItem("kingscollege_backoffice_bankAccounts")
+    const bankAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
+
+    const getReceiveAccountNo = (paymentMethod: string): string => {
+      if (!paymentMethod) return ""
+      const m = paymentMethod.toLowerCase()
+      let matchedAccount: any = null
+
+      if (m.startsWith("edc")) {
+        const edcMatch = paymentMethod.match(/EDC\s*-\s*(.+?)\s*\((.+?)\)/)
+        if (edcMatch) {
+          const [, bankName, accountNumber] = edcMatch
+          matchedAccount = bankAccounts.find((acc: any) =>
+            acc.paymentSource === "EDC" &&
+            acc.bankName === bankName.trim() &&
+            acc.accountNumber === accountNumber.trim() &&
+            acc.isActive
+          )
+        }
+        if (!matchedAccount) {
+          matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "EDC" && acc.isActive)
+        }
+      } else if (m.includes("bank transfer") || m.includes("bank")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Bank Transfer" && acc.isActive)
+      } else if (m.includes("cheque")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Cashier's cheque" && acc.isActive)
+      }
+
+      return matchedAccount?.glAccount || matchedAccount?.accountNumber || ""
+    }
+
+    const wb = XLSX.utils.book_new()
+    const titleRow = ["Interface File - Sales Receipt for school fees"]
+    const headerRow = [
+      "Receipt no.", "Customer no.", "Type", "RV no. series",
+      "Receive date", "Payment method", "Sell-to-customer No.",
+      "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
+    ]
+
+    const dataRows = filteredReceipts.map(r => [
+      r.receiptNumber,
+      r.participantName,
+      "CASHRCPT",
+      "AR-RV",
+      format(r.transactionDate, "yyyy-MM-dd") + " 00:00:00",
+      mapPaymentMethod(r.paymentMethod),
+      r.participantName,
+      getReceiveAccountNo(r.paymentMethod),
+      "",
+      "",
+      "",
+      r.amount
+    ])
+
+    const ws = XLSX.utils.aoa_to_sheet([titleRow, [], headerRow, ...dataRows])
+    ws["!cols"] = [
+      { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
+      { wch: 22 }, { wch: 16 }, { wch: 20 },
+      { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }
+    ]
+
+    XLSX.utils.book_append_sheet(wb, ws, "Receipts")
+    XLSX.writeFile(wb, `interface-receipts-summer-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "issued":
@@ -360,6 +441,10 @@ export function SummerActivitiesReceipts() {
               <Button variant="outline" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 {t("receipt.bulkResend")}
+              </Button>
+              <Button variant="outline" className="flex items-center gap-2" onClick={downloadInterfaceFile}>
+                <Download className="w-4 h-4" />
+                {t("receipt.downloadInterfaceFile")}
               </Button>
               <Button className="flex items-center gap-2">
                 <Download className="w-4 h-4" />

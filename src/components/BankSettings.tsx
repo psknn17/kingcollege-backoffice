@@ -46,7 +46,6 @@ export function BankSettings() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
     const [dialogMode, setDialogMode] = useState<'offline' | 'online'>('offline')
-    const isSuperAdmin = user?.role === 'super_admin' || (user as any)?.roles?.includes('super_admin') || user?.role === 'admin' || (user as any)?.roles?.includes('admin')
 
     const initialFormData: Omit<BankAccount, "id"> = {
         paymentSource: "",
@@ -148,12 +147,10 @@ export function BankSettings() {
                         <h3 className="text-lg font-semibold">{t("bankSettings.offlinePaymentTitle") || "Offline Payment"}</h3>
                         <p className="text-sm text-muted-foreground">Manage bank accounts for offline/counter payments</p>
                     </div>
-                    {isSuperAdmin && (
-                        <Button onClick={() => handleOpenDialog(undefined, 'offline')}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            {t("bankSettings.addAccount")}
-                        </Button>
-                    )}
+                    <Button onClick={() => handleOpenDialog(undefined, 'offline')}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        {t("bankSettings.addAccount")}
+                    </Button>
                 </div>
 
                 <Card>
@@ -165,13 +162,13 @@ export function BankSettings() {
                                     <TableHead className="w-[25%]">{t("bankSettings.bank")}</TableHead>
                                     <TableHead className="w-[25%]">{t("bankSettings.accountNumber")}</TableHead>
                                     <TableHead className="w-[20%]">{t("bankSettings.glAccount")}</TableHead>
-                                    {isSuperAdmin && <TableHead align="center" className="w-[10%]">{t("bankSettings.actions")}</TableHead>}
+                                    <TableHead align="center" className="w-[10%]">{t("bankSettings.actions")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {accounts.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-32 text-center text-muted-foreground">
+                                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
@@ -182,13 +179,11 @@ export function BankSettings() {
                                             <TableCell>{account.bankName}</TableCell>
                                             <TableCell className="font-mono">{account.accountNumber}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                            {isSuperAdmin && (
-                                                <TableCell align="right" className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
-                                                        <Edit className="w-4 h-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            )}
+                                            <TableCell align="right" className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 )}
@@ -205,12 +200,6 @@ export function BankSettings() {
                         <h3 className="text-lg font-semibold">{t("bankSettings.onlinePaymentTitle") || "Online Payment (Gateway)"}</h3>
                         <p className="text-sm text-muted-foreground">{t("bankSettings.onlinePaymentSubtitle") || "Manage bank accounts and GL account mappings for online payments"}</p>
                     </div>
-                    {isSuperAdmin && (
-                        <Button onClick={() => handleOpenDialog(undefined, 'online')}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            {t("bankSettings.addOnlineAccount") || "Add Online Account"}
-                        </Button>
-                    )}
                 </div>
 
                 <Card>
@@ -222,13 +211,12 @@ export function BankSettings() {
                                     <TableHead className="w-[25%]">{t("bankSettings.bank")}</TableHead>
                                     <TableHead className="w-[25%]">{t("bankSettings.accountNumber")}</TableHead>
                                     <TableHead className="w-[20%]">{t("bankSettings.glAccount")}</TableHead>
-                                    {isSuperAdmin && <TableHead align="center" className="w-[10%]">{t("bankSettings.actions")}</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {onlineAccounts.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-32 text-center text-muted-foreground">
+                                        <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
@@ -239,13 +227,6 @@ export function BankSettings() {
                                             <TableCell>{account.bankName}</TableCell>
                                             <TableCell className="font-mono">{account.accountNumber}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                            {isSuperAdmin && (
-                                                <TableCell align="right" className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'online')}>
-                                                        <Edit className="w-4 h-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            )}
                                         </TableRow>
                                     ))
                                 )}

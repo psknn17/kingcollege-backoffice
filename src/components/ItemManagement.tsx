@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, parseXlsxOrCsvFile, XLSX_ACCEPT } from "@/utils/xlsxUtils"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { cn } from "./ui/utils"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -11,7 +12,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save, ChevronDown } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
 import { ViewModal } from "./ViewModal"
@@ -1894,6 +1895,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     ? useState<string>("all")
     : useState("all")
   const [selectedDocType, setSelectedDocType] = useState("all")
+  const [showFilters, setShowFilters] = useState(false)
 
   // Multi-select for bulk delete
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
@@ -2811,19 +2813,54 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       {activeTab === "items" && (
         <>
         <Card>
-          <CardContent className="p-4 space-y-4">
+          <CardContent className="pt-6 space-y-4">
             {/* Filters */}
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder={t("item.searchItemsPlaceholder")}
                   value={searchItemTerm}
                   onChange={(e) => { setSearchItemTerm(e.target.value); setCurrentPage(1) }}
-                  className=""
-                  disabled={!userCanEdit}
+                  className="pl-10 h-9"
                 />
               </div>
+              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+                <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
+              </Button>
             </div>
+            {showFilters && (<>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select value={selectedCategory} onValueChange={(v) => { setSelectedCategory(v); setCurrentPage(1) }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedDocType} onValueChange={(v) => { setSelectedDocType(v); setCurrentPage(1) }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Document Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="SI">SI (Sales Invoice)</SelectItem>
+                    <SelectItem value="CI">CI (Credit Invoice)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => { setSearchItemTerm(""); setSelectedCategory("all"); setSelectedDocType("all"); setCurrentPage(1) }}>
+                  Clear Filters
+                </Button>
+              </div>
+            </>)}
 
             {/* Bulk Delete Bar */}
             {selectedItemIds.size > 0 && (

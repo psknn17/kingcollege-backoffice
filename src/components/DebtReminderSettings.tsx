@@ -1,11 +1,12 @@
 import { useState, useMemo, useRef } from "react"
+import ReactQuill from "react-quill-new"
+import "react-quill-new/dist/quill.snow.css"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { Textarea } from "./ui/textarea"
 import { Switch } from "./ui/switch"
 import { Checkbox } from "./ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
@@ -34,6 +35,46 @@ interface DebtReminderTemplate {
   subject: string
   emailTitle: string
   message: string
+}
+
+/* ── Minimal Quill config: font-size + bold + italic only ── */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const QuillSize = ReactQuill.Quill.import("attributors/style/size") as any
+QuillSize.whitelist = ["10px", "12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "36px", "48px"]
+ReactQuill.Quill.register(QuillSize, true)
+
+const FONT_SIZE_OPTIONS = ["10px", "12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "36px", "48px"]
+
+const QUILL_FORMATS = ["size", "bold", "italic"]
+
+/** Custom toolbar rendered as plain HTML — Quill binds to id */
+function CustomToolbar({ id }: { id: string }) {
+  return (
+    <div id={id} className="ql-toolbar ql-snow" style={{ borderRadius: "0.5rem 0.5rem 0 0", background: "var(--muted)", borderColor: "var(--border)", padding: "6px 8px" }}>
+      <span className="ql-formats">
+        <select className="ql-size" defaultValue="">
+          {FONT_SIZE_OPTIONS.map(s => (
+            <option key={s} value={s === "14px" ? "" : s}>{s}</option>
+          ))}
+        </select>
+      </span>
+      <span className="ql-formats">
+        <button className="ql-bold" />
+        <button className="ql-italic" />
+      </span>
+    </div>
+  )
+}
+
+function renderFormattedPreview(msg: string, sampleVars: Record<string, string>) {
+  if (!msg || msg === "<p><br></p>") return null
+  let html = msg
+  for (const [key, val] of Object.entries(sampleVars)) {
+    html = html.replace(new RegExp(key.replace(/[{}]/g, "\\$&"), "g"),
+      `<span style="font-weight:600;color:#047857;background:#ecfdf5;padding:1px 4px;border-radius:4px">${val}</span>`)
+  }
+  return <div dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 const DEFAULT_REMINDER_TEMPLATES: DebtReminderTemplate[] = [
@@ -88,7 +129,7 @@ const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: "overdue", label: "Overdue" },
 ]
 
-type ReminderStatus = "new" | "reminded" | "cancelled"
+type ReminderStatus = "scheduled" | "reminded" | "cancelled"
 
 interface ReminderConfig {
   id: string
@@ -151,7 +192,7 @@ const initialReminders: ReminderConfig[] = [
     emailTitle: "",
     message: "",
     invoiceStatuses: [],
-    status: "new"
+    status: "scheduled"
   },
   {
     id: "2",
@@ -166,7 +207,7 @@ const initialReminders: ReminderConfig[] = [
     emailTitle: "",
     message: "",
     invoiceStatuses: [],
-    status: "new"
+    status: "scheduled"
   },
   {
     id: "3",
@@ -181,7 +222,7 @@ const initialReminders: ReminderConfig[] = [
     emailTitle: "",
     message: "",
     invoiceStatuses: [],
-    status: "new"
+    status: "scheduled"
   }
 ]
 
@@ -318,8 +359,10 @@ export function DebtReminderSettings() {
     }
   }
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", subject: "", emailTitle: "", message: "" })
-  const templateMessageRef = useRef<HTMLTextAreaElement>(null)
-  const reminderMessageRef = useRef<HTMLTextAreaElement>(null)
+  const reminderQuillRef = useRef<ReactQuill>(null)
+  const templateQuillRef = useRef<ReactQuill>(null)
+  const reminderEditorModules = useMemo(() => ({ toolbar: { container: "#reminder-toolbar" } }), [])
+  const templateEditorModules = useMemo(() => ({ toolbar: { container: "#template-toolbar" } }), [])
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -329,7 +372,7 @@ export function DebtReminderSettings() {
 
     const total = reminderList.length
 
-    const scheduledReminders = reminderList.filter(r => r.status === "new")
+    const scheduledReminders = reminderList.filter(r => r.status === "scheduled")
 
     const sentReminders = reminderList.filter(r => r.status === "reminded")
 
@@ -435,7 +478,7 @@ export function DebtReminderSettings() {
       emailTitle: "",
       message: "",
       invoiceStatuses: [],
-      status: "new"
+      status: "scheduled"
     }
     setEditingReminder(newReminder)
     setIsEditDialogOpen(true)
@@ -542,7 +585,7 @@ export function DebtReminderSettings() {
       ...reminder,
       id: Date.now().toString(),
       name: `${reminder.name} (Copy)`,
-      status: "new",
+      status: "scheduled",
       sendDate: "",
       sendTime: reminder.sendTime || "09:00",
       scheduledAt: undefined,
@@ -743,7 +786,7 @@ export function DebtReminderSettings() {
 
     // Set default status if not set (for old reminders)
     if (!reminder.status) {
-      updateReminder(reminder.id, "status", "new")
+      updateReminder(reminder.id, "status", "scheduled")
     }
 
     // Use existing recipient count if available, otherwise generate once
@@ -768,7 +811,7 @@ export function DebtReminderSettings() {
     }
 
     // Update reminder to scheduled status
-    updateReminder(previewReminder.id, "status", "new")
+    updateReminder(previewReminder.id, "status", "scheduled")
     updateReminder(previewReminder.id, "scheduledAt", new Date().toISOString())
 
     toast.success("Reminder scheduled successfully", {
@@ -782,7 +825,7 @@ export function DebtReminderSettings() {
 
   const handleCancelSchedule = (reminder: ReminderConfig) => {
     // Only allow canceling scheduled reminders
-    if (reminder.status !== "new") {
+    if (reminder.status !== "scheduled") {
       toast.error("Cannot cancel", {
         description: "Only scheduled reminders can be cancelled"
       })
@@ -791,7 +834,7 @@ export function DebtReminderSettings() {
 
     cancelConfirm.confirm(() => {
       // Update to scheduled status
-      updateReminder(reminder.id, "status", "new")
+      updateReminder(reminder.id, "status", "scheduled")
       updateReminder(reminder.id, "scheduledAt", undefined)
 
       toast.success("Schedule cancelled", {
@@ -803,7 +846,7 @@ export function DebtReminderSettings() {
 
   const handleEditScheduled = (reminder: ReminderConfig) => {
     // Only allow editing scheduled reminders
-    if (reminder.status !== "new") {
+    if (reminder.status !== "scheduled") {
       toast.error("Cannot edit", {
         description: "Only scheduled reminders can be edited"
       })
@@ -811,7 +854,7 @@ export function DebtReminderSettings() {
     }
 
     // Update to scheduled status to allow editing
-    updateReminder(reminder.id, "status", "new")
+    updateReminder(reminder.id, "status", "scheduled")
     updateReminder(reminder.id, "scheduledAt", undefined)
 
     // Close preview modal
@@ -824,10 +867,10 @@ export function DebtReminderSettings() {
 
   const getStatusBadge = (status: ReminderStatus | undefined) => {
     switch (status) {
-      case "new":
+      case "scheduled":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100">
-            New
+            Scheduled
           </Badge>
         )
       case "reminded":
@@ -845,7 +888,7 @@ export function DebtReminderSettings() {
       default:
         return (
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100">
-            New
+            Scheduled
           </Badge>
         )
     }
@@ -1027,7 +1070,7 @@ export function DebtReminderSettings() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
                       <SelectItem value="reminded">Reminded</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
@@ -1148,7 +1191,7 @@ export function DebtReminderSettings() {
                               toast.success("Reminder cancelled")
                               logActivity({ action: "Cancel Reminder", module: "Debt Reminder", detail: `Cancelled reminder "${reminder.name}"` })
                             }}
-                            disabled={!userCanEdit || reminder.status !== "new"}
+                            disabled={!userCanEdit || reminder.status !== "scheduled"}
                             title="Cancel"
                           >
                             <XCircle className="w-4 h-4" />
@@ -1336,8 +1379,7 @@ export function DebtReminderSettings() {
               {/* Send Date & Send Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4" />
+                  <Label>
                     {t("debtReminder.sendDate")} <span className="text-destructive">*</span>
                   </Label>
                   <Popover open={openCalendarId === `edit-${editingReminder.id}`} onOpenChange={(open) => setOpenCalendarId(open ? `edit-${editingReminder.id}` : null)}>
@@ -1368,8 +1410,7 @@ export function DebtReminderSettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
+                  <Label>
                     {t("debtReminder.sendTime")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -1396,13 +1437,18 @@ export function DebtReminderSettings() {
               {/* Message */}
               <div className="space-y-2">
                 <Label>{t("debtReminder.messageTemplate")} <span className="text-destructive">*</span></Label>
-                <Textarea
-                  ref={reminderMessageRef}
-                  value={editingReminder.message}
-                  onChange={(e) => setEditingReminder(prev => prev ? { ...prev, message: e.target.value } : prev)}
-                  placeholder="Enter reminder message template"
-                  rows={4}
-                />
+                <div className="reminder-editor">
+                  <CustomToolbar id="reminder-toolbar" />
+                  <ReactQuill
+                    ref={reminderQuillRef}
+                    theme="snow"
+                    value={editingReminder.message}
+                    onChange={(val) => setEditingReminder(prev => prev ? { ...prev, message: val } : prev)}
+                    modules={reminderEditorModules}
+                    formats={QUILL_FORMATS}
+                    placeholder="Enter reminder message template"
+                  />
+                </div>
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-xs text-muted-foreground">Variables:</span>
                   {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
@@ -1410,19 +1456,13 @@ export function DebtReminderSettings() {
                       key={v}
                       variant="outline"
                       className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
-                        const el = reminderMessageRef.current
-                        if (el) {
-                          const start = el.selectionStart ?? el.value.length
-                          const end = el.selectionEnd ?? el.value.length
-                          const newVal = el.value.slice(0, start) + v + el.value.slice(end)
-                          setEditingReminder(prev => prev ? { ...prev, message: newVal } : prev)
-                          requestAnimationFrame(() => {
-                            el.focus()
-                            el.setSelectionRange(start + v.length, start + v.length)
-                          })
-                        } else {
-                          setEditingReminder(prev => prev ? { ...prev, message: (prev.message || "") + v } : prev)
+                        const editor = reminderQuillRef.current?.getEditor()
+                        if (editor) {
+                          const range = editor.getSelection(true)
+                          editor.insertText(range.index, v)
+                          editor.setSelection(range.index + v.length, 0)
                         }
                       }}
                     >
@@ -1522,7 +1562,7 @@ export function DebtReminderSettings() {
 
                 {/* Email body */}
                 <div className="px-6 py-6">
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  <div className="text-sm text-gray-700 leading-relaxed">
                     {(() => {
                       const sampleVars: Record<string, string> = {
                         "{parent_name}": "Mr. John Smith",
@@ -1533,12 +1573,7 @@ export function DebtReminderSettings() {
                       }
                       const msg = previewReminder.message || ""
                       if (!msg) return <span className="text-gray-300 italic">No message content</span>
-                      const parts = msg.split(/(\{[a-z_]+\})/g)
-                      return parts.map((part, idx) =>
-                        sampleVars[part]
-                          ? <span key={idx} className="font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">{sampleVars[part]}</span>
-                          : <span key={idx}>{part}</span>
-                      )
+                      return renderFormattedPreview(msg, sampleVars) || <span className="text-gray-300 italic">No message content</span>
                     })()}
                   </div>
                 </div>
@@ -1558,7 +1593,7 @@ export function DebtReminderSettings() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>{t("common.close")}</Button>
-            {(!previewReminder?.status || previewReminder?.status === "new") && (
+            {(!previewReminder?.status || previewReminder?.status === "scheduled") && (
               <Button
                 onClick={handleScheduleReminder}
                 disabled={!userCanEdit || !previewReminder?.sendDate}
@@ -1568,7 +1603,7 @@ export function DebtReminderSettings() {
                 Save & Schedule
               </Button>
             )}
-            {previewReminder?.status === "new" && (
+            {previewReminder?.status === "scheduled" && (
               <Button onClick={() => handleEditScheduled(previewReminder)} disabled={!userCanEdit} className="gap-2">
                 <Edit className="w-4 h-4" />
                 Edit
@@ -1704,14 +1739,18 @@ export function DebtReminderSettings() {
                 </div>
                 <div className="flex flex-col flex-1">
                   <Label className="text-sm font-medium mb-1.5">Message <span className="text-destructive">*</span></Label>
-
-                  <Textarea
-                    ref={templateMessageRef}
-                    value={templateForm.message}
-                    onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))}
-                    placeholder="Enter message template..."
-                    className="flex-1 resize-none"
-                  />
+                  <div className="reminder-editor flex-1">
+                    <CustomToolbar id="template-toolbar" />
+                    <ReactQuill
+                      ref={templateQuillRef}
+                      theme="snow"
+                      value={templateForm.message}
+                      onChange={(val) => setTemplateForm(f => ({ ...f, message: val }))}
+                      modules={templateEditorModules}
+                      formats={QUILL_FORMATS}
+                      placeholder="Enter message template..."
+                    />
+                  </div>
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     <span className="text-xs text-muted-foreground">Variables:</span>
                     {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
@@ -1719,19 +1758,13 @@ export function DebtReminderSettings() {
                         key={v}
                         variant="outline"
                         className="cursor-pointer text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
-                          const el = templateMessageRef.current
-                          if (el) {
-                            const start = el.selectionStart ?? el.value.length
-                            const end = el.selectionEnd ?? el.value.length
-                            const newVal = el.value.slice(0, start) + v + el.value.slice(end)
-                            setTemplateForm(f => ({ ...f, message: newVal }))
-                            requestAnimationFrame(() => {
-                              el.focus()
-                              el.setSelectionRange(start + v.length, start + v.length)
-                            })
-                          } else {
-                            setTemplateForm(f => ({ ...f, message: f.message + v }))
+                          const editor = templateQuillRef.current?.getEditor()
+                          if (editor) {
+                            const range = editor.getSelection(true)
+                            editor.insertText(range.index, v)
+                            editor.setSelection(range.index + v.length, 0)
                           }
                         }}
                       >
@@ -1778,7 +1811,7 @@ export function DebtReminderSettings() {
 
                 {/* Email body */}
                 <div className="flex-1 px-6 py-5 overflow-y-auto">
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  <div className="text-sm text-gray-700 leading-relaxed">
                     {(() => {
                       const sampleVars: Record<string,string> = {
                         "{parent_name}": "John Smith",
@@ -1788,13 +1821,8 @@ export function DebtReminderSettings() {
                         "{days_remaining}": "14",
                       }
                       const msg = templateForm.message || ""
-                      if (!msg) return <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
-                      const parts = msg.split(/(\{[a-z_]+\})/g)
-                      return parts.map((part, idx) =>
-                        sampleVars[part]
-                          ? <span key={idx} className="font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">{sampleVars[part]}</span>
-                          : <span key={idx}>{part}</span>
-                      )
+                      if (!msg || msg === "<p><br></p>") return <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
+                      return renderFormattedPreview(msg, sampleVars) || <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
                     })()}
                   </div>
                 </div>

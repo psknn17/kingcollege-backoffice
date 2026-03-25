@@ -647,16 +647,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return method
     }
 
-    const mapPaymentOption = (method: string): string => {
-      if (!method) return ""
-      const m = method.toLowerCase()
-      if (m.includes("transfer") || m.includes("bank")) return "Transfer"
-      if (m.startsWith("edc") || m.includes("credit card")) return "Credit Card"
-      if (m.includes("cheque") || m.includes("check")) return "Cheque"
-      if (m.includes("cash")) return "Cash"
-      return method
-    }
-
     // Load bank accounts to get Receive Account no.
     const bankAccountsStored = localStorage.getItem("kingscollege_backoffice_bankAccounts")
     const bankAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
@@ -697,7 +687,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const titleRow = ["Interface File - Sales Receipt for school fees"]
     const headerRow = [
       "Receipt no.", "Customer no.", "Type", "RV no. series",
-      "Receive date", "Payment method", "Payment option", "Sell-to-customer No.",
+      "Receive date", "Payment method", "Sell-to-customer No.",
       "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
     ]
 
@@ -706,12 +696,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       r.familyCode || r.studentId, // Customer no. (Family Code)
       "CASHRCPT",
       "AR-RV",
-      format(r.transactionDate, "dd/MM/yyyy"),
-      mapPaymentMethod(r.paymentMethod),
-      mapPaymentOption(r.paymentMethod),
+      format(r.transactionDate, "yyyy-MM-dd") + " 00:00:00",
+      mapPaymentMethod(r.paymentMethod).toUpperCase(),
       r.studentId, // Sell-to-customer No. (Student ID)
       getReceiveAccountNo(r.paymentMethod),
-      r.studentGrade,
+      (r.studentGrade || "").toUpperCase(),
       (r.academicYear || "").replace(/-/g, "/"),
       r.invoiceNumber,
       r.amount
@@ -722,7 +711,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     // Column widths
     ws["!cols"] = [
       { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
-      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 20 },
+      { wch: 12 }, { wch: 16 }, { wch: 20 },
       { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }
     ]
 

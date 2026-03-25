@@ -102,6 +102,7 @@ export function FamilyGroups() {
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null)
   const [formData, setFormData] = useState<Omit<Family, "id" | "createdAt">>(emptyFamily)
   const [selectedStudentToAdd, setSelectedStudentToAdd] = useState<string>("")
+  const [discountDetailStudent, setDiscountDetailStudent] = useState<Student | null>(null)
 
   // Helper function to get student group discounts
   const getStudentGroupDiscounts = (studentId: string, category: string = "tuition") => {
@@ -197,16 +198,8 @@ export function FamilyGroups() {
           bValue = getStudentsByFamily(b.id).length
           break
         case "totalDiscount":
-          const aStudents = getStudentsByFamily(a.id)
-          const bStudents = getStudentsByFamily(b.id)
-          aValue = aStudents.reduce((total: number, student: Student) => {
-            const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-            return total + groupDiscounts.reduce((s, d) => s + (d.discountType === 'percentage' ? d.discountPercentage : 0), 0)
-          }, 0)
-          bValue = bStudents.reduce((total: number, student: Student) => {
-            const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-            return total + groupDiscounts.reduce((s, d) => s + (d.discountType === 'percentage' ? d.discountPercentage : 0), 0)
-          }, 0)
+          aValue = getTotalDiscount(a.id).percentage + getTotalDiscount(a.id).fixedAmount
+          bValue = getTotalDiscount(b.id).percentage + getTotalDiscount(b.id).fixedAmount
           break
         default:
           return 0
@@ -242,7 +235,10 @@ export function FamilyGroups() {
   const stats = useMemo(() => {
     const totalFamilies = families.length
     const totalStudentsInFamilies = students.filter((s: Student) => s.familyId).length
-    const studentsWithDiscount = students.filter((s: Student) => getStudentGroupDiscounts(s.studentId).length > 0).length
+    const studentsWithDiscount = students.filter((s: Student) => {
+      const allCategories = ["tuition", "eca", "trip", "exam", "bus"]
+      return allCategories.some(cat => getStudentGroupDiscounts(s.studentId, cat).length > 0)
+    }).length
     const multiChildFamilies = families.filter((f: Family) => getStudentsByFamily(f.id).length > 1).length
     return { totalFamilies, totalStudentsInFamilies, studentsWithDiscount, multiChildFamilies }
   }, [families, students, getStudentsByFamily])
@@ -400,12 +396,19 @@ export function FamilyGroups() {
     }
   }
 
-  const getTotalDiscount = (familyId: string): number => {
+  const getTotalDiscount = (familyId: string): { percentage: number; fixedAmount: number } => {
     const familyStudents = getStudentsByFamily(familyId)
-    return familyStudents.reduce((total, student) => {
-      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-      return total + groupDiscounts.reduce((s, d) => s + (d.discountType === 'percentage' ? d.discountPercentage : 0), 0)
-    }, 0)
+    return familyStudents.reduce((totals, student) => {
+      const allCategories = ["tuition", "eca", "trip", "exam", "bus"]
+      allCategories.forEach(cat => {
+        const groupDiscounts = getStudentGroupDiscounts(student.studentId, cat)
+        groupDiscounts.forEach(d => {
+          if (d.discountType === 'percentage') totals.percentage += d.discountPercentage
+          else totals.fixedAmount += d.fixedAmount
+        })
+      })
+      return totals
+    }, { percentage: 0, fixedAmount: 0 })
   }
 
   // Export to CSV
@@ -429,7 +432,7 @@ export function FamilyGroups() {
         family.email || "",
         family.address || "",
         familyStudents.length,
-        totalDiscount > 0 ? `${totalDiscount}%` : "0%"
+        totalDiscount.percentage > 0 ? `${totalDiscount.percentage}%` : totalDiscount.fixedAmount > 0 ? `฿${totalDiscount.fixedAmount.toLocaleString()}` : "0%"
       ]
     })
 
@@ -602,11 +605,16 @@ export function FamilyGroups() {
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          {totalDiscount > 0 && (
-                            <Badge className="bg-green-100 text-green-800">
+                          {totalDiscount.percentage > 0 && (
+                            <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">
                               <Percent className="w-3 h-3 mr-1" />
-                              {t("familyGroups.totalDiscount").replace("{percent}", String(totalDiscount))}
-                            </Badge>
+                              {t("familyGroups.totalDiscount").replace("{percent}", String(totalDiscount.percentage))}
+                            </span>
+                          )}
+                          {totalDiscount.fixedAmount > 0 && (
+                            <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+                              ฿ {totalDiscount.fixedAmount.toLocaleString()}
+                            </span>
                           )}
                           <div className="flex items-center gap-2">
                             <Button
@@ -710,25 +718,18 @@ export function FamilyGroups() {
                                 <TableCell align="left">{student.studentId}</TableCell>
                                 {/* Year Group - LEFT (text) */}
                                 <TableCell align="left">{gradeLevelLabels[student.gradeLevel] || student.gradeLevel}</TableCell>
-                                {/* Discounts - CENTER (badge list) */}
+                                {/* Discounts - CENTER (eye icon) */}
                                 <TableCell align="center">
-                                  <div className="flex flex-wrap justify-center gap-1">
-                                    {(() => {
-                                      const badges: React.ReactNode[] = []
-                                      // Group Discounts Badges
-                                      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-                                      groupDiscounts.forEach((d, i) => {
-                                        badges.push(
-                                          <Badge key={`group-${i}`} className="bg-green-100 text-green-800 text-[10px] py-0 h-5">
-                                            {d.name} {d.discountType === 'percentage' ? `${d.discountPercentage}%` : `฿${d.fixedAmount.toLocaleString()}`}
-                                          </Badge>
-                                        )
-                                      })
-
-                                      if (badges.length > 0) return badges
-                                      return <span className="text-muted-foreground text-sm">{t("familyGroups.noDiscount")}</span>
-                                    })()}
-                                  </div>
+                                  {(() => {
+                                    const allCategories = ["tuition", "eca", "trip", "exam", "bus"]
+                                    const hasAny = allCategories.some(cat => getStudentGroupDiscounts(student.studentId, cat).length > 0)
+                                    if (!hasAny) return <span className="text-muted-foreground text-sm">{t("familyGroups.noDiscount")}</span>
+                                    return (
+                                      <Button variant="ghost" size="icon" onClick={() => setDiscountDetailStudent(student)}>
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                    )
+                                  })()}
                                 </TableCell>
 
                                 {/* Actions - CENTER */}
@@ -749,39 +750,6 @@ export function FamilyGroups() {
                         </Table>
                       )}
 
-                      {/* Discount & Fee Waiver Summary */}
-                      {familyStudents.length >= 1 && (
-                        <div className="mt-4 space-y-3">
-                          {/* Student Discount Summary */}
-                          {(() => {
-                            const studentsWithDiscounts = familyStudents.filter(s => getStudentGroupDiscounts(s.studentId).length > 0);
-                            if (studentsWithDiscounts.length > 0) {
-                              return (
-                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                                  <h4 className="font-medium text-green-800 mb-2">{t("discountReports.studentDiscountDetails")}</h4>
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    {studentsWithDiscounts.map(student => {
-                                      const groupDiscounts = getStudentGroupDiscounts(student.studentId)
-                                      return (
-                                        <div key={student.id}>
-                                          <p className="font-medium text-green-800">{student.firstName}</p>
-                                          {groupDiscounts.map((d, i) => (
-                                            <p key={i} className="text-xs text-green-700">
-                                              • {d.name}: {d.discountType === 'percentage' ? `${d.discountPercentage}%` : `฿${d.fixedAmount.toLocaleString()}`}
-                                            </p>
-                                          ))}
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-
-                        </div>
-                      )}
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
@@ -1125,6 +1093,49 @@ export function FamilyGroups() {
         descriptionKey="confirmDialog.createDescription"
         confirmTextKey="common.create"
       />
+
+      {/* Discount Detail Dialog */}
+      <Dialog open={!!discountDetailStudent} onOpenChange={(open) => !open && setDiscountDetailStudent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Percent className="w-4 h-4" />
+              {discountDetailStudent?.firstName} {discountDetailStudent?.lastName} - {t("student.discounts")}
+            </DialogTitle>
+          </DialogHeader>
+          {discountDetailStudent && (() => {
+            const categories = [
+              { key: "tuition", label: "Tuition", color: "border-teal-400 bg-teal-50", badgeColor: "!bg-teal-100 !text-teal-800" },
+              { key: "eca", label: "ECA", color: "border-indigo-400 bg-indigo-50", badgeColor: "!bg-indigo-100 !text-indigo-800" },
+              { key: "trip", label: "Trip & Activity", color: "border-orange-400 bg-orange-50", badgeColor: "!bg-orange-100 !text-orange-800" },
+              { key: "exam", label: "Exam", color: "border-pink-400 bg-pink-50", badgeColor: "!bg-pink-100 !text-pink-800" },
+              { key: "bus", label: "School Bus", color: "border-cyan-400 bg-cyan-50", badgeColor: "!bg-cyan-100 !text-cyan-800" },
+            ]
+            const hasDiscounts = categories.some(cat => getStudentGroupDiscounts(discountDetailStudent.studentId, cat.key).length > 0)
+            if (!hasDiscounts) return <p className="text-muted-foreground text-sm p-4">{t("familyGroups.noDiscount")}</p>
+            return (
+              <div className="space-y-3">
+                {categories.map(cat => {
+                  const discounts = getStudentGroupDiscounts(discountDetailStudent.studentId, cat.key)
+                  if (discounts.length === 0) return null
+                  return (
+                    <div key={cat.key} className={`border-l-4 ${cat.color} rounded-lg p-3`}>
+                      <Badge className={`${cat.badgeColor} border-transparent text-xs mb-2`}>{cat.label}</Badge>
+                      <div className="space-y-1">
+                        {discounts.map((d, i) => (
+                          <p key={i} className="text-sm">
+                            {d.name}: {d.discountType === 'percentage' ? `${d.discountPercentage}%` : `฿${d.fixedAmount.toLocaleString()}`}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
 
     </div >
   )

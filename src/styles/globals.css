@@ -286,3 +286,37 @@ html {
   z-index: 1999 !important;
   background-color: rgba(0, 0, 0, 0.9) !important;
 }
+
+/* ── Reminder rich-text editor (Quill + custom toolbar) ── */
+
+/* Hide Quill's auto-generated toolbar (we use CustomToolbar) */
+.reminder-editor > .quill > .ql-toolbar.ql-snow {
+  display: none;
+}
+
+.reminder-editor .ql-container.ql-snow {
+  border-radius: 0 0 0.5rem 0.5rem;
+  border-color: var(--border);
+  font-size: 14px;
+  min-height: 120px;
+}
+
+.reminder-editor .ql-editor {
+  min-height: 120px;
+}
+
+.reminder-editor .ql-editor.ql-blank::before {
+  font-style: normal;
+  color: var(--muted-foreground);
+}
+
+/* Custom toolbar size dropdown */
+.reminder-editor .ql-toolbar .ql-picker.ql-size {
+  width: 70px;
+}
+
+/* Quill dropdowns in dialogs */
+.reminder-editor .ql-picker-options {
+  z-index: 2100 !important;
+  background: #fff !important;
+}

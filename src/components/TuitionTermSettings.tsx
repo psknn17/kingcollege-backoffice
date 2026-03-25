@@ -101,10 +101,9 @@ export function TuitionTermSettings() {
       return
     }
 
-    // Validate consecutive year
-    const nextValidYear = getNextValidYear()
-    if (startYear !== nextValidYear) {
-      toast.error(`${t("termSettings.mustCreateConsecutive")} ${nextValidYear}-${nextValidYear + 1}`)
+    // Validate year range (2000-2050)
+    if (startYear < 2000 || startYear > 2050) {
+      toast.error("Please enter a year between 2000 and 2050")
       return
     }
 
@@ -554,19 +553,24 @@ export function TuitionTermSettings() {
               placeholder="e.g., 2026"
               value={newYearStart}
               onChange={(e) => setNewYearStart(e.target.value)}
-              min="2020"
+              min="2000"
               max="2050"
-              className={cn("mt-2", newYearStart && parseInt(newYearStart) !== getNextValidYear() && "border-red-500 focus-visible:ring-red-500")}
+              className={cn("mt-2", newYearStart && academicYears.find(y => y.id === `${newYearStart}/${parseInt(newYearStart) + 1}`) && "border-red-500 focus-visible:ring-red-500")}
               disabled={!userCanEdit}
             />
-            {newYearStart && parseInt(newYearStart) !== getNextValidYear() && (
+            {newYearStart && academicYears.find(y => y.id === `${newYearStart}/${parseInt(newYearStart) + 1}`) && (
               <p className="text-sm text-red-500 mt-2">
-                {t("termSettings.mustCreateConsecutive")} {getNextValidYear()}-{getNextValidYear() + 1}
+                {t("termSettings.yearAlreadyExists")}
               </p>
             )}
-            {(!newYearStart || parseInt(newYearStart) === getNextValidYear()) && (
+            {newYearStart && !academicYears.find(y => y.id === `${newYearStart}/${parseInt(newYearStart) + 1}`) && (
               <p className="text-sm text-gray-500 mt-2">
-                {t("termSettings.willCreateYear")} {newYearStart ? `${newYearStart}/${parseInt(newYearStart) + 1}` : "YYYY/YYYY"} {t("termSettings.withDefaultTerms")}
+                {t("termSettings.willCreateYear")} {newYearStart}/{parseInt(newYearStart) + 1} {t("termSettings.withDefaultTerms")}
+              </p>
+            )}
+            {!newYearStart && (
+              <p className="text-sm text-gray-500 mt-2">
+                {t("termSettings.willCreateYear")} YYYY/YYYY {t("termSettings.withDefaultTerms")}
               </p>
             )}
           </div>
@@ -576,7 +580,7 @@ export function TuitionTermSettings() {
             </Button>
             <Button
               onClick={addNewAcademicYear}
-              disabled={!userCanEdit || !newYearStart || parseInt(newYearStart) !== getNextValidYear()}
+              disabled={!userCanEdit || !newYearStart || !!academicYears.find(y => y.id === `${newYearStart}/${parseInt(newYearStart) + 1}`)}
             >
               {t("termSettings.createYear")}
             </Button>
