@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Search, Plus, Trash2, Calendar, Eye, Save, ArrowLeft, FileText, Package, CheckCircle, Pencil, Download, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
+import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
 import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
@@ -119,6 +120,7 @@ const loadExternalItems = (): ExternalItem[] => {
 
 export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: ExternalInvoiceCreationProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
   const schoolSettings = useSchoolSettings()
   const isEditMode = !!editInvoice
 
@@ -337,6 +339,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       finalAmount: total,
       total,
       notes: "",
+      createdBy: user?.name || "Admin",
       createdAt: editInvoice?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -584,12 +587,12 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
       {/* Signatures */}
       <div className="flex justify-between mt-8 px-8">
         <div className="text-center">
-          <p className="mb-4" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattana</p>
+          <p className="mb-4" style={{ fontSize: '10px' }}>{user?.name || ""}</p>
           <div className="border-t border-black w-40 mx-auto"></div>
           <p className="mt-1" style={{ fontSize: '10px' }}>Prepared by</p>
         </div>
         <div className="text-center">
-          <p className="mb-4" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+          <p className="mb-4" style={{ fontSize: '10px' }}>{""}</p>
           <div className="border-t border-black w-40 mx-auto"></div>
           <p className="mt-1" style={{ fontSize: '10px' }}>Authorised officer</p>
         </div>

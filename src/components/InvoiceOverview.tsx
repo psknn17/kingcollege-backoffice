@@ -417,21 +417,21 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoiceOverview.paidInvoices")}</p>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.paid}</p>
+            <p className="text-2xl font-bold">{summaryStats.paid}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoiceOverview.unpaidInvoices")}</p>
-            <p className="text-2xl font-bold text-blue-600">{summaryStats.unpaid}</p>
+            <p className="text-2xl font-bold">{summaryStats.unpaid}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoiceOverview.overdueInvoices")}</p>
-            <p className="text-2xl font-bold text-red-600">{summaryStats.overdue}</p>
+            <p className="text-2xl font-bold">{summaryStats.overdue}</p>
           </CardContent>
         </Card>
       </div>
@@ -473,6 +473,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
                 setTermFilter("all") // Reset term when year changes
               }} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allYears")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -489,6 +490,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
               <Select value={termFilter} onValueChange={setTermFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allTerms")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -508,6 +510,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allYearGroups")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -524,6 +527,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
               <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PaymentStatus)} disabled={!userCanEdit}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>

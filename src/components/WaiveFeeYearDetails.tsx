@@ -21,7 +21,8 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
-  ArrowUpDown
+  ArrowUpDown,
+  Filter
 } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
@@ -319,7 +320,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeDiscounts}</div>
+            <div className="text-2xl font-bold">{activeDiscounts}</div>
             <p className="text-xs text-muted-foreground">
               {t("waiveFee.familyWithActiveDiscounts")}
             </p>
@@ -361,6 +362,7 @@ export function WaiveFeeYearDetails({ academicYear, onBack }: WaiveFeeYearDetail
               <Label>{t("common.status")}</Label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

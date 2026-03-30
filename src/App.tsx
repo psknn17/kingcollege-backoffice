@@ -38,7 +38,6 @@ import {
   Calendar,
   FileText,
   Users,
-  Settings,
   CreditCard,
   GraduationCap,
   Receipt,
@@ -116,7 +115,6 @@ import { FamilyGroups } from "./components/FamilyGroups"
 import { SchoolSettings } from "./components/SchoolSettings"
 import { ReportOverview } from "./components/ReportOverview"
 import { UserProfile } from "./components/UserProfile"
-import { UserSettings } from "./components/UserSettings"
 import { UserActivity } from "./components/UserActivity"
 import { BankSettings } from "./components/BankSettings"
 import { ClientList } from "./components/ClientList"
@@ -140,41 +138,41 @@ const menuItems = {
   ],
   tuition: [
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
-    { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
     { id: "item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "tuition-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "student-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "student-invoices", labelKey: "menu.invoiceManagement", icon: FileInvoice },
+    { id: "tuition-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   eca: [
-    { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
     { id: "eca-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "eca-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "eca-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "eca-invoices", labelKey: "menu.ecaInvoices", icon: FileInvoice },
+    { id: "eca-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   tripActivity: [
-    { id: "trip-invoices", labelKey: "menu.tripInvoices", icon: FileInvoice },
     { id: "trip-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "trip-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "trip-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "trip-invoices", labelKey: "menu.tripInvoices", icon: FileInvoice },
+    { id: "trip-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   exam: [
-    { id: "exam-invoices", labelKey: "menu.examInvoices", icon: FileInvoice },
     { id: "exam-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "exam-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "exam-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "exam-invoices", labelKey: "menu.examInvoices", icon: FileInvoice },
+    { id: "exam-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   schoolBus: [
-    { id: "bus-invoices", labelKey: "menu.busInvoices", icon: FileInvoice },
     { id: "bus-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "bus-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "bus-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "bus-invoices", labelKey: "menu.busInvoices", icon: FileInvoice },
+    { id: "bus-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   externalInvoice: [
-    { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
     { id: "client-list", labelKey: "menu.clientList", icon: Users },
     { id: "external-item-management", labelKey: "menu.itemsTemplates", icon: Tag },
-    { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
     { id: "external-discount-groups", labelKey: "menu.studentGroups", icon: Users },
+    { id: "external-invoices", labelKey: "menu.externalInvoices", icon: Building },
+    { id: "external-receipts", labelKey: "menu.receipts", icon: Receipt },
   ],
   report: [],
   userManagement: [
@@ -270,7 +268,7 @@ export default function App() {
 
 
   // Redirect Approver role to approval-queue (allow profile/settings/activity)
-  const approverAllowedPages = ["approval-queue", "user-profile", "user-settings", "user-activity"]
+  const approverAllowedPages = ["approval-queue", "user-profile", "user-activity"]
   useEffect(() => {
     if (user?.role === "approver" && !approverAllowedPages.includes(activeSection)) {
       navigate("/approval-queue", { replace: true })
@@ -641,14 +639,6 @@ export default function App() {
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          onClick={() => handleMenuItemClick("user-settings")}
-                          className="flex items-center gap-2 px-3 py-2 cursor-pointer"
-                        >
-                          <Settings className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">Settings</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
                           onClick={() => handleMenuItemClick("user-activity")}
                           className="flex items-center gap-2 px-3 py-2 cursor-pointer"
                         >
@@ -916,7 +906,6 @@ export default function App() {
 
                     {/* Profile */}
                     <Route path="/user-profile" element={<UserProfile />} />
-                    <Route path="/user-settings" element={<UserSettings />} />
                     <Route path="/user-activity" element={<UserActivity />} />
 
                     {/* Fallback - Redirect to Dashboard if no path or invalid path */}

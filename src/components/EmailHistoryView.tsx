@@ -33,8 +33,7 @@ import {
   Send,
   ArrowUpDown,
   Eye,
-  History,
-  ChevronDown
+  History
 } from "lucide-react"
 import { cn } from "@/components/ui/utils"
 import { ColumnPresets } from "@/utils/tableAlignment"
@@ -227,7 +226,6 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = usePersistedState("email-history-view:pageSize", 15)
   const itemsPerPage = pageSize
@@ -239,11 +237,6 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
   // Generate mock data based on job data
   const emailHistory = useMemo(() => generateMockEmailHistory(jobData), [jobData])
 
-  const clearFilters = () => {
-    setSearchTerm("")
-    setStatusFilter("all")
-    setCurrentPage(1)
-  }
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -534,35 +527,21 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                 className="pl-10 h-9"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-              <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
-            </Button>
+            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1) }}>
+              <SelectTrigger className="w-[180px] h-9">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder={t("common.status")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.allStatus")}</SelectItem>
+                <SelectItem value="pending">{t("common.pending")}</SelectItem>
+                <SelectItem value="delivered">{t("emailHistory.delivered")}</SelectItem>
+                <SelectItem value="opened">{t("emailHistory.opened")}</SelectItem>
+                <SelectItem value="failed">{t("emailHistory.failed")}</SelectItem>
+                <SelectItem value="bounced">{t("emailHistory.bounced")}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          {showFilters && (<>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t("common.status")}</label>
-                <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1) }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("common.status")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                    <SelectItem value="pending">{t("common.pending")}</SelectItem>
-                    <SelectItem value="delivered">{t("emailHistory.delivered")}</SelectItem>
-                    <SelectItem value="opened">{t("emailHistory.opened")}</SelectItem>
-                    <SelectItem value="failed">{t("emailHistory.failed")}</SelectItem>
-                    <SelectItem value="bounced">{t("emailHistory.bounced")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
-            </div>
-          </>)}
         </CardContent>
       </Card>
 
@@ -762,7 +741,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                   </div>
                   <div className="flex-shrink-0 text-center px-4 py-2 bg-white rounded-md border border-red-200">
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">{t("emailHistory.attempts")}</label>
-                    <p className="text-2xl font-bold text-red-600 mt-1">{selectedRecord.attempts}</p>
+                    <p className="text-2xl font-bold mt-1">{selectedRecord.attempts}</p>
                   </div>
                 </div>
               </div>

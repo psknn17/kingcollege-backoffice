@@ -173,6 +173,7 @@ export function TuitionDashboard() {
                 <label className="text-sm font-medium text-foreground">{t("common.academicYear")}</label>
                 <Select value={selectedYear} onValueChange={handleYearChange}>
                   <SelectTrigger className="h-10">
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder={t("invoice.academicYear")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -190,6 +191,7 @@ export function TuitionDashboard() {
                 <label className="text-sm font-medium text-foreground">{t("payment.term")}</label>
                 <Select value={selectedTerm} onValueChange={handleTermChange}>
                   <SelectTrigger className="h-10">
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder={t("payment.term")} />
                   </SelectTrigger>
                   <SelectContent>

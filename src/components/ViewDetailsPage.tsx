@@ -31,7 +31,8 @@ import {
   Trash2,
   Save,
   X,
-  Search
+  Search,
+  Filter
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
@@ -277,6 +278,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
             />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-[160px]">
+                <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder={t("viewModal.allCategories")} />
               </SelectTrigger>
               <SelectContent>

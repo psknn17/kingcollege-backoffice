@@ -3073,7 +3073,7 @@ export function InvoiceManagement({
           ...inv,
           invoiceNumber: finalInvoiceNumber,
           approvalStatus: "approved" as ApprovalStatus,
-          approvedBy: "Admin",
+          approvedBy: user?.name || "Admin",
           approvedAt: approvalDate,
           issueDate: approvalDate,
           status: "sent" as const,
@@ -3094,7 +3094,7 @@ export function InvoiceManagement({
               ...inv,
               invoiceNumber: finalInvoiceNumber,
               approvalStatus: "approved" as ApprovalStatus,
-              approvedBy: "Admin",
+              approvedBy: user?.name || "Admin",
               approvedAt: emailSentAt,
               issueDate: approvalDate.toISOString().split('T')[0],
               status: "sent",
@@ -3787,7 +3787,7 @@ export function InvoiceManagement({
               <Clock className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("invoice.pendingApproval")}</p>
             </div>
-            <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingApproval}</p>
+            <p className="text-2xl font-bold">{summaryStats.pendingApproval}</p>
           </CardContent>
         </Card>
 
@@ -3797,7 +3797,7 @@ export function InvoiceManagement({
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
             </div>
-            <p className="text-2xl font-bold text-purple-600">{summaryStats.approved}</p>
+            <p className="text-2xl font-bold">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
@@ -3807,7 +3807,7 @@ export function InvoiceManagement({
               <Mail className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Email</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{summaryStats.sent}</p>
+            <p className="text-2xl font-bold">{summaryStats.sent}</p>
           </CardContent>
         </Card>
 
@@ -3827,7 +3827,7 @@ export function InvoiceManagement({
               <DollarSign className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.paid}</p>
+            <p className="text-2xl font-bold">{summaryStats.paid}</p>
           </CardContent>
         </Card>
 
@@ -3837,7 +3837,7 @@ export function InvoiceManagement({
               <AlertCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">{summaryStats.overdue}</p>
+            <p className="text-2xl font-bold">{summaryStats.overdue}</p>
           </CardContent>
         </Card>
 
@@ -3891,6 +3891,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
                       <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allStatus")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -3905,6 +3906,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">Email Status</label>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allStatus")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -3918,6 +3920,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                       <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allStatus")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -3998,6 +4001,7 @@ export function InvoiceManagement({
                         setTermFilter("all")
                       }}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allYears")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -4012,6 +4016,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
                       <Select value={termFilter} onValueChange={setTermFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allTerms")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -4028,6 +4033,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">{t("invoice.yearGroup")}</label>
                       <Select value={gradeFilter} onValueChange={setGradeFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allYearGroups")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -4042,6 +4048,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
                       <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allStatus")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -4056,6 +4063,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">Email Status</label>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allStatus")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -4069,6 +4077,7 @@ export function InvoiceManagement({
                       <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                       <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("invoice.allStatus")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -4471,6 +4480,7 @@ export function InvoiceManagement({
                   <label className="text-sm font-medium text-muted-foreground">Approval Status</label>
                   <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("invoice.allStatus")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -4493,6 +4503,7 @@ export function InvoiceManagement({
                   <label className="text-sm font-medium text-muted-foreground">Email Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("invoice.allStatus")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -4512,6 +4523,7 @@ export function InvoiceManagement({
                   <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
                   <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("invoice.allStatus")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -5257,7 +5269,7 @@ export function InvoiceManagement({
                   </Button>
                   {(() => {
                     const canCancelInvoice = user?.role !== "approver" && user?.role !== "Approver" && user?.role !== "Approvalver"
-                    const shouldShowCancelButton = canCancelInvoice && getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.status !== "cancelled"
+                    const shouldShowCancelButton = canCancelInvoice && selectedInvoice.status !== "cancelled"
 
                     return shouldShowCancelButton ? (
                       <Button
@@ -7107,12 +7119,12 @@ export function InvoiceManagement({
               {/* Signatures */}
               <div className="flex justify-between mt-8 px-8">
                 <div className="text-center">
-                  <p className="mb-4" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattana</p>
+                  <p className="mb-4" style={{ fontSize: '10px' }}>{selectedInvoice?.createdBy || user?.name || ""}</p>
                   <div className="border-t border-black w-40 mx-auto"></div>
                   <p className="mt-1" style={{ fontSize: '10px' }}>Prepared by</p>
                 </div>
                 <div className="text-center">
-                  <p className="mb-4" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+                  <p className="mb-4" style={{ fontSize: '10px' }}>{selectedInvoice?.approvedBy || ""}</p>
                   <div className="border-t border-black w-40 mx-auto"></div>
                   <p className="mt-1" style={{ fontSize: '10px' }}>Authorised officer</p>
                 </div>

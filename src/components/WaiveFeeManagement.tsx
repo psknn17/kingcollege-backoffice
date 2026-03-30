@@ -329,6 +329,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
               <Label>{t("waiveFee.academicYear")}</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

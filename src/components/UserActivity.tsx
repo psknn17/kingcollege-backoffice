@@ -130,7 +130,7 @@ export function UserActivity() {
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Success</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{userActivities.filter(log => log.status === "success").length}</p>
+            <p className="text-2xl font-bold">{userActivities.filter(log => log.status === "success").length}</p>
           </CardContent>
         </Card>
 
@@ -140,7 +140,7 @@ export function UserActivity() {
               <AlertTriangle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Warnings</p>
             </div>
-            <p className="text-2xl font-bold text-yellow-600">{userActivities.filter(log => log.status === "warning").length}</p>
+            <p className="text-2xl font-bold">{userActivities.filter(log => log.status === "warning").length}</p>
           </CardContent>
         </Card>
 
@@ -150,7 +150,7 @@ export function UserActivity() {
               <XCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Errors</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">{userActivities.filter(log => log.status === "error").length}</p>
+            <p className="text-2xl font-bold">{userActivities.filter(log => log.status === "error").length}</p>
           </CardContent>
         </Card>
       </div>

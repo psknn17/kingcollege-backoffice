@@ -2835,6 +2835,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Select value={selectedCategory} onValueChange={(v) => { setSelectedCategory(v); setCurrentPage(1) }}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2846,6 +2847,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 </Select>
                 <Select value={selectedDocType} onValueChange={(v) => { setSelectedDocType(v); setCurrentPage(1) }}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Document Type" />
                   </SelectTrigger>
                   <SelectContent>

@@ -562,7 +562,7 @@ export function ApprovalQueue() {
           ...inv,
           invoiceNumber: finalInvoiceNumber,
           approvalStatus: "approved" as ApprovalStatus,
-          approvedBy: "Admin",
+          approvedBy: user?.name || "Admin",
           approvedAt: approvalDate,
           issueDate: inv.issueDate || approvalDate,
           status: "sent" as const,
@@ -578,7 +578,7 @@ export function ApprovalQueue() {
       {
         invoiceNumber: finalInvoiceNumber,
         approvalStatus: "approved",
-        approvedBy: "Admin",
+        approvedBy: user?.name || "Admin",
         approvedAt: approvalDate.toISOString(),
         issueDate: (invoice.issueDate || approvalDate).toISOString().split('T')[0],
         status: "sent",
@@ -643,7 +643,7 @@ export function ApprovalQueue() {
         patch: {
           invoiceNumber: finalInvoiceNumber,
           approvalStatus: "approved" as ApprovalStatus,
-          approvedBy: "Admin",
+          approvedBy: user?.name || "Admin",
           approvedAt: now.toISOString(),
           issueDate: (inv.issueDate || now).toISOString().split('T')[0],
           status: "sent",
@@ -656,7 +656,7 @@ export function ApprovalQueue() {
         ...inv,
         invoiceNumber: finalInvoiceNumber,
         approvalStatus: "approved" as ApprovalStatus,
-        approvedBy: "Admin",
+        approvedBy: user?.name || "Admin",
         approvedAt: now,
         issueDate: inv.issueDate || now,
         status: "sent" as const,
@@ -1023,6 +1023,7 @@ export function ApprovalQueue() {
                 setTermFilter("all")
               }}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allYears")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1039,6 +1040,7 @@ export function ApprovalQueue() {
               <label className="text-sm font-medium text-muted-foreground">{t("invoice.term")}</label>
               <Select value={termFilter} onValueChange={setTermFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allTerms")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1055,6 +1057,7 @@ export function ApprovalQueue() {
               <label className="text-sm font-medium text-muted-foreground">{t("student.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allYearGroups")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1071,6 +1074,7 @@ export function ApprovalQueue() {
               <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.approvalStatus")}</label>
               <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("invoice.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1133,6 +1137,7 @@ export function ApprovalQueue() {
               <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.emailStatus")}</label>
               <Select value={emailStatusFilter} onValueChange={setEmailStatusFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("approvalQueue.allEmailStatus")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1149,6 +1154,7 @@ export function ApprovalQueue() {
               <label className="text-sm font-medium text-muted-foreground">{t("approvalQueue.invoiceStatus")}</label>
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("approvalQueue.allInvoiceStatus")} />
                 </SelectTrigger>
                 <SelectContent>

@@ -43,7 +43,7 @@ interface SummerActivityReceipt {
   amount: number
   paymentMethod: string
   transactionDate: Date
-  status: "issued" | "resent" | "failed"
+  status: "issued" | "cancelled"
   downloadCount: number
   sessionTimes: string
   isEarlyBird: boolean
@@ -99,7 +99,7 @@ const mockReceipts: SummerActivityReceipt[] = [
     amount: 1200,
     paymentMethod: "Bank Transfer",
     transactionDate: new Date("2025-04-13"),
-    status: "resent",
+    status: "issued",
     downloadCount: 0,
     sessionTimes: "10:00-16:00",
     isEarlyBird: true
@@ -135,7 +135,7 @@ const mockReceipts: SummerActivityReceipt[] = [
     amount: 2800,
     paymentMethod: "Cash",
     transactionDate: new Date("2025-04-11"),
-    status: "failed",
+    status: "issued",
     downloadCount: 0,
     sessionTimes: "13:00-17:00",
     isEarlyBird: true
@@ -147,7 +147,6 @@ export function SummerActivitiesReceipts() {
   const [receipts] = useState<SummerActivityReceipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<SummerActivityReceipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [activityTypeFilter, setActivityTypeFilter] = useState("all")
   const [earlyBirdFilter, setEarlyBirdFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -226,10 +225,6 @@ export function SummerActivitiesReceipts() {
       )
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(receipt => receipt.status === statusFilter)
-    }
-
     if (activityTypeFilter !== "all") {
       filtered = filtered.filter(receipt => receipt.activityType === activityTypeFilter)
     }
@@ -253,7 +248,6 @@ export function SummerActivitiesReceipts() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    setStatusFilter("all")
     setActivityTypeFilter("all")
     setEarlyBirdFilter("all")
     setDateFrom(null)
@@ -356,19 +350,6 @@ export function SummerActivitiesReceipts() {
     XLSX.writeFile(wb, `interface-receipts-summer-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "issued":
-        return <Badge className="bg-green-100 text-green-800">{t("receipt.status.issued")}</Badge>
-      case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.status.resent")}</Badge>
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800">{t("receipt.status.failed")}</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
   const getActivityTypeBadge = (activityType: string) => {
     switch (activityType) {
       case "camp":
@@ -390,9 +371,6 @@ export function SummerActivitiesReceipts() {
 
   const summaryStats = {
     total: receipts.length,
-    issued: receipts.filter(r => r.status === "issued").length,
-    resent: receipts.filter(r => r.status === "resent").length,
-    failed: receipts.filter(r => r.status === "failed").length,
     totalDownloads: receipts.reduce((sum, r) => sum + r.downloadCount, 0),
     earlyBird: receipts.filter(r => r.isEarlyBird).length,
     totalRevenue: receipts.reduce((sum, r) => sum + r.amount, 0),
@@ -454,18 +432,11 @@ export function SummerActivitiesReceipts() {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
                 <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
                 <p className="text-2xl font-bold">{summaryStats.total}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl gap-0">
-              <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
-                <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
               </CardContent>
             </Card>
 
@@ -520,24 +491,10 @@ export function SummerActivitiesReceipts() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("common.status")}</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                      <SelectItem value="issued">{t("receipt.status.issued")}</SelectItem>
-                      <SelectItem value="resent">{t("receipt.status.resent")}</SelectItem>
-                      <SelectItem value="failed">{t("receipt.status.failed")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <label className="text-sm font-medium">{t("summer.activityType.label")}</label>
                   <Select value={activityTypeFilter} onValueChange={setActivityTypeFilter}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -556,6 +513,7 @@ export function SummerActivitiesReceipts() {
                   <label className="text-sm font-medium">{t("summer.earlyBird")}</label>
                   <Select value={earlyBirdFilter} onValueChange={setEarlyBirdFilter}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -665,8 +623,6 @@ export function SummerActivitiesReceipts() {
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Status - badge (center aligned) */}
-                    <TableHead align="center">{t("common.status")}</TableHead>
                     {/* Downloads - number (right aligned) */}
                     <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                       <div className="flex items-center justify-end gap-1">
@@ -726,8 +682,6 @@ export function SummerActivitiesReceipts() {
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - date (left aligned) */}
                       <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
-                      {/* Status - badge (center aligned) */}
-                      <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                       {/* Downloads - number (right aligned) */}
                       <TableCell align="right">
                         <div className="text-sm">

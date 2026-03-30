@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, ChevronLeft, ChevronRight, X, User, DollarSign, Calendar as CalendarEmoji, Clock, CreditCard, CheckSquare, Square, Send, AlertCircle, CheckCircle, Receipt, Users, ArrowUpDown, Plus, RefreshCw, XCircle } from "lucide-react"
+import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, ChevronLeft, ChevronRight, X, User, DollarSign, Calendar as CalendarEmoji, Clock, CreditCard, CheckSquare, Square, Send, AlertCircle, CheckCircle, Receipt, Users, ArrowUpDown, Plus } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
 import { Separator } from "./ui/separator"
@@ -35,7 +35,7 @@ interface Receipt {
   transactionDate: Date
   paymentType: "yearly" | "termly"
   term: string
-  status: "issued" | "resent" | "failed"
+  status: "issued" | "cancelled"
   downloadCount: number
 }
 
@@ -96,7 +96,7 @@ const mockReceipts: Receipt[] = [
     transactionDate: new Date("2025-08-13"),
     paymentType: "yearly",
     term: "2025/2026",
-    status: "resent",
+    status: "issued",
     downloadCount: 0
   },
   {
@@ -126,7 +126,7 @@ const mockReceipts: Receipt[] = [
     transactionDate: new Date("2025-08-11"),
     paymentType: "yearly",
     term: "2025/2026",
-    status: "failed",
+    status: "issued",
     downloadCount: 0
   }
 ]
@@ -134,7 +134,6 @@ const mockReceipts: Receipt[] = [
 // Add more mock data for pagination testing
 for (let i = 6; i <= 120; i++) {
   const student = studentData[i % studentData.length]
-  const statuses: ("issued" | "resent" | "failed")[] = ["issued", "resent", "failed"]
   const paymentMethods = ["Credit Card", "PromptPay", "Bank Counter", "WeChat Pay", "Alipay", "Cash"]
   const paymentTypes: ("yearly" | "termly")[] = ["yearly", "termly"]
 
@@ -150,7 +149,7 @@ for (let i = 6; i <= 120; i++) {
     transactionDate: new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
     paymentType: paymentTypes[Math.floor(Math.random() * paymentTypes.length)],
     term: Math.random() > 0.5 ? "2025/2026" : `Term ${Math.floor(Math.random() * 3) + 1}`,
-    status: statuses[Math.floor(Math.random() * statuses.length)],
+    status: "issued" as const,
     downloadCount: Math.floor(Math.random() * 10)
   })
 }
@@ -167,7 +166,6 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
   const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
 
-  const [statusFilter, setStatusFilter] = useState("all")
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("all")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -358,7 +356,8 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
   ]
 
   const downloadInterfaceFile = () => {
-    if (filteredReceipts.length === 0) {
+    const sorted = getSortedReceipts(filteredReceipts)
+    if (sorted.length === 0) {
       toast.error("No receipts to export")
       return
     }
@@ -373,8 +372,12 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
       return method.toUpperCase()
     }
 
+    // Load bank accounts (offline + online) to get Receive Account no.
     const bankAccountsStored = localStorage.getItem("kingscollege_backoffice_bankAccounts")
-    const bankAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
+    const offlineAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
+    const onlineAccountsStored = localStorage.getItem("onlineBankAccounts")
+    const onlineAccounts = onlineAccountsStored ? JSON.parse(onlineAccountsStored) : []
+    const bankAccounts = [...offlineAccounts, ...onlineAccounts]
 
     const getReceiveAccountNo = (paymentMethod: string): string => {
       if (!paymentMethod) return ""
@@ -399,6 +402,12 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
         matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Bank Transfer" && acc.isActive)
       } else if (m.includes("cheque")) {
         matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Cashier's cheque" && acc.isActive)
+      } else if (m.includes("thai qr") || m.includes("qr")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Thai QR" && acc.isActive)
+      } else if (m.includes("credit card")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Credit Card" && acc.isActive)
+      } else if (m.includes("cash")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Cash" && acc.isActive)
       }
 
       return matchedAccount?.glAccount || matchedAccount?.accountNumber || ""
@@ -412,17 +421,17 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
       "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
     ]
 
-    const dataRows = filteredReceipts.map(r => [
+    const dataRows = sorted.map((r: any) => [
       r.receiptNumber,
-      r.studentId,
+      r.familyCode || r.studentId,
       "CASHRCPT",
       "AR-RV",
       format(r.transactionDate, "yyyy-MM-dd") + " 00:00:00",
-      mapPaymentMethod(r.paymentMethod),
+      r.paymentMethod || "",
       r.studentId,
       getReceiveAccountNo(r.paymentMethod),
       (r.studentGrade || "").toUpperCase(),
-      (r.term || ""),
+      (r.academicYear || r.term || "").replace(/-/g, "/"),
       r.invoiceNumber,
       r.amount
     ])
@@ -437,7 +446,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
     XLSX.utils.book_append_sheet(wb, ws, "Receipts")
     XLSX.writeFile(wb, `interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
     toast.success("Interface file downloaded successfully")
-    logActivity({ action: "Download Interface File", module: "Receipts", detail: `Exported ${filteredReceipts.length} receipts to interface file` })
+    logActivity({ action: "Download Interface File", module: "Receipts", detail: `Exported ${sorted.length} receipts to interface file` })
   }
 
   const handleSort = (column: string) => {
@@ -473,19 +482,6 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
     })
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "issued":
-        return <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge>
-      case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.resent")}</Badge>
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800">{t("receipt.failed")}</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
   // Calculate pagination with sorting
   const sortedReceipts = getSortedReceipts(filteredReceipts)
   const totalPages = Math.ceil(sortedReceipts.length / itemsPerPage)
@@ -495,9 +491,6 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
 
   const summaryStats = {
     total: receipts.length,
-    issued: receipts.filter(r => r.status === "issued").length,
-    resent: receipts.filter(r => r.status === "resent").length,
-    failed: receipts.filter(r => r.status === "failed").length,
     totalDownloads: receipts.reduce((sum, r) => sum + r.downloadCount, 0)
   }
 
@@ -564,7 +557,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
                 <div className="flex items-center gap-1.5">
@@ -572,36 +565,6 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                   <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
                 </div>
                 <p className="text-2xl font-bold">{summaryStats.total}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl gap-0">
-              <CardContent className="p-4 pb-4">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
-                </div>
-                <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl gap-0">
-              <CardContent className="p-4 pb-4">
-                <div className="flex items-center gap-1.5">
-                  <RefreshCw className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{t("receipt.resent")}</p>
-                </div>
-                <p className="text-2xl font-bold text-blue-600">{summaryStats.resent}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl gap-0">
-              <CardContent className="p-4 pb-4">
-                <div className="flex items-center gap-1.5">
-                  <XCircle className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{t("receipt.failed")}</p>
-                </div>
-                <p className="text-2xl font-bold text-red-600">{summaryStats.failed}</p>
               </CardContent>
             </Card>
 
@@ -644,26 +607,12 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("common.status")}</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                      <SelectItem value="issued">{t("receipt.issued")}</SelectItem>
-                      <SelectItem value="resent">{t("receipt.resent")}</SelectItem>
-                      <SelectItem value="failed">{t("receipt.failed")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {!isExternal && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">{t("receipt.paymentType")}</label>
                     <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
                       <SelectTrigger>
+                        <Filter className="w-4 h-4 mr-2" />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -680,6 +629,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                     <label className="text-sm font-medium">{t("receipt.yearGroup")}</label>
                     <Select value={gradeFilter} onValueChange={setGradeFilter}>
                       <SelectTrigger>
+                        <Filter className="w-4 h-4 mr-2" />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -840,12 +790,6 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                      <div className="flex items-center gap-1">
-                        {t("common.status")}
-                        <ArrowUpDown className="h-4 w-4" />
-                      </div>
-                    </TableHead>
                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                       <div className="flex items-center gap-1">
                         {t("receipt.downloads")}
@@ -884,7 +828,6 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                       <TableCell>₿{receipt.amount.toLocaleString()}</TableCell>
                       <TableCell>{receipt.paymentMethod}</TableCell>
                       <TableCell>{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
-                      <TableCell>{getStatusBadge(receipt.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
                           {receipt.downloadCount} {t("receipt.times")}
@@ -1042,7 +985,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
                   <div className="space-y-2 mt-2">
                     <p><span className="font-medium">{t("receipt.receiptNumber")}:</span> {selectedReceipt.receiptNumber}</p>
                     <p><span className="font-medium">{t("receipt.invoiceNumber")}:</span> {selectedReceipt.invoiceNumber}</p>
-                    <p><span className="font-medium">{t("common.status")}:</span> {getStatusBadge(selectedReceipt.status)}</p>
+                    <p><span className="font-medium">{t("common.status")}:</span> <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge></p>
                   </div>
                 </div>
                 <div>

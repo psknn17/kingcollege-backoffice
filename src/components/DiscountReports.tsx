@@ -568,7 +568,7 @@ export function DiscountReports() {
               <Percent className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Total Discount</p>
             </div>
-            <p className="text-2xl font-bold text-orange-500">฿{totalDiscountAmountSum.toLocaleString()}</p>
+            <p className="text-2xl font-bold">฿{totalDiscountAmountSum.toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -578,7 +578,7 @@ export function DiscountReports() {
               <TrendingDown className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Avg. Discount / Student</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">฿{totalStudents > 0 ? Math.round(totalDiscountAmountSum / totalStudents).toLocaleString() : "0"}</p>
+            <p className="text-2xl font-bold">฿{totalStudents > 0 ? Math.round(totalDiscountAmountSum / totalStudents).toLocaleString() : "0"}</p>
           </CardContent>
         </Card>
 
@@ -588,7 +588,7 @@ export function DiscountReports() {
               <Tag className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Discount Types</p>
             </div>
-            <p className="text-2xl font-bold text-purple-600">{new Set(filteredStudents.flatMap(s => s.discounts.map(d => d.type))).size}</p>
+            <p className="text-2xl font-bold">{new Set(filteredStudents.flatMap(s => s.discounts.map(d => d.type))).size}</p>
           </CardContent>
         </Card>
       </div>
@@ -620,6 +620,7 @@ export function DiscountReports() {
                   <label className="text-sm font-medium text-muted-foreground">{t("discountReports.academicYear")}</label>
                   <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("discountReports.allAcademicYears") || "All Academic Years"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -635,6 +636,7 @@ export function DiscountReports() {
                   <label className="text-sm font-medium text-muted-foreground">{t("discountReports.term")}</label>
                   <Select value={filterTerm} onValueChange={setFilterTerm}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("discountReports.allTerms") || "All Terms"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -650,6 +652,7 @@ export function DiscountReports() {
                   <label className="text-sm font-medium text-muted-foreground">{t("discountReports.yearGroup")}</label>
                   <Select value={filterYearGroup} onValueChange={setFilterYearGroup}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("discountReports.allYearGroups")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -665,6 +668,7 @@ export function DiscountReports() {
                   <label className="text-sm font-medium text-muted-foreground">{t("discountReports.discountType")}</label>
                   <Select value={filterType} onValueChange={setFilterType}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("discountReports.allTypes")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -680,6 +684,7 @@ export function DiscountReports() {
                   <label className="text-sm font-medium text-muted-foreground">{t("discountReports.studentStatus") || "Student Status"}</label>
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("discountReports.allStatus")} />
                     </SelectTrigger>
                     <SelectContent>

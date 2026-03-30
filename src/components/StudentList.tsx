@@ -1970,7 +1970,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               <UserCheck className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("student.activeStudents")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+            <p className="text-2xl font-bold">{stats.active}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
@@ -2016,6 +2016,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select value={filterGrade} onValueChange={setFilterGrade}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("student.yearGroup")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -2029,6 +2030,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("common.status")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -2042,6 +2044,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               </Select>
               <Select value={filterAcademicYear} onValueChange={setFilterAcademicYear}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("common.academicYear")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -2055,6 +2058,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               </Select>
               <Select value={filterTerm} onValueChange={setFilterTerm}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("student.term")} />
                 </SelectTrigger>
                 <SelectContent>

@@ -368,7 +368,7 @@ export function EventPaymentDeadline() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
+            <div className="text-2xl font-bold">
               {deadlines.filter(d => d.status === 'overdue').length}
             </div>
           </CardContent>

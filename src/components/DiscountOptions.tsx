@@ -11,7 +11,8 @@ import { Badge } from "./ui/badge"
 import {
   Save,
   Users,
-  Info
+  Info,
+  Filter
 } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
@@ -273,6 +274,7 @@ export function DiscountOptions() {
             <Label className="text-sm whitespace-nowrap">{t("discountOptions.academicYear")}:</Label>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-[150px]">
+                <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder={t("discountOptions.selectYear")} />
               </SelectTrigger>
               <SelectContent>

@@ -8,11 +8,10 @@ import { Separator } from "./ui/separator"
 import { toast } from "sonner"
 import { logActivity } from "@/lib/activityLog"
 import { useAuth, getRoleDisplayName } from "@/contexts/AuthContext"
-import { User, Mail, Phone, Building, Calendar, Upload, Save, Lock, Eye, EyeOff } from "lucide-react"
-import { format } from "date-fns"
+import { User, Mail, Phone, Save, Lock, Eye, EyeOff } from "lucide-react"
 
 export function UserProfile() {
-  const { user } = useAuth()
+  const { user, updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswordSection, setShowPasswordSection] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
@@ -23,14 +22,12 @@ export function UserProfile() {
     name: user?.name || "",
     email: user?.email || "user@example.com",
     phone: "",
-    department: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   })
 
   const handleSave = () => {
-    // Validate form
     if (!formData.name.trim()) {
       toast.error("Please enter your name")
       return
@@ -41,7 +38,7 @@ export function UserProfile() {
       return
     }
 
-    // Here you would update the user profile in the backend
+    updateProfile({ name: formData.name, email: formData.email, phone: formData.phone })
     toast.success("Profile updated successfully")
     logActivity({ action: "Update Profile", module: "User Profile", detail: `Updated profile: ${formData.name} (${formData.email})` })
     setIsEditing(false)
@@ -68,7 +65,6 @@ export function UserProfile() {
       return
     }
 
-    // Here you would update the password in the backend
     toast.success("Password changed successfully")
     logActivity({ action: "Change Password", module: "User Profile", detail: "Password changed successfully" })
     setShowPasswordSection(false)
@@ -78,15 +74,6 @@ export function UserProfile() {
       newPassword: "",
       confirmPassword: "",
     })
-  }
-
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Here you would upload the avatar to the backend
-      toast.success("Avatar uploaded successfully")
-      logActivity({ action: "Upload Avatar", module: "User Profile", detail: `Uploaded avatar: ${file.name}` })
-    }
   }
 
   return (
@@ -103,33 +90,19 @@ export function UserProfile() {
       <Card>
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your personal details and profile picture</CardDescription>
+          <CardDescription>Update your personal details</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar Section */}
-          <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24 border-4 border-gray-200 shadow-lg">
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-2xl">
+          {/* Avatar + Name row */}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16 border-2 border-gray-200 shadow">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg">
                 {user?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
               </AvatarFallback>
             </Avatar>
-            <div className="space-y-2">
-              <Label htmlFor="avatar-upload" className="cursor-pointer">
-                <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <span>
-                    <Upload className="w-4 h-4" />
-                    Upload Photo
-                  </span>
-                </Button>
-              </Label>
-              <Input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-              <p className="text-xs text-gray-500">JPG, PNG or GIF. Max size 2MB</p>
+            <div>
+              <p className="text-lg font-semibold">{user?.name}</p>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role || "")}</p>
             </div>
           </div>
 
@@ -181,45 +154,15 @@ export function UserProfile() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="department">
-                <Building className="w-4 h-4 inline mr-2" />
-                Department
-              </Label>
-              <Input
-                id="department"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                disabled={!isEditing}
-                placeholder="Finance & Accounting"
-              />
-            </div>
-          </div>
-
-          {/* Read-only Info */}
-          <Separator />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
               <Label className="text-gray-500">Role</Label>
               <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
                 <span className="font-medium text-gray-700">{getRoleDisplayName(user?.role || "")}</span>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-gray-500">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Member Since
-              </Label>
-              <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
-                <span className="font-medium text-gray-700">
-                  {format(new Date(), "MMMM yyyy")}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             {isEditing ? (
               <>
                 <Button onClick={handleSave} className="gap-2">

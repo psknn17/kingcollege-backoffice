@@ -4,7 +4,7 @@ import { Button } from "./ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-import { RotateCcw, GraduationCap, BookOpen, Bus, FileText, Globe, ClipboardCheck, DollarSign, CheckCircle, AlertTriangle, Users } from "lucide-react"
+import { RotateCcw, GraduationCap, BookOpen, Bus, FileText, Globe, ClipboardCheck, DollarSign, CheckCircle, AlertTriangle, Users, Filter } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
@@ -264,6 +264,7 @@ export function ReportOverview() {
                 setSelectedTerm("all") // Reset term when year changes
               }}>
                 <SelectTrigger className="h-10">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("common.allAcademicYears")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -280,6 +281,7 @@ export function ReportOverview() {
               <label className="text-sm font-medium">{t("payment.term")}</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger className="h-10">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("common.all")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -320,7 +322,7 @@ export function ReportOverview() {
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("report.totalCollected")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{formatFullCurrency(totals.totalCollected)}</p>
+            <p className="text-2xl font-bold">{formatFullCurrency(totals.totalCollected)}</p>
           </CardContent>
         </Card>
 
@@ -330,7 +332,7 @@ export function ReportOverview() {
               <AlertTriangle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("report.totalOutstanding")}</p>
             </div>
-            <p className="text-2xl font-bold text-orange-500">{formatFullCurrency(totals.totalOutstanding)}</p>
+            <p className="text-2xl font-bold">{formatFullCurrency(totals.totalOutstanding)}</p>
           </CardContent>
         </Card>
 

@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   selectRole: (roleId: string) => void
+  updateProfile: (data: { name?: string; email?: string; phone?: string }) => void
   isAuthenticated: boolean
   needsRoleSelection: boolean
   isLoading: boolean
@@ -263,6 +264,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateProfile = (data: { name?: string; email?: string; phone?: string }) => {
+    if (user) {
+      const updatedUser = { ...user, ...data }
+      setUser(updatedUser)
+      safeSaveToStorage(STORAGE_KEY, JSON.stringify(updatedUser))
+
+      // Also update the users list so it persists across logins
+      try {
+        const usersStored = localStorage.getItem(USERS_STORAGE_KEY)
+        if (usersStored) {
+          const usersList = JSON.parse(usersStored)
+          const idx = usersList.findIndex((u: any) => u.id === user.id || u.email === user.email)
+          if (idx !== -1) {
+            if (data.name) {
+              const nameParts = data.name.split(' ')
+              usersList[idx].firstName = nameParts[0] || ""
+              usersList[idx].lastName = nameParts.slice(1).join(' ') || ""
+            }
+            if (data.email) usersList[idx].email = data.email
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList))
+          }
+        }
+      } catch (e) {
+        console.error("Failed to update users list:", e)
+      }
+    }
+  }
+
   const logout = () => {
     setUser(null)
     setNeedsRoleSelection(false)
@@ -273,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = user !== null && !needsRoleSelection
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, selectRole, isAuthenticated, needsRoleSelection, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, selectRole, updateProfile, isAuthenticated, needsRoleSelection, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -74,7 +74,7 @@ interface Receipt {
   chequeDate?: Date
   collectorName?: string
   familyCode?: string
-  status: "issued" | "resent" | "failed"
+  status: "issued" | "cancelled"
 }
 
 interface CreditNote {
@@ -90,7 +90,7 @@ interface CreditNote {
   issueDate: Date
   academicYear: string
   term: string
-  status: "issued" | "resent" | "failed" | "cancelled" | "pending" | "used" | "partial"
+  status: "issued" | "cancelled" | "pending" | "used" | "partial"
   familyCode?: string
   appliedToInvoice?: string
   appliedToReceipt?: string
@@ -189,7 +189,7 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         downloadCount: 0,
         collectorName: "System",
         familyCode: familyCode,
-        status: (r.status as "issued" | "resent" | "failed") || "issued"
+        status: (r.status as "issued" | "cancelled") || "issued"
       }
     })
   } catch (error) {
@@ -247,7 +247,7 @@ const mockCreditNotes: CreditNote[] = [
 // Add more mock credit notes
 for (let i = 4; i <= 50; i++) {
   const student = studentData[i % studentData.length]
-  const reasons = ["Course cancellation", "Overpayment refund", "Activity cancellation", "Billing error", "Withdrawal"]
+  const reasons = ["Course cancellation", "Overpayment refund", "Activity cancellation", "Withdrawal"]
   const academicYears = ["2024/2025", "2025/2026"]
   const terms = ["Term 1", "Term 2", "Term 3"]
   const statuses: ("issued" | "cancelled" | "pending")[] = ["issued", "cancelled", "pending"]
@@ -452,6 +452,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     term: "",
     amount: 0,
     reason: "",
+    otherReason: "",
     issueDate: new Date()
   })
 
@@ -532,10 +533,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       filtered = filtered.filter(receipt => receipt.paymentMethod === paymentChannelFilter)
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(receipt => receipt.status === statusFilter)
-    }
-
     if (dateFrom) {
       filtered = filtered.filter(receipt => receipt.transactionDate >= dateFrom)
     }
@@ -546,7 +543,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
     setFilteredReceipts(filtered)
     setCurrentPage(1)
-  }, [searchTerm, academicYearFilter, termFilter, gradeFilter, paymentChannelFilter, statusFilter, dateFrom, dateTo, receipts, activeTab, academicYears])
+  }, [searchTerm, academicYearFilter, termFilter, gradeFilter, paymentChannelFilter, dateFrom, dateTo, receipts, activeTab, academicYears])
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -632,7 +629,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   }
 
   const downloadInterfaceFile = () => {
-    if (filteredReceipts.length === 0) {
+    const sorted = getSortedReceipts(filteredReceipts)
+    if (sorted.length === 0) {
       toast.error(t("receipt.noReceiptsToExport"))
       return
     }
@@ -647,9 +645,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return method
     }
 
-    // Load bank accounts to get Receive Account no.
+    // Load bank accounts (offline + online) to get Receive Account no.
     const bankAccountsStored = localStorage.getItem("kingscollege_backoffice_bankAccounts")
-    const bankAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
+    const offlineAccounts = bankAccountsStored ? JSON.parse(bankAccountsStored) : []
+    const onlineAccountsStored = localStorage.getItem("onlineBankAccounts")
+    const onlineAccounts = onlineAccountsStored ? JSON.parse(onlineAccountsStored) : []
+    const bankAccounts = [...offlineAccounts, ...onlineAccounts]
 
     const getReceiveAccountNo = (paymentMethod: string): string => {
       if (!paymentMethod) return ""
@@ -676,6 +677,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Bank Transfer" && acc.isActive)
       } else if (m.includes("cheque")) {
         matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Cashier's cheque" && acc.isActive)
+      } else if (m.includes("thai qr") || m.includes("qr")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Thai QR" && acc.isActive)
+      } else if (m.includes("credit card")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Credit Card" && acc.isActive)
+      } else if (m.includes("cash")) {
+        matchedAccount = bankAccounts.find((acc: any) => acc.paymentSource === "Cash" && acc.isActive)
       }
 
       return matchedAccount?.glAccount || matchedAccount?.accountNumber || ""
@@ -691,13 +698,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
     ]
 
-    const dataRows = filteredReceipts.map(r => [
+    const dataRows = sorted.map(r => [
       r.receiptNumber,
       r.familyCode || r.studentId, // Customer no. (Family Code)
       "CASHRCPT",
       "AR-RV",
       format(r.transactionDate, "yyyy-MM-dd") + " 00:00:00",
-      mapPaymentMethod(r.paymentMethod).toUpperCase(),
+      r.paymentMethod || "",
       r.studentId, // Sell-to-customer No. (Student ID)
       getReceiveAccountNo(r.paymentMethod),
       (r.studentGrade || "").toUpperCase(),
@@ -718,7 +725,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     XLSX.utils.book_append_sheet(wb, ws, "Receipts")
     XLSX.writeFile(wb, `interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
     toast.success(t("receipt.interfaceFileDownloaded"))
-    logActivity({ action: "Download Interface File", module: "Receipts", detail: `Exported ${filteredReceipts.length} receipts to interface file, File: interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx` })
+    logActivity({ action: "Download Interface File", module: "Receipts", detail: `Exported ${sorted.length} receipts to interface file, File: interface-receipts-${format(new Date(), "dd-MM-yyyy")}.xlsx` })
   }
 
   const exportToExcel = () => {
@@ -995,20 +1002,16 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       toast.error(t("receipt.studentNameRequired"))
       return
     }
-    if (!creditNoteForm.yearGroup) {
-      toast.error(t("receipt.yearGroupRequired") || "Year Group is required")
-      return
-    }
-    if (!creditNoteForm.academicYear) {
-      toast.error(t("receipt.academicYearRequired") || "Academic Year is required")
-      return
-    }
-    if (!creditNoteForm.term) {
-      toast.error(t("receipt.termRequired") || "Term is required")
-      return
-    }
     if (!creditNoteForm.amount || creditNoteForm.amount <= 0) {
       toast.error(t("receipt.amountMustBePositive"))
+      return
+    }
+    if (!creditNoteForm.reason) {
+      toast.error(t("receipt.reasonRequired") || "Reason is required")
+      return
+    }
+    if (creditNoteForm.reason === "Other" && !creditNoteForm.otherReason.trim()) {
+      toast.error(t("receipt.otherReasonRequired") || "Please specify the reason")
       return
     }
     if (!creditNoteForm.issueDate) {
@@ -1031,7 +1034,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       studentGrade: creditNoteForm.yearGroup,
       amount: creditNoteForm.amount,
       remainingBalance: creditNoteForm.amount,
-      reason: creditNoteForm.reason,
+      reason: creditNoteForm.reason === "Other" ? creditNoteForm.otherReason.trim() : creditNoteForm.reason,
       issueDate: creditNoteForm.issueDate,
       academicYear: creditNoteForm.academicYear,
       term: creditNoteForm.term,
@@ -1056,6 +1059,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       term: "",
       amount: 0,
       reason: "",
+      otherReason: "",
       issueDate: new Date()
     })
 
@@ -1234,8 +1238,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { bg: string; text: string; border: string }> = {
       issued: { bg: "bg-green-100", text: "text-green-800", border: "border-green-200" },
-      resent: { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-200" },
-      failed: { bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
       cancelled: { bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
       pending: { bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-200" },
       used: { bg: "bg-gray-100", text: "text-gray-600", border: "border-gray-200" },
@@ -1378,6 +1380,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         setTermFilter("all")
                       }}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("common.allYears")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1395,6 +1398,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
                       <Select value={termFilter} onValueChange={setTermFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("common.allTerms")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1412,6 +1416,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
                       <Select value={gradeFilter} onValueChange={setGradeFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("common.allYearGroups")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1429,6 +1434,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <label className="text-sm font-medium text-muted-foreground">{t("common.paymentChannel")}</label>
                       <Select value={paymentChannelFilter} onValueChange={setPaymentChannelFilter}>
                         <SelectTrigger className="h-9">
+                          <Filter className="w-4 h-4 mr-2" />
                           <SelectValue placeholder={t("common.allChannels")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1436,21 +1442,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           {paymentMethodOptions.map(method => (
                             <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder={t("receipt.allStatuses")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">{t("receipt.allStatuses")}</SelectItem>
-                          <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
-                          <SelectItem value="resent">{t("receipt.statusResent")}</SelectItem>
-                          <SelectItem value="failed">{t("receipt.statusFailed")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1572,81 +1563,65 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         }}
                       />
                     </TableHead>
-                    {/* Receipt # - left aligned (ID/code) */}
-                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
-                      <div className="flex items-center gap-1">
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("receipt.receiptNumber")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Invoice # - left aligned (ID/code) */}
-                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
-                      <div className="flex items-center gap-1">
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("invoiceNumber")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("receipt.invoice")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Student/Client - left aligned (text/name) */}
-                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
-                      <div className="flex items-center gap-1">
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {category === "external" ? t("receipt.client") : t("common.student")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
                     {category !== "external" && (
                       <>
-                        {/* Grade - center aligned (badge) */}
                         <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
                           <div className="flex items-center gap-1 justify-center">
                             {t("common.yearGroup")}
                             <ArrowUpDown className="h-4 w-4" />
                           </div>
                         </TableHead>
-                        {/* Academic Year - left aligned (text) */}
-                        <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")}>
-                          <div className="flex items-center gap-1">
+                        <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")}>
+                          <div className="flex items-center gap-1 justify-center">
                             {t("common.academicYear")}
                             <ArrowUpDown className="h-4 w-4" />
                           </div>
                         </TableHead>
-                        {/* Term - left aligned (text) */}
-                        <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
-                          <div className="flex items-center gap-1">
+                        <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")}>
+                          <div className="flex items-center gap-1 justify-center">
                             {t("common.term")}
                             <ArrowUpDown className="h-4 w-4" />
                           </div>
                         </TableHead>
                       </>
                     )}
-                    {/* Amount - right aligned (currency) */}
-                    <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center gap-1 justify-end">
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("common.amount")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Payment Method - left aligned (text) */}
-                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
-                      <div className="flex items-center gap-1">
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("paymentMethod")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("common.paymentMethod")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Date - left aligned (date) */}
-                    <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
-                      <div className="flex items-center gap-1">
+                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transactionDate")}>
+                      <div className="flex items-center gap-1 justify-center">
                         {t("common.date")}
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Status - center aligned (badge) */}
-                    <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                      <div className="flex items-center gap-1 justify-center">
-                        {t("common.status")}
-                        <ArrowUpDown className="h-4 w-4" />
-                      </div>
-                    </TableHead>
-                    {/* Actions - center aligned */}
+                    <TableHead align="center">{t("common.status")}</TableHead>
                     <TableHead align="center">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1661,16 +1636,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           onCheckedChange={() => toggleReceiptSelection(receipt.id)}
                         />
                       </TableCell>
-                      {/* Receipt # - left aligned */}
-                      <TableCell align="left" className="font-mono text-sm">
+                      <TableCell align="center" className="font-mono text-sm">
                         {receipt.receiptNumber}
                       </TableCell>
-                      {/* Invoice # - left aligned */}
-                      <TableCell align="left" className="font-mono text-sm">
+                      <TableCell align="center" className="font-mono text-sm">
                         {receipt.invoiceNumber}
                       </TableCell>
-                      {/* Student/Client - left aligned */}
-                      <TableCell align="left">
+                      <TableCell align="center">
                         <div>
                           <div className="font-medium">{receipt.studentName}</div>
                           <div className="text-sm text-muted-foreground">{receipt.familyCode || receipt.studentId}</div>
@@ -1678,25 +1650,19 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       </TableCell>
                       {category !== "external" && (
                         <>
-                          {/* Grade - center aligned */}
                           <TableCell align="center">
                             <Badge variant="secondary">{receipt.studentGrade}</Badge>
                           </TableCell>
-                          {/* Academic Year - left aligned */}
-                          <TableCell align="left">{formatAcademicYear(receipt.academicYear)}</TableCell>
-                          {/* Term - left aligned */}
-                          <TableCell align="left">{(receipt.term?.match(/Term\s*\d+/i) || [])[0] || receipt.term}</TableCell>
+                          <TableCell align="center">{formatAcademicYear(receipt.academicYear)}</TableCell>
+                          <TableCell align="center">{(receipt.term?.match(/Term\s*\d+/i) || [])[0] || receipt.term}</TableCell>
                         </>
                       )}
-                      {/* Amount - right aligned */}
-                      <TableCell align="right">฿{receipt.amount.toLocaleString()}</TableCell>
-                      {/* Payment Method - left aligned */}
-                      <TableCell align="left">{receipt.paymentMethod}</TableCell>
-                      {/* Date - left aligned */}
-                      <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
-                      {/* Status - center aligned */}
-                      <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
-                      {/* Actions - center aligned */}
+                      <TableCell align="center">฿{receipt.amount.toLocaleString()}</TableCell>
+                      <TableCell align="center">{receipt.paymentMethod}</TableCell>
+                      <TableCell align="center">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
+                      <TableCell align="center">
+                        <Badge className="bg-green-100 text-green-800 border border-green-200 hover:bg-green-100">Issued</Badge>
+                      </TableCell>
                       <TableCell align="center">
                         <TooltipProvider>
                           <div className="flex gap-1 justify-center">
@@ -1905,13 +1871,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       <div className="border border-black">
                         <div className="flex">
                           <div className="flex-1 p-4 border-r border-black text-center">
-                            <p className="mb-8">{viewingReceipt.collectorName || 'Thananchaya Chalorkpunrattana'}</p>
+                            <p className="mb-8">{viewingReceipt.collectorName || viewingReceipt.createdBy || ""}</p>
                             <div className="border-t border-black pt-2">
                               <p className="font-semibold">Collector</p>
                             </div>
                           </div>
                           <div className="flex-1 p-4 text-center">
-                            <p className="mb-8 italic text-blue-800">Porntip Jarusintrangkul</p>
+                            <p className="mb-8 italic">{viewingReceipt.approvedBy || ""}</p>
                             <div className="border-t border-black pt-2">
                               <p className="font-semibold">Authorised signature</p>
                             </div>
@@ -2030,6 +1996,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                           <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
                             <SelectValue placeholder={t("receipt.allStatus")} />
                           </SelectTrigger>
                           <SelectContent>
@@ -2045,6 +2012,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
                         <Select value={gradeFilter} onValueChange={setGradeFilter}>
                           <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
                             <SelectValue placeholder={t("common.allYearGroups")} />
                           </SelectTrigger>
                           <SelectContent>
@@ -2060,6 +2028,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
                         <Select value={termFilter} onValueChange={setTermFilter}>
                           <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
                             <SelectValue placeholder={t("common.allTerms")} />
                           </SelectTrigger>
                           <SelectContent>
@@ -2074,6 +2043,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
                         <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
                           <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
                             <SelectValue placeholder={t("common.allYears")} />
                           </SelectTrigger>
                           <SelectContent>
@@ -2392,7 +2362,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground mb-0.5">Credit Amount</p>
-                        <p className="text-2xl font-bold text-green-700">฿{viewingCreditNote.amount.toLocaleString()}</p>
+                        <p className="text-2xl font-bold">฿{viewingCreditNote.amount.toLocaleString()}</p>
                       </div>
                       {viewingCreditNote.remainingBalance !== undefined && viewingCreditNote.remainingBalance !== viewingCreditNote.amount && (
                         <div className="text-right">
@@ -2603,7 +2573,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("common.yearGroup")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("common.yearGroup")}</Label>
                   <Select value={creditNoteForm.yearGroup} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, yearGroup: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("receipt.selectYearGroup")} />
@@ -2616,7 +2586,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("common.academicYear")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("common.academicYear")}</Label>
                   <Select value={creditNoteForm.academicYear} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, academicYear: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("receipt.selectAcademicYear")} />
@@ -2632,7 +2602,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("common.term")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("common.term")}</Label>
                   <Select value={creditNoteForm.term} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, term: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("receipt.selectTerm")} />
@@ -2656,8 +2626,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               <div className="space-y-2">
-                <Label>{t("receipt.reason")}</Label>
-                <Select value={creditNoteForm.reason} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, reason: value })}>
+                <Label>{t("receipt.reason")} <span className="text-red-500">*</span></Label>
+                <Select value={creditNoteForm.reason} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, reason: value, otherReason: value !== "Other" ? "" : creditNoteForm.otherReason })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("receipt.selectReason")} />
                   </SelectTrigger>
@@ -2665,11 +2635,18 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     <SelectItem value="Course cancellation">{t("receipt.reasonCourseCancellation")}</SelectItem>
                     <SelectItem value="Overpayment refund">{t("receipt.reasonOverpaymentRefund")}</SelectItem>
                     <SelectItem value="Activity cancellation">{t("receipt.reasonActivityCancellation")}</SelectItem>
-                    <SelectItem value="Billing error">{t("receipt.reasonBillingError")}</SelectItem>
                     <SelectItem value="Withdrawal">{t("receipt.reasonWithdrawal")}</SelectItem>
                     <SelectItem value="Other">{t("receipt.reasonOther")}</SelectItem>
                   </SelectContent>
                 </Select>
+                {creditNoteForm.reason === "Other" && (
+                  <Input
+                    placeholder={t("receipt.specifyReason") || "Please specify reason..."}
+                    value={creditNoteForm.otherReason}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, otherReason: e.target.value })}
+                    className="mt-2"
+                  />
+                )}
               </div>
 
               <div className="space-y-2">
@@ -2692,7 +2669,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 px-6 pb-6 pt-4 border-t">
+            <div className="flex justify-end gap-2 px-6 pb-6 pt-4">
               <Button variant="outline" onClick={() => setIsCreateCreditNoteOpen(false)}>
                 {t("common.cancel")}
               </Button>

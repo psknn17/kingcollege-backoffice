@@ -464,7 +464,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("emailJobs.completed")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{emailJobs.filter(j => j.status === "completed").length}</p>
+            <p className="text-2xl font-bold">{emailJobs.filter(j => j.status === "completed").length}</p>
           </CardContent>
         </Card>
 
@@ -474,7 +474,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               <Loader className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("emailJobs.inProgress")}</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{emailJobs.filter(j => j.status === "in-progress").length}</p>
+            <p className="text-2xl font-bold">{emailJobs.filter(j => j.status === "in-progress").length}</p>
           </CardContent>
         </Card>
 
@@ -484,7 +484,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               <XCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("emailJobs.failed")}</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">{emailJobs.filter(j => j.status === "failed").length}</p>
+            <p className="text-2xl font-bold">{emailJobs.filter(j => j.status === "failed").length}</p>
           </CardContent>
         </Card>
       </div>
@@ -515,6 +515,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder={t("emailJobs.filterByStatus")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -529,6 +530,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
                 {!isSimplifiedView && (
                   <Select value={typeFilter} onValueChange={setTypeFilter} disabled={!userCanEdit}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("emailJobs.filterByType")} />
                     </SelectTrigger>
                     <SelectContent>

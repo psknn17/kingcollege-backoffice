@@ -464,12 +464,12 @@ export function ViewModal({
         <div className="px-4 py-4">
           <div className="flex justify-between px-6">
             <div className="text-center">
-              <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
+              <p className="italic mb-6" style={{ fontSize: '10px' }}>{data?.createdBy || ""}</p>
               <div className="w-40 border-t border-black mb-1"></div>
               <p style={{ fontSize: '10px' }}>Prepared by</p>
             </div>
             <div className="text-center">
-              <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+              <p className="italic mb-6" style={{ fontSize: '10px' }}>{data?.approvedBy || ""}</p>
               <div className="w-40 border-t border-black mb-1"></div>
               <p style={{ fontSize: '10px' }}>Authorised officer</p>
             </div>
@@ -1041,8 +1041,8 @@ export function ViewModal({
                     </Button>
                   </>
                 )}
-                {/* Cancel Invoice button - only for approved, non-cancelled invoices */}
-                {type === "invoice" && data?.approvalStatus === "approved" && data?.status !== "cancelled" && onCancel && (
+                {/* Cancel Invoice button - for non-cancelled invoices */}
+                {type === "invoice" && data?.status !== "cancelled" && onCancel && (
                   <Button
                     variant="destructive"
                     size="sm"

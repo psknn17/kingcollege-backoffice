@@ -317,7 +317,7 @@ export function ExternalParentsApproval() {
               <Clock className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("external.pendingReview")}</p>
             </div>
-            <p className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</p>
+            <p className="text-2xl font-bold">{summaryStats.pending}</p>
           </CardContent>
         </Card>
 
@@ -327,7 +327,7 @@ export function ExternalParentsApproval() {
               <Search className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("external.underReview")}</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{summaryStats.underReview}</p>
+            <p className="text-2xl font-bold">{summaryStats.underReview}</p>
           </CardContent>
         </Card>
 
@@ -337,7 +337,7 @@ export function ExternalParentsApproval() {
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.approved")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.approved}</p>
+            <p className="text-2xl font-bold">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
@@ -347,7 +347,7 @@ export function ExternalParentsApproval() {
               <XCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.rejected")}</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">{summaryStats.rejected}</p>
+            <p className="text-2xl font-bold">{summaryStats.rejected}</p>
           </CardContent>
         </Card>
       </div>
@@ -384,6 +384,7 @@ export function ExternalParentsApproval() {
               <label className="text-sm font-medium">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

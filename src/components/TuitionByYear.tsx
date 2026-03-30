@@ -6,7 +6,7 @@ import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
-import { Save, GraduationCap } from "lucide-react"
+import { Save, GraduationCap, Filter } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
@@ -308,6 +308,7 @@ export function TuitionByYear() {
             <Label htmlFor="academic-year" className="text-sm whitespace-nowrap">{t("common.academicYear")}:</Label>
             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={!userCanEdit}>
               <SelectTrigger className="w-[150px]">
+                <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder={t("tuition.selectYear")} />
               </SelectTrigger>
               <SelectContent>

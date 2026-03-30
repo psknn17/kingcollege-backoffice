@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, Receipt, Users, ArrowUpDown, CheckCircle, DollarSign } from "lucide-react"
+import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, Receipt, Users, ArrowUpDown, DollarSign } from "lucide-react"
 import { format } from "date-fns"
 import { th, enUS } from "date-fns/locale"
 import { InternalEmailManagement } from "./InternalEmailManagement"
@@ -41,7 +41,7 @@ interface AfterSchoolReceipt {
   paymentMethod: string
   transactionDate: Date
   paymentType: "single" | "complete"
-  status: "issued" | "resent" | "failed"
+  status: "issued" | "cancelled"
   downloadCount: number
   isExternal: boolean
 }
@@ -88,7 +88,7 @@ const mockReceipts: AfterSchoolReceipt[] = [
     paymentMethod: "Bank Counter",
     transactionDate: new Date("2025-08-13"),
     paymentType: "complete",
-    status: "resent",
+    status: "issued",
     downloadCount: 0,
     isExternal: true
   },
@@ -118,7 +118,7 @@ const mockReceipts: AfterSchoolReceipt[] = [
     paymentMethod: "Credit Card",
     transactionDate: new Date("2025-08-11"),
     paymentType: "complete",
-    status: "failed",
+    status: "issued",
     downloadCount: 0,
     isExternal: true
   }
@@ -132,7 +132,6 @@ export function AfterSchoolReceipts() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [statusFilter, setStatusFilter] = useState("all")
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("all")
   const [parentTypeFilter, setParentTypeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -216,10 +215,6 @@ export function AfterSchoolReceipts() {
       )
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(receipt => receipt.status === statusFilter)
-    }
-
     if (paymentTypeFilter !== "all") {
       filtered = filtered.filter(receipt => receipt.paymentType === paymentTypeFilter)
     }
@@ -243,7 +238,6 @@ export function AfterSchoolReceipts() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    setStatusFilter("all")
     setPaymentTypeFilter("all")
     setParentTypeFilter("all")
     setDateFrom(null)
@@ -346,19 +340,6 @@ export function AfterSchoolReceipts() {
     XLSX.writeFile(wb, `interface-receipts-afterschool-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "issued":
-        return <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge>
-      case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.resent")}</Badge>
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800">{t("receipt.failed")}</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
   const getPaymentTypeBadge = (paymentType: string) => {
     return paymentType === "complete"
       ? <Badge variant="default">{t("receipt.completePackage")}</Badge>
@@ -367,9 +348,6 @@ export function AfterSchoolReceipts() {
 
   const summaryStats = {
     total: receipts.length,
-    issued: receipts.filter(r => r.status === "issued").length,
-    resent: receipts.filter(r => r.status === "resent").length,
-    failed: receipts.filter(r => r.status === "failed").length,
     totalDownloads: receipts.reduce((sum, r) => sum + r.downloadCount, 0),
     externalParents: receipts.filter(r => r.isExternal).length,
     totalRevenue: receipts.reduce((sum, r) => sum + r.totalAmount, 0)
@@ -443,16 +421,6 @@ export function AfterSchoolReceipts() {
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
-            </div>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl gap-0">
-          <CardContent className="p-4 pb-4">
-            <div className="flex items-center gap-1.5">
               <DollarSign className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
             </div>
@@ -500,24 +468,10 @@ export function AfterSchoolReceipts() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("common.status")}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("invoice.allStatus")}</SelectItem>
-                  <SelectItem value="issued">{t("receipt.issued")}</SelectItem>
-                  <SelectItem value="resent">{t("receipt.resent")}</SelectItem>
-                  <SelectItem value="failed">{t("receipt.failed")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <label className="text-sm font-medium">{t("receipt.paymentType")}</label>
               <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -532,6 +486,7 @@ export function AfterSchoolReceipts() {
               <label className="text-sm font-medium">{t("receipt.parentType")}</label>
               <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -641,8 +596,6 @@ export function AfterSchoolReceipts() {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                {/* Status - CENTER */}
-                <TableHead align="center">{t("common.status")}</TableHead>
                 {/* Downloads - RIGHT */}
                 <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                   <div className="flex items-center gap-1 justify-end">
@@ -694,8 +647,6 @@ export function AfterSchoolReceipts() {
                   <TableCell align="center">{getPaymentTypeBadge(receipt.paymentType)}</TableCell>
                   {/* Date - LEFT */}
                   <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
-                  {/* Status - CENTER */}
-                  <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                   {/* Downloads - RIGHT */}
                   <TableCell align="right">
                     <div className="text-sm">

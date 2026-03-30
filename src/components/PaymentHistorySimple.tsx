@@ -386,6 +386,7 @@ export function PaymentHistorySimple() {
                   <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
                   <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Years" />
                     </SelectTrigger>
                     <SelectContent>
@@ -402,6 +403,7 @@ export function PaymentHistorySimple() {
                   <label className="text-sm font-medium text-muted-foreground">{t("payment.term")}</label>
                   <Select value={termFilter} onValueChange={setTermFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Terms" />
                     </SelectTrigger>
                     <SelectContent>
@@ -418,6 +420,7 @@ export function PaymentHistorySimple() {
                   <label className="text-sm font-medium text-muted-foreground">{t("student.yearGroup")}</label>
                   <Select value={yearGroupFilter} onValueChange={setYearGroupFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Year Groups" />
                     </SelectTrigger>
                     <SelectContent>
@@ -447,6 +450,7 @@ export function PaymentHistorySimple() {
                   <label className="text-sm font-medium text-muted-foreground">Module</label>
                   <Select value={moduleFilter} onValueChange={setModuleFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Modules" />
                     </SelectTrigger>
                     <SelectContent>
@@ -466,6 +470,7 @@ export function PaymentHistorySimple() {
                   <label className="text-sm font-medium text-muted-foreground">{t("payment.paymentChannel")}</label>
                   <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
                     <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Methods" />
                     </SelectTrigger>
                     <SelectContent>

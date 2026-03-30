@@ -358,7 +358,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.paid")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.paidStudents}</p>
+            <p className="text-2xl font-bold">{summaryStats.paidStudents}</p>
           </CardContent>
         </Card>
 
@@ -368,7 +368,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
               <Clock className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.pending")}</p>
             </div>
-            <p className="text-2xl font-bold text-yellow-600">{summaryStats.pendingStudents}</p>
+            <p className="text-2xl font-bold">{summaryStats.pendingStudents}</p>
           </CardContent>
         </Card>
 
@@ -378,7 +378,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
               <AlertTriangle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("common.overdue")}</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">{summaryStats.overdueStudents}</p>
+            <p className="text-2xl font-bold">{summaryStats.overdueStudents}</p>
           </CardContent>
         </Card>
 
@@ -398,7 +398,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
               <UserPlus className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("course.externalParents")}</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{summaryStats.externalParents}</p>
+            <p className="text-2xl font-bold">{summaryStats.externalParents}</p>
           </CardContent>
         </Card>
       </div>
@@ -428,6 +428,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
                 <label className="text-sm font-medium">{t("common.paymentStatus")}</label>
                 <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -443,6 +444,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
                 <label className="text-sm font-medium">{t("receipt.parentType")}</label>
                 <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -457,6 +459,7 @@ export function CourseStudentReport({ courseId = "1" }: CourseStudentReportProps
                 <label className="text-sm font-medium">{t("student.yearGroup")}</label>
                 <Select value={yearGroupFilter} onValueChange={setYearGroupFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

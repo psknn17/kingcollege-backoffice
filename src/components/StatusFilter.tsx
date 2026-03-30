@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Badge } from "./ui/badge"
+import { Filter } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 export type PaymentStatus = "paid" | "partial" | "unpaid" | "cancelled" | "overdue" | "all"
@@ -27,6 +28,7 @@ export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterPro
       <label className="text-sm font-medium">{t("status.status")}</label>
       <Select value={selectedStatus} onValueChange={onStatusChange}>
         <SelectTrigger className="w-[140px]">
+          <Filter className="w-4 h-4 mr-2" />
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -69,6 +71,7 @@ export function PaymentChannelFilter({ selectedChannel, onChannelChange }: Payme
       <label className="text-sm font-medium">{t("paymentChannel.label")}</label>
       <Select value={selectedChannel} onValueChange={onChannelChange}>
         <SelectTrigger className="w-[160px]">
+          <Filter className="w-4 h-4 mr-2" />
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

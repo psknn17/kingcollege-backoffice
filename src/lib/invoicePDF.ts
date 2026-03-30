@@ -36,6 +36,8 @@ interface Invoice {
   idCharges?: number
   discounts?: Array<{ name: string; amount: number; percent?: number }>
 
+  createdBy?: string
+  approvedBy?: string
 }
 
 const escapeHtml = (value: unknown) => {
@@ -231,12 +233,12 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
 
         <div style="display:flex; justify-content:space-between; margin-top:32px; padding:0 32px;">
           <div style="text-align:center;">
-            <p style="margin-bottom:16px; font-size:10px;">Thananchaya Chalorkpunrattana</p>
+            <p style="margin-bottom:16px; font-size:10px;">${escapeHtml(invoice.createdBy || "")}</p>
             <div style="border-top:1px solid black; width:160px; margin:0 auto;"></div>
             <p style="margin-top:4px; font-size:10px;">Prepared by</p>
           </div>
           <div style="text-align:center;">
-            <p style="margin-bottom:16px; font-size:10px;">Porntip Jarusintrangkul</p>
+            <p style="margin-bottom:16px; font-size:10px;">${escapeHtml(invoice.approvedBy || "")}</p>
             <div style="border-top:1px solid black; width:160px; margin:0 auto;"></div>
             <p style="margin-top:4px; font-size:10px;">Authorised officer</p>
           </div>
@@ -399,12 +401,12 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
 
         <div style="display:flex; justify-content:space-between; margin-top:40px; padding:0 40px; font-size:11px;">
           <div style="text-align:center; width:200px;">
-            <p style="margin-bottom:30px;">Thananchaya Chalorkpunrattana</p>
+            <p style="margin-bottom:30px;">${escapeHtml(invoice.createdBy || "")}</p>
             <div style="border-top:1px solid black; margin:0 auto 4px;"></div>
             <p style="margin-top:4px;">Prepared by</p>
           </div>
           <div style="text-align:center; width:200px;">
-            <p style="margin-bottom:30px;">Porntip Jarusintrangkul</p>
+            <p style="margin-bottom:30px;">${escapeHtml(invoice.approvedBy || "")}</p>
             <div style="border-top:1px solid black; margin:0 auto 4px;"></div>
             <p style="margin-top:4px;">Authorised officer</p>
           </div>

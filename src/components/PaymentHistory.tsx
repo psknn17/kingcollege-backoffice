@@ -407,6 +407,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 setTermFilter("all") // Reset term when year changes
               }}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("common.allYears")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -423,6 +424,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               <label className="text-sm font-medium text-muted-foreground">{t("payment.term")}</label>
               <Select value={termFilter} onValueChange={setTermFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("payment.allTerms")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -442,6 +444,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               <label className="text-sm font-medium text-muted-foreground">{t("student.yearGroup")}</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("payment.allYearGroups")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -458,6 +461,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PaymentStatus)}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("common.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -496,6 +500,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
               <label className="text-sm font-medium text-muted-foreground">{t("payment.paymentChannel")}</label>
               <Select value={paymentChannelFilter} onValueChange={setPaymentChannelFilter}>
                 <SelectTrigger className="h-9">
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("payment.allChannels")} />
                 </SelectTrigger>
                 <SelectContent>

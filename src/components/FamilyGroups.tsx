@@ -480,7 +480,7 @@ export function FamilyGroups() {
               <UserCheck className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Students Assigned</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{stats.totalStudentsInFamilies}</p>
+            <p className="text-2xl font-bold">{stats.totalStudentsInFamilies}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl gap-0">
@@ -489,7 +489,7 @@ export function FamilyGroups() {
               <Percent className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">With Discount</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{stats.studentsWithDiscount}</p>
+            <p className="text-2xl font-bold">{stats.studentsWithDiscount}</p>
           </CardContent>
         </Card>
         <Card className={`rounded-xl gap-0 ${studentsWithoutFamily.length > 0 ? "border-amber-300 bg-amber-50" : ""}`}>
@@ -541,6 +541,7 @@ export function FamilyGroups() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <Select value={yearGroupFilter} onValueChange={(val) => { setYearGroupFilter(val); setCurrentPage(1) }}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="All Year Groups" />
                 </SelectTrigger>
                 <SelectContent>

@@ -2930,6 +2930,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
         issueDate: format(now, 'yyyy-MM-dd'),
         status: category === "tuition" ? "pending_approval" : "sent",
+        approvalStatus: category === "tuition" ? "wait" : "approved",
+        createdBy: user?.name || "Admin",
+        ...(category !== "tuition" ? {
+          approvedBy: user?.name || "Admin",
+          emailSentAt: now.toISOString(),
+        } : {}),
         term: `${selectedAcademicYear} - ${selectedTerm}`,
         paymentType: "termly",
         createdAt: now.toISOString(),
@@ -3112,8 +3118,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
           netAmount: discountCalc.netAmount,
           dueDate: paymentDeadline ? format(paymentDeadline, 'yyyy-MM-dd') : "",
           issueDate: isOriginalStudent && editInvoice?.issueDate ? editInvoice.issueDate : format(now, 'yyyy-MM-dd'),
-          status: "pending_approval",
-          approvalStatus: isOriginalStudent ? (editInvoice?.approvalStatus || "wait") : "wait",
+          status: category === "tuition" ? "pending_approval" : "sent",
+          approvalStatus: category === "tuition"
+            ? (isOriginalStudent ? (editInvoice?.approvalStatus || "wait") : "wait")
+            : "approved",
+          createdBy: user?.name || "Admin",
+          ...(category !== "tuition" ? {
+            approvedBy: user?.name || "Admin",
+            emailSentAt: now.toISOString(),
+          } : {}),
           term: `${selectedAcademicYear || ''} - ${selectedTerm || ''}`,
           paymentType: "termly",
           createdAt: now.toISOString(),
@@ -4991,12 +5004,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="px-4 py-4">
                         <div className="flex justify-between px-6">
                           <div className="text-center">
-                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>{user?.name || ""}</p>
                             <div className="w-40 border-t border-black mb-1"></div>
                             <p style={{ fontSize: '10px' }}>Prepared by</p>
                           </div>
                           <div className="text-center">
-                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>{""}</p>
                             <div className="w-40 border-t border-black mb-1"></div>
                             <p style={{ fontSize: '10px' }}>Authorised officer</p>
                           </div>
@@ -5267,12 +5280,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       <div className="px-4 py-4">
                         <div className="flex justify-between px-6">
                           <div className="text-center">
-                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Thananchaya Chalorkpunrattara</p>
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>{user?.name || ""}</p>
                             <div className="w-40 border-t border-black mb-1"></div>
                             <p style={{ fontSize: '10px' }}>Prepared by</p>
                           </div>
                           <div className="text-center">
-                            <p className="italic mb-6" style={{ fontSize: '10px' }}>Porntip Jarusintrangkul</p>
+                            <p className="italic mb-6" style={{ fontSize: '10px' }}>{""}</p>
                             <div className="w-40 border-t border-black mb-1"></div>
                             <p style={{ fontSize: '10px' }}>Authorised officer</p>
                           </div>

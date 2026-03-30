@@ -44,7 +44,7 @@ interface EventReceipt {
   amount: number
   paymentMethod: string
   transactionDate: Date
-  status: "issued" | "resent" | "failed"
+  status: "issued" | "cancelled"
   downloadCount: number
   isExternal: boolean
 }
@@ -100,7 +100,7 @@ const mockReceipts: EventReceipt[] = [
     amount: 250,
     paymentMethod: "Bank Transfer",
     transactionDate: new Date("2025-08-13"),
-    status: "resent",
+    status: "issued",
     downloadCount: 0,
     isExternal: false
   },
@@ -136,7 +136,7 @@ const mockReceipts: EventReceipt[] = [
     amount: 180,
     paymentMethod: "Cash",
     transactionDate: new Date("2025-08-11"),
-    status: "failed",
+    status: "issued",
     downloadCount: 0,
     isExternal: false
   }
@@ -147,7 +147,6 @@ export function EventReceipts() {
   const [receipts] = useState<EventReceipt[]>(mockReceipts)
   const [filteredReceipts, setFilteredReceipts] = useState<EventReceipt[]>(mockReceipts)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [eventTypeFilter, setEventTypeFilter] = useState("all")
   const [participantTypeFilter, setParticipantTypeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -228,10 +227,6 @@ export function EventReceipts() {
       )
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(receipt => receipt.status === statusFilter)
-    }
-
     if (eventTypeFilter !== "all") {
       filtered = filtered.filter(receipt => receipt.eventType === eventTypeFilter)
     }
@@ -255,7 +250,6 @@ export function EventReceipts() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    setStatusFilter("all")
     setEventTypeFilter("all")
     setParticipantTypeFilter("all")
     setDateFrom(null)
@@ -358,19 +352,6 @@ export function EventReceipts() {
     XLSX.writeFile(wb, `interface-receipts-events-${format(new Date(), "dd-MM-yyyy")}.xlsx`)
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "issued":
-        return <Badge className="bg-green-100 text-green-800">{t("receipt.issued")}</Badge>
-      case "resent":
-        return <Badge className="bg-blue-100 text-blue-800">{t("receipt.resent")}</Badge>
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800">{t("receipt.failed")}</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
   const getEventTypeBadge = (eventType: string) => {
     switch (eventType) {
       case "educational":
@@ -388,9 +369,6 @@ export function EventReceipts() {
 
   const summaryStats = {
     total: receipts.length,
-    issued: receipts.filter(r => r.status === "issued").length,
-    resent: receipts.filter(r => r.status === "resent").length,
-    failed: receipts.filter(r => r.status === "failed").length,
     totalDownloads: receipts.reduce((sum, r) => sum + r.downloadCount, 0),
     externalParticipants: receipts.filter(r => r.isExternal).length,
     totalRevenue: receipts.reduce((sum, r) => sum + r.amount, 0),
@@ -451,18 +429,11 @@ export function EventReceipts() {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
                 <p className="text-sm text-muted-foreground">{t("receipt.totalReceipts")}</p>
                 <p className="text-2xl font-bold">{summaryStats.total}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl gap-0">
-              <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("receipt.successfullyIssued")}</p>
-                <p className="text-2xl font-bold text-green-600">{summaryStats.issued}</p>
               </CardContent>
             </Card>
 
@@ -510,24 +481,10 @@ export function EventReceipts() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("common.status")}</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("eventReceipt.allStatus")}</SelectItem>
-                      <SelectItem value="issued">{t("receipt.issued")}</SelectItem>
-                      <SelectItem value="resent">{t("receipt.resent")}</SelectItem>
-                      <SelectItem value="failed">{t("receipt.failed")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <label className="text-sm font-medium">{t("eventReceipt.eventType")}</label>
                   <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -544,6 +501,7 @@ export function EventReceipts() {
                   <label className="text-sm font-medium">{t("eventReceipt.participantType")}</label>
                   <Select value={participantTypeFilter} onValueChange={setParticipantTypeFilter}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -653,8 +611,6 @@ export function EventReceipts() {
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Status - badge/center */}
-                    <TableHead align="center">{t("common.status")}</TableHead>
                     {/* Downloads - number/right */}
                     <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("downloadCount")}>
                       <div className="flex items-center gap-1 justify-end">
@@ -710,8 +666,6 @@ export function EventReceipts() {
                       <TableCell align="left">{receipt.paymentMethod}</TableCell>
                       {/* Date - date/left */}
                       <TableCell align="left">{format(receipt.transactionDate, "dd MMM yyyy")}</TableCell>
-                      {/* Status - badge/center */}
-                      <TableCell align="center">{getStatusBadge(receipt.status)}</TableCell>
                       {/* Downloads - number/right */}
                       <TableCell align="right">
                         <div className="text-sm">

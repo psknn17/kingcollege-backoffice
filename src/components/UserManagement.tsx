@@ -807,35 +807,35 @@ export function UserManagement() {
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("userManagement.activeUsers")}</p>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.active}</p>
+            <p className="text-2xl font-bold">{summaryStats.active}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("userManagement.superAdmin")}</p>
-            <p className="text-2xl font-bold text-purple-600">{summaryStats.super_admin}</p>
+            <p className="text-2xl font-bold">{summaryStats.super_admin}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("userManagement.financeAdmin")}</p>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.admin_accountant}</p>
+            <p className="text-2xl font-bold">{summaryStats.admin_accountant}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("userManagement.approver")}</p>
-            <p className="text-2xl font-bold text-blue-600">{summaryStats.approver}</p>
+            <p className="text-2xl font-bold">{summaryStats.approver}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("userManagement.viewer")}</p>
-            <p className="text-2xl font-bold text-gray-600">{summaryStats.viewer}</p>
+            <p className="text-2xl font-bold">{summaryStats.viewer}</p>
           </CardContent>
         </Card>
       </div>
@@ -873,6 +873,7 @@ export function UserManagement() {
               <label className="text-sm font-medium">{t("userManagement.roleLabel")}</label>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder={t("userManagement.allRoles")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -889,6 +890,7 @@ export function UserManagement() {
               <label className="text-sm font-medium">{t("userManagement.statusLabel")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

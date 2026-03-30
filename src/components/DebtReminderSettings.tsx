@@ -961,7 +961,7 @@ export function DebtReminderSettings() {
               <Bell className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Total Reminders</p>
             </div>
-            <p className="text-2xl font-bold text-blue-700">{summaryStats.total}</p>
+            <p className="text-2xl font-bold">{summaryStats.total}</p>
           </CardContent>
         </Card>
 
@@ -971,7 +971,7 @@ export function DebtReminderSettings() {
               <ClockIcon className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Scheduled</p>
             </div>
-            <p className="text-2xl font-bold text-yellow-700">{summaryStats.scheduledCount}</p>
+            <p className="text-2xl font-bold">{summaryStats.scheduledCount}</p>
           </CardContent>
         </Card>
 
@@ -981,7 +981,7 @@ export function DebtReminderSettings() {
               <Send className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Sent</p>
             </div>
-            <p className="text-2xl font-bold text-green-700">{summaryStats.sentCount}</p>
+            <p className="text-2xl font-bold">{summaryStats.sentCount}</p>
           </CardContent>
         </Card>
 
@@ -991,7 +991,7 @@ export function DebtReminderSettings() {
               <XCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Cancelled</p>
             </div>
-            <p className="text-2xl font-bold text-red-700">{summaryStats.cancelledCount}</p>
+            <p className="text-2xl font-bold">{summaryStats.cancelledCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -1029,6 +1029,7 @@ export function DebtReminderSettings() {
                   <Label className="text-sm">Academic Year</Label>
                   <Select value={filterAcademicYear} onValueChange={(v) => { setFilterAcademicYear(v); setCurrentPage(1) }}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Academic Years" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1046,6 +1047,7 @@ export function DebtReminderSettings() {
                   <Label className="text-sm">Term</Label>
                   <Select value={filterTerm} onValueChange={(v) => { setFilterTerm(v); setCurrentPage(1) }}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Terms" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1066,6 +1068,7 @@ export function DebtReminderSettings() {
                   <Label className="text-sm">Status</Label>
                   <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1) }}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1507,7 +1510,7 @@ export function DebtReminderSettings() {
                         <h3 className="font-semibold text-blue-900">Recipient Count</h3>
                         <p className="text-sm text-blue-700">This reminder will be sent to approximately</p>
                       </div>
-                      <div className="text-2xl font-bold text-blue-700">
+                      <div className="text-2xl font-bold">
                         {previewReminder.recipientCount || 0}
                       </div>
                     </div>

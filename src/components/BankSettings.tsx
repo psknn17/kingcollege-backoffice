@@ -34,7 +34,7 @@ const STORAGE_KEY = "bankAccounts"
 export function BankSettings() {
     const { t } = useLanguage()
     const { user } = useAuth()
-    const userCanEdit = canPerformActions(user?.role)
+    const userCanEdit = user?.role === "super_admin"
     const confirmDialog = useConfirmDialog()
 
     const [accounts, setAccounts] = usePersistedState<BankAccount[]>(STORAGE_KEY, [])
@@ -147,10 +147,12 @@ export function BankSettings() {
                         <h3 className="text-lg font-semibold">{t("bankSettings.offlinePaymentTitle") || "Offline Payment"}</h3>
                         <p className="text-sm text-muted-foreground">Manage bank accounts for offline/counter payments</p>
                     </div>
+                    {userCanEdit && (
                     <Button onClick={() => handleOpenDialog(undefined, 'offline')}>
                         <Plus className="w-4 h-4 mr-2" />
                         {t("bankSettings.addAccount")}
                     </Button>
+                    )}
                 </div>
 
                 <Card>
@@ -180,9 +182,11 @@ export function BankSettings() {
                                             <TableCell className="font-mono">{account.accountNumber}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
                                             <TableCell align="right" className="text-right">
+                                                {userCanEdit && (
                                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))

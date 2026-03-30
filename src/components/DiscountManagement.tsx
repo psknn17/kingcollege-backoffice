@@ -861,7 +861,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         endDate: formData.endDate!,
         usedCount: 0,
         isActive: true,
-        createdBy: "Admin"
+        createdBy: user?.name || "Admin"
       }
       setDiscountCodes(prev => [...prev, newDiscount])
       toast.success(t("discount.discountCodeCreated"))

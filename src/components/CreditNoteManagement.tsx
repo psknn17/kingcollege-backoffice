@@ -747,6 +747,7 @@ export function CreditNoteManagement() {
                   </div>
                   <Select defaultValue="all">
                     <SelectTrigger className="w-[180px]">
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder={t("paymentMethod.label")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -858,7 +859,7 @@ export function CreditNoteManagement() {
                     <FilePen className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">{t("creditNote.draft")}</p>
                   </div>
-                  <p className="text-2xl font-bold text-gray-600">{summaryStats.draft}</p>
+                  <p className="text-2xl font-bold">{summaryStats.draft}</p>
                 </CardContent>
               </Card>
 
@@ -868,7 +869,7 @@ export function CreditNoteManagement() {
                     <FileCheck className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">{t("creditNote.issued")}</p>
                   </div>
-                  <p className="text-2xl font-bold text-blue-600">{summaryStats.issued}</p>
+                  <p className="text-2xl font-bold">{summaryStats.issued}</p>
                 </CardContent>
               </Card>
 
@@ -878,7 +879,7 @@ export function CreditNoteManagement() {
                     <CheckCircle className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">{t("creditNote.applied")}</p>
                   </div>
-                  <p className="text-2xl font-bold text-green-600">{summaryStats.applied}</p>
+                  <p className="text-2xl font-bold">{summaryStats.applied}</p>
                 </CardContent>
               </Card>
 
@@ -921,6 +922,7 @@ export function CreditNoteManagement() {
                         <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
                         <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
                           <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -937,6 +939,7 @@ export function CreditNoteManagement() {
                         <label className="text-sm font-medium text-muted-foreground">{t("creditNote.noteTypeLabel") || "Note Type"}</label>
                         <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter} disabled={!userCanEdit}>
                           <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

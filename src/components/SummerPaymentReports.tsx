@@ -345,7 +345,7 @@ export function SummerPaymentReports() {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t("summerPayment.pendingPayments")}</p>
                 </div>
-                <p className="text-2xl font-bold text-orange-500">฿{calculatePendingAmount().toLocaleString()}</p>
+                <p className="text-2xl font-bold">฿{calculatePendingAmount().toLocaleString()}</p>
               </CardContent>
             </Card>
 
@@ -355,7 +355,7 @@ export function SummerPaymentReports() {
                   <TrendingUp className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t("summerPayment.successRate")}</p>
                 </div>
-                <p className="text-2xl font-bold text-green-600">92.5%</p>
+                <p className="text-2xl font-bold">92.5%</p>
               </CardContent>
             </Card>
 
@@ -365,7 +365,7 @@ export function SummerPaymentReports() {
                   <CalendarDays className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t("summerPayment.activePrograms")}</p>
                 </div>
-                <p className="text-2xl font-bold text-blue-600">12</p>
+                <p className="text-2xl font-bold">12</p>
               </CardContent>
             </Card>
           </div>
@@ -497,6 +497,7 @@ export function SummerPaymentReports() {
                   <Label>{t("summerPayment.activity")}</Label>
                   <Select value={selectedActivity} onValueChange={setSelectedActivity}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -517,6 +518,7 @@ export function SummerPaymentReports() {
                   <Label>{t("common.category")}</Label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -539,6 +541,7 @@ export function SummerPaymentReports() {
                   <Label>{t("payment.paymentChannel")}</Label>
                   <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

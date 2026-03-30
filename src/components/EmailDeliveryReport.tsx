@@ -416,7 +416,7 @@ export function EmailDeliveryReport() {
               <CheckCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("email.deliveryRate")}</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{stats.deliveryRate.toFixed(1)}%</p>
+            <p className="text-2xl font-bold">{stats.deliveryRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
@@ -426,7 +426,7 @@ export function EmailDeliveryReport() {
               <Eye className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("email.openRate")}</p>
             </div>
-            <p className="text-2xl font-bold text-emerald-600">{stats.openRate.toFixed(1)}%</p>
+            <p className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
@@ -436,7 +436,7 @@ export function EmailDeliveryReport() {
               <XCircle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("email.failedEmails")}</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">{stats.failed + stats.bounced + stats.spam}</p>
+            <p className="text-2xl font-bold">{stats.failed + stats.bounced + stats.spam}</p>
           </CardContent>
         </Card>
       </div>
@@ -467,6 +467,7 @@ export function EmailDeliveryReport() {
                 <label className="text-sm font-medium">{t("common.status")}</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -485,6 +486,7 @@ export function EmailDeliveryReport() {
                 <label className="text-sm font-medium">{t("student.yearGroup")}</label>
                 <Select value={gradeFilter} onValueChange={setGradeFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -500,6 +502,7 @@ export function EmailDeliveryReport() {
                 <label className="text-sm font-medium">{t("email.language")}</label>
                 <Select value={languageFilter} onValueChange={setLanguageFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

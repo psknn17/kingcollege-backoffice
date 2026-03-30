@@ -357,21 +357,21 @@ export function ExternalParentManagement() {
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("externalParent.stats.pendingReview")}</p>
-            <p className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</p>
+            <p className="text-2xl font-bold">{summaryStats.pending}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("common.status.approved")}</p>
-            <p className="text-2xl font-bold text-green-600">{summaryStats.approved}</p>
+            <p className="text-2xl font-bold">{summaryStats.approved}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("externalParent.stats.onWaitlist")}</p>
-            <p className="text-2xl font-bold text-blue-600">{summaryStats.waitlist}</p>
+            <p className="text-2xl font-bold">{summaryStats.waitlist}</p>
           </CardContent>
         </Card>
 
@@ -415,6 +415,7 @@ export function ExternalParentManagement() {
               <label className="text-sm font-medium">{t("externalParent.filter.applicationStatus")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -431,6 +432,7 @@ export function ExternalParentManagement() {
               <label className="text-sm font-medium">{t("externalParent.filter.paymentStatus")}</label>
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                 <SelectTrigger>
+                  <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

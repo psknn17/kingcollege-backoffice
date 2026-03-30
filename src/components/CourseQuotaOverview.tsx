@@ -593,7 +593,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
               <AlertTriangle className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("course.performanceAlerts")}</p>
             </div>
-            <p className="text-2xl font-bold text-orange-600">{summaryStats.lowEnrollment}</p>
+            <p className="text-2xl font-bold">{summaryStats.lowEnrollment}</p>
           </CardContent>
         </Card>
       </div>
@@ -623,6 +623,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 <label className="text-sm font-medium">{t("common.category")}</label>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -640,6 +641,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 <label className="text-sm font-medium">{t("common.status")}</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -656,6 +658,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                 <label className="text-sm font-medium">{t("common.sortBy")}</label>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

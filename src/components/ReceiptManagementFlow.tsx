@@ -1146,6 +1146,7 @@ export function ReceiptManagementFlow({
                 </div>
                 <Select value={filterYearGroup} onValueChange={setFilterYearGroup}>
                   <SelectTrigger className="w-[160px]">
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder={t("table.yearGroup")} />
                   </SelectTrigger>
                   <SelectContent>

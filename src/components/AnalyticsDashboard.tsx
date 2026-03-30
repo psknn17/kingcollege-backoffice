@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts"
-import { BarChart3, FileDown, Loader2 } from "lucide-react"
+import { BarChart3, FileDown, Loader2, DollarSign, TrendingUp, Landmark, Users, ArrowRightLeft, CheckCircle2, Filter } from "lucide-react"
 import {
   getRevenueTermMatrix, getRevenueYearMatrix,
   getAvgTermMatrix, getAvgYearMatrix,
@@ -50,14 +50,17 @@ const fmtK = (n: number) => `฿${(n / 1000).toFixed(0)}k`
 const fmtM = (n: number) => `฿${(n / 1000000).toFixed(1)}M`
 
 // ── SUMMARY CARD ──────────────────────────────────────────────────────────────
-function SummaryCard({ label, value, accent = "#6366f1" }: {
-  label: string; value: string; accent?: string
+function SummaryCard({ label, value, accent = "#6366f1", icon: Icon }: {
+  label: string; value: string; accent?: string; icon?: React.ElementType
 }) {
   return (
     <Card className="rounded-xl gap-0">
       <CardContent className="p-4 pb-4">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold" style={{ color: accent }}>{value}</p>
+        <div className="flex items-center gap-2 mb-1">
+          {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+          <p className="text-sm text-muted-foreground">{label}</p>
+        </div>
+        <p className="text-2xl font-bold">{value}</p>
       </CardContent>
     </Card>
   )
@@ -368,10 +371,10 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-5 bg-muted/20 min-h-screen">
+    <div className="p-6 space-y-6 bg-muted/20 min-h-screen">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
             <BarChart3 className="w-5 h-5 text-primary-foreground" />
@@ -387,6 +390,7 @@ export function AnalyticsDashboard() {
             <span className="text-sm text-muted-foreground font-medium mr-1">Filter:</span>
             <Select value={filterYear} onValueChange={v => { setFilterYear(v) }}>
               <SelectTrigger className="h-8 w-36 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
+                <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Academic Year" />
               </SelectTrigger>
               <SelectContent>
@@ -396,6 +400,7 @@ export function AnalyticsDashboard() {
             </Select>
             <Select value={filterTerm} onValueChange={v => { setFilterTerm(v) }}>
               <SelectTrigger className="h-8 w-28 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
+                <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Term" />
               </SelectTrigger>
               <SelectContent>
@@ -405,6 +410,7 @@ export function AnalyticsDashboard() {
             </Select>
             <Select value={filterCategory} onValueChange={v => { setFilterCategory(v) }}>
               <SelectTrigger className="h-8 w-36 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
+                <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Fee Type" />
               </SelectTrigger>
               <SelectContent>
@@ -425,13 +431,13 @@ export function AnalyticsDashboard() {
       </div>
 
       {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <SummaryCard label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" />
-        <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e" />
-        <SummaryCard label="Bank Fees"      value={fmtB(totalBankFees)}  accent="#ef4444" />
-        <SummaryCard label="Students"       value={fmt(totalStudents)}    accent="#06b6d4" />
-        <SummaryCard label="Transactions"   value={fmt(totalTxn)}         accent="#a855f7" />
-        <SummaryCard label="Success Rate"   value={`${successRate}%`}     accent={successRate >= 80 ? "#22c55e" : "#f59e0b"} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <SummaryCard label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" icon={DollarSign} />
+        <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e" icon={TrendingUp} />
+        <SummaryCard label="Bank Fees"      value={fmtB(totalBankFees)}  accent="#ef4444" icon={Landmark} />
+        <SummaryCard label="Students"       value={fmt(totalStudents)}    accent="#06b6d4" icon={Users} />
+        <SummaryCard label="Transactions"   value={fmt(totalTxn)}         accent="#a855f7" icon={ArrowRightLeft} />
+        <SummaryCard label="Success Rate"   value={`${successRate}%`}     accent={successRate >= 80 ? "#22c55e" : "#f59e0b"} icon={CheckCircle2} />
       </div>
 
       {/* ── Tabs ── */}

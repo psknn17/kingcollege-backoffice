@@ -283,7 +283,7 @@ export function EventRegistrationReports() {
                   <TrendingUp className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t("eventReports.paymentRate")}</p>
                 </div>
-                <p className="text-2xl font-bold text-green-600">76.8%</p>
+                <p className="text-2xl font-bold">76.8%</p>
               </CardContent>
             </Card>
 
@@ -293,7 +293,7 @@ export function EventRegistrationReports() {
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t("eventReports.activeEvents")}</p>
                 </div>
-                <p className="text-2xl font-bold text-blue-600">8</p>
+                <p className="text-2xl font-bold">8</p>
               </CardContent>
             </Card>
           </div>
@@ -394,6 +394,7 @@ export function EventRegistrationReports() {
                   <Label>{t("eventReports.event")}</Label>
                   <Select value={selectedEvent} onValueChange={setSelectedEvent}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -412,6 +413,7 @@ export function EventRegistrationReports() {
                   <Label>{t("student.yearGroup")}</Label>
                   <Select value={selectedYearGroup} onValueChange={setSelectedYearGroup}>
                     <SelectTrigger>
+                      <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
