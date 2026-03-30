@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { Search, Plus, Edit, Trash2, Building2, Upload, Download } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Building2, Upload, Download, ArrowUpDown } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -56,16 +56,43 @@ export function ClientList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
+  // Sorting state
+  const [sortKey, setSortKey] = useState<keyof Client>("clientName")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  const handleSort = (key: keyof Client) => {
+    if (sortKey === key) {
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
+  }
+
   const filtered = useMemo(() => {
     const q = searchTerm.toLowerCase()
-    return clients.filter(
+    let result = clients.filter(
       c =>
         c.clientName.toLowerCase().includes(q) ||
-        c.clientId.toLowerCase().includes(q) ||
-        c.contactName.toLowerCase().includes(q) ||
-        c.address.toLowerCase().includes(q)
+        (c.clientId || "").toLowerCase().includes(q) ||
+        (c.contactName || "").toLowerCase().includes(q) ||
+        (c.address || "").toLowerCase().includes(q)
     )
-  }, [clients, searchTerm])
+
+    // Apply sorting
+    result.sort((a, b) => {
+      const aVal = String(a[sortKey] || "").toLowerCase()
+      const bVal = String(b[sortKey] || "").toLowerCase()
+
+      if (sortDirection === "asc") {
+        return aVal.localeCompare(bVal)
+      } else {
+        return bVal.localeCompare(aVal)
+      }
+    })
+
+    return result
+  }, [clients, searchTerm, sortKey, sortDirection])
 
   const paginatedClients = useMemo(() => {
     const start = (currentPage - 1) * pageSize
@@ -307,10 +334,46 @@ export function ClientList() {
               <TableHeader>
                 <TableRow>
                   <TableHead align="left">#</TableHead>
-                  <TableHead align="left">{t("clientList.clientId")}</TableHead>
-                  <TableHead align="left">{t("clientList.clientName")}</TableHead>
-                  <TableHead align="left">{t("clientList.contactName")}</TableHead>
-                  <TableHead align="left">{t("clientList.address")}</TableHead>
+                  <TableHead
+                    align="left"
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("clientId")}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t("clientList.clientId")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    align="left"
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("clientName")}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t("clientList.clientName")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    align="left"
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("contactName")}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t("clientList.contactName")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    align="left"
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("address")}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t("clientList.address")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
                   {userCanEdit && <TableHead align="center">{t("common.actions")}</TableHead>}
                 </TableRow>
               </TableHeader>

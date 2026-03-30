@@ -193,7 +193,11 @@ export function SummerDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group created successfully")
-      logActivity({ action: "Create Group", module: "Summer Discount Groups", detail: `Created group "${groupForm.name}" with ${groupForm.selectedStudents.length} students` })
+      logActivity({
+        action: "Create Group",
+        module: "Summer Discount Groups",
+        detail: `Created group "${groupForm.name}" with ${groupForm.selectedStudents.length} students: ${groupForm.selectedStudents.map(s => s.name).slice(0, 10).join(", ")}${groupForm.selectedStudents.length > 10 ? ` and ${groupForm.selectedStudents.length - 10} more` : ""}`
+      })
     }
 
     setIsGroupDialogOpen(false)

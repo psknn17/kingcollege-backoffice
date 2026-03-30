@@ -12,7 +12,7 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Separator } from "./ui/separator"
 import { Textarea } from "./ui/textarea"
-import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save, ChevronDown } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, CheckCircle, X, Package, Tag, Bookmark, GraduationCap, Zap, MapPin, FileText, Eye, ArrowUpDown, CreditCard, Upload, FileDown, Download, Save, ChevronDown, RefreshCw } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
 import { ViewModal } from "./ViewModal"
@@ -1891,11 +1891,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const [searchItemTerm, setSearchItemTerm] = invoiceType === "tuition"
     ? useState<string>("")
     : useState("")
-  const [selectedCategory, setSelectedCategory] = invoiceType === "tuition"
-    ? useState<string>("all")
-    : useState("all")
-  const [selectedDocType, setSelectedDocType] = useState("all")
-  const [showFilters, setShowFilters] = useState(false)
+
 
   // Multi-select for bulk delete
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
@@ -1977,7 +1973,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchItemTerm, selectedCategory])
+  }, [searchItemTerm])
 
   // One-time cleanup: remove auto-generated tuition items (TUI-T{n}-{GRADE})
   useEffect(() => {
@@ -2099,6 +2095,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       return
     }
 
+    // Check for duplicate item code
+    const isDuplicate = items.some(item => 
+      item.itemCode.toLowerCase() === newItem.itemCode.toLowerCase() && 
+      (!editingItem || item.id !== editingItem.id)
+    )
+
+    if (isDuplicate) {
+      toast.error(t("item.itemCodeAlreadyExists"))
+      return
+    }
+
     const amount = parseFloat(newItem.amount)
     if (isNaN(amount)) {
       toast.error(t("item.enterValidAmount"))
@@ -2108,9 +2115,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     // Allow amount = 0 for tuition fee items
     // These items are templates - price comes from TuitionByYear data
     // Check if item code starts with "TUI-T" OR if it's a tuition category item with "tuition fee" in name
+    const tuitionMatch = parseTuitionItemName(newItem.name)
     const isTuitionTemplate =
       newItem.itemCode.toUpperCase().startsWith('TUI-T') ||
-      (newItem.category === 'Tuition' && newItem.name.toLowerCase().includes('tuition fee'))
+      (newItem.category === 'Tuition' && newItem.name.toLowerCase().includes('tuition fee')) ||
+      (!!tuitionMatch.term && !!tuitionMatch.gradeId)
 
     if (!isTuitionTemplate && amount <= 0) {
       toast.error(t("item.enterValidAmountPositive"))
@@ -2141,16 +2150,46 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       }
     }
 
+    const finalCategory = newItem.category || getDefaultCategory(invoiceType)
+    let finalAmount = amount
+    let finalGrades = newItem.applicableGrades
+
+    // Auto-update price/grades for manual Tuition fee items to match master data
+    if ((invoiceType === "tuition" || finalCategory === "Tuition")) {
+      const parsed = parseTuitionItemName(newItem.name)
+      if (parsed.term && parsed.gradeId) {
+        try {
+          const stored = localStorage.getItem("tuitionByYearData")
+          if (stored) {
+            const allYears = JSON.parse(stored)
+            const latestYear = Object.keys(allYears).sort((a, b) => b.localeCompare(a))[0]
+            if (latestYear) {
+              const gradeMatch = allYears[latestYear].find((g: any) => g.id === parsed.gradeId)
+              if (gradeMatch) {
+                const termAmount = gradeMatch[`term${parsed.term}Amount`]
+                if (termAmount !== undefined) {
+                  finalAmount = termAmount
+                  finalGrades = [gradeMatch.gradeLevel] // Force correct grade locking
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to sync manual tuition item with master data", err)
+        }
+      }
+    }
+
     const itemData: Item = {
       id: editingItem?.id || `item-${Date.now()}`,
       itemCode: newItem.itemCode,
       name: newItem.name,
       description: newItem.description,
-      amount: amount,
-      category: newItem.category || getDefaultCategory(invoiceType),
+      amount: finalAmount,
+      category: finalCategory,
       nominalCode: newItem.nominalCode || undefined,
       documentType: newItem.documentType || "SI",
-      applicableGrades: newItem.applicableGrades,
+      applicableGrades: finalGrades,
       isActive: newItem.isActive,
       invoiceType: (editingItem?.invoiceType || invoiceType) as Item["invoiceType"]
     }
@@ -2160,13 +2199,21 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
       toast.success(t("item.itemUpdated"))
-      logActivity({ action: "Update", module: "Items & Templates", detail: `Updated item "${itemData.name}" (${itemData.itemCode})` })
+      logActivity({
+        action: "Update",
+        module: "Items & Templates",
+        detail: `Updated item "${itemData.name}" (${itemData.itemCode}) - Price: ${itemData.amount}, Nominal: ${itemData.nominalCode || "N/A"}`
+      })
     } else {
       const updatedItems = [...items, itemData]
       setItems(updatedItems)
       saveItemsToStorage(updatedItems, invoiceType)
       toast.success(t("item.itemCreated"))
-      logActivity({ action: "Create", module: "Items & Templates", detail: `Created item "${itemData.name}" (${itemData.itemCode})` })
+      logActivity({
+        action: "Create",
+        module: "Items & Templates",
+        detail: `Created item "${itemData.name}" (${itemData.itemCode}) - Price: ${itemData.amount}, Nominal: ${itemData.nominalCode || "N/A"}`
+      })
     }
 
     closeItemModal()
@@ -2225,12 +2272,15 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     idsToDelete.forEach(id => deletedIds.add(id))
     saveDeletedItemIds(deletedIds, invoiceType)
 
-    saveItemsToStorage(updatedItems, invoiceType)
     saveTemplatesToStorage(updatedTemplates, invoiceType)
-
+    const deletedNames = items.filter(i => idsToDelete.includes(i.id)).map(i => i.name)
+    const displayNames = deletedNames.slice(0, 3).join(", ") + (deletedNames.length > 3 ? `... and ${deletedNames.length - 3} more` : "")
+    
+    setItems(updatedItems)
+    saveItemsToStorage(updatedItems, invoiceType)
     setSelectedItemIds(new Set())
-    toast.success(t("item.bulkDeleted").replace("{count}", String(idsToDelete.length)))
-    logActivity({ action: "Delete", module: "Items & Templates", detail: `Bulk deleted ${idsToDelete.length} items` })
+    toast.success(t("item.itemsDeleted").replace("{count}", String(idsToDelete.length)))
+    logActivity({ action: "Delete", module: "Items & Templates", detail: `Bulk deleted ${idsToDelete.length} items: [${displayNames}]` })
   }
 
   // Import functions
@@ -2258,7 +2308,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     downloadAsXlsx(headers, [exampleRow], "item_import_template")
 
     toast.success(t("item.templateDownloaded"))
-    logActivity({ action: "Export", module: "Items & Templates", detail: `Downloaded item import template (${invoiceType})` })
+    logActivity({
+      action: "Export",
+      module: "Items & Templates",
+      detail: `Downloaded item import template (Excel) for ${invoiceType}`
+    })
   }
 
   const handleExportItems = () => {
@@ -2269,12 +2323,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       item.description,
       item.amount,
       item.nominalCode || "",
-      item.documentType || "SI",
+      "SI",
       item.isActive ? "active" : "inactive"
     ])
     downloadAsXlsx(headers, rows, `items_export_${invoiceType}_${new Date().toISOString().split("T")[0]}`)
     toast.success(`Exported ${rows.length} items`)
-    logActivity({ action: "Export", module: "Items & Templates", detail: `Exported ${rows.length} items for ${invoiceType}` })
+    logActivity({
+      action: "Export",
+      module: "Items & Templates",
+      detail: `Exported ${rows.length} items to Excel for ${invoiceType}`
+    })
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2288,15 +2346,19 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         return
       }
 
-      // Auto-map BC column names to our system column names
+      const fileHeaders = Object.keys(rawRows[0])
+      
+      // Auto-map Excel column names to our system column names
       const columnMapping: Record<string, string> = {
         "No.": "Item Code",
         "Gen. Prod. Posting Group": "Nominal Code",
-        "Description": "Name",
         "Price": "Amount",
       }
 
-      const fileHeaders = Object.keys(rawRows[0])
+      // Map Description to Name ONLY if a dedicated Name column doesn't exist
+      if (!fileHeaders.includes("Name") && fileHeaders.includes("Description")) {
+        columnMapping["Description"] = "Name"
+      }
       const needsMapping = fileHeaders.some(h => h in columnMapping)
 
       const rows = needsMapping
@@ -2338,33 +2400,75 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     let skipped = 0
     let updatedItems = [...items]
 
+    // Load tuition data for auto-update if applicable
+    let tuitionLookup: any[] = []
+    if (invoiceType === "tuition" || invoiceType === "student") {
+      try {
+        const stored = localStorage.getItem("tuitionByYearData")
+        if (stored) {
+          const allYears = JSON.parse(stored)
+          const latestYear = Object.keys(allYears).sort((a, b) => b.localeCompare(a))[0]
+          if (latestYear) tuitionLookup = allYears[latestYear]
+        }
+      } catch (err) {
+        console.error("Failed to load tuition data for import update", err)
+      }
+    }
+
+    const importedNames: string[] = []
+    let syncedFromMaster = 0
+    
     importPreview.forEach(row => {
-      // Check if item already exists (check against running list)
       const existingItem = updatedItems.find(item => item.itemCode === row["Item Code"])
+      const rowCategory = row["Category"] || (invoiceType === "tuition" ? "Tuition" : categories[0])
+      let amount = parseFloat(row["Amount"]) || 0
+      let applicableGrades = grades
+      const itemName = row["Name"]
+
+      // Auto-update price ONLY if it's a tuition item and patterns match
+      if ((invoiceType === "tuition" || rowCategory === "Tuition") && tuitionLookup.length > 0) {
+        const parsed = parseTuitionItemName(itemName)
+        if (parsed.term && parsed.gradeId) {
+          const gradeMatch = tuitionLookup.find(g => g.id === parsed.gradeId)
+          if (gradeMatch) {
+            const termAmount = gradeMatch[`term${parsed.term}Amount`]
+            if (termAmount !== undefined) {
+              amount = termAmount
+              applicableGrades = [gradeMatch.gradeLevel] // Lock to specific grade (ONLY for tuition)
+              syncedFromMaster++
+            }
+          }
+        }
+      }
+
       if (existingItem) {
-        skipped++
+        existingItem.amount = amount
+        existingItem.name = itemName
+        existingItem.description = row["Description"] || existingItem.description
+        existingItem.applicableGrades = applicableGrades
+        importedNames.push(itemName)
+        imported++
         return
       }
 
       const newItem: Item = {
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         itemCode: row["Item Code"],
-        name: row["Name"],
+        name: itemName,
         description: row["Description"] || "",
-        amount: parseFloat(row["Amount"]) || 0,
-        category: row["Category"] || categories[0],
+        amount,
+        category: rowCategory,
         nominalCode: row["Nominal Code"] || "",
-        documentType: (row["Document Type"] === "CI" ? "CI" : "SI") as "SI" | "CI",
+        documentType: "SI",
         isActive: (row["Status"] || "active").toLowerCase() === "active",
-        applicableGrades: grades, // Apply to all grades by default
+        applicableGrades,
         invoiceType: invoiceType as "student" | "external" | "eca"
       }
-
       updatedItems = [...updatedItems, newItem]
+      importedNames.push(itemName)
       imported++
     })
 
-    // Save once after all items are accumulated
     setItems(updatedItems)
     saveItemsToStorage(updatedItems, invoiceType)
     setIsImportDialogOpen(false)
@@ -2373,7 +2477,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         ? t("item.importedWithSkipped").replace("{imported}", String(imported)).replace("{skipped}", String(skipped))
         : t("item.importedItems").replace("{imported}", String(imported))
     )
-    logActivity({ action: "Import", module: "Items & Templates", detail: `Imported ${imported} items${skipped > 0 ? ` (${skipped} skipped)` : ""} for ${invoiceType}` })
+    
+    // Log with item details (Truncated for better readability)
+    const namesString = importedNames.slice(0, 3).join(", ") + (importedNames.length > 3 ? `... and ${importedNames.length - 3} more` : "")
+    logActivity({
+      action: "Import",
+      module: "Items & Templates",
+      detail: `Imported ${imported} items (${syncedFromMaster} synced prices) : [${namesString}]`
+    })
   }
 
   const handleImport = () => {
@@ -2402,107 +2513,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     }
   }
 
-  // Sync Tuition Fees function
-  const handleSyncTuitionFees = () => {
-    if (invoiceType !== "tuition" && invoiceType !== "student") {
-      toast.error(t("item.syncTuitionOnly"))
-      return
-    }
-
-    try {
-      // Load tuition data from localStorage (from TuitionByYear component)
-      const tuitionDataRaw = localStorage.getItem("tuitionByYearData")
-      if (!tuitionDataRaw) {
-        toast.error(t("item.noTuitionData"))
-        return
-      }
-
-      const tuitionData: Record<string, any[]> = JSON.parse(tuitionDataRaw)
-
-      // Get the most recent academic year
-      const years = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
-      if (years.length === 0) {
-        toast.error(t("item.noTuitionData"))
-        return
-      }
-
-      const latestYear = years[0]
-      const gradeData = tuitionData[latestYear]
-
-      let created = 0
-      let updated = 0
-      const updatedItems = [...items]
-
-      // For each grade level, create/update items for Term 1, 2, 3
-      // Priority: 1) Match imported items by name parsing  2) Match by auto-generated itemCode  3) Create new
-      gradeData.forEach((grade: any, index: number) => {
-        const gradeLevel = grade.gradeLevel // e.g., "Year 1"
-        const gradeOrder = grade.gradeLevelOrder || (index + 1)
-        const sharedNominalCode = `411${String(gradeOrder).padStart(4, '0')}`
-
-        for (let term = 1; term <= 3; term++) {
-          const amount = grade[`term${term}Amount`] || 0
-          if (amount <= 0) continue
-
-          // 1) Try to find imported item by name matching (e.g., "Tuition fee - Term 1 / Year 5")
-          const importedItem = updatedItems.find(item => {
-            if (item.category !== "Tuition") return false
-            const parsed = parseTuitionItemName(item.name)
-            return parsed.term === term && parsed.gradeId === grade.id
-          })
-
-          if (importedItem) {
-            // Found imported item → update only amount, keep itemCode & nominalCode
-            importedItem.amount = amount
-            importedItem.applicableGrades = [gradeLevel]
-            updated++
-            continue
-          }
-
-          // 2) Fallback: match by auto-generated itemCode
-          const autoItemCode = `TUI-T${term}-${grade.id.toUpperCase()}`
-          const autoItem = updatedItems.find(item => item.itemCode === autoItemCode)
-
-          if (autoItem) {
-            autoItem.amount = amount
-            autoItem.name = `Term ${term} Tuition Fee - ${gradeLevel}`
-            autoItem.applicableGrades = [gradeLevel]
-            autoItem.nominalCode = sharedNominalCode
-            updated++
-          } else {
-            // 3) No match → create new auto-generated item
-            updatedItems.push({
-              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              itemCode: autoItemCode,
-              name: `Term ${term} Tuition Fee - ${gradeLevel}`,
-              description: `Term ${term} tuition fee for ${gradeLevel} (${latestYear})`,
-              amount,
-              category: "Tuition",
-              nominalCode: sharedNominalCode,
-              documentType: "SI",
-              isActive: true,
-              applicableGrades: [gradeLevel],
-              invoiceType: "student"
-            })
-            created++
-          }
-        }
-      })
-
-      setItems(updatedItems)
-      saveItemsToStorage(updatedItems, invoiceType)
-
-      // Only show toast if items were created or updated
-      if (created > 0 || updated > 0) {
-
-        toast.success(t("item.syncedTuitionFees").replace("{created}", String(created)).replace("{updated}", String(updated)).replace("{year}", latestYear))
-        logActivity({ action: "Sync", module: "Items & Templates", detail: `Synced tuition fees for ${latestYear}: ${created} created, ${updated} updated` })
-      }
-    } catch (error) {
-      console.error("Failed to sync tuition fees:", error)
-      // Silent fail for auto-sync, only log error
-    }
-  }
 
   // Template functions
   const openCreateTemplateModal = () => {
@@ -2567,14 +2577,25 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       invoiceType: (editingTemplate?.invoiceType || invoiceType) as ItemTemplate["invoiceType"]
     }
 
+    const itemNames = selectedItemsForTemplate.map(id => items.find(it => it.id === id)?.name || id)
+    const displayNames = itemNames.slice(0, 3).join(", ") + (itemNames.length > 3 ? `... and ${itemNames.length - 3} more` : "")
+
     if (editingTemplate) {
       setTemplates(templates.map(template => template.id === editingTemplate.id ? templateData : template))
       toast.success(t("item.templateUpdated"))
-      logActivity({ action: "Update", module: "Items & Templates", detail: `Updated template "${templateData.name}" with ${selectedItemsForTemplate.length} items` })
+      logActivity({
+        action: "Update", 
+        module: "Items & Templates", 
+        detail: `Updated template "${templateData.name}" with ${selectedItemsForTemplate.length} items: [${displayNames}]`
+      })
     } else {
       setTemplates([...templates, templateData])
       toast.success(t("item.templateCreated"))
-      logActivity({ action: "Create", module: "Items & Templates", detail: `Created template "${templateData.name}" with ${selectedItemsForTemplate.length} items` })
+      logActivity({
+        action: "Create", 
+        module: "Items & Templates", 
+        detail: `Created template "${templateData.name}" with ${selectedItemsForTemplate.length} items: [${displayNames}]`
+      })
     }
 
     closeTemplateModal()
@@ -2674,8 +2695,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       (item.documentType || "").toLowerCase().includes(searchLower) ||
       item.applicableGrades.some(grade => grade.toLowerCase() === searchLower) ||
       item.applicableGrades.some(grade => grade.toLowerCase().startsWith(searchLower))
-    const matchesCategory = !selectedCategory || selectedCategory === "all" || item.category === selectedCategory
-    const matchesDocType = selectedDocType === "all" || item.documentType === selectedDocType
+    const matchesCategory = true
+    const matchesDocType = true
     return matchesSearch && matchesCategory && matchesDocType
   })
 
@@ -2825,44 +2846,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   className="pl-10 h-9"
                 />
               </div>
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-                <ChevronDown className={cn("w-4 h-4 ml-2 transition-transform", showFilters && "rotate-180")} />
-              </Button>
             </div>
-            {showFilters && (<>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Select value={selectedCategory} onValueChange={(v) => { setSelectedCategory(v); setCurrentPage(1) }}>
-                  <SelectTrigger>
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedDocType} onValueChange={(v) => { setSelectedDocType(v); setCurrentPage(1) }}>
-                  <SelectTrigger>
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Document Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="SI">SI (Sales Invoice)</SelectItem>
-                    <SelectItem value="CI">CI (Credit Invoice)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => { setSearchItemTerm(""); setSelectedCategory("all"); setSelectedDocType("all"); setCurrentPage(1) }}>
-                  Clear Filters
-                </Button>
-              </div>
-            </>)}
 
             {/* Bulk Delete Bar */}
             {selectedItemIds.size > 0 && (
@@ -2931,8 +2915,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     </TableHead>
                     {/* Nominal Code - left aligned */}
                     <TableHead align="left">{t("item.nominalCode")}</TableHead>
-                    {/* Type - left aligned */}
-                    <TableHead align="left">{t("item.type")}</TableHead>
+
                     {/* Amount - right aligned (currency) */}
                     <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center justify-end gap-1">
@@ -2987,12 +2970,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                       <TableCell align="left" className="text-muted-foreground font-mono text-sm">
                         {item.nominalCode || "-"}
                       </TableCell>
-                      {/* Type - left aligned */}
-                      <TableCell align="left" className="text-sm">
-                        <Badge variant="outline" className="font-mono">
-                          {item.documentType || "SI"}
-                        </Badge>
-                      </TableCell>
+
                       {/* Amount - right aligned (currency) */}
                       <TableCell align="right" className="font-medium">
                         {formatCurrency(item.amount)}
@@ -3017,9 +2995,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled={!userCanEdit}
+                            disabled={!userCanEdit || (item.category === "Tuition" && !!parseTuitionItemName(item.name).term && !!parseTuitionItemName(item.name).gradeId)}
                             onClick={() => openEditItemModal(item)}
-                            title="Edit Item"
+                            title={(item.category === "Tuition" && !!parseTuitionItemName(item.name).term && !!parseTuitionItemName(item.name).gradeId) ? "Tuition items cannot be edited manually. Use Tuition by Year page." : "Edit Item"}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -3209,7 +3187,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <label className="font-medium">{t("item.nominalCode")}</label>
                 <Input
@@ -3218,14 +3196,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   onChange={(e) => setNewItem({ ...newItem, nominalCode: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="font-medium">{t("item.type")}</label>
-                <Input
-                  value="SI"
-                  disabled
-                  className="bg-gray-100"
-                />
-              </div>
+
             </div>
 
             <div className="space-y-2">

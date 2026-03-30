@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 // Tabs removed — both sections shown on same page
-import { Building, Plus, Edit, Trash2, Landmark, CheckCircle2, XCircle } from "lucide-react"
+import { Building, Plus, Edit, Trash2, Landmark, CheckCircle2, XCircle, ArrowUpDown } from "lucide-react"
 import { logActivity } from "@/lib/activityLog"
 import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -56,6 +56,42 @@ export function BankSettings() {
     }
 
     const [formData, setFormData] = useState<Omit<BankAccount, "id">>(initialFormData)
+
+    // Sorting state
+    const [offlineSortKey, setOfflineSortKey] = useState<keyof BankAccount>("paymentSource")
+    const [offlineSortDir, setOfflineSortDir] = useState<"asc" | "desc">("asc")
+    const [onlineSortKey, setOnlineSortKey] = useState<keyof BankAccount>("paymentSource")
+    const [onlineSortDir, setOnlineSortDir] = useState<"asc" | "desc">("asc")
+
+    const handleSortOffline = (key: keyof BankAccount) => {
+        if (offlineSortKey === key) {
+            setOfflineSortDir(prev => prev === "asc" ? "desc" : "asc")
+        } else {
+            setOfflineSortKey(key)
+            setOfflineSortDir("asc")
+        }
+    }
+
+    const handleSortOnline = (key: keyof BankAccount) => {
+        if (onlineSortKey === key) {
+            setOnlineSortDir(prev => prev === "asc" ? "desc" : "asc")
+        } else {
+            setOnlineSortKey(key)
+            setOnlineSortDir("asc")
+        }
+    }
+
+    const sortedAccounts = [...accounts].sort((a, b) => {
+        const aVal = String(a[offlineSortKey] || "").toLowerCase()
+        const bVal = String(b[offlineSortKey] || "").toLowerCase()
+        return offlineSortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+    })
+
+    const sortedOnlineAccounts = [...onlineAccounts].sort((a, b) => {
+        const aVal = String(a[onlineSortKey] || "").toLowerCase()
+        const bVal = String(b[onlineSortKey] || "").toLowerCase()
+        return onlineSortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+    })
 
     const handleOpenDialog = (account?: BankAccount, mode: 'offline' | 'online' = 'offline') => {
         setDialogMode(mode)
@@ -160,22 +196,42 @@ export function BankSettings() {
                         <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[20%]">{t("bankSettings.paymentSource")}</TableHead>
-                                    <TableHead className="w-[25%]">{t("bankSettings.bank")}</TableHead>
-                                    <TableHead className="w-[25%]">{t("bankSettings.accountNumber")}</TableHead>
-                                    <TableHead className="w-[20%]">{t("bankSettings.glAccount")}</TableHead>
-                                    <TableHead align="center" className="w-[10%]">{t("bankSettings.actions")}</TableHead>
+                                    <TableHead className="w-[20%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("paymentSource")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.paymentSource")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("bankName")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.bank")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("accountNumber")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.accountNumber")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="w-[20%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("glAccount")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.glAccount")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead align="center" className="w-[10%] text-center">{t("bankSettings.actions")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {accounts.length === 0 ? (
+                                {sortedAccounts.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    accounts.map((account) => (
+                                    sortedAccounts.map((account) => (
                                         <TableRow key={account.id}>
                                             <TableCell className="font-medium">{account.paymentSource}</TableCell>
                                             <TableCell>{account.bankName}</TableCell>
@@ -211,21 +267,41 @@ export function BankSettings() {
                         <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[20%]">{t("bankSettings.paymentSource")}</TableHead>
-                                    <TableHead className="w-[25%]">{t("bankSettings.bank")}</TableHead>
-                                    <TableHead className="w-[25%]">{t("bankSettings.accountNumber")}</TableHead>
-                                    <TableHead className="w-[20%]">{t("bankSettings.glAccount")}</TableHead>
+                                    <TableHead className="w-[20%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOnline("paymentSource")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.paymentSource")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOnline("bankName")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.bank")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOnline("accountNumber")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.accountNumber")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="w-[20%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOnline("glAccount")}>
+                                        <div className="flex items-center gap-1">
+                                            {t("bankSettings.glAccount")}
+                                            <ArrowUpDown className="h-4 w-4" />
+                                        </div>
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {onlineAccounts.length === 0 ? (
+                                {sortedOnlineAccounts.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    onlineAccounts.map((account) => (
+                                    sortedOnlineAccounts.map((account) => (
                                         <TableRow key={account.id}>
                                             <TableCell className="font-medium">{account.paymentSource}</TableCell>
                                             <TableCell>{account.bankName}</TableCell>

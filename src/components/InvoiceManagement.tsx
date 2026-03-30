@@ -608,11 +608,11 @@ export function InvoiceManagement({
   const [selectedTemplate, setSelectedTemplate] = useState<InvoiceTemplate | null>(null)
 
   // Student selection state
-  const [studentSelectionType, setStudentSelectionType] = useState<"individual" | "csv" | "all">("individual")
+  const [studentSelectionType, setStudentSelectionType] = useState<"individual" | "excel" | "all">("individual")
   const [searchStudentTerm, setSearchStudentTerm] = useState("")
   const [selectedStudents, setSelectedStudents] = useState<any[]>([])
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [csvStudents, setCsvStudents] = useState<any[]>([])
+  const [excelFile, setExcelFile] = useState<File | null>(null)
+  const [excelStudents, setExcelStudents] = useState<any[]>([])
 
   // Item selection state
   const [availableItems, setAvailableItems] = useState<PreCreatedItem[]>([])
@@ -1498,8 +1498,8 @@ export function InvoiceManagement({
     setStudentSelectionType("individual")
     setSearchStudentTerm("")
     setSelectedStudents([])
-    setCsvFile(null)
-    setCsvStudents([])
+    setExcelFile(null)
+    setExcelStudents([])
     setAvailableItems([])
     setSelectedItems([])
   }
@@ -1507,8 +1507,8 @@ export function InvoiceManagement({
   const handleGradeChange = (grade: string) => {
     setSelectedGrade(grade)
     setSelectedStudents([])
-    setCsvStudents([])
-    setCsvFile(null)
+    setExcelStudents([])
+    setExcelFile(null)
     setSelectedItems([])
 
     // Filter available items for this grade
@@ -1539,19 +1539,19 @@ export function InvoiceManagement({
     setSelectedStudents(gradeStudents)
   }
 
-  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      setCsvFile(file)
-      // Simulate CSV parsing
-      const mockCsvData = [
-        { id: "ST001301", name: "CSV Student 1", grade: selectedGrade, parentName: "Parent 1", email: "parent1@email.com" },
-        { id: "ST001302", name: "CSV Student 2", grade: selectedGrade, parentName: "Parent 2", email: "parent2@email.com" },
-        { id: "ST001303", name: "CSV Student 3", grade: selectedGrade, parentName: "Parent 3", email: "parent3@email.com" },
+      setExcelFile(file)
+      // Simulate Excel parsing
+      const mockExcelData = [
+        { id: "ST001301", name: "Excel Student 1", grade: selectedGrade, parentName: "Parent 1", email: "parent1@email.com" },
+        { id: "ST001302", name: "Excel Student 2", grade: selectedGrade, parentName: "Parent 2", email: "parent2@email.com" },
+        { id: "ST001303", name: "Excel Student 3", grade: selectedGrade, parentName: "Parent 3", email: "parent3@email.com" },
       ]
-      setCsvStudents(mockCsvData)
-      setSelectedStudents(mockCsvData)
-      toast.success(`Loaded ${mockCsvData.length} students from Excel`)
+      setExcelStudents(mockExcelData)
+      setSelectedStudents(mockExcelData)
+      toast.success(`Loaded ${mockExcelData.length} students from Excel`)
     }
   }
 
@@ -1628,10 +1628,11 @@ export function InvoiceManagement({
     const totalItems = selectedItems.reduce((sum, item) => sum + item.amount, 0)
 
     toast.success(`Created ${selectedStudents.length} invoices with ${selectedItems.length} items each - Total per invoice: ${totalItems.toLocaleString()}`)
+    const studentNames = selectedStudents.map(s => s.name || s.studentName)
     logActivity({
       action: "Created invoices",
       module: "Invoices",
-      detail: `Students: ${selectedStudents.length}, Items per invoice: ${selectedItems.length}, Total per invoice: ${totalItems.toLocaleString()}`
+      detail: `Created ${selectedStudents.length} invoices for: ${studentNames.slice(0, 10).join(", ")}${studentNames.length > 10 ? ` and ${studentNames.length - 10} more` : ""}, Items per invoice: ${selectedItems.length}, Total per invoice: ${totalItems.toLocaleString()}`
     })
     closeCreateModal()
   }
@@ -1697,6 +1698,23 @@ export function InvoiceManagement({
     setEmailLogs(updatedEmailLogs)
     try {
       localStorage.setItem(EMAIL_LOGS_STORAGE_KEY, JSON.stringify(updatedEmailLogs))
+      
+      // Update central Email History
+      const historyData = localStorage.getItem("emailReminderHistory")
+      const history = historyData ? JSON.parse(historyData) : []
+      const centralEntry = {
+        id: `invoice-email-${Date.now()}`,
+        sentDate: new Date().toISOString().split("T")[0],
+        subject: `Invoice: ${invoiceToSend.invoiceNumber}`,
+        academicYear: invoiceToSend.academicYear || "-",
+        term: invoiceToSend.term || "-",
+        recipients: 1,
+        status: "sent",
+        message: `Invoice: ${invoiceToSend.invoiceNumber}\nStudent: ${invoiceToSend.studentName}\nID: ${invoiceToSend.studentId}\nAmount: ฿${invoiceToSend.finalAmount.toLocaleString()}`
+      }
+      history.unshift(centralEntry)
+      localStorage.setItem("emailReminderHistory", JSON.stringify(history))
+      window.dispatchEvent(new CustomEvent("emailReminderHistoryUpdated"))
     } catch (error) {
       console.error("Failed to save email log:", error)
     }
@@ -2354,10 +2372,11 @@ export function InvoiceManagement({
       }, 500)
     }
 
+    const invoiceNums = newInvoices.map(inv => inv.invoiceNumber)
     logActivity({
-      action: `Imported ${newInvoices.length} invoices from interface file`,
+      action: `Imported ${newInvoices.length} invoices from interface Excel`,
       module: "Invoice Management",
-      detail: `Invoice numbers: ${newInvoices.map(inv => inv.invoiceNumber).join(", ")}${itemNote}`
+      detail: `Invoice numbers: ${invoiceNums.slice(0, 10).join(", ")}${invoiceNums.length > 10 ? ` and ${invoiceNums.length - 10} more` : ""}${itemNote}`
     })
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }

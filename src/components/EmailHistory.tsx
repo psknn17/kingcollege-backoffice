@@ -12,7 +12,7 @@ import { Calendar } from "./ui/calendar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
-import { Filter, Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle, ChevronDown } from "lucide-react"
+import { Filter, Mail, CalendarIcon, History, Users, CheckCircle, TrendingUp, Eye, FileText, Send, Download, MoreVertical, Search, X, AlertCircle, ChevronDown, ArrowUpDown } from "lucide-react"
 import { PaginationBar } from "./ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { toast } from "@/components/ui/sonner"
@@ -139,6 +139,19 @@ export function EmailHistory() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>("sentDate")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
+  }
+
   useEffect(() => {
     const loadHistory = () => {
       const storedHistory = loadEmailHistoryFromStorage()
@@ -148,8 +161,12 @@ export function EmailHistory() {
     loadHistory()
 
     const interval = setInterval(loadHistory, 2000)
+    window.addEventListener("emailReminderHistoryUpdated", loadHistory)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("emailReminderHistoryUpdated", loadHistory)
+    }
   }, [])
 
   // Get unique academic years and terms from data
@@ -278,10 +295,30 @@ export function EmailHistory() {
   }
 
   const filteredHistory = allHistory.filter(filterHistory)
+
+  const sortedHistory = useMemo(() => {
+    return [...filteredHistory].sort((a, b) => {
+      let aVal = a[sortKey]
+      let bVal = b[sortKey]
+
+      if (sortKey === "sentDate") {
+        aVal = new Date(a.sentDate).getTime()
+        bVal = new Date(b.sentDate).getTime()
+      } else if (typeof aVal === "string") {
+        aVal = aVal.toLowerCase()
+        bVal = bVal.toLowerCase()
+      }
+
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+      return 0
+    })
+  }, [filteredHistory, sortKey, sortDirection])
+
   const paginatedHistory = useMemo(() => {
     const start = (currentPage - 1) * pageSize
-    return filteredHistory.slice(start, start + pageSize)
-  }, [filteredHistory, currentPage, pageSize])
+    return sortedHistory.slice(start, start + pageSize)
+  }, [sortedHistory, currentPage, pageSize])
 
   return (
     <div className="space-y-6">
@@ -431,11 +468,36 @@ export function EmailHistory() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead align="left">{t("common.date")}</TableHead>
-                  <TableHead align="left">Subject</TableHead>
-                  <TableHead align="left">{t("common.academicYear")}</TableHead>
-                  <TableHead align="left">{t("common.term")}</TableHead>
-                  <TableHead align="right">Recipients</TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("sentDate")} align="left">
+                    <div className="flex items-center gap-1">
+                      {t("common.date")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("subject")} align="left">
+                    <div className="flex items-center gap-1">
+                      Subject
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("academicYear")} align="left">
+                    <div className="flex items-center gap-1">
+                      {t("common.academicYear")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("term")} align="left">
+                    <div className="flex items-center gap-1">
+                      {t("common.term")}
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("recipients")} align="right">
+                    <div className="flex items-center justify-end gap-1">
+                      Recipients
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
                   <TableHead align="center">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>

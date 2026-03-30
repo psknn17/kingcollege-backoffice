@@ -591,7 +591,32 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const receipt = receipts.find(r => r.id === receiptId)
     if (receipt) {
       toast.success(t("receipt.emailSentTo").replace("{name}", receipt.studentName))
-      logActivity({ action: "Send Receipt Email", module: "Receipts", detail: `Receipt: ${receipt.receiptNumber}, Student: ${receipt.studentName} (${receipt.studentId}), Amount: ฿${receipt.amount.toLocaleString()}, Payment: ${receipt.paymentMethod}` })
+      logActivity({ 
+        action: "Send Receipt Email", 
+        module: "Receipts", 
+        detail: `Receipt: ${receipt.receiptNumber}, Student: ${receipt.studentName} (${receipt.studentId}), Amount: ฿${receipt.amount.toLocaleString()}, Payment: ${receipt.paymentMethod}` 
+      })
+
+      // Update Email History
+      try {
+        const historyData = localStorage.getItem("emailReminderHistory")
+        const history = historyData ? JSON.parse(historyData) : []
+        const newEntry = {
+          id: `receipt-resend-${Date.now()}`,
+          sentDate: new Date().toISOString().split("T")[0],
+          subject: `Receipt: ${receipt.receiptNumber}`,
+          academicYear: receipt.academicYear || "-",
+          term: receipt.term || "-",
+          recipients: 1,
+          status: "sent",
+          message: `Receipt: ${receipt.receiptNumber}\nStudent: ${receipt.studentName}\nID: ${receipt.studentId}\nAmount: ฿${receipt.amount.toLocaleString()}`
+        }
+        history.unshift(newEntry)
+        localStorage.setItem("emailReminderHistory", JSON.stringify(history))
+        window.dispatchEvent(new CustomEvent("emailReminderHistoryUpdated"))
+      } catch (err) {
+        console.error("Failed to add to email history", err)
+      }
     }
   }
 
@@ -622,8 +647,31 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       return
     }
 
+    const selectedReceiptsList = receipts.filter(r => selectedReceipts.has(r.id))
+
     toast.success(t("receipt.sendingEmails").replace("{count}", String(selectedReceipts.size)))
     logActivity({ action: "Bulk Send Receipt Email", module: "Receipts", detail: `Sent emails for ${selectedReceipts.size} receipts` })
+
+    // Update Email History
+    try {
+      const historyData = localStorage.getItem("emailReminderHistory")
+      const history = historyData ? JSON.parse(historyData) : []
+      const newEntry = {
+        id: `receipt-bulk-resend-${Date.now()}`,
+        sentDate: new Date().toISOString().split("T")[0],
+        subject: `Bulk Resend: ${selectedReceipts.size} Receipts`,
+        academicYear: selectedReceiptsList[0]?.academicYear || "-",
+        term: selectedReceiptsList[0]?.term || "-",
+        recipients: selectedReceipts.size,
+        status: "sent",
+        message: `Bulk Resented Receipt Emails\n\nReceipts:\n${selectedReceiptsList.map(r => `- ${r.receiptNumber} (${r.studentName})`).join("\n")}`
+      }
+      history.unshift(newEntry)
+      localStorage.setItem("emailReminderHistory", JSON.stringify(history))
+      window.dispatchEvent(new CustomEvent("emailReminderHistoryUpdated"))
+    } catch (err) {
+      console.error("Failed to add to email history", err)
+    }
 
     setSelectedReceipts(new Set())
   }

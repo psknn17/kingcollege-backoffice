@@ -170,7 +170,11 @@ export function TuitionDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group updated successfully")
-      logActivity({ action: "Update Group", module: "Student Groups", detail: `Updated group "${formData.name}" with ${formData.selectedStudents.length} students` })
+      logActivity({
+        action: "Update Group",
+        module: "Student Groups",
+        detail: `Updated group "${formData.name}" with ${formData.selectedStudents.length} students: ${formData.selectedStudents.map(s => s.name).slice(0, 10).join(", ")}${formData.selectedStudents.length > 10 ? ` and ${formData.selectedStudents.length - 10} more` : ""}`
+      })
     } else {
       // Create new group
       const newGroup: DiscountGroup = {
@@ -187,7 +191,11 @@ export function TuitionDiscountGroups() {
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
       toast.success("Student group created successfully")
-      logActivity({ action: "Create Group", module: "Student Groups", detail: `Created group "${formData.name}" with ${formData.selectedStudents.length} students` })
+      logActivity({
+        action: "Create Group",
+        module: "Student Groups",
+        detail: `Created group "${formData.name}" with ${formData.selectedStudents.length} students: ${formData.selectedStudents.map(s => s.name).slice(0, 10).join(", ")}${formData.selectedStudents.length > 10 ? ` and ${formData.selectedStudents.length - 10} more` : ""}`
+      })
     }
 
     setIsDialogOpen(false)

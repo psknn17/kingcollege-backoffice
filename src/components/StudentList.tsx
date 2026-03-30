@@ -577,7 +577,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     logActivity({
       action: "Deleted student",
       module: "Student Management",
-      detail: `${student.firstName} ${student.lastName} (ID: ${student.studentId})`
+      detail: `Deleted student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})`
     })
     toast.success("Student deleted successfully")
   }
@@ -631,7 +631,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     logActivity({
       action: "Created student",
       module: "Student Management",
-      detail: `${newStudent.firstName} ${newStudent.lastName} (ID: ${newStudent.studentId})`
+      detail: `Created student: ${newStudent.firstName} ${newStudent.lastName} (ID: ${newStudent.studentId})`
     })
 
     toast.success(t("student.studentAdded"))
@@ -681,7 +681,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       logActivity({
         action: "Updated student",
         module: "Student Management",
-        detail: `${formData.firstName} ${formData.lastName} (ID: ${formData.studentId})`
+        detail: `Updated student: ${formData.firstName} ${formData.lastName} (ID: ${formData.studentId})`
       })
 
       toast.success(t("student.studentUpdated"))
@@ -1060,6 +1060,12 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
     setIsImportDialogOpen(false)
     toast.success(`Imported ${imported} students${skipped > 0 ? `, skipped ${skipped} duplicates` : ""} `)
+    const importedNames = importPreview.map(s => `${s["First Name"] || s["Name"] || ""} ${s["Last Name"] || ""}`).slice(0, 10).join(", ")
+    logActivity({
+      action: "Import Students",
+      module: "Student Management",
+      detail: `Imported ${imported} students from Excel: ${importedNames}${importPreview.length > 10 ? ` and ${importPreview.length - 10} more` : ""}${skipped > 0 ? ` (${skipped} skipped)` : ""}`
+    })
   }
 
   const handleConfirmImport = () => {

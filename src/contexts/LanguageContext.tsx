@@ -902,6 +902,7 @@ const en: Record<string, string> = {
   "item.templateAdded": "Template added successfully",
   "item.confirmDeleteItem": "Are you sure you want to delete this item?",
   "item.confirmDeleteTemplate": "Are you sure you want to delete this template?",
+  "item.itemCodeAlreadyExists": "Item Code already exists",
 
   // Discount Management
   "discount.title": "Discount Management",
@@ -2863,7 +2864,7 @@ const en: Record<string, string> = {
   "item.createNewItem": "Create New Item",
   "item.editItemDesc": "Update the item information",
   "item.createNewItemDesc": "Add a new item to the system",
-  "item.searchItemsPlaceholder": "Search by code, name, nominal code, category...",
+  "item.searchItemsPlaceholder": "Search by code, name, nominal code...",
   "item.allCategories": "All Categories",
   "item.allTypes": "All Types",
   "item.nominalCode": "Nominal Code",
@@ -4887,6 +4888,7 @@ const th: Record<string, string> = {
   "item.templateAdded": "เพิ่มเทมเพลตเรียบร้อย",
   "item.confirmDeleteItem": "คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?",
   "item.confirmDeleteTemplate": "คุณแน่ใจหรือไม่ว่าต้องการลบเทมเพลตนี้?",
+  "item.itemCodeAlreadyExists": "รหัสรายการนี้มีอยู่ในระบบแล้ว",
 
   // Discount Management
   "discount.title": "จัดการส่วนลด",
@@ -6679,7 +6681,7 @@ const th: Record<string, string> = {
   "item.createNewItem": "สร้างรายการใหม่",
   "item.editItemDesc": "อัปเดตข้อมูลรายการ",
   "item.createNewItemDesc": "เพิ่มรายการใหม่เข้าสู่ระบบ",
-  "item.searchItemsPlaceholder": "ค้นหาด้วยรหัส, ชื่อ, รหัสบัญชี, หมวดหมู่...",
+  "item.searchItemsPlaceholder": "ค้นหาด้วยรหัส, ชื่อ, รหัสบัญชี...",
   "item.allCategories": "ทุกหมวดหมู่",
   "item.allTypes": "ทุกประเภท",
   "item.nominalCode": "รหัสบัญชี",

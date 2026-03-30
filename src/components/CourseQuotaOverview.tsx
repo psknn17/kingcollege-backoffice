@@ -524,7 +524,11 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
     // Mock successful import
     const newCoursesCount = Math.floor(Math.random() * 5) + 1
     toast.success(`Successfully imported ${newCoursesCount} courses from Excel`)
-    logActivity({ action: "Import Courses", module: "Course Quota", detail: `Imported ${newCoursesCount} courses from CSV file "${csvFile.name}"` })
+    logActivity({
+      action: "Import Courses",
+      module: "Course Quota",
+      detail: `Imported ${newCoursesCount} courses via Excel from file "${csvFile.name}"`
+    })
 
     setIsImporting(false)
     closeManageModal()

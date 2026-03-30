@@ -474,7 +474,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
         setStudentGroups(updatedGroups)
 
         toast.success(`Added ${newStudents.length} students to group`)
-        logActivity({ action: "Import Students", module: "Discount Management", detail: `Imported ${newStudents.length} students via CSV to group "${updatedGroups[groupIndex].name}"` })
+        logActivity({
+          action: "Import Students",
+          module: "Discount Management",
+          detail: `Imported ${newStudents.length} students via Excel to group "${updatedGroups[groupIndex].name}": ${newStudents.map(s => s.name).slice(0, 10).join(", ")}${newStudents.length > 10 ? ` and ${newStudents.length - 10} more` : ""}`
+        })
         setCsvUploadDialog({ isOpen: false, groupId: null })
         setCsvFile(null)
         setCsvPreviewData([])
@@ -691,7 +695,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
             selectedStudents: [...prev.selectedStudents, ...validStudents]
           }))
           toast.success(`Successfully imported ${validStudents.length} students`)
-          logActivity({ action: "Import Students", module: "Discount Management", detail: `Imported ${validStudents.length} students from file` })
+          logActivity({
+            action: "Import Students",
+            module: "Discount Management",
+            detail: `Imported ${validStudents.length} students from file: ${validStudents.map(s => s.name).slice(0, 10).join(", ")}${validStudents.length > 10 ? ` and ${validStudents.length - 10} more` : ""}`
+          })
         }
 
         if (errors.length > 0) {
@@ -772,7 +780,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
       setStudentGroups(prev => prev.map(g => g.id === editGroupDialog.group.id ? updatedGroup : g))
       toast.success(t("discount.groupUpdated"))
-      logActivity({ action: "Update Group", module: "Discount Management", detail: `Updated discount group "${groupForm.name}" with ${groupForm.selectedStudents.length} students` })
+      logActivity({
+        action: "Update Group",
+        module: "Discount Management",
+        detail: `Updated discount group "${groupForm.name}" with ${groupForm.selectedStudents.length} students: ${groupForm.selectedStudents.map(s => s.name).slice(0, 10).join(", ")}${groupForm.selectedStudents.length > 10 ? ` and ${groupForm.selectedStudents.length - 10} more` : ""}`
+      })
       setEditGroupDialog({ isOpen: false, group: null })
     } else {
       // Create new group
@@ -789,7 +801,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
       setStudentGroups(prev => [...prev, newGroup])
       toast.success(t("discount.groupCreated"))
-      logActivity({ action: "Create Group", module: "Discount Management", detail: `Created discount group "${newGroup.name}" (${newGroup.id}) with ${newGroup.students.length} students` })
+      logActivity({
+        action: "Create Group",
+        module: "Discount Management",
+        detail: `Created discount group "${newGroup.name}" (${newGroup.id}) with ${newGroup.students.length} students: ${newGroup.students.map(s => s.name).slice(0, 10).join(", ")}${newGroup.students.length > 10 ? ` and ${newGroup.students.length - 10} more` : ""}`
+      })
       setIsGroupDialogOpen(false)
     }
     resetGroupForm()

@@ -7,6 +7,7 @@ import { Badge } from "./ui/badge"
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { ArrowUpDown } from "lucide-react"
 
 // Module grouping: map raw module names to display groups
 const MODULE_GROUP_MAP: Record<string, string> = {
@@ -82,46 +83,46 @@ const mockActivityLogs: ActivityLogEntry[] = [
   {
     id: "log-001",
     user: "Admin",
-    action: "Approved invoice 20250000001",
+    action: "Approved invoice 202603001",
     module: "Invoices",
     detail: "Approval Status: wait -> approved",
     ip: "192.168.1.100",
-    device: "Mock Device",
+    device: "Desktop",
     status: "success",
-    timestamp: new Date("2026-01-27T10:15:00").toISOString()
+    timestamp: new Date().toISOString()
   },
   {
     id: "log-002",
-    user: "Finance Manager",
-    action: "Rejected invoice 20250000001",
-    module: "Invoices",
-    detail: "Reason: Missing document",
-    ip: "192.168.1.101",
-    device: "Mock Device",
-    status: "warning",
-    timestamp: new Date("2026-01-27T11:05:00").toISOString()
+    user: "System",
+    action: "Import",
+    module: "Items & Templates",
+    detail: "Imported 20 items (15 items updated with prices from Tuition by Year) successfully for tuition: [Tuition fee - Term 1 / Nursery, Tuition fee - Term 2 / Year 1... and 15 more]",
+    ip: "127.0.0.1",
+    device: "Background Service",
+    status: "success",
+    timestamp: new Date(Date.now() - 3600000).toISOString()
   },
   {
     id: "log-003",
     user: "Admin",
-    action: "Created invoices",
-    module: "Invoices",
-    detail: "Submitted 3 invoice(s) for approval",
+    action: "Save Tuition Data",
+    module: "Tuition by Year",
+    detail: "Saved tuition data for academic year 2026-2027, Grand Total: 5,450,000",
     ip: "192.168.1.100",
-    device: "Mock Device",
+    device: "Desktop",
     status: "success",
-    timestamp: new Date("2026-01-27T11:20:00").toISOString()
+    timestamp: new Date(Date.now() - 7200000).toISOString()
   },
   {
     id: "log-004",
-    user: "Admin",
-    action: "Updated invoice 20250000001",
-    module: "Invoices",
-    detail: "Due Date: \"2026-01-15\" → \"2026-01-30\"; Notes: \"-\" → \"Updated payment date\"",
-    ip: "192.168.1.100",
-    device: "Mock Device",
+    user: "Finance Manager",
+    action: "Delete",
+    module: "Items & Templates",
+    detail: "Bulk deleted 5 items: [TUI005, TUI006, wsss... and 2 more]",
+    ip: "192.168.1.101",
+    device: "Laptop",
     status: "success",
-    timestamp: new Date("2026-01-27T11:45:00").toISOString()
+    timestamp: new Date(Date.now() - 86400000).toISOString()
   },
   {
     id: "log-005",
@@ -160,27 +161,65 @@ export function ActivityLog() {
   const [logs, setLogs] = useState<ActivityLogEntry[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [sortColumn, setSortColumn] = useState<keyof ActivityLogEntry | "timestamp">("timestamp")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+
+  const handleSort = (column: keyof ActivityLogEntry | "timestamp") => {
+    if (sortColumn === column) {
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
 
   const filteredLogs = useMemo(() => {
     const logsWithoutViewed = logs.filter(log => !log.action.toLowerCase().startsWith("viewed"))
 
-    if (!searchTerm) return logsWithoutViewed
+    let result = [...logsWithoutViewed]
 
-    const needle = searchTerm.toLowerCase()
-    return logsWithoutViewed.filter(log =>
-      log.user.toLowerCase().includes(needle) ||
-      log.action.toLowerCase().includes(needle) ||
-      log.module.toLowerCase().includes(needle) ||
-      log.detail.toLowerCase().includes(needle) ||
-      log.ip.toLowerCase().includes(needle) ||
-      log.device.toLowerCase().includes(needle)
-    )
-  }, [searchTerm, logs])
+    if (searchTerm) {
+      const needle = searchTerm.toLowerCase()
+      result = result.filter(log =>
+        log.user.toLowerCase().includes(needle) ||
+        log.action.toLowerCase().includes(needle) ||
+        log.module.toLowerCase().includes(needle) ||
+        log.detail.toLowerCase().includes(needle) ||
+        log.ip.toLowerCase().includes(needle) ||
+        log.device.toLowerCase().includes(needle)
+      )
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let aValue: any = a[sortColumn as keyof ActivityLogEntry]
+      let bValue: any = b[sortColumn as keyof ActivityLogEntry]
+
+      if (sortColumn === "timestamp") {
+        aValue = new Date(a.timestamp).getTime()
+        bValue = new Date(b.timestamp).getTime()
+      }
+
+      if (typeof aValue === "string") {
+        return sortDirection === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue)
+      }
+
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue
+    })
+
+    return result
+  }, [searchTerm, logs, sortColumn, sortDirection])
 
   useEffect(() => {
     const load = () => {
       const stored = loadActivityLogs()
-      setLogs(stored.length > 0 ? stored : mockActivityLogs)
+      // Combine real logs with mock logs for a better preview, 
+      // but only if stored logs aren't already overwhelming.
+      // We put mocks first to show the new format clearly.
+      const combined = [...mockActivityLogs, ...stored]
+      setLogs(combined)
     }
     load()
     const handleUpdate = () => load()
@@ -194,12 +233,12 @@ export function ActivityLog() {
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+    <div className="space-y-6 font-sans" style={{ fontFamily: "'Lato', sans-serif" }}>
+      <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm mb-6 bg-gradient-to-r from-white to-gray-50">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">{t("activityLog.title")}</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{t("activityLog.title")}</h2>
+            <p className="text-base text-muted-foreground mt-1">
               {t("activityLog.subtitle")}
             </p>
           </div>
@@ -229,12 +268,57 @@ export function ActivityLog() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead align="left" className="pl-6">{t("activityLog.timestamp")}</TableHead>
-                <TableHead align="left">{t("activityLog.user")}</TableHead>
-                <TableHead align="left">{t("activityLog.module")}</TableHead>
-                <TableHead align="left">{t("activityLog.action")}</TableHead>
+                <TableHead
+                  align="left"
+                  className="pl-6 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("timestamp")}
+                >
+                  <div className="flex items-center gap-1">
+                    {t("activityLog.timestamp")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  align="left"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("user")}
+                >
+                  <div className="flex items-center gap-1">
+                    {t("activityLog.user")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  align="left"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("module")}
+                >
+                  <div className="flex items-center gap-1">
+                    {t("activityLog.module")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  align="left"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("action")}
+                >
+                  <div className="flex items-center gap-1">
+                    {t("activityLog.action")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
                 <TableHead align="left">{t("activityLog.detail")}</TableHead>
-                <TableHead align="left">{t("activityLog.ip")}</TableHead>
+                <TableHead
+                  align="left"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("ip")}
+                >
+                  <div className="flex items-center gap-1">
+                    {t("activityLog.ip")}
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
                 <TableHead align="center">{t("common.status")}</TableHead>
               </TableRow>
             </TableHeader>

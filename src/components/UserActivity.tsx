@@ -103,12 +103,14 @@ export function UserActivity() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-6 font-sans" style={{ fontFamily: "'Lato', sans-serif" }}>
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">My Activity</h2>
-          <p className="text-sm text-muted-foreground">View your recent actions and activity history</p>
+      <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm mb-6 bg-gradient-to-r from-white to-gray-50">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">My Activity</h2>
+            <p className="text-base text-muted-foreground mt-1">View your recent actions and activity history</p>
+          </div>
         </div>
       </div>
 
@@ -246,14 +248,10 @@ export function UserActivity() {
                 ) : (
                   paginatedLogs.map((log) => (
                     <TableRow key={log.id}>
-                      {/* Timestamp - date column, left aligned */}
-                      <TableCell align="left" className="font-mono text-xs">
+                      <TableCell align="left" className="text-sm">
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">
+                          <span className="text-gray-900">
                             {formatTimestamp(log.timestamp)}
-                          </span>
-                          <span className="text-gray-400">
-                            {getRelativeTime(log.timestamp)}
                           </span>
                         </div>
                       </TableCell>
