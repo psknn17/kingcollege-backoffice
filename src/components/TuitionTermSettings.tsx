@@ -137,6 +137,7 @@ export function TuitionTermSettings() {
 
     const updatedYears = [...academicYears, newYear].sort((a, b) => b.id.localeCompare(a.id))
     setAcademicYears(updatedYears)
+    saveAcademicYears(updatedYears)
 
     // Also add to editedYears
     setEditedYears(prev => ({
@@ -148,11 +149,6 @@ export function TuitionTermSettings() {
     setIsAddYearDialogOpen(false)
     setNewYearStart("")
 
-    // Save immediately after creating new year
-    setTimeout(() => {
-      saveAcademicYears()
-    }, 100)
-
     toast.success(`${t("termSettings.academicYear")} ${formatAcademicYear(yearId)} ${t("termSettings.yearCreated")}`)
     logActivity({ action: "Create Academic Year", module: "Term Settings", detail: `Created academic year ${formatAcademicYear(yearId)} with ${newYear.terms.length} terms (Term 1, Term 2, Term 3)` })
   }
@@ -160,7 +156,9 @@ export function TuitionTermSettings() {
   const deleteAcademicYear = (yearId: string) => {
     if (academicYears.length <= 1) return
     deleteDialog.confirm(() => {
+      const updatedYears = academicYears.filter(y => y.id !== yearId)
       deleteYear(yearId)
+      saveAcademicYears(updatedYears)
 
       // Also remove from editedYears
       setEditedYears(prev => {
@@ -279,13 +277,9 @@ export function TuitionTermSettings() {
       y.id === yearId ? editedYear : y
     )
     setAcademicYears(updatedYears)
-
-    // Save to localStorage after a brief delay to ensure state is updated
-    setTimeout(() => {
-      saveAcademicYears()
-      toast.success(t("termSettings.changesSaved"))
-      logActivity({ action: "Update Term Settings", module: "Term Settings", detail: `Saved changes for academic year ${formatAcademicYear(yearId)}, Terms: ${editedYear.terms.map(t => t.name).join(", ")}` })
-    }, 100)
+    saveAcademicYears(updatedYears)
+    toast.success(t("termSettings.changesSaved"))
+    logActivity({ action: "Update Term Settings", module: "Term Settings", detail: `Saved changes for academic year ${formatAcademicYear(yearId)}, Terms: ${editedYear.terms.map(t => t.name).join(", ")}` })
   }
 
   const handleSaveYearClick = (yearId: string) => {

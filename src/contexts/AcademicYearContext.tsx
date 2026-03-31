@@ -20,7 +20,7 @@ interface AcademicYearContextType {
   addAcademicYear: (year: AcademicYear) => void
   deleteAcademicYear: (yearId: string) => void
   updateAcademicYear: (yearId: string, updates: Partial<AcademicYear>) => void
-  saveAcademicYears: () => void
+  saveAcademicYears: (years?: AcademicYear[]) => void
 }
 
 const AcademicYearContext = createContext<AcademicYearContextType | undefined>(undefined)
@@ -157,9 +157,9 @@ export function AcademicYearProvider({ children }: { children: ReactNode }) {
     return loadFromStorage() || initialAcademicYears
   })
 
-  // Manual save function - no auto-save
-  const saveAcademicYears = () => {
-    saveToStorage(academicYears)
+  // Manual save function - accepts explicit years to avoid stale closure
+  const saveAcademicYears = (years?: AcademicYear[]) => {
+    saveToStorage(years ?? academicYears)
   }
 
   const setAcademicYears = (years: AcademicYear[]) => {
