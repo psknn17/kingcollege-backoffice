@@ -16,6 +16,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { ColumnPresets } from "@/utils/tableAlignment"
+import { copyItemsForNewYear } from "@/utils/itemAutoCreate"
 
 interface GradeLevelTuition {
   id: string
@@ -272,6 +273,22 @@ export function TuitionByYear() {
     saveTuitionToStorage(tuitionData)
     toast.success(t("tuition.savedSuccess"))
     logActivity({ action: "Save Tuition Data", module: "Tuition by Year", detail: `Saved tuition data for academic year ${selectedYear}, Grand Total: ${getGrandTotal()}` })
+
+    // Auto-copy items for the selected year if it doesn't have items yet
+    if (selectedYear && currentYearGrades.length > 0) {
+      // Find the previous year (the year just before the selected one)
+      const sortedYears = availableYears.slice().sort((a, b) => a.localeCompare(b))
+      const currentIndex = sortedYears.indexOf(selectedYear)
+      const previousYear = currentIndex > 0 ? sortedYears[currentIndex - 1] : null
+
+      if (previousYear) {
+        const copied = copyItemsForNewYear(selectedYear, previousYear, currentYearGrades)
+        if (copied > 0) {
+          toast.success(`Copied ${copied} items from ${formatAcademicYear(previousYear)} to ${formatAcademicYear(selectedYear)}`)
+        }
+      }
+    }
+
     setIsSaveConfirmDialogOpen(false)
   }
 

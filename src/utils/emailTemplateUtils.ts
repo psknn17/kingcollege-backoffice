@@ -40,9 +40,11 @@ export const RECEIPT_VARIABLES: TemplateVariable[] = [
   { key: "{{studentId}}",      label: "Student ID",      example: "KC2025001" },
   { key: "{{grade}}",          label: "Year Group",      example: "Year 7" },
   { key: "{{receiptNumber}}",  label: "Receipt No.",     example: "R2025-00456" },
+  { key: "{{invoiceNumber}}",  label: "Invoice No.",     example: "INV-2025-001234" },
   { key: "{{receiptDate}}",    label: "Receipt Date",    example: "28/02/2026" },
   { key: "{{amount}}",         label: "Amount",          example: "130,000" },
   { key: "{{paymentMethod}}",  label: "Payment Method",  example: "Bank Transfer" },
+  { key: "{{term}}",           label: "Term",            example: "Term 1" },
   { key: "{{schoolName}}",     label: "School Name",     example: "King's College International School Bangkok" },
 ]
 
@@ -63,9 +65,11 @@ export const RECEIPT_SAMPLE: Record<string, string> = {
   "{{studentId}}": "KC2025001",
   "{{grade}}": "Year 7",
   "{{receiptNumber}}": "R2025-00456",
+  "{{invoiceNumber}}": "INV-2025-001234",
   "{{receiptDate}}": "28/02/2026",
   "{{amount}}": "130,000",
   "{{paymentMethod}}": "Bank Transfer",
+  "{{term}}": "Term 1",
   "{{schoolName}}": "King's College International School Bangkok",
 }
 
@@ -168,17 +172,17 @@ Best regards,
       subject: "Payment Receipt {{receiptNumber}} \u2014 {{studentName}}",
       body: `Dear {{parentName}},
 
-Thank you for your payment. Please find attached the receipt for {{studentName}}.
+Please find attached the payment receipt for {{studentName}}.
 
 Receipt Details:
   \u2022 Receipt No.:       {{receiptNumber}}
-  \u2022 Receipt Date:      {{receiptDate}}
-  \u2022 Amount Received:   {{amount}} THB
+  \u2022 Invoice No.:       {{invoiceNumber}}
+  \u2022 Amount:            {{amount}} THB
+  \u2022 Payment Date:      {{receiptDate}}
   \u2022 Payment Method:    {{paymentMethod}}
+  \u2022 Term:              {{term}}
 
-Please keep this receipt for your records.
-
-If you have any questions, please contact the Finance & Accounting Department.
+Thank you for your payment.
 
 Best regards,
 {{schoolName}}`,

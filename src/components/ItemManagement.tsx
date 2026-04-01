@@ -23,6 +23,8 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
 import { parseTuitionItemName } from "@/utils/itemAutoCreate"
+import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { logActivity } from "@/lib/activityLog"
@@ -40,6 +42,7 @@ interface Item {
   applicableGrades: string[]
   appointmentDate?: string
   invoiceType?: "student" | "external" | "eca"
+  academicYear?: string
 }
 
 interface ItemTemplate {
@@ -1849,6 +1852,22 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   const { t } = useLanguage()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const { academicYears } = useAcademicYears()
+
+  // Year filter for tuition items
+  const isTuitionView = invoiceType === "student" || invoiceType === "tuition"
+  const availableYears = academicYears.map(y => y.id).sort((a, b) => b.localeCompare(a))
+  const [selectedYearFilter, setSelectedYearFilter] = usePersistedState<string>(
+    `itemMgmt-yearFilter-${invoiceType}`,
+    ""
+  )
+
+  // Auto-select latest year when available
+  useEffect(() => {
+    if (isTuitionView && availableYears.length > 0 && (!selectedYearFilter || !availableYears.includes(selectedYearFilter))) {
+      setSelectedYearFilter(availableYears[0])
+    }
+  }, [availableYears, isTuitionView])
 
   // Confirmation dialog hooks
   const addConfirmDialog = useConfirmDialog()
@@ -1997,6 +2016,49 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
     }
     localStorage.setItem(cleanupKey, "true")
   }, [])
+
+  // One-time migration: tag existing tuition items with latest academic year
+  useEffect(() => {
+    if (!isTuitionView) return
+    const migrationKey = "itemYearMigrationDone"
+    if (localStorage.getItem(migrationKey)) return
+
+    try {
+      const storageKey = "invoiceItems"
+      const raw = localStorage.getItem(storageKey)
+      if (!raw) return
+
+      const allItems: Item[] = JSON.parse(raw)
+      const tuitionRaw = localStorage.getItem("tuitionByYearData")
+      if (!tuitionRaw) return
+      const tuitionData = JSON.parse(tuitionRaw)
+      const years = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
+      if (years.length === 0) return
+
+      const latestYear = years[0]
+      let migrated = 0
+
+      allItems.forEach(item => {
+        if (item.category === "Tuition" && !item.academicYear) {
+          const parsed = parseTuitionItemName(item.name)
+          if (parsed.term && parsed.gradeId) {
+            item.academicYear = latestYear
+            migrated++
+          }
+        }
+      })
+
+      if (migrated > 0) {
+        localStorage.setItem(storageKey, JSON.stringify(allItems))
+        setItems(allItems)
+        console.log(`[Migration] Tagged ${migrated} tuition items with year ${latestYear}`)
+      }
+    } catch (e) {
+      console.error("[Migration] Failed to tag items with year:", e)
+    }
+
+    localStorage.setItem(migrationKey, "true")
+  }, [isTuitionView])
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString()
@@ -2162,9 +2224,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           const stored = localStorage.getItem("tuitionByYearData")
           if (stored) {
             const allYears = JSON.parse(stored)
-            const latestYear = Object.keys(allYears).sort((a, b) => b.localeCompare(a))[0]
-            if (latestYear) {
-              const gradeMatch = allYears[latestYear].find((g: any) => g.id === parsed.gradeId)
+            const lookupYear = selectedYearFilter || Object.keys(allYears).sort((a, b) => b.localeCompare(a))[0]
+            if (lookupYear) {
+              const gradeMatch = allYears[lookupYear].find((g: any) => g.id === parsed.gradeId)
               if (gradeMatch) {
                 const termAmount = gradeMatch[`term${parsed.term}Amount`]
                 if (termAmount !== undefined) {
@@ -2191,7 +2253,16 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       documentType: newItem.documentType || "SI",
       applicableGrades: finalGrades,
       isActive: newItem.isActive,
-      invoiceType: (editingItem?.invoiceType || invoiceType) as Item["invoiceType"]
+      invoiceType: (editingItem?.invoiceType || invoiceType) as Item["invoiceType"],
+      ...(() => {
+        const p = parseTuitionItemName(newItem.name)
+        const isActualTuition = finalCategory === "Tuition" && !!p.term && !!p.gradeId
+        if (isTuitionView && isActualTuition && selectedYearFilter) {
+          return { academicYear: editingItem?.academicYear || selectedYearFilter }
+        }
+        if (editingItem?.academicYear) return { academicYear: editingItem.academicYear }
+        return {}
+      })()
     }
 
     if (editingItem) {
@@ -2407,8 +2478,9 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         const stored = localStorage.getItem("tuitionByYearData")
         if (stored) {
           const allYears = JSON.parse(stored)
-          const latestYear = Object.keys(allYears).sort((a, b) => b.localeCompare(a))[0]
-          if (latestYear) tuitionLookup = allYears[latestYear]
+          // Use selected year filter, fallback to latest year
+          const lookupYear = selectedYearFilter || Object.keys(allYears).sort((a, b) => b.localeCompare(a))[0]
+          if (lookupYear) tuitionLookup = allYears[lookupYear]
         }
       } catch (err) {
         console.error("Failed to load tuition data for import update", err)
@@ -2445,6 +2517,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         existingItem.amount = amount
         existingItem.name = itemName
         existingItem.description = row["Description"] || existingItem.description
+        if (isTuitionView && rowCategory === "Tuition" && selectedYearFilter && !existingItem.academicYear) {
+          const p = parseTuitionItemName(itemName)
+          if (p.term && p.gradeId) existingItem.academicYear = selectedYearFilter
+        }
         existingItem.applicableGrades = applicableGrades
         importedNames.push(itemName)
         imported++
@@ -2462,7 +2538,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         documentType: "SI",
         isActive: (row["Status"] || "active").toLowerCase() === "active",
         applicableGrades,
-        invoiceType: invoiceType as "student" | "external" | "eca"
+        invoiceType: invoiceType as "student" | "external" | "eca",
+        ...(() => {
+          const p = parseTuitionItemName(itemName)
+          return isTuitionView && rowCategory === "Tuition" && !!p.term && !!p.gradeId && selectedYearFilter
+            ? { academicYear: selectedYearFilter } : {}
+        })()
       }
       updatedItems = [...updatedItems, newItem]
       importedNames.push(itemName)
@@ -2697,7 +2778,17 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
       item.applicableGrades.some(grade => grade.toLowerCase().startsWith(searchLower))
     const matchesCategory = true
     const matchesDocType = true
-    return matchesSearch && matchesCategory && matchesDocType
+
+    // Year filter for tuition items
+    let matchesYear = true
+    if (isTuitionView && selectedYearFilter) {
+      if (item.category === "Tuition" && item.academicYear) {
+        matchesYear = item.academicYear === selectedYearFilter
+      }
+      // Items without academicYear (non-tuition or legacy) show in all years
+    }
+
+    return matchesSearch && matchesCategory && matchesDocType && matchesYear
   })
 
   // Sort filtered items
@@ -2846,6 +2937,21 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   className="pl-10 h-9"
                 />
               </div>
+              {isTuitionView && availableYears.length > 0 && (
+                <Select value={selectedYearFilter} onValueChange={(v) => { setSelectedYearFilter(v); setCurrentPage(1) }}>
+                  <SelectTrigger className="w-[160px] h-9">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder={t("common.academicYear")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map(year => (
+                      <SelectItem key={year} value={year}>
+                        {formatAcademicYear(year)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Bulk Delete Bar */}
@@ -2906,6 +3012,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
+                    {/* Nominal Code - left aligned */}
+                    <TableHead align="left">{t("item.nominalCode")}</TableHead>
                     {/* Item Name/Description - left aligned */}
                     <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                       <div className="flex items-center gap-1">
@@ -2913,9 +3021,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Nominal Code - left aligned */}
-                    <TableHead align="left">{t("item.nominalCode")}</TableHead>
-
+                    {/* Type - center aligned */}
+                    <TableHead align="center">{t("item.type")}</TableHead>
                     {/* Amount - right aligned (currency) */}
                     <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center justify-end gap-1">
@@ -2935,85 +3042,96 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedItems.map((item) => (
+                  {paginatedItems.map((item) => {
+                    const isTuitionItem = item.category === "Tuition" && !!parseTuitionItemName(item.name).term && !!parseTuitionItemName(item.name).gradeId
+                    return (
                     <TableRow key={item.id} className={selectedItemIds.has(item.id) ? "bg-red-50/50" : ""}>
-                      {/* Checkbox - center aligned */}
-                      <TableCell align="center">
+                      <TableCell align="left" className="py-2 pl-6">
                         <Checkbox
                           checked={selectedItemIds.has(item.id)}
                           onCheckedChange={(checked) => {
                             const newSet = new Set(selectedItemIds)
-                            if (checked) {
-                              newSet.add(item.id)
-                            } else {
-                              newSet.delete(item.id)
-                            }
+                            if (checked) newSet.add(item.id)
+                            else newSet.delete(item.id)
                             setSelectedItemIds(newSet)
                           }}
-                          disabled={!userCanEdit}
+                          disabled={!userCanEdit || isTuitionItem}
                         />
                       </TableCell>
-                      {/* Item Code - left aligned */}
-                      <TableCell align="left">
-                        <Badge variant="outline" className="font-mono">
+                      <TableCell align="left" className="py-2">
+                        <Badge variant="outline" className="font-mono text-[11px]">
                           {item.itemCode}
                         </Badge>
                       </TableCell>
-                      {/* Item Name/Description - left aligned */}
-                      <TableCell align="left">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
-                        </div>
-                      </TableCell>
-                      {/* Nominal Code - left aligned */}
-                      <TableCell align="left" className="text-muted-foreground font-mono text-sm">
+                      <TableCell align="left" className="py-2 text-muted-foreground font-mono text-xs">
                         {item.nominalCode || "-"}
                       </TableCell>
-
-                      {/* Amount - right aligned (currency) */}
-                      <TableCell align="right" className="font-medium">
+                      <TableCell align="left" className="py-2">
+                        <div className="flex flex-col space-y-0.5">
+                          <div className="flex items-center gap-2 leading-none">
+                            <p className="font-medium text-sm">{item.name}</p>
+                            {isTuitionItem && item.academicYear && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                                {formatAcademicYear(item.academicYear)}
+                              </Badge>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-[10px] text-muted-foreground leading-tight">{item.description}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell align="center" className="py-2 text-xs">
+                        SI
+                      </TableCell>
+                      <TableCell align="right" className="py-2 font-medium text-sm">
                         {formatCurrency(item.amount)}
                       </TableCell>
-                      {/* Status - center aligned (badge) */}
-                      <TableCell align="center">
-                        <Badge variant={item.isActive ? "default" : "secondary"}>
+                      <TableCell align="center" className="py-2">
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "h-5 text-[10px] px-2 border",
+                            item.isActive 
+                              ? "bg-green-50 text-green-700 border-green-200" 
+                              : "bg-gray-50 text-gray-400 border-gray-200"
+                          )}
+                        >
                           {item.isActive ? t("common.active") : t("common.inactive")}
                         </Badge>
                       </TableCell>
-                      {/* Actions - center aligned */}
-                      <TableCell align="center">
+                      <TableCell align="center" className="py-2">
                         <div className="flex gap-2 justify-center">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => { setUsageDialogItem(item); setUsageDialogFilter("all") }}
-                            title="View Usage"
+                            title={t("item.viewUsage")}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled={!userCanEdit || (item.category === "Tuition" && !!parseTuitionItemName(item.name).term && !!parseTuitionItemName(item.name).gradeId)}
+                            disabled={!userCanEdit || isTuitionItem}
                             onClick={() => openEditItemModal(item)}
-                            title={(item.category === "Tuition" && !!parseTuitionItemName(item.name).term && !!parseTuitionItemName(item.name).gradeId) ? "Tuition items cannot be edited manually. Use Tuition by Year page." : "Edit Item"}
+                            title={isTuitionItem ? t("item.tuitionManagedByYear") : t("item.editItemTooltip")}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled={!userCanEdit}
+                            disabled={!userCanEdit || isTuitionItem}
                             onClick={() => deleteConfirmDialog.confirm(() => handleDeleteItem(item.id))}
-                            title="Delete Item"
+                            title={isTuitionItem ? t("item.tuitionCannotDelete") : t("item.deleteItemTooltip")}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             </div>

@@ -22,6 +22,7 @@ export interface Item {
   isActive: boolean
   applicableGrades: string[]
   invoiceType?: "student" | "external" | "eca"
+  academicYear?: string
 }
 
 // Standard tuition fee item definitions
@@ -269,4 +270,65 @@ export const getTuitionItemCode = (termNumber: 1 | 2 | 3): string | null => {
 export const getTuitionNominalCode = (termNumber: 1 | 2 | 3): string | null => {
   const itemDef = getTuitionFeeItemDefinition(termNumber)
   return itemDef?.nominalCode || null
+}
+
+/**
+ * Copy tuition items from a previous year to a new year, syncing prices from tuition grade data.
+ *
+ * @param newYear - The new academic year (e.g. "2026-2027")
+ * @param previousYear - The previous academic year to copy items from (e.g. "2025-2026")
+ * @param tuitionGradeData - Grade-level tuition data for the new year (from tuitionByYearData)
+ * @returns Number of items copied
+ */
+export const copyItemsForNewYear = (
+  newYear: string,
+  previousYear: string,
+  tuitionGradeData: Array<{ id: string; gradeLevel: string; term1Amount: number; term2Amount: number; term3Amount: number }>
+): number => {
+  const items = loadItemsFromStorage("student")
+
+  // Check if new year already has tuition items
+  const existingNewYearItems = items.filter(
+    item => item.academicYear === newYear && item.category === "Tuition"
+  )
+  if (existingNewYearItems.length > 0) return 0
+
+  // Find tuition items from previous year
+  const previousYearItems = items.filter(
+    item => item.academicYear === previousYear && item.category === "Tuition"
+  )
+  if (previousYearItems.length === 0) return 0
+
+  const newItems: Item[] = []
+
+  previousYearItems.forEach(sourceItem => {
+    const parsed = parseTuitionItemName(sourceItem.name)
+    let newAmount = sourceItem.amount
+
+    // Sync price from new year's tuition data if possible
+    if (parsed.term && parsed.gradeId) {
+      const gradeMatch = tuitionGradeData.find(g => g.id === parsed.gradeId)
+      if (gradeMatch) {
+        const termAmount = gradeMatch[`term${parsed.term}Amount` as keyof typeof gradeMatch] as number
+        if (termAmount !== undefined && termAmount > 0) {
+          newAmount = termAmount
+        }
+      }
+    }
+
+    newItems.push({
+      ...sourceItem,
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      amount: newAmount,
+      academicYear: newYear
+    })
+  })
+
+  if (newItems.length > 0) {
+    const updatedItems = [...items, ...newItems]
+    saveItemsToStorage(updatedItems, "student")
+    console.log(`[copyItemsForNewYear] Copied ${newItems.length} items from ${previousYear} to ${newYear}`)
+  }
+
+  return newItems.length
 }

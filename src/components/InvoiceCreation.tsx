@@ -1527,61 +1527,43 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       const tuitionDataRaw = isTuition ? localStorage.getItem("tuitionByYearData") : null
 
       // For tuition: auto-sync items from Tuition By Year data
+      // Syncs prices based on each item's academicYear field
       if (isTuition && tuitionDataRaw) {
         try {
           const tuitionData: Record<string, any[]> = JSON.parse(tuitionDataRaw)
-          const years = Object.keys(tuitionData).sort((a, b) => b.localeCompare(a))
 
-          if (years.length > 0) {
-            const latestYear = years[0]
-            const gradeData = tuitionData[latestYear]
+          // Load existing items
+          const existingRaw = localStorage.getItem(storageKey)
+          const existingItems: any[] = existingRaw ? JSON.parse(existingRaw) : []
+          let updated = 0
 
-            // Load existing items
-            const existingRaw = localStorage.getItem(storageKey)
-            const existingItems: any[] = existingRaw ? JSON.parse(existingRaw) : []
-            let created = 0
-            let updated = 0
+          // Only update amounts of existing items (imported or manually created)
+          // Do NOT create new items — only items that staff imported/created get updated
+          // Sync each item using its own academicYear
+          existingItems.forEach((item: any) => {
+            if (item.category !== "Tuition") return
+            const parsed = parseTuitionItemName(item.name)
+            if (!parsed.term || !parsed.gradeId) return
 
-            // Only update amounts of existing items (imported or manually created)
-            // Do NOT create new items — only items that staff imported/created get updated
-            gradeData.forEach((grade: any, index: number) => {
-              const gradeLevel = grade.gradeLevel
+            // Determine which year's data to use for this item
+            const itemYear = item.academicYear
+            if (!itemYear || !tuitionData[itemYear]) return
 
-              for (let term = 1; term <= 3; term++) {
-                const amount = grade[`term${term}Amount`] || 0
-                if (amount <= 0) continue
+            const gradeData = tuitionData[itemYear]
+            const gradeMatch = gradeData.find((g: any) => g.id === parsed.gradeId)
+            if (!gradeMatch) return
 
-                // 1) Try to find imported item by name (e.g., "Tuition fee - Term 1 / Year 5")
-                const importedItem = existingItems.find((item: any) => {
-                  if (item.category !== "Tuition") return false
-                  const parsed = parseTuitionItemName(item.name)
-                  return parsed.term === term && parsed.gradeId === grade.id
-                })
+            const amount = gradeMatch[`term${parsed.term}Amount`] || 0
+            if (amount <= 0) return
 
-                if (importedItem) {
-                  importedItem.amount = amount
-                  importedItem.applicableGrades = [gradeLevel]
-                  updated++
-                  continue
-                }
+            item.amount = amount
+            item.applicableGrades = [gradeMatch.gradeLevel]
+            updated++
+          })
 
-                // 2) Fallback: match by auto-generated itemCode (if staff created via Sync button)
-                const autoItemCode = `TUI-T${term}-${grade.id.toUpperCase()}`
-                const autoItem = existingItems.find((item: any) => item.itemCode === autoItemCode)
-
-                if (autoItem) {
-                  autoItem.amount = amount
-                  autoItem.applicableGrades = [gradeLevel]
-                  updated++
-                }
-                // No else — do NOT create new items automatically
-              }
-            })
-
-            if (created > 0 || updated > 0) {
-              localStorage.setItem(storageKey, JSON.stringify(existingItems))
-              console.log(`[InvoiceCreation] Auto-synced tuition items: ${created} new, ${updated} updated from ${latestYear}`)
-            }
+          if (updated > 0) {
+            localStorage.setItem(storageKey, JSON.stringify(existingItems))
+            console.log(`[InvoiceCreation] Auto-synced ${updated} tuition items by academicYear`)
           }
         } catch (e) {
           console.error("[InvoiceCreation] Failed to auto-sync tuition items:", e)
@@ -1946,8 +1928,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                 const storedItems = localStorage.getItem(storageKey)
                 if (storedItems) {
                   const allItems = JSON.parse(storedItems)
-                  // 1) Try to find imported item by name matching
-                  const importedMatch = allItems.find((item: any) => {
+                  // Filter items by selected academic year first, fallback to all
+                  const yearFilteredItems = selectedAcademicYear
+                    ? allItems.filter((item: any) =>
+                        item.academicYear === selectedAcademicYear ||
+                        (!item.academicYear && item.category === "Tuition")
+                      )
+                    : allItems
+                  // 1) Try to find imported item by name matching (prefer year-matched)
+                  const importedMatch = yearFilteredItems.find((item: any) => {
                     if (item.category !== "Tuition") return false
                     const parsed = parseTuitionItemName(item.name)
                     return parsed.term === termNumber && parsed.gradeId === gradeId
@@ -1960,7 +1949,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   } else {
                     // 2) Fallback: match by auto-generated itemCode
                     const syncedItemCode = `TUI-T${termNumber}-${gradeId.toUpperCase()}`
-                    const autoMatch = allItems.find((item: any) => item.itemCode === syncedItemCode)
+                    const autoMatch = yearFilteredItems.find((item: any) => item.itemCode === syncedItemCode)
                     if (autoMatch) {
                       itemCode = autoMatch.itemCode
                       nominalCode = autoMatch.nominalCode

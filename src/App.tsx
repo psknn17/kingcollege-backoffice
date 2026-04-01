@@ -754,7 +754,7 @@ export default function App() {
                     className="flex items-center gap-2"
                   >
                     <Globe className="w-4 h-4" />
-                    {language === 'en' ? 'TH' : 'EN'}
+                    {language === 'en' ? 'EN' : 'TH'}
                   </Button>
 
                 </header>
