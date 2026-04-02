@@ -76,6 +76,9 @@ interface Invoice {
   rejectedAt?: Date
   rejectedBy?: string
   category?: string
+  discounts?: { name: string; amount: number; percentage?: number }[]
+  registrationFees?: { name: string; amount: number }[]
+  isNewStudent?: boolean
 }
 
 const grades = [
@@ -159,6 +162,9 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
             if (cat.includes("external")) return "external"
             return cat
           })(),
+          discounts: inv.discounts || [],
+          registrationFees: inv.registrationFees || [],
+          isNewStudent: inv.isNewStudent || false,
         }
       })
     }
@@ -1354,7 +1360,7 @@ export function ApprovalQueue() {
                   <TableCell align="right" className="font-medium">
                     <div>฿{invoice.finalAmount.toLocaleString()}</div>
                     {(invoice.discountAmount ?? 0) > 0 && (
-                      <div className="text-xs text-green-600">-฿{(invoice.discountAmount ?? 0).toLocaleString()}</div>
+                      <div className="text-xs text-red-500">-฿{(invoice.discountAmount ?? 0).toLocaleString()}</div>
                     )}
                   </TableCell>
                   {/* Approval Status - center */}
@@ -1766,18 +1772,41 @@ export function ApprovalQueue() {
                               )}
                             </td>
                             <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
-                              {formatCurrency(item.discountedAmount)}
+                              {formatCurrency(item.amount)}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    {/* Total */}
-                    <div className="border-t bg-gray-50 p-4">
-                      <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
-                      <div className="flex justify-between items-center font-bold text-base">
-                        <span>{t("approvalQueue.total")}</span>
-                        <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
+                    {/* Discounts & Registration Fees */}
+                    <div className="border-t">
+                      {/* Discount Lines */}
+                      {(selectedInvoice.discounts || []).map((discount, idx) => (
+                        <div key={`disc-${idx}`} className="flex justify-between items-center px-4 py-2 border-t">
+                          <span className="text-sm text-gray-600">
+                            {discount.name} {discount.percentage ? `(${discount.percentage}%)` : ''}
+                          </span>
+                          <span className="text-sm font-medium text-red-500">
+                            -{formatCurrency(discount.amount)}
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Registration Fees (New Students) */}
+                      {(selectedInvoice.registrationFees || []).map((fee, idx) => (
+                        <div key={`regfee-${idx}`} className="flex justify-between items-center px-4 py-2 border-t">
+                          <span className="text-sm text-orange-600">{fee.name}</span>
+                          <span className="text-sm font-medium text-orange-600">+{formatCurrency(fee.amount)}</span>
+                        </div>
+                      ))}
+
+                      {/* Amount in Words + Total */}
+                      <div className="border-t bg-gray-50 p-4">
+                        <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
+                        <div className="flex justify-between items-center font-bold text-base">
+                          <span>{t("approvalQueue.total")}</span>
+                          <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

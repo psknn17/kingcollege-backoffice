@@ -31,6 +31,15 @@ interface BankAccount {
 
 const STORAGE_KEY = "bankAccounts"
 
+/** Mask account number: show last 4 chars, replace digits with *. Skip non-numeric strings like "Online" */
+export const maskAccountNumber = (accountNumber: string): string => {
+    if (!accountNumber || accountNumber.length <= 4) return accountNumber
+    if (!/\d/.test(accountNumber)) return accountNumber
+    const visible = accountNumber.slice(-4)
+    const masked = accountNumber.slice(0, -4).replace(/[0-9]/g, "*")
+    return masked + visible
+}
+
 export function BankSettings() {
     const { t } = useLanguage()
     const { user } = useAuth()
@@ -58,7 +67,7 @@ export function BankSettings() {
     const [formData, setFormData] = useState<Omit<BankAccount, "id">>(initialFormData)
 
     // Sorting state
-    const [offlineSortKey, setOfflineSortKey] = useState<keyof BankAccount>("paymentSource")
+    const [offlineSortKey, setOfflineSortKey] = useState<keyof BankAccount>("bankName")
     const [offlineSortDir, setOfflineSortDir] = useState<"asc" | "desc">("asc")
     const [onlineSortKey, setOnlineSortKey] = useState<keyof BankAccount>("paymentSource")
     const [onlineSortDir, setOnlineSortDir] = useState<"asc" | "desc">("asc")
@@ -112,7 +121,11 @@ export function BankSettings() {
     }
 
     const handleSave = () => {
-        if (!formData.paymentSource || !formData.bankName || !formData.accountNumber) {
+        if (dialogMode === 'online' && !formData.paymentSource) {
+            toast.error("Please fill in all required fields")
+            return
+        }
+        if (!formData.bankName || !formData.accountNumber) {
             toast.error("Please fill in all required fields")
             return
         }
@@ -196,52 +209,50 @@ export function BankSettings() {
                         <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[20%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("paymentSource")}>
-                                        <div className="flex items-center gap-1">
-                                            {t("bankSettings.paymentSource")}
-                                            <ArrowUpDown className="h-4 w-4" />
-                                        </div>
-                                    </TableHead>
-                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("bankName")}>
+                                    <TableHead className="w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("bankName")}>
                                         <div className="flex items-center gap-1">
                                             {t("bankSettings.bank")}
                                             <ArrowUpDown className="h-4 w-4" />
                                         </div>
                                     </TableHead>
-                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("accountNumber")}>
+                                    <TableHead className="w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("accountNumber")}>
                                         <div className="flex items-center gap-1">
                                             {t("bankSettings.accountNumber")}
                                             <ArrowUpDown className="h-4 w-4" />
                                         </div>
                                     </TableHead>
-                                    <TableHead className="w-[20%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("glAccount")}>
+                                    <TableHead className="w-[25%] cursor-pointer hover:bg-muted/50" onClick={() => handleSortOffline("glAccount")}>
                                         <div className="flex items-center gap-1">
                                             {t("bankSettings.glAccount")}
                                             <ArrowUpDown className="h-4 w-4" />
                                         </div>
                                     </TableHead>
-                                    <TableHead align="center" className="w-[10%] text-center">{t("bankSettings.actions")}</TableHead>
+                                    <TableHead align="center" className="w-[15%] text-center">{t("bankSettings.actions")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {sortedAccounts.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                                        <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                                             {t("bankSettings.noAccounts")}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     sortedAccounts.map((account) => (
                                         <TableRow key={account.id}>
-                                            <TableCell className="font-medium">{account.paymentSource}</TableCell>
-                                            <TableCell>{account.bankName}</TableCell>
-                                            <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                                            <TableCell className="font-medium">{account.bankName}</TableCell>
+                                            <TableCell className="font-mono">{maskAccountNumber(account.accountNumber)}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
-                                            <TableCell align="right" className="text-right">
+                                            <TableCell align="center" className="text-center">
                                                 {userCanEdit && (
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
-                                                    <Edit className="w-4 h-4" />
-                                                </Button>
+                                                <div className="flex gap-1 justify-center">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(account, 'offline')}>
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(account.id)}>
+                                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                    </Button>
+                                                </div>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -305,7 +316,7 @@ export function BankSettings() {
                                         <TableRow key={account.id}>
                                             <TableCell className="font-medium">{account.paymentSource}</TableCell>
                                             <TableCell>{account.bankName}</TableCell>
-                                            <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                                            <TableCell className="font-mono">{maskAccountNumber(account.accountNumber)}</TableCell>
                                             <TableCell className="font-mono">{account.glAccount || "-"}</TableCell>
                                         </TableRow>
                                     ))
@@ -330,6 +341,7 @@ export function BankSettings() {
                         </DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-6">
+                        {dialogMode === 'online' && (
                         <div className="grid gap-2">
                             <Label htmlFor="paymentSource">{t("bankSettings.paymentSource")} <span className="text-destructive">*</span></Label>
                             <Select
@@ -346,6 +358,7 @@ export function BankSettings() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        )}
                         <div className="grid gap-2">
                             <Label htmlFor="bankName">{t("bankSettings.bank")} <span className="text-destructive">*</span></Label>
                             <Select

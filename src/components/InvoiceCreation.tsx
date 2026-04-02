@@ -5165,7 +5165,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
 
                             {/* Discount Section */}
                             {discountCalc.discountItems.map((discount, idx) => (
-                              <tr key={`discount-${idx}`} className="border-b border-gray-200 text-green-700">
+                              <tr key={`discount-${idx}`} className="border-b border-gray-200 text-red-500">
                                 <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + idx + 1}</td>
                                 <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
                                   {discount.name} {discount.percentage ? `(${discount.percentage}%)` : ''}

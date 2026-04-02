@@ -1864,7 +1864,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
   // Auto-select latest year when available
   useEffect(() => {
-    if (isTuitionView && availableYears.length > 0 && (!selectedYearFilter || !availableYears.includes(selectedYearFilter))) {
+    if (isTuitionView && availableYears.length > 0 && (!selectedYearFilter || (selectedYearFilter !== "all" && !availableYears.includes(selectedYearFilter)))) {
       setSelectedYearFilter(availableYears[0])
     }
   }, [availableYears, isTuitionView])
@@ -2781,7 +2781,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
     // Year filter for tuition items
     let matchesYear = true
-    if (isTuitionView && selectedYearFilter) {
+    if (isTuitionView && selectedYearFilter && selectedYearFilter !== "all") {
       if (item.category === "Tuition" && item.academicYear) {
         matchesYear = item.academicYear === selectedYearFilter
       }
@@ -2944,6 +2944,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     <SelectValue placeholder={t("common.academicYear")} />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">{t("common.allYears")}</SelectItem>
                     {availableYears.map(year => (
                       <SelectItem key={year} value={year}>
                         {formatAcademicYear(year)}

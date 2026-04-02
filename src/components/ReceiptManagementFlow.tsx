@@ -840,7 +840,7 @@ export function ReceiptManagementFlow({
     // Style for preview: responsive full width
     const containerStyle = forPrint ? {
       width: '794px',
-      height: '1123px',
+      minHeight: '1123px',
       backgroundColor: '#fff',
       fontFamily: "'Times New Roman', Times, serif",
       fontSize: '12px',
@@ -849,7 +849,9 @@ export function ReceiptManagementFlow({
       padding: '40px 60px',
       boxSizing: 'border-box' as const,
       position: 'relative' as const,
-      overflow: 'hidden' as const
+      overflow: 'hidden' as const,
+      display: 'flex' as const,
+      flexDirection: 'column' as const
     } : {
       width: '100%',
       backgroundColor: '#fff',
@@ -858,47 +860,74 @@ export function ReceiptManagementFlow({
       lineHeight: '1.6',
       color: '#000',
       padding: '30px 40px',
-      boxSizing: 'border-box' as const
+      boxSizing: 'border-box' as const,
+      display: 'flex' as const,
+      flexDirection: 'column' as const
     }
 
     const headerFontSize = forPrint ? '13px' : '15px'
-    const titleFontSize = forPrint ? '22px' : '26px'
     const bodyFontSize = forPrint ? '11px' : '13px'
     const smallFontSize = forPrint ? '10px' : '12px'
-    const signatureHeight = forPrint ? '60px' : '80px'
+
+    // Calculate totals
+    const cnList: AppliedCreditNote[] = (data as any).appliedCreditNotes ||
+      (selectedCNIds.size > 0
+        ? availableCreditNotes
+          .filter(cn => selectedCNIds.has(cn.id))
+          .map(cn => ({ id: cn.id, creditNoteNumber: cn.creditNoteNumber, studentName: cn.studentName, reason: cn.reason, appliedAmount: Math.min((cn.remainingBalance ?? cn.amount), getTotalReceivedAmount()) }))
+        : [])
+    const cnTotal = cnList.reduce((s, cn) => s + cn.appliedAmount, 0)
+    const totalInvoiceReceived = data.invoices.reduce((sum, inv) => sum + (inv.receivedAmount || 0), 0)
+    const netReceivedAmount = Math.max(0, totalInvoiceReceived - cnTotal)
+    const overpaymentAmount = data.overpaymentAmount || 0
+
+    // Build document rows: invoices + credit notes
+    const filledInvoices = data.invoices.filter(inv => inv.invoiceNo.trim())
+    const allDocRows: { no: number; docNo: string; issueDate: string; amount: number; isCredit?: boolean }[] = []
+    filledInvoices.forEach((inv, i) => {
+      allDocRows.push({
+        no: i + 1,
+        docNo: inv.invoiceNo,
+        issueDate: inv.invoiceDate ? format(inv.invoiceDate, "dd MMMM yyyy") : "-",
+        amount: inv.receivedAmount
+      })
+    })
+    cnList.forEach((cn, i) => {
+      allDocRows.push({
+        no: filledInvoices.length + i + 1,
+        docNo: cn.creditNoteNumber,
+        issueDate: "",
+        amount: -cn.appliedAmount,
+        isCredit: true
+      })
+    })
 
     return (
       <div ref={forPrint ? printRef : undefined} style={containerStyle}>
-        {/* HEADER */}
-        <div style={{ textAlign: 'center', marginBottom: forPrint ? '20px' : '30px' }}>
+        {/* HEADER - Logo + School Name only, no address */}
+        <div style={{ textAlign: 'center', marginBottom: forPrint ? '15px' : '20px' }}>
           <img
             src={schoolSettings.logoUrl || SchoolLogo}
             alt="School Logo"
-            style={{ height: forPrint ? '70px' : '90px', display: 'block', margin: '0 auto 8px auto' }}
+            style={{ height: forPrint ? '65px' : '80px', display: 'block', margin: '0 auto 8px auto' }}
           />
-          <div style={{ fontSize: headerFontSize, fontWeight: 'bold', letterSpacing: '2px', marginBottom: '2px' }}>
-            {schoolSettings.schoolName.toUpperCase()}
+          <div style={{ fontSize: headerFontSize, fontWeight: 600, letterSpacing: '3px', marginBottom: '2px' }}>
+            KING'S COLLEGE INTERNATIONAL SCHOOL
           </div>
-          <div style={{ fontSize: smallFontSize, color: '#333', letterSpacing: '1px', marginBottom: '8px' }}>
+          <div style={{ fontSize: smallFontSize, letterSpacing: '4px', color: '#333' }}>
             BANGKOK
-          </div>
-          <div style={{ fontSize: '9px', color: '#555', marginBottom: '2px' }}>
-            {schoolSettings.address}
-          </div>
-          <div style={{ fontSize: '9px', color: '#555' }}>
-            {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
           </div>
         </div>
 
         {/* TITLE */}
-        <div style={{ textAlign: 'center', marginBottom: forPrint ? '20px' : '30px' }}>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', letterSpacing: '4px' }}>
+        <div style={{ textAlign: 'center', marginBottom: forPrint ? '15px' : '25px' }}>
+          <div style={{ fontSize: forPrint ? '28px' : '32px', fontWeight: 'bold', fontStyle: 'italic' }}>
             RECEIPT
           </div>
         </div>
 
         {/* CLIENT & RECEIPT INFO - BOXED LAYOUT */}
-        <div style={{ border: '1px solid #ccc', padding: '15px 20px', marginBottom: '25px', fontSize: bodyFontSize }}>
+        <div style={{ border: '1px solid #999', padding: '12px 18px', marginBottom: forPrint ? '15px' : '20px', fontSize: bodyFontSize }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
@@ -906,19 +935,19 @@ export function ReceiptManagementFlow({
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       <tr>
-                        <td style={{ width: '110px', paddingBottom: '6px' }}>Student ID no.</td>
-                        <td style={{ paddingBottom: '6px', fontWeight: 'bold' }}>{data.clientNo}</td>
+                        <td style={{ width: '110px', paddingBottom: '5px', color: '#333' }}>Student ID no.</td>
+                        <td style={{ paddingBottom: '5px' }}>{data.clientNo}</td>
                       </tr>
                       <tr>
-                        <td style={{ paddingBottom: '6px' }}>Student name</td>
-                        <td style={{ paddingBottom: '6px', fontWeight: 'bold' }}>{data.clientName}</td>
+                        <td style={{ paddingBottom: '5px', color: '#333' }}>Student name</td>
+                        <td style={{ paddingBottom: '5px' }}>{data.clientName}</td>
                       </tr>
                       <tr>
-                        <td style={{ paddingBottom: '6px' }}>Contact name</td>
-                        <td style={{ paddingBottom: '6px' }}>{data.contactName || "-"}</td>
+                        <td style={{ paddingBottom: '5px', color: '#333' }}>Contact name</td>
+                        <td style={{ paddingBottom: '5px' }}>{data.contactName || "-"}</td>
                       </tr>
                       <tr>
-                        <td style={{ verticalAlign: 'top' }}>Address</td>
+                        <td style={{ verticalAlign: 'top', color: '#333' }}>Address</td>
                         <td>{data.address || "-"}</td>
                       </tr>
                     </tbody>
@@ -928,20 +957,20 @@ export function ReceiptManagementFlow({
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       <tr>
-                        <td style={{ width: '100px', paddingBottom: '6px' }}>Receipt no.</td>
-                        <td style={{ paddingBottom: '6px', textAlign: 'right', fontWeight: 'bold' }}>{data.receiptNo}</td>
+                        <td style={{ paddingBottom: '5px', color: '#333' }}>Receipt no.</td>
+                        <td style={{ paddingBottom: '5px', textAlign: 'right' }}>{data.receiptNo}</td>
                       </tr>
                       <tr>
-                        <td style={{ paddingBottom: '6px' }}>Receipt date</td>
-                        <td style={{ paddingBottom: '6px', textAlign: 'right' }}>{data.receiptDate ? format(data.receiptDate, "dd MMMM yyyy") : "-"}</td>
+                        <td style={{ paddingBottom: '5px', color: '#333' }}>Receipt date</td>
+                        <td style={{ paddingBottom: '5px', textAlign: 'right' }}>{data.receiptDate ? format(data.receiptDate, "dd MMMM yyyy") : "-"}</td>
                       </tr>
                       <tr>
-                        <td style={{ paddingBottom: '6px' }}>Year group</td>
-                        <td style={{ paddingBottom: '6px', textAlign: 'right' }}>{data.yearGroup || "-"}</td>
+                        <td style={{ paddingBottom: '5px', color: '#333' }}>Year group</td>
+                        <td style={{ paddingBottom: '5px', textAlign: 'right' }}>{data.yearGroup || "-"}</td>
                       </tr>
                       <tr>
-                        <td style={{ paddingBottom: '6px' }}>School year</td>
-                        <td style={{ paddingBottom: '6px', textAlign: 'right' }}>{data.schoolYear}</td>
+                        <td style={{ paddingBottom: '5px', color: '#333' }}>School year</td>
+                        <td style={{ paddingBottom: '5px', textAlign: 'right' }}>{data.schoolYear}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -951,137 +980,117 @@ export function ReceiptManagementFlow({
           </table>
         </div>
 
-        {/* INVOICE TABLE - FULL BORDERS */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: '25px' }}>
+        {/* DOCUMENT TABLE - 4 columns matching template */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: '0' }}>
           <thead>
-            <tr style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc' }}>
-              <th style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal', width: '40px' }}>No.</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Invoice no.</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Invoice date</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Invoice amount (THB)</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Received amount (THB)</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Outstanding amount (THB)</th>
+            <tr style={{ borderTop: '1px solid #999', borderBottom: '1px solid #999' }}>
+              <th style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal', width: '50px' }}>No.</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal', width: '30%' }}>Document no.</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Issue date</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Received amount (THB)</th>
             </tr>
           </thead>
           <tbody>
-            {data.invoices.filter(inv => inv.invoiceNo.trim()).map((invoice, index) => (
-              <tr key={invoice.id} style={{ height: '30px' }}>
-                <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{index + 1}</td>
-                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{invoice.invoiceNo}</td>
-                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{invoice.invoiceDate ? format(invoice.invoiceDate, "dd MMMM yyyy") : "-"}</td>
-                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>{formatCurrency(invoice.invoiceAmount)}</td>
-                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>{formatCurrency(invoice.receivedAmount)}</td>
-                <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>{invoice.outstandingAmount > 0 ? formatCurrency(invoice.outstandingAmount) : "-"}</td>
+            {allDocRows.map((row) => (
+              <tr key={`${row.docNo}-${row.no}`} style={{ height: '30px', color: row.isCredit ? '#ef4444' : undefined }}>
+                <td style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '8px', textAlign: 'center', verticalAlign: 'top' }}>{row.no}</td>
+                <td style={{ borderRight: '1px solid #999', padding: '8px', textAlign: 'center', verticalAlign: 'top' }}>{row.docNo}</td>
+                <td style={{ borderRight: '1px solid #999', padding: '8px', textAlign: 'center', verticalAlign: 'top' }}>{row.issueDate || "-"}</td>
+                <td style={{ borderRight: '1px solid #999', padding: '8px', textAlign: 'right', verticalAlign: 'top' }}>
+                  {row.amount < 0 ? `(${formatCurrency(Math.abs(row.amount))})` : formatCurrency(row.amount)}
+                </td>
               </tr>
             ))}
-            {/* Amount in words and total footer */}
-            {(() => {
-              const cnList: AppliedCreditNote[] = (data as any).appliedCreditNotes ||
-                (selectedCNIds.size > 0
-                  ? availableCreditNotes
-                    .filter(cn => selectedCNIds.has(cn.id))
-                    .map(cn => ({ id: cn.id, creditNoteNumber: cn.creditNoteNumber, studentName: cn.studentName, reason: cn.reason, appliedAmount: Math.min((cn.remainingBalance ?? cn.amount), getTotalReceivedAmount()) }))
-                  : [])
-              const cnTotal = cnList.reduce((s, cn) => s + cn.appliedAmount, 0)
-              const totalInvoiceReceived = data.invoices.reduce((sum, inv) => sum + (inv.receivedAmount || 0), 0)
-              const totalOutstanding = data.invoices.reduce((sum, inv) => sum + (inv.outstandingAmount || 0), 0)
-              const netReceivedAmount = Math.max(0, totalInvoiceReceived - cnTotal)
 
-              return (
-                <>
-                  {/* Credit Note Rows as consecutive items */}
-                  {cnList.map((cn, i) => (
-                    <tr key={cn.id} style={{ height: '30px', color: '#059669' }}>
-                      <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>
-                        {data.invoices.filter(inv => inv.invoiceNo.trim()).length + i + 1}
-                      </td>
-                      <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>
-                        Credit Note ({cn.creditNoteNumber})
-                      </td>
-                      <td colSpan={2} style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'left', verticalAlign: 'top', fontSize: '11px' }}>
-                        {cn.reason || "Credit applied"}
-                      </td>
-                      <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}>
-                        -{formatCurrency(cn.appliedAmount)}
-                      </td>
-                      <td style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'right', verticalAlign: 'top' }}></td>
-                    </tr>
-                  ))}
+            {/* Empty spacer rows to fill table height */}
+            {Array.from({ length: Math.max(0, 6 - allDocRows.length) }).map((_, i) => (
+              <tr key={`spacer-${i}`} style={{ height: '30px' }}>
+                <td style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999' }}></td>
+                <td style={{ borderRight: '1px solid #999' }}></td>
+                <td style={{ borderRight: '1px solid #999' }}></td>
+                <td style={{ borderRight: '1px solid #999' }}></td>
+              </tr>
+            ))}
 
-                  {/* Spacer Row to fill height, ensuring borders go down */}
-                  <tr style={{ height: '180px' }}>
-                    <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc' }}></td>
-                  </tr>
+            {/* Overpayment amount row */}
+            <tr style={{ borderTop: '1px solid #999' }}>
+              <td colSpan={3} style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '8px 12px', textAlign: 'left' }}>
+                Overpayment amount
+              </td>
+              <td style={{ borderRight: '1px solid #999', padding: '8px 12px', textAlign: 'right' }}>
+                {overpaymentAmount > 0 ? formatCurrency(overpaymentAmount) : "-"}
+              </td>
+            </tr>
 
-                  {/* Final Total Received */}
-                  <tr style={{ backgroundColor: '#f9f9f9' }}>
-                    <td colSpan={3} style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'left', fontSize: '10px' }}>
-                      {numberToWords(netReceivedAmount)} BAHT ONLY
-                    </td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>
-                      TOTAL
-                    </td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'right', fontWeight: 'bold' }}>
-                      {formatCurrency(netReceivedAmount)}
-                    </td>
-                    <td style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '10px 12px', textAlign: 'right' }}>
-                      {totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "-"}
-                    </td>
-                  </tr>
-                </>
-              )
-            })()}
+            {/* Amount in words + TOTAL row */}
+            <tr style={{ borderTop: '1px solid #999', borderBottom: '1px solid #999' }}>
+              <td colSpan={2} style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', fontSize: bodyFontSize }}>
+                {numberToWords(netReceivedAmount).toUpperCase()}
+              </td>
+              <td style={{ borderRight: '1px solid #999', padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>
+                TOTAL
+              </td>
+              <td style={{ borderRight: '1px solid #999', padding: '10px 12px', textAlign: 'right', fontWeight: 'bold' }}>
+                {formatCurrency(netReceivedAmount)}
+              </td>
+            </tr>
           </tbody>
         </table>
 
+        {/* Spacing */}
+        <div style={{ height: forPrint ? '20px' : '25px' }}></div>
+
         {/* PAYMENT METHOD TABLE */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: '40px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: bodyFontSize, marginBottom: forPrint ? '15px' : '20px' }}>
           <thead>
-            <tr style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc' }}>
-              <th style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Payment method</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Bank name</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Bank branch</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Cheque no.</th>
-              <th style={{ borderRight: '1px solid #ccc', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Cheque date</th>
+            <tr style={{ borderTop: '1px solid #999', borderBottom: '1px solid #999' }}>
+              <th style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Payment method</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Bank name</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Bank branch</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Cheque no.</th>
+              <th style={{ borderRight: '1px solid #999', padding: '10px 8px', textAlign: 'center', fontWeight: 'normal' }}>Cheque date</th>
             </tr>
           </thead>
           <tbody>
-            <tr style={{ borderBottom: '1px solid #ccc' }}>
-              <td style={{ borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>
+            <tr style={{ borderBottom: '1px solid #999' }}>
+              <td style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '12px 8px', textAlign: 'center' }}>
                 {PAYMENT_METHODS.find(p => p.value === data.paymentMethod)?.label?.toUpperCase() || "-"}
               </td>
-              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.bankName || "-"}</td>
-              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.bankBranch || "-"}</td>
-              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.chequeNo || "-"}</td>
-              <td style={{ borderRight: '1px solid #ccc', padding: '12px 8px', textAlign: 'center' }}>{data.chequeDate ? format(data.chequeDate, "dd/MM/yyyy") : "-"}</td>
+              <td style={{ borderRight: '1px solid #999', padding: '12px 8px', textAlign: 'center' }}>{data.bankName || "-"}</td>
+              <td style={{ borderRight: '1px solid #999', padding: '12px 8px', textAlign: 'center' }}>{data.bankBranch || "-"}</td>
+              <td style={{ borderRight: '1px solid #999', padding: '12px 8px', textAlign: 'center' }}>{data.chequeNo || "-"}</td>
+              <td style={{ borderRight: '1px solid #999', padding: '12px 8px', textAlign: 'center' }}>{data.chequeDate ? format(data.chequeDate, "dd/MM/yyyy") : "-"}</td>
             </tr>
           </tbody>
         </table>
 
+        {/* LEGAL NOTES */}
+        <div style={{ fontSize: forPrint ? '9px' : '11px', color: '#333', marginBottom: forPrint ? '20px' : '25px', lineHeight: '1.6' }}>
+          <div>In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.</div>
+          <div>Please note that any overpayment amount is non-refundable and will be credited against future school fee invoices.</div>
+        </div>
+
         {/* SIGNATURE SECTION */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', padding: '0 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: forPrint ? '20px' : '30px', padding: '0 10px' }}>
           <div style={{ width: '45%', textAlign: 'center' }}>
-            <div style={{ border: '1px solid #ccc', padding: '15px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-              {data.collectorName || ""}
+            <div style={{ borderBottom: '1px solid #999', padding: '15px 10px', minHeight: '50px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: bodyFontSize }}>{data.collectorName || ""}</span>
             </div>
             <div style={{ fontSize: bodyFontSize }}>Collector</div>
           </div>
           <div style={{ width: '45%', textAlign: 'center' }}>
-            <div style={{ border: '1px solid #ccc', padding: '15px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-              {/* Optional Signature image goes here */}
+            <div style={{ borderBottom: '1px solid #999', padding: '15px 10px', minHeight: '50px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '8px' }}>
+              {/* Authorised signature */}
             </div>
             <div style={{ fontSize: bodyFontSize }}>Authorised signature</div>
+            <div style={{ fontSize: forPrint ? '9px' : '11px', color: '#333' }}>Head of Finance and Accounting</div>
           </div>
         </div>
 
-        {/* LEGAL FOOTER */}
-        <div style={{ fontSize: '9px', textAlign: 'left', color: '#555', marginTop: 'auto', borderTop: '1px solid #eee', paddingTop: '10px' }}>
-          In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.
+        {/* FOOTER - School address & contact */}
+        <div style={{ marginTop: 'auto', borderTop: '1px solid #ccc', paddingTop: '8px', textAlign: 'center', fontSize: forPrint ? '8px' : '9px', color: '#555' }}>
+          <div>King's College International School Bangkok &nbsp; 727 Ratchadaphisek Road, Bang Phongphang, Yannawa, Bangkok 10120 Thailand</div>
+          <div>{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</div>
         </div>
       </div>
     )

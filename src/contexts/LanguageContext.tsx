@@ -4171,7 +4171,7 @@ const th: Record<string, string> = {
   "common.allTypes": "ทุกประเภท",
   "common.internal": "ภายใน",
   "common.external": "ภายนอก",
-  "common.allYears": "ทุกชั้นปี",
+  "common.allYears": "ทุกปีการศึกษา",
   "common.importing": "กำลังนำเข้า...",
   "common.importCsv": "นำเข้า Excel",
   "common.template": "เทมเพลต",

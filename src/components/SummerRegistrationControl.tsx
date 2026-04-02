@@ -611,7 +611,7 @@ export function SummerRegistrationControl() {
                           {period.pricingSettings.earlyBirdDiscount > 0 && (
                             <div>
                               <span className="text-muted-foreground">{t("summer.earlyBird")}:</span>
-                              <span className="ml-1 font-medium text-green-600">-{period.pricingSettings.earlyBirdDiscount}%</span>
+                              <span className="ml-1 font-medium text-red-500">-{period.pricingSettings.earlyBirdDiscount}%</span>
                             </div>
                           )}
                           {period.pricingSettings.lateRegistrationFee > 0 && (

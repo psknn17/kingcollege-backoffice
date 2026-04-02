@@ -359,7 +359,7 @@ export function ViewModal({
 
               {/* Discount Section */}
               {discounts.length > 0 && discounts.map((discount: any, idx: number) => (
-                <tr key={`discount-${idx}`} className="border-b border-gray-200" style={{ color: '#059669' }}>
+                <tr key={`discount-${idx}`} className="border-b border-gray-200 text-red-500">
                   <td className="py-1.5 px-2 align-top">{(data.items?.length || 0) + idx + 1}</td>
                   <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
                     {discount.name}{discount.percentage ? ` (${discount.percentage}%)` : ''}

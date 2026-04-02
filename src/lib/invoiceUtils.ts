@@ -20,7 +20,7 @@ export const BANK_DETAILS = {
   bankName: "Kasikorn Bank (bank code 004)",
   branch: "Sathu Pradit (branch code 0041)",
   swiftCode: "KASITHBK",
-  bankAddress: "1 Soi Rat Burana 22/1, Rat Burana Road, Bangkok 10140",
+  bankAddress: "400/22 Phahon Yothin Road, Samsen Nai, Phayathai District, Bangkok 10400, Thailand",
 }
 
 // ============================================

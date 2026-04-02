@@ -44,6 +44,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
 import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
+import { maskAccountNumber } from "./BankSettings"
 import * as XLSX from "xlsx"
 
 type ApprovalStatus = "wait" | "approved" | "rejected"
@@ -752,7 +753,6 @@ export function InvoiceManagement({
         const emailStatus = getEmailStatus(inv)
         if (statusFilter === "wait") return emailStatus === "wait"
         if (statusFilter === "sent") return emailStatus === "sent"
-        if (statusFilter === "unsent") return emailStatus === "wait"
         return true
       })
     }
@@ -2411,9 +2411,9 @@ export function InvoiceManagement({
         const itemsRows = invoice.items.map(item => `
           <tr>
             <td style="padding:6px 8px; border:1px solid #e5e7eb;">${escapeHtml(item.description)}</td>
-            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.amount.toLocaleString()}</td>
+            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">฿${item.amount.toLocaleString()}</td>
             <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.discountPercent || 0}%</td>
-            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.discountedAmount.toLocaleString()}</td>
+            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">฿${item.discountedAmount.toLocaleString()}</td>
           </tr>
         `).join("")
 
@@ -2469,7 +2469,7 @@ export function InvoiceManagement({
               ${itemsRows}
               <tr>
                 <td colspan="3" style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">Total</td>
-                <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">${getDisplayAmount(invoice).toLocaleString()}</td>
+                <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">฿${getDisplayAmount(invoice).toLocaleString()}</td>
               </tr>
             </tbody>
           </table>
@@ -3600,32 +3600,15 @@ export function InvoiceManagement({
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
       case "sent":
         return <Badge className="bg-blue-100 text-blue-800"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
-      case "unsent":
-        return <Badge className="bg-gray-100 text-gray-600 border border-gray-200"><Mail className="w-3 h-3 mr-1" />Not Sent</Badge>
-      case "cancelled":
-        return <span className="text-muted-foreground text-sm">—</span>
     }
   }
 
-  const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" | "unsent" => {
-    // If invoice is cancelled, email status is cancelled
-    if (invoice.status === "cancelled") return "cancelled"
-
-    // If invoice is not approved, email status is wait
-    if (getApprovalStatus(invoice) === "wait") {
-      return "wait"
-    }
-
-    // If emailSentAt exists, it has been sent
-    if (invoice.emailSentAt) {
+  const getEmailStatus = (invoice: Invoice): "wait" | "sent" => {
+    // Approved = email sent automatically
+    if (getApprovalStatus(invoice) === "approved" || invoice.emailSentAt || invoice.status === "sent") {
       return "sent"
     }
-
-    // If status is sent, email has been sent
-    if (invoice.status === "sent") return "sent"
-
-    // If approved but not sent, return unsent
-    return "unsent"
+    return "wait"
   }
 
   const getPaymentStatusBadge = (status: "unpaid" | "paid" | "partial" | "overdue") => {
@@ -4331,11 +4314,11 @@ export function InvoiceManagement({
                       {/* Amount - RIGHT */}
                       <TableCell align="right">
                         <div className="font-medium">
-                          {getDisplayAmount(invoice).toLocaleString()}
+                          ฿{getDisplayAmount(invoice).toLocaleString()}
                         </div>
                         {invoice.discountAmount > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            Discount: {invoice.discountAmount.toLocaleString()}
+                          <div className="text-xs text-red-500">
+                            -฿{invoice.discountAmount.toLocaleString()}
                           </div>
                         )}
                       </TableCell>
@@ -5204,13 +5187,13 @@ export function InvoiceManagement({
 
                       return (
                         <div className="border-t">
-                          {/* 1. Other Discounts (NOT Fee Waiver Program) - Green */}
+                          {/* 1. Other Discounts */}
                           {discountLines.map((discount, idx) => (
                             <div key={idx} className="flex justify-between items-center px-4 py-2 border-t">
-                              <span className="text-sm text-green-600">
+                              <span className="text-sm text-gray-600">
                                 {discount.name} {discount.percent ? `(${discount.percent}%)` : ''}
                               </span>
-                              <span className="text-sm font-medium text-green-600">
+                              <span className="text-sm font-medium text-red-500">
                                 -{formatCurrency(discount.amount)}
                               </span>
                             </div>
@@ -5393,7 +5376,7 @@ export function InvoiceManagement({
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mb-1">{item.description}</p>
-                            <p className="font-medium">{item.amount.toLocaleString()}</p>
+                            <p className="font-medium">฿{item.amount.toLocaleString()}</p>
                           </div>
                           <div className="flex-shrink-0 ml-4">
                             {isSelected ? (
@@ -5449,7 +5432,7 @@ export function InvoiceManagement({
                                 </div>
                               </TableCell>
                               <TableCell align="right" className="font-medium">
-                                {item.amount.toLocaleString()}
+                                ฿{item.amount.toLocaleString()}
                               </TableCell>
                               <TableCell align="center">
                                 <Button
@@ -5882,7 +5865,7 @@ export function InvoiceManagement({
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
-                        <p className="font-medium text-sm">{item.amount.toLocaleString()}</p>
+                        <p className="font-medium text-sm">฿{item.amount.toLocaleString()}</p>
                       </div>
                       <div className="flex-shrink-0 ml-4">
                         {isSelected ? (
@@ -6018,7 +6001,7 @@ export function InvoiceManagement({
                               <TableCell align="left" className="font-mono whitespace-nowrap">{row.studentId}</TableCell>
                               <TableCell align="left" className="max-w-xs"><span className="block truncate" title={row.studentName}>{row.studentName}</span></TableCell>
                               <TableCell align="left" className="whitespace-nowrap">{row.grade}</TableCell>
-                              <TableCell align="right" className="whitespace-nowrap">{row.amount.toLocaleString()}</TableCell>
+                              <TableCell align="right" className="whitespace-nowrap">฿{row.amount.toLocaleString()}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -6185,10 +6168,10 @@ export function InvoiceManagement({
               </div>
             )}
 
-            {/* Bank Account */}
-            {!_fullyByCN && PAYMENT_SOURCES.some(s => s.value === paymentMethod) && (
+            {/* Bank Account + GL (offline) */}
+            {!_fullyByCN && paymentMethod && !_onlineMethods.includes(paymentMethod) && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Select Bank Account</label>
+                <label className="text-sm font-medium">Bank Account / GL</label>
                 <Select
                   onValueChange={(accountId) => {
                     const account = bankAccounts.find(a => a.id === accountId)
@@ -6204,16 +6187,16 @@ export function InvoiceManagement({
                   </SelectTrigger>
                   <SelectContent>
                     {bankAccounts
-                      .filter(acc => acc.paymentSource === paymentMethod && acc.isActive)
+                      .filter(acc => acc.isActive && !["Thai QR", "Credit Card"].includes(acc.paymentSource))
                       .map(acc => (
                         <SelectItem key={acc.id} value={acc.id}>
-                          {acc.bankName} - {acc.accountNumber}
+                          {acc.bankName} - {maskAccountNumber(acc.accountNumber)} (GL: {acc.glAccount || "-"})
                         </SelectItem>
                       ))
                     }
-                    {bankAccounts.filter(acc => acc.paymentSource === paymentMethod && acc.isActive).length === 0 && (
+                    {bankAccounts.filter(acc => acc.isActive && !["Thai QR", "Credit Card"].includes(acc.paymentSource)).length === 0 && (
                       <div className="p-2 text-xs text-muted-foreground italic">
-                        No bank accounts configured for this method.
+                        No bank accounts configured. Go to Bank Settings to add.
                       </div>
                     )}
                   </SelectContent>
@@ -6533,7 +6516,7 @@ export function InvoiceManagement({
                     .forEach(d => {
                       discounts.push({
                         name: d.name,
-                        value: d.percentage ? `${d.percentage}%` : `${d.amount.toLocaleString()}`,
+                        value: d.percentage ? `${d.percentage}%` : `฿${d.amount.toLocaleString()}`,
                         color: "bg-purple-100 text-purple-800"
                       })
                     })
@@ -6717,7 +6700,7 @@ export function InvoiceManagement({
               </div>
               <div className="flex justify-between border-t pt-2 mt-2">
                 <span className="text-gray-500">{t("common.amount")}</span>
-                <span className="font-semibold text-green-600">{selectedInvoiceForApproval.finalAmount.toLocaleString()}</span>
+                <span className="font-semibold">฿{selectedInvoiceForApproval.finalAmount.toLocaleString()}</span>
               </div>
             </div>
           )}
@@ -6888,7 +6871,7 @@ export function InvoiceManagement({
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-gray-500">Total Amount</span>
-                <span className="font-semibold text-green-600">{selectedInvoice.finalAmount.toLocaleString()}</span>
+                <span className="font-semibold">฿{selectedInvoice.finalAmount.toLocaleString()}</span>
               </div>
             </div>
           )}
