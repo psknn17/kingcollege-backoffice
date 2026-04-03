@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
@@ -46,11 +46,68 @@ export function BankSettings() {
     const userCanEdit = user?.role === "super_admin"
     const confirmDialog = useConfirmDialog()
 
-    const [accounts, setAccounts] = usePersistedState<BankAccount[]>(STORAGE_KEY, [])
-    const [onlineAccounts, setOnlineAccounts] = usePersistedState<BankAccount[]>("onlineBankAccounts", [
-        { id: "BA-ONLINE-1", paymentSource: "Credit Card", bankName: "Kiatnakin Phatra Bank", accountNumber: "3423423413", glAccount: "100-500", isActive: true },
-        { id: "BA-ONLINE-2", paymentSource: "Thai QR", bankName: "Kasikorn Bank", accountNumber: "Online", glAccount: "100-600", isActive: true }
+    const [accounts, setAccounts] = usePersistedState<BankAccount[]>(STORAGE_KEY, [
+        { id: "BA-OFF-1", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12788-5", glAccount: "111-2101", isActive: true },
+        { id: "BA-OFF-2", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12885-7", glAccount: "111-2102", isActive: true },
+        { id: "BA-OFF-3", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-365-315-8", glAccount: "111-2105", isActive: true },
+        { id: "BA-OFF-4", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-1-06348-7", glAccount: "111-2106", isActive: true },
+        { id: "BA-OFF-5", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-6-06112-4", glAccount: "111-2107", isActive: true },
+        { id: "BA-OFF-6", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12884-9", glAccount: "111-2202", isActive: true },
+        { id: "BA-OFF-7", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-169-492-2", glAccount: "111-2205", isActive: true },
+        { id: "BA-OFF-8", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-2-78322-4", glAccount: "111-2206", isActive: true },
+        { id: "BA-OFF-9", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-0-20031-9", glAccount: "111-2207", isActive: true },
     ])
+    const [onlineAccounts, setOnlineAccounts] = usePersistedState<BankAccount[]>("onlineBankAccounts", [
+        { id: "BA-ONLINE-2", paymentSource: "Thai QR", bankName: "Kasikorn Bank", accountNumber: "Online", glAccount: "111-2201", isActive: true },
+        { id: "BA-ONLINE-3", paymentSource: "Credit Note", bankName: "Kasikorn Bank", accountNumber: "041-1-12977-2", glAccount: "111-2201", isActive: true }
+    ])
+
+    // Migration: replace old seed offline accounts with real bank accounts
+    useEffect(() => {
+        const hasOldSeed = accounts.some(a => a.id === "bank-001" || a.id === "bank-002" || a.id === "bank-003")
+        if (hasOldSeed) {
+            const realAccounts = [
+                { id: "BA-OFF-1", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12788-5", glAccount: "111-2101", isActive: true },
+                { id: "BA-OFF-2", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12885-7", glAccount: "111-2102", isActive: true },
+                { id: "BA-OFF-3", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-365-315-8", glAccount: "111-2105", isActive: true },
+                { id: "BA-OFF-4", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-1-06348-7", glAccount: "111-2106", isActive: true },
+                { id: "BA-OFF-5", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-6-06112-4", glAccount: "111-2107", isActive: true },
+                { id: "BA-OFF-6", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12884-9", glAccount: "111-2202", isActive: true },
+                { id: "BA-OFF-7", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-169-492-2", glAccount: "111-2205", isActive: true },
+                { id: "BA-OFF-8", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-2-78322-4", glAccount: "111-2206", isActive: true },
+                { id: "BA-OFF-9", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-0-20031-9", glAccount: "111-2207", isActive: true },
+            ]
+            setAccounts(realAccounts)
+        } else if (accounts.length === 0) {
+            // No accounts at all — seed with real data
+            setAccounts([
+                { id: "BA-OFF-1", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12788-5", glAccount: "111-2101", isActive: true },
+                { id: "BA-OFF-2", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12885-7", glAccount: "111-2102", isActive: true },
+                { id: "BA-OFF-3", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-365-315-8", glAccount: "111-2105", isActive: true },
+                { id: "BA-OFF-4", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-1-06348-7", glAccount: "111-2106", isActive: true },
+                { id: "BA-OFF-5", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-6-06112-4", glAccount: "111-2107", isActive: true },
+                { id: "BA-OFF-6", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12884-9", glAccount: "111-2202", isActive: true },
+                { id: "BA-OFF-7", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-169-492-2", glAccount: "111-2205", isActive: true },
+                { id: "BA-OFF-8", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-2-78322-4", glAccount: "111-2206", isActive: true },
+                { id: "BA-OFF-9", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-0-20031-9", glAccount: "111-2207", isActive: true },
+            ])
+        }
+    }, [])
+
+    // Migration: force online accounts to exactly Thai QR + Credit Note with correct details
+    useEffect(() => {
+        const expected = [
+            { id: "BA-ONLINE-2", paymentSource: "Thai QR", bankName: "Kasikorn Bank", accountNumber: "Online", glAccount: "111-2201", isActive: true },
+            { id: "BA-ONLINE-3", paymentSource: "Credit Note", bankName: "Kasikorn Bank", accountNumber: "041-1-12977-2", glAccount: "111-2201", isActive: true }
+        ]
+        const hasCreditCard = onlineAccounts.some(a => a.paymentSource === "Credit Card")
+        const hasWrongBank = onlineAccounts.some(a => (a.paymentSource === "Thai QR" || a.paymentSource === "Credit Note") && a.bankName !== "Kasikorn Bank")
+        const hasWrongThaiQRAccount = onlineAccounts.some(a => a.paymentSource === "Thai QR" && a.accountNumber !== "Online")
+        const missingEntries = !onlineAccounts.some(a => a.paymentSource === "Thai QR") || !onlineAccounts.some(a => a.paymentSource === "Credit Note")
+        if (hasCreditCard || hasWrongBank || hasWrongThaiQRAccount || missingEntries) {
+            setOnlineAccounts(expected)
+        }
+    }, [])
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)

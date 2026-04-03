@@ -4348,6 +4348,7 @@ export function InvoiceManagement({
                       {/* Actions - CENTER */}
                       <TableCell align="center">
                         <div className="flex gap-1 justify-center">
+                          {/* Always visible: View */}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -4356,6 +4357,7 @@ export function InvoiceManagement({
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
+                          {/* Always visible: Edit */}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -4396,25 +4398,7 @@ export function InvoiceManagement({
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => downloadInvoice(invoice.id)}
-                            title="Download"
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          {getApprovalStatus(invoice) === "approved" && invoice.status !== "cancelled" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openSendEmailConfirm(invoice.id)}
-                              disabled={!userCanEdit}
-                              title="Send Email"
-                            >
-                              <Mail className="w-4 h-4" />
-                            </Button>
-                          )}
+                          {/* Always visible: Mark Paid */}
                           {getApprovalStatus(invoice) === "approved" && getPaymentStatus(invoice) !== "paid" && invoice.status !== "cancelled" && (
                             <Button
                               size="sm"
@@ -4427,6 +4411,7 @@ export function InvoiceManagement({
                               <DollarSign className="w-4 h-4" />
                             </Button>
                           )}
+                          {/* More menu: Download, Send Email, Email History */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -4434,6 +4419,19 @@ export function InvoiceManagement({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => downloadInvoice(invoice.id)}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download
+                              </DropdownMenuItem>
+                              {getApprovalStatus(invoice) === "approved" && invoice.status !== "cancelled" && (
+                                <DropdownMenuItem
+                                  disabled={!userCanEdit}
+                                  onClick={() => openSendEmailConfirm(invoice.id)}
+                                >
+                                  <Mail className="mr-2 h-4 w-4" />
+                                  Send Email
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => openEmailHistory(invoice)}>
                                 <History className="mr-2 h-4 w-4" />
                                 Email History ({getInvoiceEmailLogs(invoice.id).length})
@@ -4447,7 +4445,6 @@ export function InvoiceManagement({
                 </TableBody>
               </Table>
 
-              {/* Pagination Controls */}
               <PaginationBar
                 currentPage={currentPage}
                 pageSize={pageSize}
@@ -4742,6 +4739,7 @@ export function InvoiceManagement({
                         {/* Actions - CENTER */}
                         <TableCell align="center">
                           <div className="flex items-center gap-1 justify-center">
+                            {/* Always visible: View */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -4753,6 +4751,7 @@ export function InvoiceManagement({
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
+                            {/* Always visible: Edit */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -4783,14 +4782,7 @@ export function InvoiceManagement({
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => downloadInvoice(invoice.id)}
-                              title="Download"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
+                            {/* Always visible: Mark Paid */}
                             {getApprovalStatus(invoice) === "approved" && getPaymentStatus(invoice) !== "paid" && invoice.status !== "cancelled" && (
                               <Button
                                 size="sm"
@@ -4802,6 +4794,7 @@ export function InvoiceManagement({
                                 <DollarSign className="w-4 h-4" />
                               </Button>
                             )}
+                            {/* More menu: Download, Email History */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -4809,6 +4802,10 @@ export function InvoiceManagement({
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => downloadInvoice(invoice.id)}>
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Download
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openEmailHistory(invoice)}>
                                   <History className="mr-2 h-4 w-4" />
                                   Email History ({getInvoiceEmailLogs(invoice.id).length})

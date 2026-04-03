@@ -330,7 +330,7 @@ for (let i = 4; i <= 40; i++) {
 
 const CREDIT_NOTES_STORAGE_KEY = "creditNotesRecords"
 const CREDIT_NOTES_VERSION_KEY = "creditNotesVersion"
-const CREDIT_NOTES_CURRENT_VERSION = "3"
+const CREDIT_NOTES_CURRENT_VERSION = "4"
 
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
@@ -365,58 +365,63 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
       })
     }
   } catch { }
-  // Build mock data with family code enrichment
+  // Build mock data using REAL invoice students so credit notes match invoices
   const invoicesStored = localStorage.getItem("createdInvoices")
   const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
-  // Enrich mock CNs with student data from actual invoices so IDs match real invoices
-  const invoiceStudents = invoices.reduce((acc: Record<string, { studentId: string; studentName: string; familyCode: string; grade: string }>, inv: any) => {
+  const invoiceStudents = invoices.reduce((acc: Record<string, { studentId: string; studentName: string; familyCode: string; grade: string; academicYear: string; term: string }>, inv: any) => {
     if (inv.studentId && inv.studentName) {
-      acc[inv.studentId] = { studentId: inv.studentId, studentName: inv.studentName, familyCode: inv.adultIdNo || inv.familyCode || "", grade: inv.yearGroup || inv.grade || inv.studentGrade || "" }
+      acc[inv.studentId] = { studentId: inv.studentId, studentName: inv.studentName, familyCode: inv.adultIdNo || inv.familyCode || "", grade: inv.yearGroup || inv.grade || inv.studentGrade || "", academicYear: inv.academicYear || "2025/2026", term: inv.term || "Term 1" }
     }
     return acc
   }, {})
-  const invoiceStudentList = Object.values(invoiceStudents) as { studentId: string; studentName: string; familyCode: string; grade: string }[]
+  const invoiceStudentList = Object.values(invoiceStudents) as { studentId: string; studentName: string; familyCode: string; grade: string; academicYear: string; term: string }[]
 
-  // Generate extra mock CNs for actual students in the system if there are real invoices
-  const extraCNs: CreditNote[] = invoiceStudentList.slice(0, 5).map((s, i) => {
-    const amt = [5000, 10000, 15000, 3000, 8000][i % 5]
-    const desc = ["Overpayment refund", "Course cancellation", "Duplicate payment", "Activity cancellation", "Billing adjustment"][i % 5]
-    const postDate = new Date(Date.now() - (i + 1) * 7 * 24 * 3600 * 1000)
-    const dueD = new Date(postDate); dueD.setDate(dueD.getDate() + 30)
+  // If we have real invoice students, generate credit notes from them
+  // Otherwise fall back to hardcoded studentData
+  const sourceStudents = invoiceStudentList.length > 0 ? invoiceStudentList : studentData.map(s => ({ studentId: s.id, studentName: s.name, familyCode: "", grade: s.grade, academicYear: "2025/2026", term: "Term 1" }))
+
+  const cnDescriptions = [
+    "Credit note for ECA cancellation", "Tuition fee adjustment", "Overpayment refund",
+    "Withdrawal refund", "Activity fee correction", "Bus service cancellation",
+    "Exam fee reversal", "Summer camp refund", "Administrative adjustment", "Transfer credit"
+  ]
+  const statuses: ("issued" | "cancelled" | "pending")[] = ["issued", "cancelled", "pending"]
+  const generatedCNs: CreditNote[] = sourceStudents.slice(0, 45).map((s, i) => {
+    const amt = Math.floor(Math.random() * 50000) + 1000
+    const desc = cnDescriptions[i % cnDescriptions.length]
+    const statusPick = statuses[Math.floor(Math.random() * statuses.length)]
+    const isPaid = statusPick === "issued" && Math.random() > 0.4
+    const isCancelled = statusPick === "cancelled"
+    const isCorrective = !isPaid && !isCancelled && Math.random() > 0.7
+    const postDate = new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
+    const due = new Date(postDate); due.setDate(due.getDate() + 30)
     return {
-      id: `mock-real-${i + 1}`,
-      creditNoteNumber: `CN-${new Date().getFullYear()}-${String(900 + i + 1).padStart(6, "0")}`,
+      id: `cn-mock-${i + 1}`,
+      creditNoteNumber: `CN-${new Date().getFullYear()}-${String(i + 1).padStart(6, "0")}`,
       invoiceNumber: "",
       studentName: s.studentName,
       studentId: s.studentId,
-      studentGrade: s.grade || ["Year 1", "Year 3", "Year 5", "Year 7", "Year 9"][i % 5],
+      studentGrade: s.grade,
+      familyCode: s.familyCode,
       amount: amt,
       amountIncludingVat: Math.round(amt * 1.07),
-      remainingAmount: i % 2 === 0 ? 0 : amt,
+      remainingAmount: isPaid ? 0 : amt,
       description: desc,
       reason: desc,
       issueDate: postDate,
-      dueDate: dueD,
-      academicYear: "2025/2026",
-      term: "Term 1",
-      status: "issued" as const,
-      familyCode: s.familyCode,
-      paid: i % 2 === 0,
-      cancelled: false,
-      corrective: false
+      dueDate: due,
+      academicYear: s.academicYear,
+      term: s.term,
+      status: statusPick,
+      paid: isPaid,
+      cancelled: isCancelled,
+      corrective: isCorrective
     }
   })
 
-  const mockData = [
-    ...mockCreditNotes.map(cn => {
-      const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
-      return { ...cn, familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || "" }
-    }),
-    ...extraCNs
-  ]
   // Save to localStorage so other components (InvoiceManagement) can read them
-  try { localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(mockData)) } catch { }
-  return mockData
+  try { localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(generatedCNs)) } catch { }
+  return generatedCNs
 }
 
 const saveCreditNotesToStorage = (notes: CreditNote[]) => {
@@ -1220,6 +1225,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       otherReason: "",
       issueDate: new Date()
     })
+    setCnStudentSearch("")
 
     setIsCreateCreditNoteOpen(false)
     toast.success(t("receipt.creditNoteCreated"))

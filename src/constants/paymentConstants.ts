@@ -18,7 +18,8 @@ export const BANKS = [
     "Government Housing Bank",
     "SME Development Bank",
     "Export-Import Bank of Thailand",
-    "Mizuho Bank"
+    "Mizuho Bank",
+    "Krungthai Card"
 ]
 
 export const PAYMENT_SOURCES = [
@@ -26,5 +27,6 @@ export const PAYMENT_SOURCES = [
     { value: "Bank Transfer", label: "Bank Transfer" },
     { value: "Thai QR", label: "Thai QR" },
     { value: "Credit Card", label: "Credit Card" },
+    { value: "Credit Note", label: "Credit Note" },
     { value: "EDC", label: "EDC" }
 ]

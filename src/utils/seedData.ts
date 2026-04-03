@@ -612,13 +612,19 @@ function generateDiscountOptions() {
 
 // ── 14. Bank Accounts ────────────────────────────────────────
 const BANK_ACCOUNTS_OFFLINE = [
-  { id: "bank-001", paymentSource: "Bank Transfer", bankName: "Bangkok Bank", accountNumber: "123-4-56789-0", glAccount: "1100", isActive: true },
-  { id: "bank-002", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "098-7-65432-1", glAccount: "1101", isActive: true },
-  { id: "bank-003", paymentSource: "Bank Transfer", bankName: "SCB", accountNumber: "456-7-89012-3", glAccount: "1102", isActive: true },
+  { id: "BA-OFF-1", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12788-5", glAccount: "111-2101", isActive: true },
+  { id: "BA-OFF-2", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12885-7", glAccount: "111-2102", isActive: true },
+  { id: "BA-OFF-3", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-365-315-8", glAccount: "111-2105", isActive: true },
+  { id: "BA-OFF-4", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-1-06348-7", glAccount: "111-2106", isActive: true },
+  { id: "BA-OFF-5", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-6-06112-4", glAccount: "111-2107", isActive: true },
+  { id: "BA-OFF-6", paymentSource: "Bank Transfer", bankName: "Kasikorn Bank", accountNumber: "041-1-12884-9", glAccount: "111-2202", isActive: true },
+  { id: "BA-OFF-7", paymentSource: "Bank Transfer", bankName: "United Overseas Bank", accountNumber: "817-169-492-2", glAccount: "111-2205", isActive: true },
+  { id: "BA-OFF-8", paymentSource: "Bank Transfer", bankName: "TMBThanachart Bank", accountNumber: "212-2-78322-4", glAccount: "111-2206", isActive: true },
+  { id: "BA-OFF-9", paymentSource: "Bank Transfer", bankName: "Krungthai Card", accountNumber: "048-0-20031-9", glAccount: "111-2207", isActive: true },
 ]
 const BANK_ACCOUNTS_ONLINE = [
-  { id: "obank-001", paymentSource: "Credit Card", bankName: "Visa/Mastercard", accountNumber: "MERCHANT-001", glAccount: "1200", isActive: true },
-  { id: "obank-002", paymentSource: "Thai QR", bankName: "PromptPay", accountNumber: "0-1234-56789", glAccount: "1201", isActive: true },
+  { id: "obank-002", paymentSource: "Thai QR", bankName: "Kasikorn Bank", accountNumber: "Online", glAccount: "111-2201", isActive: true },
+  { id: "obank-003", paymentSource: "Credit Note", bankName: "Kasikorn Bank", accountNumber: "041-1-12977-2", glAccount: "111-2201", isActive: true },
 ]
 
 // ── 15. Activity Logs (realistic timeline) ───────────────────
