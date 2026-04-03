@@ -234,120 +234,100 @@ export function EditTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) onClose() }}>
-      <DialogContent style={{ maxWidth: "580px" }} className="p-8">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{template ? t("invoiceReceiptTemplate.editTemplateTitle") : t("invoiceReceiptTemplate.newTemplateTitle")}</DialogTitle>
-        </DialogHeader>
+      <DialogContent style={{ maxWidth: "1100px" }} className="p-0 max-h-[90vh]">
+        <div className="grid grid-cols-2 divide-x mt-2" style={{ minHeight: "60vh", maxHeight: "75vh" }}>
+          {/* Left: Edit */}
+          <div className="overflow-y-auto p-6 space-y-4">
+            {/* Template Name */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">
+                {t("invoiceReceiptTemplate.templateName")} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder={placeholders.name}
+                value={name}
+                onChange={e => setName(e.target.value)}
+                autoComplete="off"
+                className={errors.name ? "border-red-500" : ""}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
 
-        {/* Name — always visible */}
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold">
-            {t("invoiceReceiptTemplate.templateName")} <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            placeholder={placeholders.name}
-            value={name}
-            onChange={e => setName(e.target.value)}
-            autoComplete="off"
-            className={errors.name ? "border-red-500" : ""}
-          />
-          {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-        </div>
-
-        {/* Edit / Preview tabs */}
-        <div className="flex items-center gap-1 border-b">
-          <button
-            type="button"
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${editTab === "edit" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            onClick={() => setEditTab("edit")}
-          >
-            {t("invoiceReceiptTemplate.editTab")}
-          </button>
-          <button
-            type="button"
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${editTab === "preview" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            onClick={() => setEditTab("preview")}
-          >
-            {t("invoiceReceiptTemplate.previewTab")}
-          </button>
-        </div>
-
-        <div className="max-h-[55vh] overflow-y-auto pr-1">
-          {editTab === "edit" ? (
-            <div className="space-y-4">
-              {/* Subject */}
-              <div className="rounded-lg border p-4 space-y-3">
-                <Label className="text-sm font-semibold">
-                  {t("invoiceReceiptTemplate.emailSubject")} <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  ref={subjectRef}
-                  placeholder={placeholders.subject}
-                  value={subject}
-                  onChange={e => setSubject(e.target.value)}
-                  autoComplete="off"
-                  className={errors.subject ? "border-red-500" : ""}
-                />
-                {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">{t("invoiceReceiptTemplate.clickToInsert")}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {variables.map(v => (
-                      <button
-                        key={v.key}
-                        type="button"
-                        className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => insertVariable(v.key, "subject")}
-                        title={`Insert ${v.label} (e.g. ${v.example})`}
-                      >
-                        {v.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="rounded-lg border p-4 space-y-3">
-                <Label className="text-sm font-semibold">
-                  {t("invoiceReceiptTemplate.emailBody")} <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  ref={bodyRef}
-                  placeholder={placeholders.body}
-                  value={body}
-                  onChange={e => setBody(e.target.value)}
-                  className={`text-sm resize-none ${errors.body ? "border-red-500" : ""}`}
-                  rows={10}
-                />
-                {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">{t("invoiceReceiptTemplate.clickToInsert")}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {variables.map(v => (
-                      <button
-                        key={v.key}
-                        type="button"
-                        className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => insertVariable(v.key, "body")}
-                        title={`Insert ${v.label} (e.g. ${v.example})`}
-                      >
-                        {v.label}
-                      </button>
-                    ))}
-                  </div>
+            {/* Subject */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <Label className="text-sm font-semibold">
+                {t("invoiceReceiptTemplate.emailSubject")} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                ref={subjectRef}
+                placeholder={placeholders.subject}
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                autoComplete="off"
+                className={errors.subject ? "border-red-500" : ""}
+              />
+              {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">{t("invoiceReceiptTemplate.clickToInsert")}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {variables.map(v => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => insertVariable(v.key, "subject")}
+                      title={`Insert ${v.label} (e.g. ${v.example})`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          ) : (
+
+            {/* Body */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <Label className="text-sm font-semibold">
+                {t("invoiceReceiptTemplate.emailBody")} <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                ref={bodyRef}
+                placeholder={placeholders.body}
+                value={body}
+                onChange={e => setBody(e.target.value)}
+                className={`text-sm resize-none ${errors.body ? "border-red-500" : ""}`}
+                rows={12}
+              />
+              {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">{t("invoiceReceiptTemplate.clickToInsert")}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {variables.map(v => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => insertVariable(v.key, "body")}
+                      title={`Insert ${v.label} (e.g. ${v.example})`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Preview */}
+          <div className="overflow-y-auto p-6 pt-12 bg-gray-50/50">
             <EmailPreviewContent subject={subject || placeholders.subject} body={body || placeholders.body} sample={sample} />
-          )}
+          </div>
         </div>
 
-        <DialogFooter className="mt-2">
+        <div className="flex justify-end gap-2 px-6 py-4 border-t">
           <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={handleSave}>{template ? t("invoiceReceiptTemplate.saveChanges") : t("invoiceReceiptTemplate.createTemplate")}</Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )

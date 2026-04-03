@@ -2226,30 +2226,30 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
     setAvailableItems(categoryItems)
   }
 
-  // Helper function to check if a student has 100% discount (for Tuition invoices only)
+  // Helper function to check if a student has a single 100% discount (for Tuition invoices only)
   const hasFullDiscount = (studentId: string): boolean => {
     // Only check for tuition category
     if (category !== "tuition") {
       return false
     }
 
+    // Check Scholarship (100% single discount)
+    if (hasScholarshipDiscount(studentId)) {
+      return true
+    }
+
+    // Check Student Groups for any single group with exactly 100%
     try {
       const stored = localStorage.getItem("studentGroups")
       if (!stored) return false
 
       const groups = JSON.parse(stored)
-      let totalDiscount = 0
-
-      groups.forEach((group: any) => {
-        if (group.students && group.discountType === "percentage" && Number(group.discountPercentage) > 0) {
-          const studentInGroup = group.students.find((s: any) => s.id === studentId)
-          if (studentInGroup) {
-            totalDiscount += Number(group.discountPercentage) || 0
-          }
+      return groups.some((group: any) => {
+        if (group.students && group.discountType === "percentage" && Number(group.discountPercentage) === 100) {
+          return group.students.some((s: any) => s.id === studentId)
         }
+        return false
       })
-
-      return totalDiscount === 100
     } catch (error) {
       console.error("Error checking full discount:", error)
       return false
@@ -4095,19 +4095,9 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </div>
 
                         {(isStudentSearchFocused || searchStudentTerm.length > 0) && (
-                          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="p-2 border-b mb-1.5 flex items-center justify-between px-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground/70">
-                                {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
-                              </p>
-                              {!isSimplifiedView && selectedGrade && (
-                                <Badge variant="outline" className="text-xs font-semibold bg-primary/5 text-primary border-primary/20">
-                                  {selectedGrade} {selectedRoom ? `• ${selectedRoom}` : ''}
-                                </Badge>
-                              )}
-                            </div>
+                          <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                             {filteredStudents.length > 0 ? (
-                              filteredStudents.slice(0, 15).map((student) => {
+                              filteredStudents.slice(0, 8).map((student) => {
                                 const invoiceStudent = student as InvoiceStudent
                                 const studentHasDiscounts = !isSimplifiedView && hasDiscounts(invoiceStudent)
                                 return (
@@ -4118,50 +4108,24 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                       handleIndividualStudentSelect(student)
                                       toast.success(`Added ${student.name} (${student.id})`)
                                     }}
-                                    className={`group flex items-center gap-3 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:border-border/50 mb-1 last:mb-0 ${studentHasDiscounts ? 'bg-green-50/50 hover:bg-green-50' : ''}`}
+                                    className="px-3 py-2 hover:bg-muted cursor-pointer"
                                   >
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-sm truncate uppercase tracking-tight">
-                                        {student.name}
-                                      </div>
-                                      <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-xs font-mono font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground leading-none">ID: {student.id}</span>
-                                        <span className="text-xs text-muted-foreground font-medium">• {student.grade}</span>
-                                      </div>
+                                    <div className="font-medium text-sm truncate">{student.name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {student.id} • {student.grade}
                                       {studentHasDiscounts && (
-                                        <div className="flex flex-wrap gap-1 mt-1.5">
-                                          {invoiceStudent.discounts.siblingDiscount > 0 && (
-                                            <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
-                                              Sibling {invoiceStudent.discounts.siblingDiscount}%
-                                            </Badge>
-                                          )}
-                                          {invoiceStudent.discounts.staffChild && (
-                                            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
-                                              Staff Child
-                                            </Badge>
-                                          )}
-                                          {invoiceStudent.discounts.scholarship && (
-                                            <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
-                                              Scholarship
-                                            </Badge>
-                                          )}
-                                        </div>
+                                        <span className="ml-1">
+                                          {invoiceStudent.discounts.siblingDiscount > 0 && ` • Sibling ${invoiceStudent.discounts.siblingDiscount}%`}
+                                          {invoiceStudent.discounts.staffChild && ' • Staff Child'}
+                                          {invoiceStudent.discounts.scholarship && ' • Scholarship'}
+                                        </span>
                                       )}
-                                    </div>
-                                    <div className="h-9 w-9 rounded-full border border-border flex items-center justify-center bg-background group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/20">
-                                      <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
                                     </div>
                                   </div>
                                 )
                               })
                             ) : (
-                              <div className="py-12 px-4 text-center">
-                                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
-                                  <Users className="h-8 w-8 text-muted-foreground" />
-                                </div>
-                                <p className="text-sm font-medium text-foreground">No students found</p>
-                                <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
-                              </div>
+                              <div className="px-3 py-4 text-sm text-center text-muted-foreground">No results found</div>
                             )}
                           </div>
                         )}

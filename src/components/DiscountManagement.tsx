@@ -1237,20 +1237,14 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             </div>
                             {/* Search Results Dropdown */}
                             {isInputFocused && (
-                              <div className="absolute z-50 mt-2 bg-background border rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] max-h-[380px] overflow-y-auto w-full p-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                 {availableStudents.filter((s: Student) =>
                                   !groupForm.selectedStudents.find((sel: Student) => sel.id === s.id) &&
                                   matchesYearGroup(s.yearGroup, selectedYearGroup) &&
                                   (studentInput === "" || s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
                                     s.name.toLowerCase().includes(studentInput.toLowerCase()))
                                 ).length === 0 ? (
-                                  <div className="py-12 px-4 text-center">
-                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
-                                      <Users className="h-8 w-8 text-muted-foreground" />
-                                    </div>
-                                    <p className="text-sm font-medium text-foreground">No students found</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
-                                  </div>
+                                  <div className="px-3 py-4 text-sm text-center text-muted-foreground">No results found</div>
                                 ) : (
                                   availableStudents
                                     .filter((s: Student) =>
@@ -1259,7 +1253,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                       (studentInput === "" || s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
                                         s.name.toLowerCase().includes(studentInput.toLowerCase()))
                                     )
-                                    .slice(0, 10)
+                                    .slice(0, 8)
                                     .map((student: Student) => (
                                       <div
                                         key={student.id}
@@ -1273,20 +1267,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                           toast.success(`Added ${student.name} (${student.id})`)
                                           logActivity({ action: "Add Student", module: "Discount Management", detail: `Added student "${student.name}" (${student.id}) to group via dropdown` })
                                         }}
-                                        className="group flex items-center justify-between px-4 py-3.5 hover:bg-blue-50/80 cursor-pointer rounded-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-sm mb-2 last:mb-0 bg-white"
+                                        className="px-3 py-2 hover:bg-muted cursor-pointer"
                                       >
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-semibold text-[15px] text-gray-900 truncate group-hover:text-blue-900 transition-colors">{student.name}</div>
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <span className="inline-flex items-center text-xs font-mono font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
-                                              ID: {student.id}
-                                            </span>
-                                            <span className="text-xs text-gray-500">•</span>
-                                            <span className="text-xs text-gray-600 font-medium">{student.yearGroup}</span>
-                                          </div>
-                                        </div>
-                                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 group-hover:scale-110 flex-shrink-0 ml-3">
-                                          <Plus className="h-4 w-4 stroke-[2.5]" />
+                                        <div className="font-medium text-sm truncate">{student.name}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {student.id} • {student.yearGroup}
                                         </div>
                                       </div>
                                     ))
@@ -2149,31 +2134,27 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                 {/* Search Results Dropdown */}
                 {showSearchResults && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50 max-h-60 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {isSearching ? (
                       <div className="p-3 text-center text-muted-foreground">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto mb-2"></div>
                         {t("discount.searching")}
                       </div>
                     ) : studentSearchResults.length > 0 ? (
-                      <div className="py-1">
-                        {studentSearchResults.map((student) => (
-                          <button
-                            key={student.id}
-                            onClick={() => handleSelectSearchResult(student)}
-                            className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
-                          >
-                            <div className="font-medium truncate">{student.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {student.id} • {student.yearGroup}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                      studentSearchResults.slice(0, 8).map((student) => (
+                        <div
+                          key={student.id}
+                          onClick={() => handleSelectSearchResult(student)}
+                          className="px-3 py-2 hover:bg-muted cursor-pointer"
+                        >
+                          <div className="font-medium truncate">{student.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {student.id} • {student.yearGroup}
+                          </div>
+                        </div>
+                      ))
                     ) : (
-                      <div className="p-3 text-center text-muted-foreground">
-                        No students found matching "{studentSearchQuery}"
-                      </div>
+                      <div className="px-3 py-4 text-sm text-center text-muted-foreground">No results found</div>
                     )}
                   </div>
                 )}

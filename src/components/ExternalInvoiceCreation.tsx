@@ -644,13 +644,13 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                     />
                     <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     {showStudentDropdown && filteredStudentOptions.length > 0 && (
-                      <div className="absolute z-50 top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                        {filteredStudentOptions.map(student => {
+                      <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {filteredStudentOptions.slice(0, 8).map(student => {
                           const primaryParent = student.parents?.find(p => p.isPrimary) || student.parents?.[0]
                           return (
                             <div
                               key={student.id}
-                              className="px-3 py-2 hover:bg-muted/60 cursor-pointer"
+                              className="px-3 py-2 hover:bg-muted cursor-pointer"
                               onMouseDown={(e) => {
                                 e.preventDefault()
                                 setClientName(`${student.firstName} ${student.lastName}`)
