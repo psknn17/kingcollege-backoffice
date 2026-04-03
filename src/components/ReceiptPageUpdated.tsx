@@ -32,6 +32,7 @@ import { ColumnPresets } from "@/utils/tableAlignment"
 import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
 import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
 import { logActivity } from "@/lib/activityLog"
+import { useStudents } from "@/contexts/StudentContext"
 
 // Student data matching StudentContext
 const studentData = [
@@ -85,13 +86,20 @@ interface CreditNote {
   studentId: string
   studentGrade: string
   amount: number
+  amountIncludingVat?: number
+  remainingAmount?: number
   remainingBalance?: number
+  description?: string
   reason: string
   issueDate: Date
+  dueDate?: Date | null
   academicYear: string
   term: string
   status: "issued" | "cancelled" | "pending" | "used" | "partial"
   familyCode?: string
+  paid?: boolean
+  cancelled?: boolean
+  corrective?: boolean
   appliedToInvoice?: string
   appliedToReceipt?: string
   appliedAt?: string
@@ -202,76 +210,135 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
 const mockCreditNotes: CreditNote[] = [
   {
     id: "1",
-    creditNoteNumber: "CN-2025-000001",
-    invoiceNumber: "20250000001",
+    creditNoteNumber: "CN-2026-000001",
+    invoiceNumber: "20260000001",
     studentName: studentData[0].name,
     studentId: studentData[0].id,
     studentGrade: studentData[0].grade,
-    amount: 5000,
-    reason: "Course cancellation",
-    issueDate: new Date("2025-08-20"),
+    familyCode: "006471",
+    amount: 15000,
+    amountIncludingVat: 16050,
+    remainingAmount: 0,
+    description: "Credit note for ECA cancellation",
+    reason: "Credit note for ECA cancellation",
+    issueDate: new Date("2026-03-15"),
+    dueDate: new Date("2026-04-15"),
     academicYear: "2025/2026",
-    term: "Term 1",
-    status: "issued"
+    term: "Term 2",
+    status: "issued",
+    paid: true,
+    cancelled: false,
+    corrective: false
   },
   {
     id: "2",
-    creditNoteNumber: "CN-2025-000002",
-    invoiceNumber: "20250000001",
+    creditNoteNumber: "CN-2026-000002",
+    invoiceNumber: "20260000002",
     studentName: studentData[1].name,
     studentId: studentData[1].id,
     studentGrade: studentData[1].grade,
-    amount: 3000,
-    reason: "Overpayment refund",
-    issueDate: new Date("2025-08-19"),
+    familyCode: "006472",
+    amount: 8500,
+    amountIncludingVat: 9095,
+    remainingAmount: 8500,
+    description: "Tuition fee adjustment Term 2",
+    reason: "Tuition fee adjustment Term 2",
+    issueDate: new Date("2026-03-10"),
+    dueDate: new Date("2026-04-10"),
     academicYear: "2025/2026",
-    term: "Term 1",
-    status: "issued"
+    term: "Term 2",
+    status: "pending",
+    paid: false,
+    cancelled: false,
+    corrective: false
   },
   {
     id: "3",
-    creditNoteNumber: "CN-2025-000003",
-    invoiceNumber: "20250000001",
+    creditNoteNumber: "CN-2026-000003",
+    invoiceNumber: "20260000003",
     studentName: studentData[2].name,
     studentId: studentData[2].id,
     studentGrade: studentData[2].grade,
-    amount: 10000,
-    reason: "Activity cancellation",
-    issueDate: new Date("2025-08-18"),
-    academicYear: "2024/2025",
+    familyCode: "006473",
+    amount: 25000,
+    amountIncludingVat: 26750,
+    remainingAmount: 0,
+    description: "Withdrawal refund",
+    reason: "Withdrawal refund",
+    issueDate: new Date("2026-02-28"),
+    dueDate: new Date("2026-03-28"),
+    academicYear: "2025/2026",
     term: "Term 2",
-    status: "pending"
+    status: "cancelled",
+    paid: false,
+    cancelled: true,
+    corrective: false
   }
 ]
 
 // Add more mock credit notes
-for (let i = 4; i <= 50; i++) {
+const cnDescriptions = [
+  "Credit note for ECA cancellation",
+  "Tuition fee adjustment",
+  "Overpayment refund",
+  "Withdrawal refund",
+  "Activity fee correction",
+  "Bus service cancellation",
+  "Exam fee reversal",
+  "Summer camp refund",
+  "Administrative adjustment",
+  "Transfer credit"
+]
+for (let i = 4; i <= 40; i++) {
   const student = studentData[i % studentData.length]
-  const reasons = ["Course cancellation", "Overpayment refund", "Activity cancellation", "Withdrawal"]
   const academicYears = ["2024/2025", "2025/2026"]
   const terms = ["Term 1", "Term 2", "Term 3"]
   const statuses: ("issued" | "cancelled" | "pending")[] = ["issued", "cancelled", "pending"]
+  const amt = Math.floor(Math.random() * 50000) + 1000
+  const desc = cnDescriptions[Math.floor(Math.random() * cnDescriptions.length)]
+  const statusPick = statuses[Math.floor(Math.random() * statuses.length)]
+  const isPaid = statusPick === "issued" && Math.random() > 0.4
+  const isCancelled = statusPick === "cancelled"
+  const isCorrective = !isPaid && !isCancelled && Math.random() > 0.7
+  const postDate = new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
+  const due = new Date(postDate)
+  due.setDate(due.getDate() + 30)
 
   mockCreditNotes.push({
     id: i.toString(),
-    creditNoteNumber: `CN-2025-${String(i).padStart(6, '0')}`,
-    invoiceNumber: `20250000001${String(1234 + i).padStart(6, '0')}`,
+    creditNoteNumber: `CN-2026-${String(i).padStart(6, '0')}`,
+    invoiceNumber: `2026${String(1000 + i).padStart(7, '0')}`,
     studentName: student.name,
     studentId: student.id,
     studentGrade: student.grade,
-    amount: Math.floor(Math.random() * 50000) + 1000,
-    reason: reasons[Math.floor(Math.random() * reasons.length)],
-    issueDate: new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
+    familyCode: `00${6470 + (i % 30)}`,
+    amount: amt,
+    amountIncludingVat: Math.round(amt * 1.07),
+    remainingAmount: isPaid ? 0 : amt,
+    description: desc,
+    reason: desc,
+    issueDate: postDate,
+    dueDate: due,
     academicYear: academicYears[Math.floor(Math.random() * academicYears.length)],
     term: terms[Math.floor(Math.random() * terms.length)],
-    status: statuses[Math.floor(Math.random() * statuses.length)]
+    status: statusPick,
+    paid: isPaid,
+    cancelled: isCancelled,
+    corrective: isCorrective
   })
 }
 
 const CREDIT_NOTES_STORAGE_KEY = "creditNotesRecords"
+const CREDIT_NOTES_VERSION_KEY = "creditNotesVersion"
+const CREDIT_NOTES_CURRENT_VERSION = "3"
 
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
+    const ver = localStorage.getItem(CREDIT_NOTES_VERSION_KEY)
+    if (ver !== CREDIT_NOTES_CURRENT_VERSION) {
+      localStorage.removeItem(CREDIT_NOTES_STORAGE_KEY)
+      localStorage.setItem(CREDIT_NOTES_VERSION_KEY, CREDIT_NOTES_CURRENT_VERSION)
+    }
     const stored = localStorage.getItem(CREDIT_NOTES_STORAGE_KEY)
 
     // Load invoices to get family code
@@ -285,8 +352,15 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
         return {
           ...cn,
           amount: cn.amount ?? cn.creditAmount ?? 0,
+          amountIncludingVat: cn.amountIncludingVat ?? 0,
+          remainingAmount: cn.remainingAmount ?? 0,
           issueDate: new Date(cn.issueDate),
-          familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || cn.parentName || ""
+          dueDate: cn.dueDate ? new Date(cn.dueDate) : null,
+          familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || cn.parentName || "",
+          paid: cn.paid ?? false,
+          cancelled: cn.cancelled ?? false,
+          corrective: cn.corrective ?? false,
+          description: cn.description || cn.reason || ""
         }
       })
     }
@@ -295,30 +369,43 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
   const invoicesStored = localStorage.getItem("createdInvoices")
   const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
   // Enrich mock CNs with student data from actual invoices so IDs match real invoices
-  const invoiceStudents = invoices.reduce((acc: Record<string, { studentId: string; studentName: string; familyCode: string }>, inv: any) => {
+  const invoiceStudents = invoices.reduce((acc: Record<string, { studentId: string; studentName: string; familyCode: string; grade: string }>, inv: any) => {
     if (inv.studentId && inv.studentName) {
-      acc[inv.studentId] = { studentId: inv.studentId, studentName: inv.studentName, familyCode: inv.adultIdNo || inv.familyCode || "" }
+      acc[inv.studentId] = { studentId: inv.studentId, studentName: inv.studentName, familyCode: inv.adultIdNo || inv.familyCode || "", grade: inv.yearGroup || inv.grade || inv.studentGrade || "" }
     }
     return acc
   }, {})
-  const invoiceStudentList = Object.values(invoiceStudents) as { studentId: string; studentName: string; familyCode: string }[]
+  const invoiceStudentList = Object.values(invoiceStudents) as { studentId: string; studentName: string; familyCode: string; grade: string }[]
 
   // Generate extra mock CNs for actual students in the system if there are real invoices
-  const extraCNs: CreditNote[] = invoiceStudentList.slice(0, 5).map((s, i) => ({
-    id: `mock-real-${i + 1}`,
-    creditNoteNumber: `CN-${new Date().getFullYear()}-${String(900 + i + 1).padStart(6, "0")}`,
-    invoiceNumber: "",
-    studentName: s.studentName,
-    studentId: s.studentId,
-    studentGrade: "",
-    amount: [5000, 10000, 15000, 3000, 8000][i % 5],
-    reason: ["Overpayment refund", "Course cancellation", "Duplicate payment", "Activity cancellation", "Billing adjustment"][i % 5],
-    issueDate: new Date(Date.now() - (i + 1) * 7 * 24 * 3600 * 1000),
-    academicYear: "2025/2026",
-    term: "Term 1",
-    status: "issued" as const,
-    familyCode: s.familyCode
-  }))
+  const extraCNs: CreditNote[] = invoiceStudentList.slice(0, 5).map((s, i) => {
+    const amt = [5000, 10000, 15000, 3000, 8000][i % 5]
+    const desc = ["Overpayment refund", "Course cancellation", "Duplicate payment", "Activity cancellation", "Billing adjustment"][i % 5]
+    const postDate = new Date(Date.now() - (i + 1) * 7 * 24 * 3600 * 1000)
+    const dueD = new Date(postDate); dueD.setDate(dueD.getDate() + 30)
+    return {
+      id: `mock-real-${i + 1}`,
+      creditNoteNumber: `CN-${new Date().getFullYear()}-${String(900 + i + 1).padStart(6, "0")}`,
+      invoiceNumber: "",
+      studentName: s.studentName,
+      studentId: s.studentId,
+      studentGrade: s.grade || ["Year 1", "Year 3", "Year 5", "Year 7", "Year 9"][i % 5],
+      amount: amt,
+      amountIncludingVat: Math.round(amt * 1.07),
+      remainingAmount: i % 2 === 0 ? 0 : amt,
+      description: desc,
+      reason: desc,
+      issueDate: postDate,
+      dueDate: dueD,
+      academicYear: "2025/2026",
+      term: "Term 1",
+      status: "issued" as const,
+      familyCode: s.familyCode,
+      paid: i % 2 === 0,
+      cancelled: false,
+      corrective: false
+    }
+  })
 
   const mockData = [
     ...mockCreditNotes.map(cn => {
@@ -350,6 +437,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const { academicYears = [] } = useAcademicYears()
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
+  const { students: allStudents } = useStudents()
+
+  // Student ID search state for credit note form
+  const [cnStudentSearch, setCnStudentSearch] = useState("")
+  const [cnStudentDropdownOpen, setCnStudentDropdownOpen] = useState(false)
 
   // Categories that should NOT show credit notes
   const hideCreditNotes = ['eca', 'trip', 'exam', 'bus', 'external'].includes(category || '')
@@ -415,6 +507,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [statusFilter, setStatusFilter] = useState("all") // For Credit Notes
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
+  const [dueDateFrom, setDueDateFrom] = useState<Date | null>(null)
+  const [dueDateTo, setDueDateTo] = useState<Date | null>(null)
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -451,9 +545,15 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     academicYear: "",
     term: "",
     amount: 0,
+    amountIncludingVat: 0,
+    remainingAmount: 0,
     reason: "",
     otherReason: "",
-    issueDate: new Date()
+    issueDate: new Date(),
+    dueDate: null as Date | null,
+    paid: false,
+    cancelled: false,
+    corrective: false,
   })
 
   // Selection states
@@ -786,18 +886,18 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         cn.studentName,
         cn.studentGrade,
         format(cn.issueDate, 'dd/MM/yyyy'),
-        format(cn.issueDate, 'dd/MM/yyyy'),
+        cn.dueDate ? format(cn.dueDate, 'dd/MM/yyyy') : "",
         cn.amount,
-        cn.amount,
-        cn.remainingBalance != null ? -cn.remainingBalance : 0,
-        cn.status === "used" || cn.remainingBalance === 0 ? "TRUE" : "FALSE",
+        cn.amountIncludingVat || cn.amount,
+        cn.remainingAmount ?? 0,
+        cn.paid ? "TRUE" : "FALSE",
         "",
         cn.familyCode || "",
-        cn.status === "cancelled" ? "TRUE" : "",
+        cn.cancelled ? "TRUE" : "FALSE",
+        cn.corrective ? "TRUE" : "FALSE",
         "",
         "",
-        "",
-        cn.reason
+        cn.description || cn.reason
       ])
       downloadAsXlsx(headers, rows, `credit-notes-export-${format(new Date(), 'dd-MM-yyyy')}`)
       toast.success(t("receipt.creditNotesExported"))
@@ -904,22 +1004,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     if (searchTerm) {
       filtered = filtered.filter(cn =>
         cn.creditNoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cn.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cn.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cn.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cn.reason.toLowerCase().includes(searchTerm.toLowerCase())
+        (cn.description || cn.reason || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cn.familyCode || "").toLowerCase().includes(searchTerm.toLowerCase())
       )
-    }
-
-    if (academicYearFilter !== "all") {
-      const selectedYear = academicYears.find(y => y.id === academicYearFilter)
-      if (selectedYear) {
-        filtered = filtered.filter(cn => normalizeAcademicYear(cn.academicYear) === normalizeAcademicYear(selectedYear.name))
-      }
-    }
-
-    if (termFilter !== "all") {
-      filtered = filtered.filter(cn => cn.term === termFilter)
     }
 
     if (gradeFilter !== "all") {
@@ -927,7 +1016,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter(cn => cn.status === statusFilter)
+      if (statusFilter === "paid") {
+        filtered = filtered.filter(cn => cn.paid === true)
+      } else if (statusFilter === "cancelled-flag") {
+        filtered = filtered.filter(cn => cn.cancelled === true)
+      } else {
+        filtered = filtered.filter(cn => cn.status === statusFilter)
+      }
     }
 
     if (dateFrom) {
@@ -938,18 +1033,26 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       filtered = filtered.filter(cn => cn.issueDate <= dateTo)
     }
 
+    if (dueDateFrom) {
+      filtered = filtered.filter(cn => cn.dueDate && cn.dueDate >= dueDateFrom)
+    }
+
+    if (dueDateTo) {
+      filtered = filtered.filter(cn => cn.dueDate && cn.dueDate <= dueDateTo)
+    }
+
     setFilteredCreditNotes(filtered)
     setCnCurrentPage(1)
-  }, [searchTerm, academicYearFilter, termFilter, gradeFilter, statusFilter, dateFrom, dateTo, creditNotes, activeTab, academicYears])
+  }, [searchTerm, gradeFilter, statusFilter, dateFrom, dateTo, dueDateFrom, dueDateTo, creditNotes, activeTab])
 
   const clearCreditNoteFilters = () => {
     setSearchTerm("")
-    setAcademicYearFilter("all")
-    setTermFilter("all")
     setGradeFilter("all")
     setStatusFilter("all")
     setDateFrom(null)
     setDateTo(null)
+    setDueDateFrom(null)
+    setDueDateTo(null)
     setFilteredCreditNotes(creditNotes)
     setCnCurrentPage(1)
   }
@@ -1081,13 +1184,20 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       studentId: derivedStudentId,
       studentGrade: creditNoteForm.yearGroup,
       amount: creditNoteForm.amount,
-      remainingBalance: creditNoteForm.amount,
-      reason: creditNoteForm.reason === "Other" ? creditNoteForm.otherReason.trim() : creditNoteForm.reason,
+      amountIncludingVat: creditNoteForm.amountIncludingVat || 0,
+      remainingAmount: creditNoteForm.remainingAmount || 0,
+      remainingBalance: creditNoteForm.remainingAmount || creditNoteForm.amount,
+      description: creditNoteForm.reason,
+      reason: creditNoteForm.reason,
       issueDate: creditNoteForm.issueDate,
+      dueDate: creditNoteForm.dueDate || null,
       academicYear: creditNoteForm.academicYear,
       term: creditNoteForm.term,
       status: "issued",
-      familyCode: creditNoteForm.familyCode
+      familyCode: creditNoteForm.familyCode,
+      paid: creditNoteForm.paid || false,
+      cancelled: creditNoteForm.cancelled || false,
+      corrective: creditNoteForm.corrective || false
     }
 
     const updated = [newCreditNote, ...creditNotes]
@@ -2039,23 +2149,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
                 {/* Collapsible filter dropdowns */}
                 {showCreditNoteFilters && (<>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="h-9">
-                            <Filter className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder={t("receipt.allStatus")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">{t("receipt.allStatus")}</SelectItem>
-                            <SelectItem value="issued">{t("receipt.statusIssued")}</SelectItem>
-                            <SelectItem value="pending">{t("receipt.statusPending")}</SelectItem>
-                            <SelectItem value="cancelled">{t("receipt.statusCancelled")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                      {/* Year Group — matches column 3 */}
                       <div className="space-y-1.5">
                         <label className="text-sm font-medium text-muted-foreground">{t("common.yearGroup")}</label>
                         <Select value={gradeFilter} onValueChange={setGradeFilter}>
@@ -2072,41 +2167,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         </Select>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-muted-foreground">{t("common.term")}</label>
-                        <Select value={termFilter} onValueChange={setTermFilter}>
-                          <SelectTrigger className="h-9">
-                            <Filter className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder={t("common.allTerms")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">{t("common.allTerms")}</SelectItem>
-                            {termOptions.map(term => (
-                              <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-muted-foreground">{t("common.academicYear")}</label>
-                        <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
-                          <SelectTrigger className="h-9">
-                            <Filter className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder={t("common.allYears")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
-                            {academicYears && academicYears.length > 0 ? (
-                              academicYears.map(year => (
-                                <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
-                              ))
-                            ) : null}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
+                      {/* Posting Date — matches column 8 */}
                       <div className="space-y-1.5 min-w-0">
-                        <label className="text-sm font-medium text-muted-foreground">{t("invoice.issueDate")} ({t("date.from")} → {t("date.to")})</label>
+                        <label className="text-sm font-medium text-muted-foreground">Posting Date ({t("date.from")} → {t("date.to")})</label>
                         <div className="flex items-center gap-2 min-w-0">
                           <Popover>
                             <PopoverTrigger asChild>
@@ -2132,6 +2195,52 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                             </PopoverContent>
                           </Popover>
                         </div>
+                      </div>
+
+                      {/* Due Date — matches column 9 */}
+                      <div className="space-y-1.5 min-w-0">
+                        <label className="text-sm font-medium text-muted-foreground">Due Date ({t("date.from")} → {t("date.to")})</label>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
+                                <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
+                                <span className="truncate">{dueDateFrom ? format(dueDateFrom, "dd/MM/yy") : t("common.from")}</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={dueDateFrom || undefined} onSelect={(date) => setDueDateFrom(date ?? null)} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-muted-foreground shrink-0">→</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="flex-1 min-w-0 justify-start h-9 font-normal">
+                                <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
+                                <span className="truncate">{dueDateTo ? format(dueDateTo, "dd/MM/yy") : t("common.to")}</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={dueDateTo || undefined} onSelect={(date) => setDueDateTo(date ?? null)} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+
+                      {/* Status — matches column 10 */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="h-9">
+                            <Filter className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder={t("receipt.allStatus")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{t("receipt.allStatus")}</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="cancelled-flag">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="flex justify-end mt-4">
@@ -2213,62 +2322,45 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           }}
                         />
                       </TableHead>
-                      {/* Credit Note # - left aligned (ID/code) */}
+                      {/* Credit Note # */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("creditNoteNumber")}>
-                        <div className="flex items-center gap-1">
-                          {t("receipt.creditNoteNo")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="flex items-center gap-1">{t("receipt.creditNoteNo")}<ArrowUpDown className="h-4 w-4" /></div>
                       </TableHead>
-                      {/* Student - left aligned (text/name) */}
+                      {/* Student */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentName")}>
-                        <div className="flex items-center gap-1">
-                          {t("common.student")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="flex items-center gap-1">{t("common.student")}<ArrowUpDown className="h-4 w-4" /></div>
                       </TableHead>
-                      {/* Grade - center aligned (badge) */}
+                      {/* Grade */}
                       <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("studentGrade")}>
-                        <div className="flex items-center gap-1 justify-center">
-                          {t("common.yearGroup")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="flex items-center gap-1 justify-center">{t("common.yearGroup")}<ArrowUpDown className="h-4 w-4" /></div>
                       </TableHead>
-                      {/* Amount - right aligned (currency) */}
+                      {/* Amount */}
                       <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                        <div className="flex items-center gap-1 justify-end">
-                          {t("common.amount")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="flex items-center gap-1 justify-end">{t("common.amount")}<ArrowUpDown className="h-4 w-4" /></div>
                       </TableHead>
-                      {/* Remaining Balance - right aligned (currency) */}
+                      {/* Amount Inc VAT */}
                       <TableHead align="right">
-                        <div className="flex items-center gap-1 justify-end">
-                          {t("receipt.remainingBalance")}
-                        </div>
+                        <div className="flex items-center gap-1 justify-end">Amount Inc VAT</div>
                       </TableHead>
-                      {/* Reason - left aligned (text) */}
+                      {/* Remaining Amount */}
+                      <TableHead align="right">
+                        <div className="flex items-center gap-1 justify-end">Remaining</div>
+                      </TableHead>
+                      {/* Description */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("reason")}>
-                        <div className="flex items-center gap-1">
-                          {t("receipt.reason")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="flex items-center gap-1">Description<ArrowUpDown className="h-4 w-4" /></div>
                       </TableHead>
-                      {/* Issue Date - left aligned (date) */}
+                      {/* Posting Date */}
                       <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("issueDate")}>
-                        <div className="flex items-center gap-1">
-                          {t("receipt.issueDate")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="flex items-center gap-1">Posting Date<ArrowUpDown className="h-4 w-4" /></div>
                       </TableHead>
-                      {/* Status - center aligned (badge) */}
-                      <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                        <div className="flex items-center gap-1 justify-center">
-                          {t("common.status")}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
+                      {/* Due Date */}
+                      <TableHead align="left">
+                        <div className="flex items-center gap-1">Due Date</div>
                       </TableHead>
-                      {/* Actions - center aligned */}
+                      {/* Status */}
+                      <TableHead align="center">{t("common.status")}</TableHead>
+                      {/* Actions */}
                       <TableHead align="center">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2283,41 +2375,45 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                             onCheckedChange={() => toggleCreditNoteSelection(creditNote.id)}
                           />
                         </TableCell>
-                        {/* Credit Note # - left aligned */}
-                        <TableCell align="left" className="font-mono text-sm">
-                          {creditNote.creditNoteNumber}
-                        </TableCell>
-                        {/* Student - left aligned */}
+                        {/* Credit Note # */}
+                        <TableCell align="left" className="font-mono text-sm">{creditNote.creditNoteNumber}</TableCell>
+                        {/* Student */}
                         <TableCell align="left">
                           <div>
                             <div className="font-medium">{creditNote.studentName}</div>
-                            <div className="text-sm text-muted-foreground">{creditNote.familyCode || creditNote.studentId}</div>
+                            <div className="text-xs text-muted-foreground">{creditNote.studentId}{creditNote.familyCode ? ` · ${creditNote.familyCode}` : ""}</div>
                           </div>
                         </TableCell>
-                        {/* Grade - center aligned */}
+                        {/* Grade */}
                         <TableCell align="center">
-                          <Badge className="bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-100">
-                            {creditNote.studentGrade}
-                          </Badge>
+                          <Badge className="bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-100">{creditNote.studentGrade}</Badge>
                         </TableCell>
-                        {/* Amount - right aligned */}
+                        {/* Amount */}
                         <TableCell align="right">฿{creditNote.amount.toLocaleString()}</TableCell>
-                        {/* Remaining Balance - right aligned */}
+                        {/* Amount Inc VAT */}
+                        <TableCell align="right">{creditNote.amountIncludingVat ? `฿${creditNote.amountIncludingVat.toLocaleString()}` : "-"}</TableCell>
+                        {/* Remaining Amount */}
                         <TableCell align="right">
-                          {creditNote.status === "used"
-                            ? <span className="text-gray-400">฿0</span>
-                            : creditNote.remainingBalance !== undefined
-                              ? <span className={creditNote.remainingBalance < creditNote.amount ? "text-amber-700 font-medium" : ""}>฿{creditNote.remainingBalance.toLocaleString()}</span>
-                              : <span className="text-muted-foreground">฿{creditNote.amount.toLocaleString()}</span>
+                          {creditNote.remainingAmount !== undefined
+                            ? <span className={creditNote.remainingAmount === 0 ? "text-gray-400" : creditNote.remainingAmount < creditNote.amount ? "text-amber-700 font-medium" : ""}>฿{creditNote.remainingAmount.toLocaleString()}</span>
+                            : <span className="text-muted-foreground">-</span>
                           }
                         </TableCell>
-                        {/* Reason - left aligned */}
-                        <TableCell align="left" className="max-w-xs truncate">{creditNote.reason}</TableCell>
-                        {/* Issue Date - left aligned */}
-                        <TableCell align="left">{format(creditNote.issueDate, "dd MMM yyyy")}</TableCell>
-                        {/* Status - center aligned */}
-                        <TableCell align="center">{getStatusBadge(creditNote.status)}</TableCell>
-                        {/* Actions - center aligned */}
+                        {/* Description */}
+                        <TableCell align="left" className="max-w-[180px] truncate">{creditNote.description || creditNote.reason}</TableCell>
+                        {/* Posting Date */}
+                        <TableCell align="left" className="whitespace-nowrap">{format(creditNote.issueDate, "dd/MM/yyyy")}</TableCell>
+                        {/* Due Date */}
+                        <TableCell align="left" className="whitespace-nowrap">{creditNote.dueDate ? format(creditNote.dueDate, "dd/MM/yyyy") : "-"}</TableCell>
+                        {/* Flags */}
+                        <TableCell align="center">
+                          <div className="flex gap-1 justify-center">
+                            {creditNote.paid && <Badge className="text-[10px] px-1.5 py-0" style={{ backgroundColor: "#059669", color: "#fff" }}>Paid</Badge>}
+                            {creditNote.cancelled && <Badge className="text-[10px] px-1.5 py-0" style={{ backgroundColor: "#dc2626", color: "#fff" }}>Cancelled</Badge>}
+                            {!creditNote.paid && !creditNote.cancelled && <span className="text-muted-foreground text-xs">-</span>}
+                          </div>
+                        </TableCell>
+                        {/* Actions */}
                         <TableCell align="center">
                           <TooltipProvider>
                             <div className="flex gap-1 justify-center">
@@ -2402,61 +2498,59 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground mb-1">{t("common.status")}</p>
-                        {getStatusBadge(viewingCreditNote.status)}
+                        {viewingCreditNote.paid && <Badge className="px-3 py-1" style={{ backgroundColor: "#059669", color: "#fff" }}>Paid</Badge>}
+                        {viewingCreditNote.cancelled && <Badge className="px-3 py-1" style={{ backgroundColor: "#dc2626", color: "#fff" }}>Cancelled</Badge>}
+                        {!viewingCreditNote.paid && !viewingCreditNote.cancelled && <Badge variant="outline">-</Badge>}
                       </div>
                     </div>
 
                     {/* Amount highlight */}
-                    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-0.5">Credit Amount</p>
+                        <p className="text-sm text-muted-foreground mb-0.5">Amount</p>
                         <p className="text-2xl font-bold">฿{viewingCreditNote.amount.toLocaleString()}</p>
                       </div>
-                      {viewingCreditNote.remainingBalance !== undefined && viewingCreditNote.remainingBalance !== viewingCreditNote.amount && (
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground mb-0.5">Remaining Balance</p>
-                          <p className={`text-lg font-bold ${viewingCreditNote.remainingBalance > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                            ฿{viewingCreditNote.remainingBalance.toLocaleString()}
-                          </p>
-                        </div>
-                      )}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-0.5">Amount Inc VAT</p>
+                        <p className="text-lg font-bold">{viewingCreditNote.amountIncludingVat ? `฿${viewingCreditNote.amountIncludingVat.toLocaleString()}` : "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-0.5">Remaining</p>
+                        <p className={`text-lg font-bold ${viewingCreditNote.remainingAmount === 0 ? "text-gray-400" : "text-amber-600"}`}>
+                          {viewingCreditNote.remainingAmount !== undefined ? `฿${viewingCreditNote.remainingAmount.toLocaleString()}` : "-"}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Student + Issue info grid */}
                     <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.studentName")}</p>
-                        <p className="text-sm font-medium">{viewingCreditNote.studentName}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Student ID</p>
+                        <p className="text-sm font-medium font-mono">{viewingCreditNote.studentId}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.familyCode")}</p>
-                        <p className="text-sm font-medium">{viewingCreditNote.familyCode || viewingCreditNote.studentId}</p>
+                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.studentName")}</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.studentName}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">{t("common.yearGroup")}</p>
                         <p className="text-sm font-medium">{viewingCreditNote.studentGrade || "-"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t("common.academicYear")}</p>
-                        <p className="text-sm font-medium">{formatAcademicYear(viewingCreditNote.academicYear)}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Family Code</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.familyCode || "-"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.issueDate")}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Posting Date</p>
                         <p className="text-sm font-medium">{format(viewingCreditNote.issueDate, "dd MMM yyyy")}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t("common.term")}</p>
-                        <p className="text-sm font-medium">{(viewingCreditNote.term?.match(/Term\s*\d+/i) || [])[0] || viewingCreditNote.term || "-"}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Due Date</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.dueDate ? format(viewingCreditNote.dueDate, "dd MMM yyyy") : "-"}</p>
                       </div>
-                      {viewingCreditNote.invoiceNumber && (
-                        <div className="col-span-2">
-                          <p className="text-sm text-muted-foreground mb-1">{t("receipt.invoiceNumber")}</p>
-                          <p className="text-sm font-medium font-mono">{viewingCreditNote.invoiceNumber}</p>
-                        </div>
-                      )}
                       <div className="col-span-2">
-                        <p className="text-sm text-muted-foreground mb-1">{t("receipt.reason")}</p>
-                        <p className="text-sm font-medium">{viewingCreditNote.reason}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Description</p>
+                        <p className="text-sm font-medium">{viewingCreditNote.description || viewingCreditNote.reason}</p>
                       </div>
                     </div>
 
@@ -2524,30 +2618,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     {/* Actions */}
                     <div className="flex gap-3 pt-4 pb-6 border-t">
                       <Button
-                        onClick={() => {
-                          downloadCreditNote(viewingCreditNote.id)
-                          setIsViewDialogOpen(false)
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        {t("receipt.downloadPDF")}
-                      </Button>
-                      {viewingCreditNote.status === "pending" && (
-                        <Button
-                          variant="destructive"
-                          onClick={() => {
-                            cancelCreditNote(viewingCreditNote.id)
-                            setIsViewDialogOpen(false)
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          <X className="w-4 h-4" />
-                          {t("receipt.cancelCreditNote")}
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => setIsViewDialogOpen(false)}
                       >
                         {t("common.close")}
@@ -2576,94 +2647,130 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       {/* Create Credit Note Dialog - Hidden for ECA, Trip, Exam, Bus */}
       {
         !hideCreditNotes && <Dialog open={isCreateCreditNoteOpen} onOpenChange={setIsCreateCreditNoteOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="px-6 pt-6">
               <DialogTitle>{t("receipt.createCreditNote")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 px-6 py-4">
+              {/* Row 1: Credit Note Number | Student ID */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("receipt.creditNoteNumber")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.creditNoteNumber")}</Label>
                   <Input
                     placeholder="CN-2025-000001"
                     value={creditNoteForm.creditNoteNumber}
                     onChange={(e) => setCreditNoteForm({ ...creditNoteForm, creditNoteNumber: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t("receipt.invoiceNumber")}</Label>
-                  <Input
-                    placeholder="20250000001"
-                    value={creditNoteForm.invoiceNumber}
-                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, invoiceNumber: e.target.value })}
-                  />
+                <div className="space-y-2 relative">
+                  <Label>Student ID</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search student ID..."
+                      value={cnStudentSearch}
+                      onChange={(e) => {
+                        setCnStudentSearch(e.target.value)
+                        setCnStudentDropdownOpen(true)
+                      }}
+                      onFocus={() => setCnStudentDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setCnStudentDropdownOpen(false), 200)}
+                      className="pl-9"
+                    />
+                  </div>
+                  {cnStudentDropdownOpen && cnStudentSearch.length >= 1 && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {allStudents
+                        .filter(s => {
+                          const fullName = `${s.firstName} ${s.lastName}`.trim()
+                          return (
+                            s.studentId?.toLowerCase().includes(cnStudentSearch.toLowerCase()) ||
+                            s.id?.toLowerCase().includes(cnStudentSearch.toLowerCase()) ||
+                            fullName.toLowerCase().includes(cnStudentSearch.toLowerCase())
+                          )
+                        })
+                        .slice(0, 8)
+                        .map(student => {
+                          const fullName = `${student.firstName} ${student.lastName}`.trim()
+                          const sid = student.studentId || student.id
+                          return (
+                            <div
+                              key={student.id}
+                              className="flex items-center justify-between px-3 py-2 hover:bg-muted cursor-pointer"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                const familyCode = (student as any).familyCode || ""
+                                const rawGrade = student.gradeLevel || ""
+                                const formattedGrade = rawGrade
+                                  .replace(/^(year)(\d+)$/i, (_, prefix, num) => `Year ${num}`)
+                                  .replace(/^(pre-nursery|nursery|reception)$/i, (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
+                                setCreditNoteForm(prev => ({
+                                  ...prev,
+                                  studentId: sid,
+                                  studentName: fullName,
+                                  yearGroup: formattedGrade,
+                                  familyCode: familyCode || prev.familyCode,
+                                }))
+                                setCnStudentSearch(sid)
+                                setCnStudentDropdownOpen(false)
+                              }}
+                            >
+                              <div>
+                                <div className="font-medium text-sm">{fullName}</div>
+                                <div className="text-xs text-muted-foreground">{sid} · {student.gradeLevel.replace(/^(year)(\d+)$/i, (_, p: string, n: string) => `Year ${n}`).replace(/^(pre-nursery|nursery|reception)$/i, (m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())}</div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      {allStudents.filter(s => {
+                        const fullName = `${s.firstName} ${s.lastName}`.trim()
+                        return (
+                          s.studentId?.toLowerCase().includes(cnStudentSearch.toLowerCase()) ||
+                          s.id?.toLowerCase().includes(cnStudentSearch.toLowerCase()) ||
+                          fullName.toLowerCase().includes(cnStudentSearch.toLowerCase())
+                        )
+                      }).length === 0 && (
+                        <div className="px-3 py-4 text-sm text-center text-muted-foreground">No students found</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Row 2: Student Name | Year Group | Family Code */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("receipt.familyCode")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.studentName")}</Label>
                   <Input
-                    placeholder="FAM001"
+                    value={creditNoteForm.studentName}
+                    readOnly
+                    className="bg-muted/50"
+                    placeholder="Auto-filled"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("common.yearGroup")}</Label>
+                  <Input
+                    value={creditNoteForm.yearGroup}
+                    readOnly
+                    className="bg-muted/50"
+                    placeholder="Auto-filled"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Family Code</Label>
+                  <Input
+                    placeholder="e.g. 006471"
                     value={creditNoteForm.familyCode}
                     onChange={(e) => setCreditNoteForm({ ...creditNoteForm, familyCode: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t("receipt.studentName")} <span className="text-red-500">*</span></Label>
-                  <Input
-                    placeholder={t("receipt.enterStudentName")}
-                    value={creditNoteForm.studentName}
-                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, studentName: e.target.value })}
-                  />
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Row 3: Amount | Amount Including VAT | Remaining Amount */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>{t("common.yearGroup")}</Label>
-                  <Select value={creditNoteForm.yearGroup} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, yearGroup: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("receipt.selectYearGroup")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["Pre-Nursery", "Nursery", "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"].map(grade => (
-                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("common.academicYear")}</Label>
-                  <Select value={creditNoteForm.academicYear} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, academicYear: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("receipt.selectAcademicYear")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {academicYears.map(year => (
-                        <SelectItem key={year.id} value={year.name}>{formatAcademicYear(year.name)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t("common.term")}</Label>
-                  <Select value={creditNoteForm.term} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, term: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("receipt.selectTerm")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Term 1">Term 1</SelectItem>
-                      <SelectItem value="Term 2">Term 2</SelectItem>
-                      <SelectItem value="Term 3">Term 3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("receipt.amountTHB")} <span className="text-red-500">*</span></Label>
+                  <Label>{t("receipt.amountTHB")}</Label>
                   <Input
                     type="number"
                     placeholder="0.00"
@@ -2671,49 +2778,100 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     onChange={(e) => setCreditNoteForm({ ...creditNoteForm, amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t("receipt.reason")} <span className="text-red-500">*</span></Label>
-                <Select value={creditNoteForm.reason} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, reason: value, otherReason: value !== "Other" ? "" : creditNoteForm.otherReason })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("receipt.selectReason")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Course cancellation">{t("receipt.reasonCourseCancellation")}</SelectItem>
-                    <SelectItem value="Overpayment refund">{t("receipt.reasonOverpaymentRefund")}</SelectItem>
-                    <SelectItem value="Activity cancellation">{t("receipt.reasonActivityCancellation")}</SelectItem>
-                    <SelectItem value="Withdrawal">{t("receipt.reasonWithdrawal")}</SelectItem>
-                    <SelectItem value="Other">{t("receipt.reasonOther")}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {creditNoteForm.reason === "Other" && (
+                <div className="space-y-2">
+                  <Label>Amount Including VAT</Label>
                   <Input
-                    placeholder={t("receipt.specifyReason") || "Please specify reason..."}
-                    value={creditNoteForm.otherReason}
-                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, otherReason: e.target.value })}
-                    className="mt-2"
+                    type="number"
+                    placeholder="0.00"
+                    value={creditNoteForm.amountIncludingVat || ""}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, amountIncludingVat: parseFloat(e.target.value) || 0 })}
                   />
-                )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Remaining Amount</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={creditNoteForm.remainingAmount || ""}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, remainingAmount: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
               </div>
 
+              {/* Row 4: Description (full width) */}
               <div className="space-y-2">
-                <Label>{t("receipt.issueDate")} <span className="text-red-500">*</span></Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {creditNoteForm.issueDate ? format(creditNoteForm.issueDate, "dd/MM/yyyy") : t("receipt.selectDate")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={creditNoteForm.issueDate}
-                      onSelect={(date) => date && setCreditNoteForm({ ...creditNoteForm, issueDate: date })}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label>Description</Label>
+                <Input
+                  placeholder="e.g. Credit note for ECA"
+                  value={creditNoteForm.reason}
+                  onChange={(e) => setCreditNoteForm({ ...creditNoteForm, reason: e.target.value })}
+                />
+              </div>
+
+              {/* Row 5: Posting Date | Due Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Posting Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {creditNoteForm.issueDate ? format(creditNoteForm.issueDate, "dd/MM/yyyy") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={creditNoteForm.issueDate}
+                        onSelect={(date) => date && setCreditNoteForm({ ...creditNoteForm, issueDate: date })}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label>Due Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start", !creditNoteForm.dueDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {creditNoteForm.dueDate ? format(creditNoteForm.dueDate, "dd/MM/yyyy") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={creditNoteForm.dueDate || undefined}
+                        onSelect={(date) => setCreditNoteForm({ ...creditNoteForm, dueDate: date || null })}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Row 6: Status (mutually exclusive) */}
+              <div className="flex gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => setCreditNoteForm(prev => ({ ...prev, paid: !prev.paid, cancelled: false }))}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
+                  style={creditNoteForm.paid
+                    ? { backgroundColor: "#059669", borderColor: "#059669", color: "#fff" }
+                    : { backgroundColor: "#ecfdf5", borderColor: "#6ee7b7", color: "#047857" }
+                  }
+                >
+                  Paid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreditNoteForm(prev => ({ ...prev, cancelled: !prev.cancelled, paid: false }))}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
+                  style={creditNoteForm.cancelled
+                    ? { backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#fff" }
+                    : { backgroundColor: "#fef2f2", borderColor: "#fca5a5", color: "#b91c1c" }
+                  }
+                >
+                  Cancelled
+                </button>
               </div>
             </div>
 

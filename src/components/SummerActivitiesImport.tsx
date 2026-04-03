@@ -208,6 +208,18 @@ export function SummerActivitiesImport() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Excel Template */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                    <div>
+                      <p className="font-medium">Excel Template</p>
+                      <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                    </div>
+                    <Button variant="outline" onClick={() => downloadTemplate(importType === "activities" ? "Activities Template" : importType === "schedules" ? "Schedule Template" : "Instructor Template")}>
+                      <Download className="w-4 h-4 mr-2" />
+                      {t("summer.downloadTemplate") || "Download Template"}
+                    </Button>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="import-type">{t("summer.importType")} <span className="text-destructive">*</span></Label>
                     <Select value={importType} onValueChange={setImportType}>
@@ -222,6 +234,7 @@ export function SummerActivitiesImport() {
                     </Select>
                   </div>
 
+                  {/* Upload File */}
                   <div className="space-y-2">
                     <Label htmlFor="file-upload">{t("summer.selectFile")} <span className="text-destructive">*</span></Label>
                     <Input
@@ -302,29 +315,6 @@ export function SummerActivitiesImport() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileSpreadsheet className="w-5 h-5" />
-                    {t("summer.quickTemplates")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {importTemplates.map((template, index) => (
-                    <div key={index}>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => downloadTemplate(template.name)}
-                        className="w-full justify-start"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {template.name}
-                      </Button>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardHeader>
                   <CardTitle>{t("summer.importStatistics")}</CardTitle>

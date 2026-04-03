@@ -4,6 +4,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
@@ -36,17 +37,25 @@ interface CreditNote {
   studentId: string
   studentGrade: string
   parentName: string
+  familyCode: string
   originalAmount: number
   creditAmount: number
+  amountIncludingVat: number
+  remainingAmount: number
   reason: string
+  description: string
   type: "refund" | "adjustment" | "cancellation" | "discount" | "overpayment"
   status: "draft" | "issued" | "applied" | "cancelled"
   issueDate: Date
   dueDate?: Date
+  postingDate?: Date
   appliedDate?: Date
   issuedBy: string
   approvedBy?: string
   notes: string
+  paid: boolean
+  cancelled: boolean
+  corrective: boolean
 }
 
 // localStorage keys
@@ -62,8 +71,16 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
       const loaded = parsed.map((cn: any) => ({
         ...cn,
         noteType: cn.noteType || (cn.creditNoteNumber?.startsWith("OP-") ? "OP" : "CN"),
+        familyCode: cn.familyCode || "",
+        amountIncludingVat: cn.amountIncludingVat || cn.creditAmount || 0,
+        remainingAmount: cn.remainingAmount || 0,
+        description: cn.description || cn.reason || "",
+        paid: cn.paid || false,
+        cancelled: cn.cancelled || false,
+        corrective: cn.corrective || false,
         issueDate: new Date(cn.issueDate),
         dueDate: cn.dueDate ? new Date(cn.dueDate) : undefined,
+        postingDate: cn.postingDate ? new Date(cn.postingDate) : undefined,
         appliedDate: cn.appliedDate ? new Date(cn.appliedDate) : undefined
       }))
       if (loaded.length > 0) return loaded
@@ -133,6 +150,7 @@ export function CreditNoteManagement() {
   const [activeTab, setActiveTab] = usePersistedState<"receipts" | "credit-notes">("credit-note:activeTab", "receipts")
 
   // Import states
+  const [isImportUploadOpen, setIsImportUploadOpen] = useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [importPreview, setImportPreview] = useState<CreditNote[]>([])
   const [importErrors, setImportErrors] = useState<string[]>([])
@@ -203,18 +221,20 @@ export function CreditNoteManagement() {
 
   // Create new credit note form state
   const [newCreditNote, setNewCreditNote] = useState({
-    selectedInvoiceId: "",
     noteType: "CN" as "CN" | "OP",
-    invoiceNumber: "",
-    studentName: "",
     studentId: "",
+    studentName: "",
     studentGrade: "",
-    parentName: "",
-    originalAmount: 0,
-    creditAmount: "",
-    reason: "",
-    type: "refund" as CreditNote["type"],
-    notes: ""
+    familyCode: "",
+    postingDate: null as Date | null,
+    dueDate: null as Date | null,
+    amount: "",
+    amountIncludingVat: "",
+    remainingAmount: "",
+    description: "",
+    paid: false,
+    cancelled: false,
+    corrective: false,
   })
 
   // Get parent name from student context
@@ -224,25 +244,7 @@ export function CreditNoteManagement() {
       const primaryParent = student.parents.find(p => p.isPrimary) || student.parents[0]
       return primaryParent.name
     }
-    return "Parent"
-  }
-
-  // Handle invoice selection
-  const handleInvoiceSelect = (invoiceId: string) => {
-    const invoice = invoices.find((inv: any) => inv.id === invoiceId)
-    if (invoice) {
-      const parentName = getParentName(invoice.studentId)
-      setNewCreditNote({
-        ...newCreditNote,
-        selectedInvoiceId: invoiceId,
-        invoiceNumber: invoice.invoiceNumber,
-        studentName: invoice.studentName,
-        studentId: invoice.studentId,
-        studentGrade: invoice.studentGrade,
-        parentName: parentName,
-        originalAmount: invoice.netAmount || invoice.subtotal || 0
-      })
-    }
+    return ""
   }
 
   const applyFilters = () => {
@@ -307,22 +309,22 @@ export function CreditNoteManagement() {
   }
 
   const openCreateModal = () => {
-    // Reload invoices when opening modal
-    setInvoices(loadInvoicesFromStorage())
     setIsCreateModalOpen(true)
     setNewCreditNote({
-      selectedInvoiceId: "",
       noteType: "CN",
-      invoiceNumber: "",
-      studentName: "",
       studentId: "",
+      studentName: "",
       studentGrade: "",
-      parentName: "",
-      originalAmount: 0,
-      creditAmount: "",
-      reason: "",
-      type: "refund",
-      notes: ""
+      familyCode: "",
+      postingDate: null,
+      dueDate: null,
+      amount: "",
+      amountIncludingVat: "",
+      remainingAmount: "",
+      description: "",
+      paid: false,
+      cancelled: false,
+      corrective: false,
     })
   }
 
@@ -331,47 +333,55 @@ export function CreditNoteManagement() {
   }
 
   const performCreateCreditNote = () => {
-    if (!newCreditNote.selectedInvoiceId || !newCreditNote.creditAmount || !newCreditNote.reason) {
-      toast.error(t("creditNote.selectInvoiceAndFill"))
+    if (!newCreditNote.studentId || !newCreditNote.studentName || !newCreditNote.amount || !newCreditNote.description) {
+      toast.error(t("creditNote.fillRequiredFields") || "Please fill in all required fields")
       return
     }
 
-    const creditAmount = parseFloat(newCreditNote.creditAmount)
-    if (isNaN(creditAmount) || creditAmount <= 0) {
+    const amount = parseFloat(newCreditNote.amount)
+    if (isNaN(amount) || amount <= 0) {
       toast.error(t("creditNote.enterValidAmount"))
       return
     }
 
-    if (creditAmount > newCreditNote.originalAmount) {
-      toast.error(t("creditNote.cannotExceed"))
-      return
-    }
+    const amountIncVat = newCreditNote.amountIncludingVat ? parseFloat(newCreditNote.amountIncludingVat) : amount
+    const remainingAmt = newCreditNote.remainingAmount ? parseFloat(newCreditNote.remainingAmount) : 0
 
     const noteType = newCreditNote.noteType
+    const parentName = getParentName(newCreditNote.studentId)
     const newNote: CreditNote = {
       id: Date.now().toString(),
       creditNoteNumber: generateCreditNoteNumber(creditNotes, noteType),
       noteType: noteType,
-      invoiceNumber: newCreditNote.invoiceNumber,
+      invoiceNumber: "",
       studentName: newCreditNote.studentName,
       studentId: newCreditNote.studentId,
       studentGrade: newCreditNote.studentGrade,
-      parentName: newCreditNote.parentName,
-      originalAmount: newCreditNote.originalAmount,
-      creditAmount: creditAmount,
-      reason: newCreditNote.reason,
-      type: noteType === "OP" ? "overpayment" : newCreditNote.type,
+      parentName: parentName,
+      familyCode: newCreditNote.familyCode,
+      originalAmount: amount,
+      creditAmount: amount,
+      amountIncludingVat: amountIncVat,
+      remainingAmount: remainingAmt,
+      reason: newCreditNote.description,
+      description: newCreditNote.description,
+      type: noteType === "OP" ? "overpayment" : "refund",
       status: "issued",
       issueDate: new Date(),
+      postingDate: newCreditNote.postingDate || new Date(),
+      dueDate: newCreditNote.dueDate || undefined,
       issuedBy: "Finance Team",
-      notes: newCreditNote.notes
+      notes: "",
+      paid: newCreditNote.paid,
+      cancelled: newCreditNote.cancelled,
+      corrective: newCreditNote.corrective,
     }
 
     const updated = [newNote, ...creditNotes]
     setCreditNotes(updated)
     saveCreditNotesToStorage(updated)
     toast.success(t("creditNote.createdSuccess").replace("{number}", newNote.creditNoteNumber))
-    logActivity({ action: "Create Credit Note", module: "Credit Notes", detail: `Created ${newNote.noteType} ${newNote.creditNoteNumber} for ${newNote.studentName} — amount: ${creditAmount.toLocaleString()}` })
+    logActivity({ action: "Create Credit Note", module: "Credit Notes", detail: `Created ${newNote.noteType} ${newNote.creditNoteNumber} for ${newNote.studentName} — amount: ${amount.toLocaleString()}` })
     closeCreateModal()
   }
 
@@ -547,6 +557,36 @@ export function CreditNoteManagement() {
       .replace(/^RECEPTION$/i, "Reception")
   }
 
+  const downloadCreditNoteTemplate = () => {
+    const templateData = [
+      {
+        "No.": "CN2025-00001",
+        "Sell-to Customer No.": "100789",
+        "Customer Name": "John Smith",
+        "Year Group Code": "YEAR 12",
+        "Posting Date": "01/04/2025",
+        "Due Date": "01/04/2025",
+        "Amount": 3200,
+        "Amount Including VAT": 3200,
+        "Remaining Amount": -3200,
+        "Paid": false,
+        "Currency Code": "",
+        "Bill-to Customer No.": "006471",
+        "Cancelled": false,
+        "Corrective": false,
+        "Location Code": "",
+        "No. Printed": "",
+        "Description": "Credit note for ECA"
+      }
+    ]
+    const ws = XLSX.utils.json_to_sheet(templateData)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Credit Notes")
+    XLSX.writeFile(wb, "CreditNote_Template.xlsx")
+    toast.success(t("creditNote.templateDownloaded") || "Template downloaded")
+    logActivity({ action: "Download Template", module: "Credit Notes", detail: "Downloaded credit note import template" })
+  }
+
   const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -589,6 +629,8 @@ export function CreditNoteManagement() {
           const postingDate = row["Posting Date"]
           const dueDateRaw = row["Due Date"]
           const amount = parseFloat(String(row["Amount"] || "0").replace(/,/g, ""))
+          const amountIncVat = parseFloat(String(row["Amount Including VAT"] || "0").replace(/,/g, "")) || amount
+          const remainingAmt = parseFloat(String(row["Remaining Amount"] || "0").replace(/,/g, ""))
           const cancelled = row["Cancelled"]
           const description = String(row["Description"] || "").trim()
           const familyCode = String(row["Bill-to Customer No."] || "").trim()
@@ -612,20 +654,29 @@ export function CreditNoteManagement() {
           preview.push({
             id: `import-${Date.now()}-${index}`,
             creditNoteNumber,
+            noteType: creditNoteNumber.startsWith("OP") ? "OP" : "CN",
             invoiceNumber: "",
             studentName,
             studentId,
             studentGrade: normalizeYearGroup(yearGroup),
-            parentName: familyCode,
+            parentName: "",
+            familyCode,
             originalAmount: amount,
             creditAmount: amount,
+            amountIncludingVat: amountIncVat,
+            remainingAmount: remainingAmt,
             reason: description || "Imported Credit Note",
+            description: description || "Imported Credit Note",
             type: parseTypeFromDescription(description),
             status,
             issueDate: parseImportDate(postingDate),
+            postingDate: parseImportDate(postingDate),
             dueDate: dueDateRaw ? parseImportDate(dueDateRaw) : undefined,
             issuedBy: user?.name || "Import",
             notes: `Imported from ${file.name}`,
+            paid: false,
+            cancelled: cancelled === "TRUE" || cancelled === true,
+            corrective: false,
           })
         })
 
@@ -699,18 +750,11 @@ export function CreditNoteManagement() {
             </TabsList>
 
             <div className="flex items-center gap-2">
-              <input
-                ref={importFileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={handleImportFile}
-              />
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
                 disabled={!userCanEdit}
-                onClick={() => importFileInputRef.current?.click()}
+                onClick={() => setIsImportUploadOpen(true)}
               >
                 <Upload className="w-4 h-4" />
                 {t("creditNote.import")}
@@ -1283,7 +1327,7 @@ export function CreditNoteManagement() {
 
       {/* Create Credit Note Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl p-6">
+        <DialogContent className="max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
@@ -1295,156 +1339,168 @@ export function CreditNoteManagement() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Note Type Selection (CN / OP) */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("creditNote.noteTypeLabel") || "Note Type"} <span className="text-destructive">*</span></label>
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant={newCreditNote.noteType === "CN" ? "default" : "outline"}
-                  className={`flex-1 h-12 ${newCreditNote.noteType === "CN" ? "" : ""}`}
-                  onClick={() => setNewCreditNote({ ...newCreditNote, noteType: "CN", type: "refund" })}
-                >
-                  <div className="text-center">
-                    <div className="font-semibold">CN - Credit Note</div>
-                    <div className="text-xs opacity-80">{t("creditNote.cnDesc") || "Refund, adjustment, cancellation"}</div>
-                  </div>
-                </Button>
-                <Button
-                  type="button"
-                  variant={newCreditNote.noteType === "OP" ? "default" : "outline"}
-                  className={`flex-1 h-12 ${newCreditNote.noteType === "OP" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
-                  onClick={() => setNewCreditNote({ ...newCreditNote, noteType: "OP", type: "overpayment" })}
-                >
-                  <div className="text-center">
-                    <div className="font-semibold">OP - Overpayment</div>
-                    <div className="text-xs opacity-80">{t("creditNote.opDesc") || "Parent paid more than required"}</div>
-                  </div>
-                </Button>
-              </div>
+            {/* Note Type - CN only (OP is auto-generated from overpayment) */}
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <Badge>CN</Badge>
+              <span className="text-sm font-medium">Credit Note</span>
+              <span className="text-xs text-muted-foreground ml-auto">OP (Overpayment) จะถูกสร้างอัตโนมัติจากการชำระเกิน</span>
             </div>
 
-            {/* Invoice Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("creditNote.selectInvoiceLabel")} <span className="text-destructive">*</span></label>
-              <Select
-                value={newCreditNote.selectedInvoiceId}
-                onValueChange={handleInvoiceSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("creditNote.selectAnInvoice")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {invoices.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      {t("creditNote.noInvoicesFound")}
-                    </div>
-                  ) : (
-                    invoices.map((invoice: any) => (
-                      <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoiceNumber} - {invoice.studentName} - ฿{(invoice.netAmount || invoice.subtotal || 0).toLocaleString()}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Auto-populated Student Info */}
-            {newCreditNote.selectedInvoiceId && (
-              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                <h4 className="font-medium text-sm">{t("creditNote.invoiceDetailsLabel")}</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">{t("creditNote.invoiceLabel")}</span>
-                    <span className="ml-2 font-medium">{newCreditNote.invoiceNumber}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t("creditNote.studentLabel")}</span>
-                    <span className="ml-2 font-medium">{newCreditNote.studentName}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t("creditNote.studentIdLabel")}</span>
-                    <span className="ml-2 font-medium">{newCreditNote.studentId}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t("creditNote.gradeLabel")}</span>
-                    <span className="ml-2 font-medium">{newCreditNote.studentGrade}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t("creditNote.parentLabel")}</span>
-                    <span className="ml-2 font-medium">{newCreditNote.parentName}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t("creditNote.originalAmountLabel")}</span>
-                    <span className="ml-2 font-medium text-blue-600">฿{newCreditNote.originalAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Student ID & Customer Name */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("creditNote.creditAmountLabel")} <span className="text-destructive">*</span></label>
+                <label className="text-sm font-medium">Sell-to Customer No. (Student ID) <span className="text-destructive">*</span></label>
+                <Input
+                  placeholder="e.g. 100789"
+                  value={newCreditNote.studentId}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, studentId: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Customer Name <span className="text-destructive">*</span></label>
+                <Input
+                  placeholder="e.g. ABC DEF"
+                  value={newCreditNote.studentName}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, studentName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Year Group & Family Code */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Year Group Code</label>
+                <Input
+                  placeholder="e.g. YEAR 12"
+                  value={newCreditNote.studentGrade}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, studentGrade: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Bill-to Customer No. (Family Code)</label>
+                <Input
+                  placeholder="e.g. 006471"
+                  value={newCreditNote.familyCode}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, familyCode: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Posting Date & Due Date */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Posting Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newCreditNote.postingDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newCreditNote.postingDate ? format(newCreditNote.postingDate, "dd/MM/yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newCreditNote.postingDate || undefined}
+                      onSelect={(date) => setNewCreditNote({ ...newCreditNote, postingDate: date || null })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Due Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newCreditNote.dueDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newCreditNote.dueDate ? format(newCreditNote.dueDate, "dd/MM/yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newCreditNote.dueDate || undefined}
+                      onSelect={(date) => setNewCreditNote({ ...newCreditNote, dueDate: date || null })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Amount & Amount Including VAT */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Amount <span className="text-destructive">*</span></label>
                 <Input
                   type="number"
                   placeholder="0.00"
-                  value={newCreditNote.creditAmount}
-                  onChange={(e) => setNewCreditNote({ ...newCreditNote, creditAmount: e.target.value })}
-                  max={newCreditNote.originalAmount}
+                  value={newCreditNote.amount}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, amount: e.target.value })}
                 />
-                {newCreditNote.originalAmount > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {t("creditNote.maxLabel")} ฿{newCreditNote.originalAmount.toLocaleString()}
-                  </p>
-                )}
               </div>
-
-              {newCreditNote.noteType === "CN" ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("creditNote.creditTypeLabel")}</label>
-                  <Select
-                    value={newCreditNote.type}
-                    onValueChange={(value: CreditNote["type"]) => setNewCreditNote({ ...newCreditNote, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="refund">{t("creditNote.refund")}</SelectItem>
-                      <SelectItem value="adjustment">{t("creditNote.adjustment")}</SelectItem>
-                      <SelectItem value="cancellation">{t("creditNote.cancellation")}</SelectItem>
-                      <SelectItem value="discount">{t("creditNote.discount")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("creditNote.creditTypeLabel")}</label>
-                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted/50">
-                    <Badge className="bg-amber-100 text-amber-800">{t("creditNote.overpayment") || "Overpayment"}</Badge>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Amount Including VAT</label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={newCreditNote.amountIncludingVat}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, amountIncludingVat: e.target.value })}
+                />
+              </div>
             </div>
 
+            {/* Remaining Amount */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("creditNote.reasonLabel")} <span className="text-destructive">*</span></label>
+              <label className="text-sm font-medium">Remaining Amount</label>
               <Input
-                placeholder={t("creditNote.enterReason")}
-                value={newCreditNote.reason}
-                onChange={(e) => setNewCreditNote({ ...newCreditNote, reason: e.target.value })}
+                type="number"
+                placeholder="0.00 (negative = credit balance)"
+                value={newCreditNote.remainingAmount}
+                onChange={(e) => setNewCreditNote({ ...newCreditNote, remainingAmount: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">Negative value indicates remaining credit balance</p>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description <span className="text-destructive">*</span></label>
+              <Input
+                placeholder="e.g. Credit note for ECA"
+                value={newCreditNote.description}
+                onChange={(e) => setNewCreditNote({ ...newCreditNote, description: e.target.value })}
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("creditNote.additionalNotes")}</label>
-              <Textarea
-                placeholder={t("creditNote.enterAdditionalNotes")}
-                value={newCreditNote.notes}
-                onChange={(e) => setNewCreditNote({ ...newCreditNote, notes: e.target.value })}
-                className="min-h-20"
-              />
+            {/* Checkboxes: Paid / Cancelled / Corrective */}
+            <div className="flex gap-6 items-center pt-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newCreditNote.paid}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, paid: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Paid
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newCreditNote.cancelled}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, cancelled: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Cancelled
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newCreditNote.corrective}
+                  onChange={(e) => setNewCreditNote({ ...newCreditNote, corrective: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Corrective
+              </label>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -1549,6 +1605,50 @@ export function CreditNoteManagement() {
               <Button variant="outline" onClick={() => setIsCreateReceiptModalOpen(false)}>
                 {t("common.cancel")}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Upload Dialog */}
+      <Dialog open={isImportUploadOpen} onOpenChange={setIsImportUploadOpen}>
+        <DialogContent className="max-w-lg p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              {t("creditNote.import") || "Import Credit Notes"}
+            </DialogTitle>
+            <DialogDescription>
+              {t("creditNote.importDesc") || "Upload an Excel file to import credit notes"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Excel Template */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Excel Template</p>
+                <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+              </div>
+              <Button variant="outline" onClick={downloadCreditNoteTemplate}>
+                <Download className="w-4 h-4 mr-2" />
+                Download Template
+              </Button>
+            </div>
+
+            {/* Upload File */}
+            <div className="space-y-2">
+              <Label htmlFor="cn-import-file">Upload File <span className="text-destructive">*</span></Label>
+              <Input
+                id="cn-import-file"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => {
+                  setIsImportUploadOpen(false)
+                  handleImportFile(e)
+                }}
+                className="cursor-pointer"
+                disabled={!userCanEdit}
+              />
             </div>
           </div>
         </DialogContent>

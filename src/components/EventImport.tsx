@@ -111,6 +111,19 @@ export function EventImport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Excel Template */}
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                <div>
+                  <p className="font-medium">Excel Template</p>
+                  <p className="text-sm text-muted-foreground">{t("event.downloadTemplateDescription") || "Download the template with correct column headers"}</p>
+                </div>
+                <Button variant="outline" onClick={downloadTemplate}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {t("event.downloadTemplate")}
+                </Button>
+              </div>
+
+              {/* Upload File */}
               <div className="space-y-2">
                 <Label htmlFor="file-upload">{t("event.selectFile")} <span className="text-destructive">*</span></Label>
                 <Input
@@ -221,24 +234,6 @@ export function EventImport() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5" />
-                {t("event.downloadTemplate")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {t("event.downloadTemplateDescription")}
-              </p>
-              <Button variant="outline" onClick={downloadTemplate} className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                {t("event.downloadTemplate")}
-              </Button>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>{t("event.importGuidelines")}</CardTitle>

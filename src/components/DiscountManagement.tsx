@@ -1302,37 +1302,29 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                       <TabsContent value="csv-upload" className="space-y-4">
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <Label>{t("discount.uploadStudentCSV")} <span className="text-destructive">*</span></Label>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={downloadStudentTemplate}
-                            >
+                          {/* Excel Template */}
+                          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                            <div>
+                              <p className="font-medium">Excel Template</p>
+                              <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                            </div>
+                            <Button variant="outline" onClick={downloadStudentTemplate}>
                               <Download className="w-4 h-4 mr-2" />
                               {t("discount.downloadTemplate")}
                             </Button>
                           </div>
 
-                          <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
-                            <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {t("discount.uploadCSVHint")}
-                            </p>
-                            <input
+                          {/* Upload File */}
+                          <div className="space-y-2">
+                            <Label htmlFor="csv-file-upload">{t("discount.uploadStudentCSV")} <span className="text-destructive">*</span></Label>
+                            <Input
+                              id="csv-file-upload"
                               type="file"
                               accept=".xlsx,.xls,.csv"
                               onChange={handleFileUpload}
-                              className="hidden"
-                              id="csv-file-upload"
+                              className="cursor-pointer"
                               disabled={isProcessingFile || !userCanEdit}
                             />
-                            <Button asChild variant="outline" disabled={isProcessingFile || !userCanEdit}>
-                              <label htmlFor="csv-file-upload" className="cursor-pointer">
-                                {isProcessingFile ? t("discount.processingFile") : t("discount.chooseCSVFile")}
-                              </label>
-                            </Button>
                           </div>
 
                           {uploadedFile && (
@@ -1784,60 +1776,29 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                     <TabsContent value="csv-upload" className="space-y-3">
                       <div className="space-y-4">
+                        {/* Excel Template */}
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                          <div>
+                            <p className="font-medium">Excel Template</p>
+                            <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                          </div>
+                          <Button variant="outline" onClick={downloadStudentTemplate}>
+                            <Download className="w-4 h-4 mr-2" />
+                            {t("discount.downloadTemplate")}
+                          </Button>
+                        </div>
+
+                        {/* Upload File */}
                         <div className="space-y-2">
                           <Label htmlFor="edit-csv-file">{t("discount.uploadStudentCSV")} <span className="text-destructive">*</span></Label>
-                          <div
-                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary/50 transition-colors"
-                            onDragOver={(e) => {
-                              e.preventDefault()
-                              e.currentTarget.classList.add('border-primary', 'bg-primary/5')
-                            }}
-                            onDragLeave={(e) => {
-                              e.preventDefault()
-                              e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault()
-                              e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
-                              const file = e.dataTransfer.files?.[0]
-                              if (file && file.type === 'text/csv') {
-                                const fakeEvent = {
-                                  target: { files: [file] }
-                                } as unknown as React.ChangeEvent<HTMLInputElement>
-                                handleFileUpload(fakeEvent)
-                              } else {
-                                toast.error("Please upload an Excel file")
-                              }
-                            }}
-                          >
-                            <div className="flex flex-col items-center gap-2 text-center">
-                              <Upload className="h-8 w-8 text-muted-foreground" />
-                              <div className="space-y-1">
-                                <p className="text-sm">
-                                  <label htmlFor="edit-csv-file" className={`font-medium ${userCanEdit ? 'text-primary hover:underline cursor-pointer' : 'text-muted-foreground cursor-not-allowed'}`}>
-                                    Click to upload
-                                  </label>
-                                  {" "}or drag and drop
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Excel file with columns: id, name, year_group, parent_name
-                                </p>
-                              </div>
-                              <input
-                                id="edit-csv-file"
-                                type="file"
-                                accept=".xlsx,.xls,.csv"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0]
-                                  if (file) {
-                                    handleFileUpload(e)
-                                  }
-                                }}
-                                className="hidden"
-                                disabled={!userCanEdit}
-                              />
-                            </div>
-                          </div>
+                          <Input
+                            id="edit-csv-file"
+                            type="file"
+                            accept=".xlsx,.xls,.csv"
+                            onChange={handleFileUpload}
+                            className="cursor-pointer"
+                            disabled={!userCanEdit}
+                          />
                         </div>
 
                         {uploadedFile && (

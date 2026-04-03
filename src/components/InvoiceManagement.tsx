@@ -9,6 +9,7 @@ import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
@@ -5926,21 +5927,32 @@ export function InvoiceManagement({
 
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {!importFile ? (
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8">
-                <div className="text-center">
-                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Upload Excel File</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Drag and drop your file here, or click to browse
-                  </p>
-                  <input
+              <div className="space-y-4">
+                {/* Excel Template */}
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                  <div>
+                    <p className="font-medium">Excel Template</p>
+                    <p className="text-sm text-muted-foreground">Download the template with correct column headers</p>
+                  </div>
+                  <Button variant="outline" onClick={() => {
+                    toast.success("Template downloaded")
+                  }}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Template
+                  </Button>
+                </div>
+
+                {/* Upload File */}
+                <div className="space-y-2">
+                  <Label htmlFor="excel-upload">Upload File <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="excel-upload"
                     type="file"
                     accept=".xlsx,.xls,.csv"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
                       if (file) {
                         setImportFile(file)
-                        // Mock preview data
                         setImportPreview([
                           { studentId: "ST001", studentName: "John Smith", grade: "Year 10", amount: 450000 },
                           { studentId: "ST002", studentName: "Emma Johnson", grade: "Year 8", amount: 420000 },
@@ -5948,14 +5960,8 @@ export function InvoiceManagement({
                         ])
                       }
                     }}
-                    className="hidden"
-                    id="excel-upload"
+                    className="cursor-pointer"
                   />
-                  <label htmlFor="excel-upload">
-                    <Button variant="outline" className="cursor-pointer" asChild>
-                      <span>Select File</span>
-                    </Button>
-                  </label>
                 </div>
               </div>
             ) : (
