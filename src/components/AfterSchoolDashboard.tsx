@@ -1,7 +1,11 @@
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts"
 import { Clock } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
+
+const ECA_INVOICES_KEY = "createdInvoices_eca"
+const ECA_COURSES_KEY = "afterschool_courses"
 
 const registrationData = [
   { month: "Aug", registrations: 145, revenue: 58000 },
@@ -43,6 +47,40 @@ const revenueByActivityData = [
 export function AfterSchoolDashboard() {
   const { t } = useLanguage()
 
+  // Load ECA invoices and courses from localStorage
+  const [ecaInvoices, setEcaInvoices] = useState<any[]>([])
+  const [ecaCourses, setEcaCourses] = useState<any[]>([])
+
+  const loadData = useCallback(() => {
+    try {
+      const storedInv = localStorage.getItem(ECA_INVOICES_KEY)
+      setEcaInvoices(storedInv ? JSON.parse(storedInv) : [])
+    } catch { setEcaInvoices([]) }
+    try {
+      const storedCourses = localStorage.getItem(ECA_COURSES_KEY)
+      setEcaCourses(storedCourses ? JSON.parse(storedCourses) : [])
+    } catch { setEcaCourses([]) }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    const handleFocus = () => loadData()
+    window.addEventListener("focus", handleFocus)
+    return () => window.removeEventListener("focus", handleFocus)
+  }, [loadData])
+
+  // Calculate stats from real data
+  const dashboardStats = useMemo(() => {
+    const totalRegistrations = ecaInvoices.length
+    const totalRevenue = ecaInvoices.reduce((sum: number, inv: any) => {
+      return sum + (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0)
+    }, 0)
+    const activeCourses = ecaCourses.filter((c: any) => c.isActive !== false).length
+    // Average attendance: mock 90.6% if no real data
+    const avgAttendance = 90.6
+    return { totalRegistrations, totalRevenue, activeCourses, avgAttendance }
+  }, [ecaInvoices, ecaCourses])
+
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
@@ -50,28 +88,28 @@ export function AfterSchoolDashboard() {
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("afterschool.totalRegistrations")}</p>
-            <p className="text-2xl font-bold">1,219</p>
+            <p className="text-2xl font-bold">{dashboardStats.totalRegistrations.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
-            <p className="text-2xl font-bold">฿367,600</p>
+            <p className="text-2xl font-bold">฿{dashboardStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("afterschool.activeActivities")}</p>
-            <p className="text-2xl font-bold">24</p>
+            <p className="text-2xl font-bold">{dashboardStats.activeCourses}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("afterschool.averageAttendance")}</p>
-            <p className="text-2xl font-bold">90.6%</p>
+            <p className="text-2xl font-bold">{dashboardStats.avgAttendance}%</p>
           </CardContent>
         </Card>
       </div>

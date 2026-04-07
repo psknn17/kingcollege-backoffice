@@ -459,13 +459,14 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
     setCurrentPage(1)
   }, [searchTerm, filterGrade, filterStatus, sortColumn, sortDirection])
 
-  // Stats
+  // Stats (based on filtered data to match filter/search)
   const stats = useMemo(() => {
-    const activeStudentsCount: number = students.filter((s: Student) => s.status === "active").length
-    const totalStudentsCount: number = students.length
-    const familyCount: number = families.length
+    const activeStudentsCount: number = filteredStudents.filter((s: Student) => s.status === "active").length
+    const totalStudentsCount: number = filteredStudents.length
+    const filteredFamilyIds = new Set(filteredStudents.map((s: Student) => s.familyId).filter(Boolean))
+    const familyCount: number = filteredFamilyIds.size || families.filter((f: any) => filteredStudents.some((s: Student) => s.familyId === f.id)).length
     return { active: activeStudentsCount, total: totalStudentsCount, familyCount: familyCount }
-  }, [students, families])
+  }, [filteredStudents, families])
 
   // getGradeLabel is now imported from @/utils/grades
 
@@ -718,69 +719,78 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
   }
 
   const handleExport = () => {
-    // Create CSV content
+    // Export in iSAMS/BC format — one row per contact
     const headers = [
-      "Student ID",
-      "First Name",
-      "Last Name",
-      "Nickname",
-      "Date of Birth",
+      "Forename",
+      "Preferred Name",
+      "Surname",
+      "Full Name",
+      "Year Code",
+      "School Code",
+      "Form",
+      "Student Billing Account Code",
+      "Contact Billing Account Code",
       "Gender",
-      "Year Group",
-      "Room",
-      "Academic Year",
-      "Status",
-      "Family Code",
-      "Child Order",
-      "Enrollment Date",
-      "Parent 1 Name",
-      "Parent 1 Relationship",
-      "Parent 1 Phone",
-      "Parent 1 Email",
-      "Parent 2 Name",
-      "Parent 2 Relationship",
-      "Parent 2 Phone",
-      "Parent 2 Email",
-      "Notes",
-      "Created By",
-      "Created At",
-      "Updated By",
-      "Updated At"
+      "Date of Birth",
+      "Primary Contact Email",
+      "Primary Contact Forename",
+      "Primary Contact Surname",
+      "Primary Contact Mobile",
+      "Relation Type",
+      "Enrolment Date"
     ]
 
-    const rows = filteredStudents.map((student: Student) => {
-      const parent1 = student.parents[0]
-      const parent2 = student.parents[1]
+    const rows: any[][] = []
+    filteredStudents.forEach((student: Student) => {
       const family = families.find((f: any) => f.id === student.familyId)
+      const yearCode = student.gradeLevel?.replace(/[^0-9]/g, "") || ""
 
-      return [
-        student.studentId,
-        student.firstName,
-        student.lastName,
-        student.nickname,
-        student.dateOfBirth ? format(student.dateOfBirth, "dd/MM/yyyy") : "",
-        student.gender,
-        student.gradeLevel,
-        student.room || "",
-        formatAcademicYear(student.academicYear),
-        student.status,
-        family?.familyName || "",
-        student.childOrder,
-        student.enrollmentDate ? format(student.enrollmentDate, "dd/MM/yyyy") : "",
-        parent1?.name || "",
-        parent1?.relationship || "",
-        parent1?.phone || "",
-        parent1?.email || "",
-        parent2?.name || "",
-        parent2?.relationship || "",
-        parent2?.phone || "",
-        parent2?.email || "",
-        student.notes,
-        student.createdBy,
-        student.createdAt ? format(student.createdAt, "dd/MM/yyyy HH:mm") : "",
-        student.updatedBy,
-        student.updatedAt ? format(student.updatedAt, "dd/MM/yyyy HH:mm") : ""
-      ]
+      if (student.parents && student.parents.length > 0) {
+        student.parents.forEach((parent, i) => {
+          const nameParts = (parent.name || "").split(" ")
+          const contactForename = nameParts[0] || ""
+          const contactSurname = nameParts.slice(1).join(" ") || ""
+          rows.push([
+            student.firstName,
+            student.nickname || student.firstName,
+            student.lastName,
+            `${student.firstName} ${student.lastName}`,
+            yearCode,
+            student.studentId,
+            student.room || "",
+            family?.familyName || "",
+            i === 0 ? (family?.familyName ? `${family.familyName.substring(0, 2)}${student.studentId}` : "") : "",
+            student.gender ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1) : "",
+            student.dateOfBirth ? format(student.dateOfBirth, "dd/MM/yyyy") : "",
+            parent.email || "",
+            contactForename,
+            contactSurname,
+            parent.phone || "",
+            parent.relationship ? parent.relationship.charAt(0).toUpperCase() + parent.relationship.slice(1) : "",
+            student.enrollmentDate ? format(student.enrollmentDate, "dd/MM/yyyy") : ""
+          ])
+        })
+      } else {
+        rows.push([
+          student.firstName,
+          student.nickname || student.firstName,
+          student.lastName,
+          `${student.firstName} ${student.lastName}`,
+          yearCode,
+          student.studentId,
+          student.room || "",
+          family?.familyName || "",
+          "",
+          student.gender ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1) : "",
+          student.dateOfBirth ? format(student.dateOfBirth, "dd/MM/yyyy") : "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          student.enrollmentDate ? format(student.enrollmentDate, "dd/MM/yyyy") : ""
+        ])
+      }
     })
 
     downloadAsXlsx(headers, rows, `students_export_${format(new Date(), "yyyyMMdd_HHmmss")}`)
@@ -1096,12 +1106,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       "Enrolment Date"
     ]
 
-    const exampleRows = [
-      ["John", "Johnny", "Doe", "John Doe", "4", "100001", "DOE0001", "JD100001", "Male", "2015-05-15", "james.doe@email.com", "James", "Doe", "+66 81 234 5678", "Father", "2024-08-15"],
-      ["John", "Johnny", "Doe", "John Doe", "4", "100001", "DOE0001", "JA100001", "Male", "2015-05-15", "jane.doe@email.com", "Jane", "Doe", "+66 81 234 5679", "Mother", "2024-08-15"],
-    ]
-
-    downloadAsXlsx(headers, exampleRows, "student_import_template")
+    downloadAsXlsx(headers, [], "student_import_template")
 
     toast.success(t("student.templateDownloaded"))
   }

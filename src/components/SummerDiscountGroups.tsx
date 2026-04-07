@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import * as XLSX from "xlsx"
 import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -257,7 +258,10 @@ export function SummerDiscountGroups() {
     setFileParseErrors([])
 
     try {
-      const text = await file.text()
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: "array" })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const text = XLSX.utils.sheet_to_csv(sheet)
       const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0)
 
       // Skip header row if it looks like a header
@@ -501,7 +505,7 @@ export function SummerDiscountGroups() {
                         <input
                           id="csv-file-input"
                           type="file"
-                          accept=".xlsx,.xls,.csv"
+                          accept=".xlsx,.xls"
                           className="hidden"
                           onChange={handleFileUpload}
                           disabled={!userCanEdit}

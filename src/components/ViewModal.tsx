@@ -651,14 +651,14 @@ export function ViewModal({
   const renderTemplateView = () => (
     <div className="px-4">
       {/* Document Header */}
-      <div className="text-center py-6 border-b border-gray-200 mb-6">
+      <div className="text-center py-3 border-b border-gray-200 mb-4">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">{t("viewModal.invoiceTemplate")}</h2>
       </div>
 
       {/* Template Info */}
-      <div className="px-4 space-y-4 mb-8">
+      <div className="px-4 space-y-2 mb-4">
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <p className="text-xs text-gray-400 uppercase tracking-wide">{t("viewModal.templateName")}</p>
             <p className="text-lg font-semibold text-gray-900">{data.name}</p>
           </div>
@@ -673,31 +673,31 @@ export function ViewModal({
       {/* Items Section */}
       {data.itemsList && data.itemsList.length > 0 && (
         <div className="px-4">
-          <div className="border-t border-gray-200 pt-6 mb-4">
+          <div className="border-t border-gray-200 pt-3 mb-2">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">{t("viewModal.items")}</h3>
           </div>
 
-          <div className="space-y-4 mb-6">
+          <div className="space-y-1 mb-4">
             {data.itemsList.map((item: any, index: number) => (
-              <div key={index} className="flex items-baseline justify-between py-2">
+              <div key={index} className="flex items-baseline justify-between py-1.5">
                 <div className="flex items-baseline gap-3 flex-1 min-w-0">
                   <span className="text-gray-400 text-sm w-6 flex-shrink-0">{index + 1}.</span>
-                  <span className="text-gray-900">{item.name}</span>
-                  <span className="flex-1 border-b border-dotted border-gray-200 mx-3 mb-1"></span>
+                  <span className="text-gray-900 text-sm">{item.name}</span>
+                  <span className="flex-1 border-b border-dotted border-gray-200 mx-2 mb-1"></span>
                 </div>
-                <span className="font-medium text-gray-900 whitespace-nowrap pl-4">{formatCurrency(item.amount)}</span>
+                <span className="font-medium text-gray-900 text-sm whitespace-nowrap pl-4">{formatCurrency(item.amount)}</span>
               </div>
             ))}
           </div>
 
           {/* Total */}
-          <div className="border-t-2 border-gray-300 pt-6 pb-2">
+          <div className="border-t-2 border-gray-300 pt-3 pb-1">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">{t("viewModal.total")}</span>
-              <span className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalAmount || 0)}</span>
+              <span className="text-xl font-bold text-gray-900">{formatCurrency(data.totalAmount || 0)}</span>
             </div>
           </div>
-          <div className="border-t-4 border-double border-gray-300 mt-3"></div>
+          <div className="border-t-4 border-double border-gray-300 mt-2"></div>
         </div>
       )}
     </div>

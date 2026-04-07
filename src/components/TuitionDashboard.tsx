@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -10,6 +10,8 @@ import { format, subDays, startOfYear, endOfYear } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { DateRange } from "react-day-picker"
 import { usePersistedState } from "@/hooks/usePersistedState"
+
+const TUITION_INVOICES_KEY = "createdInvoices"
 
 const paymentData = [
   { month: "Aug", yearly: 45, termly: 30 },
@@ -100,6 +102,66 @@ export function TuitionDashboard() {
     })
     setIsDatePickerOpen(false)
   }
+
+  // Load tuition invoices from localStorage
+  const [tuitionInvoices, setTuitionInvoices] = useState<any[]>([])
+
+  const loadInvoices = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(TUITION_INVOICES_KEY)
+      setTuitionInvoices(stored ? JSON.parse(stored).filter((inv: any) => !inv.category || inv.category === "tuition") : [])
+    } catch { setTuitionInvoices([]) }
+  }, [])
+
+  useEffect(() => {
+    loadInvoices()
+    const handleFocus = () => loadInvoices()
+    window.addEventListener("focus", handleFocus)
+    return () => window.removeEventListener("focus", handleFocus)
+  }, [loadInvoices])
+
+  // Filter invoices by applied filters
+  const filteredInvoices = useMemo(() => {
+    return tuitionInvoices.filter((inv: any) => {
+      // Year filter
+      if (appliedFilters.year) {
+        const yearSlash = appliedFilters.year.replace('-', '/')
+        const yearMatch = inv.academicYear === yearSlash || inv.academicYear === appliedFilters.year || (inv.term || "").startsWith(appliedFilters.year)
+        if (!yearMatch) return false
+      }
+      // Term filter
+      if (appliedFilters.term) {
+        const termNum = appliedFilters.term.replace("term", "")
+        const tn = (inv.termName || inv.term || "").toLowerCase()
+        if (!tn.includes(`term ${termNum}`) && !tn.includes(`term${termNum}`)) return false
+      }
+      // Date range filter
+      if (appliedFilters.dateRange.from) {
+        const invDate = inv.createdAt ? new Date(inv.createdAt) : null
+        if (invDate) {
+          if (invDate < appliedFilters.dateRange.from) return false
+          if (appliedFilters.dateRange.to && invDate > appliedFilters.dateRange.to) return false
+        }
+      }
+      return true
+    })
+  }, [tuitionInvoices, appliedFilters])
+
+  // Calculate stats from filtered data
+  const dashboardStats = useMemo(() => {
+    const paidInvoices = filteredInvoices.filter((inv: any) => {
+      const status = inv.status === "pending" ? "draft" : (inv.status || "draft")
+      return status === "paid"
+    })
+    const uniqueStudents = new Set(paidInvoices.map((inv: any) => inv.studentId).filter(Boolean))
+    const totalRevenue = filteredInvoices.reduce((sum: number, inv: any) => {
+      return sum + (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0)
+    }, 0)
+    return {
+      studentsPaid: uniqueStudents.size,
+      totalRevenue
+    }
+  }, [filteredInvoices])
 
   // Get filtered data display text
   const getFilteredDisplay = () => {
@@ -325,14 +387,14 @@ export function TuitionDashboard() {
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.studentsPaid")}</p>
-            <p className="text-2xl font-bold">2,847</p>
+            <p className="text-2xl font-bold">{dashboardStats.studentsPaid.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("dashboard.totalRevenue")}</p>
-            <p className="text-2xl font-bold">฿7,350,000</p>
+            <p className="text-2xl font-bold">฿{dashboardStats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>

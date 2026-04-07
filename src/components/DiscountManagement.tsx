@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react"
 import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import * as XLSX from "xlsx"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -414,7 +415,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
     const reader = new FileReader()
     reader.onload = (e) => {
-      const text = e.target?.result as string
+      const data = e.target?.result
+      const workbook = XLSX.read(data, { type: "binary" })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const text = XLSX.utils.sheet_to_csv(sheet)
+
       const lines = text.split('\n').filter(line => line.trim())
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
 
@@ -463,7 +468,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       setIsPreviewingCsv(false)
     }
 
-    reader.readAsText(file)
+    reader.readAsBinaryString(file)
   }
 
   const handleConfirmCsvUpload = () => {
@@ -691,7 +696,11 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const text = e.target?.result as string
+        const data = e.target?.result
+        const workbook = XLSX.read(data, { type: "binary" })
+        const sheet = workbook.Sheets[workbook.SheetNames[0]]
+        const text = XLSX.utils.sheet_to_csv(sheet)
+
         const { validStudents, errors } = processCSVFile(text)
 
         if (validStudents.length > 0) {
@@ -728,7 +737,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       setIsProcessingFile(false)
     }
 
-    reader.readAsText(file)
+    reader.readAsBinaryString(file)
   }
 
   const downloadStudentTemplate = () => {
@@ -1305,7 +1314,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             <Input
                               id="csv-file-upload"
                               type="file"
-                              accept=".xlsx,.xls,.csv"
+                              accept=".xlsx,.xls"
                               onChange={handleFileUpload}
                               className="cursor-pointer"
                               disabled={isProcessingFile || !userCanEdit}
@@ -1821,7 +1830,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           <Input
                             id="edit-csv-file"
                             type="file"
-                            accept=".xlsx,.xls,.csv"
+                            accept=".xlsx,.xls"
                             onChange={handleFileUpload}
                             className="cursor-pointer"
                             disabled={!userCanEdit}
@@ -1868,20 +1877,6 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           </div>
                         )}
 
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={downloadStudentTemplate}
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="h-4 w-4" />
-                            {t("discount.downloadTemplate")}
-                          </Button>
-                          <span className="text-xs text-muted-foreground">
-                            {t("discount.needTemplate")}
-                          </span>
-                        </div>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -1992,7 +1987,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                   </p>
                   <input
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.xls"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
                       if (file) handleCsvUpload(file)

@@ -3727,7 +3727,7 @@ export function InvoiceManagement({
           <input
             id="import-interface-input"
             type="file"
-            accept=".csv,.xlsx,.xls"
+            accept=".xlsx,.xls"
             className="hidden"
             onChange={handleImportInterfaceFile}
           />
@@ -5594,7 +5594,7 @@ export function InvoiceManagement({
                       <p className="text-sm text-muted-foreground mb-2">Upload file with student information</p>
                       <Input
                         type="file"
-                        accept=".xlsx,.xls,.csv"
+                        accept=".xlsx,.xls"
                         onChange={handleCsvUpload}
                         className="max-w-xs mx-auto"
                       />
@@ -5941,7 +5941,7 @@ export function InvoiceManagement({
                   <Input
                     id="excel-upload"
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.xls"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
                       if (file) {
@@ -7431,7 +7431,7 @@ export function InvoiceManagement({
               <label className="block text-sm font-medium mb-2">Upload Excel File</label>
               <input
                 type="file"
-                accept=".csv,.xlsx,.xls"
+                accept=".xlsx,.xls"
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
                 onChange={(e) => {
                   setIsImportInterfaceUploadOpen(false)

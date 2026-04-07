@@ -3252,7 +3252,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Create/Edit Item Modal */}
       <Dialog open={isCreateItemModalOpen} onOpenChange={closeItemModal}>
-        <DialogContent className="max-w-2xl w-[95vw] p-6">
+        <DialogContent style={{ maxWidth: 750, width: '95vw' }} className="p-6">
           <DialogHeader>
             <DialogTitle>{editingItem ? t("item.editItem") : t("item.createNewItem")}</DialogTitle>
             <DialogDescription>
@@ -3334,7 +3334,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Create/Edit Template Modal */}
       <Dialog open={isCreateTemplateModalOpen} onOpenChange={closeTemplateModal}>
-        <DialogContent className="max-w-3xl w-[95vw] p-6">
+        <DialogContent className="max-w-[750px] w-[95vw] p-6">
           <DialogHeader>
             <DialogTitle>{editingTemplate ? t("item.editTemplate") : t("item.createNewTemplate")}</DialogTitle>
             <DialogDescription>

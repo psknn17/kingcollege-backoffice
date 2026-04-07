@@ -240,7 +240,7 @@ export function SummerActivitiesImport() {
                     <Input
                       id="file-upload"
                       type="file"
-                      accept=".xlsx,.xls,.csv"
+                      accept=".xlsx,.xls"
                       onChange={handleFileSelect}
                       disabled={importStatus.status === 'uploading' || importStatus.status === 'processing'}
                     />

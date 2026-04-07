@@ -133,7 +133,6 @@ const menuItems = {
     { id: "email-jobs", labelKey: "menu.emailHistoryView", icon: Send },
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
 { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
-    { id: "school-settings", labelKey: "menu.schoolSettings", icon: Settings2 },
     { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
   ],
   tuition: [
@@ -901,7 +900,6 @@ export default function App() {
                     <Route path="/approval-queue" element={<ApprovalQueue />} />
 
                     {/* Settings */}
-                    <Route path="/school-settings" element={<SchoolSettings />} />
                     <Route path="/bank-settings" element={<BankSettings />} />
 
                     {/* Profile */}

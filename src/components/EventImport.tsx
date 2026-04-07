@@ -129,7 +129,7 @@ export function EventImport() {
                 <Input
                   id="file-upload"
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.xls"
                   onChange={handleFileSelect}
                   disabled={importStatus.status === 'uploading' || importStatus.status === 'processing'}
                 />
@@ -253,7 +253,7 @@ export function EventImport() {
                 <h4 className="font-medium">{t("event.fileRequirements")}:</h4>
                 <ul className="space-y-1 text-muted-foreground ml-4">
                   <li>• {t("event.maxFileSize")}: 10MB</li>
-                  <li>• {t("event.formats")}: .xlsx, .xls, .csv</li>
+                  <li>• {t("event.formats")}: .xlsx, .xls</li>
                   <li>• {t("event.maxRecordsPerFile")}: 1000</li>
                 </ul>
               </div>

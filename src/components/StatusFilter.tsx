@@ -3,7 +3,7 @@ import { Badge } from "./ui/badge"
 import { Filter } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 
-export type PaymentStatus = "paid" | "partial" | "unpaid" | "cancelled" | "overdue" | "all"
+export type PaymentStatus = "success" | "pending" | "failed" | "all"
 
 export type PaymentChannel = "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank" | "all"
 
@@ -16,11 +16,9 @@ export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterPro
   const { t } = useLanguage()
   const statusOptions = [
     { value: "all" as PaymentStatus, label: t("status.allStatus"), color: undefined },
-    { value: "paid" as PaymentStatus, label: t("status.paid"), color: "bg-green-100 text-green-800 hover:bg-green-100" },
-    { value: "partial" as PaymentStatus, label: t("status.partial"), color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" },
-    { value: "unpaid" as PaymentStatus, label: t("status.unpaid"), color: "bg-gray-100 text-gray-800 hover:bg-gray-100" },
-    { value: "cancelled" as PaymentStatus, label: t("status.cancelled"), color: "bg-red-100 text-red-800 hover:bg-red-100" },
-    { value: "overdue" as PaymentStatus, label: t("status.overdue"), color: "bg-orange-100 text-orange-800 hover:bg-orange-100" }
+    { value: "success" as PaymentStatus, label: t("status.success"), color: "bg-green-100 text-green-800 hover:bg-green-100" },
+    { value: "pending" as PaymentStatus, label: t("status.pending"), color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" },
+    { value: "failed" as PaymentStatus, label: t("status.failed"), color: "bg-red-100 text-red-800 hover:bg-red-100" }
   ]
 
   return (
@@ -90,34 +88,27 @@ export function getStatusBadge(status: string, t: (key: string) => string) {
   const statusLower = status.toLowerCase()
 
   switch (statusLower) {
+    case "success":
     case "paid":
       return (
         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-          {t("status.paid")}
+          {t("status.success")}
         </Badge>
       )
+    case "pending":
     case "partial":
+    case "unpaid":
+    case "overdue":
       return (
         <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-          {t("status.partial")}
+          {t("status.pending")}
         </Badge>
       )
-    case "unpaid":
-      return (
-        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-          {t("status.unpaid")}
-        </Badge>
-      )
+    case "failed":
     case "cancelled":
       return (
         <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-          {t("status.cancelled")}
-        </Badge>
-      )
-    case "overdue":
-      return (
-        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-          {t("status.overdue")}
+          {t("status.failed")}
         </Badge>
       )
     default:

@@ -12,7 +12,8 @@ import { Checkbox } from "./ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { cn } from "./ui/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { PaginationBar } from "./ui/pagination-bar"
 import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy, Search, Filter, ArrowUpDown } from "lucide-react"
@@ -84,7 +85,7 @@ const DEFAULT_REMINDER_TEMPLATES: DebtReminderTemplate[] = [
     description: "Friendly first reminder for upcoming payment",
     subject: "Tuition Payment Reminder",
     emailTitle: "Friendly Payment Reminder",
-    message: "Dear {parent_name},\n\nThis is a friendly reminder that {student_name}'s payment of {amount} is due on {due_date} ({days_remaining} days remaining).\n\nPlease make your payment at your earliest convenience.\n\nBest regards,\nFinance Office"
+    message: "Dear {parent_name},<br><br>This is a friendly reminder that the tuition fee for <b>{student_name}</b> (ID: {student_id}, {year_group}) for {term}, Academic Year {academic_year} is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date} ({days_remaining} days remaining)<br><br>Please make your payment at your earliest convenience via the link below:<br>{payment_link}<br><br>If you have already made the payment, please disregard this email.<br><br>Best regards,<br>Finance Office<br>{school_name}"
   },
   {
     id: "tpl-second",
@@ -92,7 +93,7 @@ const DEFAULT_REMINDER_TEMPLATES: DebtReminderTemplate[] = [
     description: "Follow-up reminder for overdue payment",
     subject: "Tuition Payment Reminder",
     emailTitle: "Second Payment Reminder",
-    message: "Dear {parent_name},\n\nThis is our second reminder that {student_name}'s payment of {amount} was due on {due_date}.\n\nWe kindly ask you to settle this payment as soon as possible to avoid any disruption to your child's enrollment.\n\nBest regards,\nFinance Office"
+    message: "Dear {parent_name},<br><br>This is our second reminder regarding the outstanding payment for <b>{student_name}</b> (ID: {student_id}, {year_group}).<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Original Due Date:</b> {due_date}<br><b>Term:</b> {term}, Academic Year {academic_year}<br><br>We kindly ask you to settle this payment as soon as possible to avoid any disruption to your child's enrollment.<br><br>Pay online: {payment_link}<br><br>For any enquiries, please contact our Finance Office on +66 (0) 2481 9955.<br><br>Best regards,<br>Finance Office<br>{school_name}"
   },
   {
     id: "tpl-final",
@@ -100,7 +101,7 @@ const DEFAULT_REMINDER_TEMPLATES: DebtReminderTemplate[] = [
     description: "Urgent final notice before action is taken",
     subject: "Urgent: Final Payment Notice",
     emailTitle: "Final Payment Notice",
-    message: "Dear {parent_name},\n\nThis is a final notice regarding {student_name}'s outstanding payment of {amount} which was due on {due_date}.\n\nPlease contact our Finance Office immediately to make payment arrangements. Failure to do so may affect your child's enrollment status.\n\nBest regards,\nFinance Office"
+    message: "Dear {parent_name},<br><br><b>This is a final notice</b> regarding the outstanding payment for <b>{student_name}</b> (ID: {student_id}, {year_group}).<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Original Due Date:</b> {due_date}<br><b>Term:</b> {term}, Academic Year {academic_year}<br><br>Please contact our Finance Office immediately to make payment arrangements. Failure to settle this balance may affect your child's enrollment status for the upcoming term.<br><br>Pay now: {payment_link}<br><br>This email was automatically generated. Please do not reply.<br>For further enquiries, please contact our Finance Office on +66 (0) 2481 9955.<br><br>Kind regards,<br>Finance Office<br>{school_name}"
   },
   {
     id: "tpl-overdue",
@@ -108,18 +109,78 @@ const DEFAULT_REMINDER_TEMPLATES: DebtReminderTemplate[] = [
     description: "Notice for payments that are already overdue",
     subject: "Overdue Payment Notice",
     emailTitle: "Overdue Payment Notice",
-    message: "Dear {parent_name},\n\nWe wish to inform you that {student_name}'s payment of {amount} is now overdue as of {due_date}.\n\nPlease make immediate payment or contact our Finance Office to discuss payment arrangements.\n\nBest regards,\nFinance Office"
+    message: "Dear {parent_name},<br><br>We wish to inform you that the following payment for <b>{student_name}</b> (ID: {student_id}, {year_group}) is now <b>overdue</b>.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Overdue:</b> {amount}<br><b>Due Date:</b> {due_date}<br><b>Term:</b> {term}, Academic Year {academic_year}<br><br>Please make immediate payment via: {payment_link}<br><br>If you are experiencing financial difficulties, please contact the Finance Office to discuss a payment plan.<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-eca",
+    name: "ECA Payment Reminder",
+    description: "Reminder for after-school / ECA activity fees",
+    subject: "ECA Payment Reminder",
+    emailTitle: "ECA Activity Payment Reminder",
+    message: "Dear {parent_name},<br><br>This is a reminder that the ECA (Extra-Curricular Activity) fee for <b>{student_name}</b> (ID: {student_id}, {year_group}) is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date}<br><b>Term:</b> {term}, Academic Year {academic_year}<br><br>Please make your payment via: {payment_link}<br><br>If you have already made the payment, please disregard this email.<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-trip",
+    name: "Trip & Activity Payment",
+    description: "Reminder for school trip and activity fees",
+    subject: "Trip & Activity Payment Reminder",
+    emailTitle: "Trip & Activity Payment Reminder",
+    message: "Dear {parent_name},<br><br>This is a reminder that the trip/activity fee for <b>{student_name}</b> (ID: {student_id}, {year_group}) is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date}<br><br>Please complete your payment before the deadline to secure your child's place.<br><br>Pay online: {payment_link}<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-bus",
+    name: "School Bus Payment",
+    description: "Reminder for school bus service fees",
+    subject: "School Bus Payment Reminder",
+    emailTitle: "School Bus Payment Reminder",
+    message: "Dear {parent_name},<br><br>This is a reminder that the school bus fee for <b>{student_name}</b> (ID: {student_id}, {year_group}) for {term}, Academic Year {academic_year} is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date}<br><br>Please make your payment via: {payment_link}<br><br>Failure to pay by the due date may result in suspension of the bus service.<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-exam",
+    name: "Exam Payment Reminder",
+    description: "Reminder for exam and assessment fees",
+    subject: "Exam Payment Reminder",
+    emailTitle: "Exam Fee Payment Reminder",
+    message: "Dear {parent_name},<br><br>This is a reminder that the exam/assessment fee for <b>{student_name}</b> (ID: {student_id}, {year_group}) is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date}<br><b>Term:</b> {term}, Academic Year {academic_year}<br><br>Please complete your payment before the deadline to ensure your child can sit the scheduled examination.<br><br>Pay online: {payment_link}<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-summer",
+    name: "Summer Activity Payment",
+    description: "Reminder for summer programme fees",
+    subject: "Summer Activity Payment Reminder",
+    emailTitle: "Summer Activity Payment Reminder",
+    message: "Dear {parent_name},<br><br>This is a reminder that the summer programme fee for <b>{student_name}</b> (ID: {student_id}, {year_group}) is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date}<br><b>Academic Year:</b> {academic_year}<br><br>Please make your payment before the deadline to confirm your child's place in the summer programme.<br><br>Pay online: {payment_link}<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-external",
+    name: "External Invoice Reminder",
+    description: "Reminder for external / miscellaneous invoices",
+    subject: "External Invoice Payment Reminder",
+    emailTitle: "External Invoice Payment Reminder",
+    message: "Dear {parent_name},<br><br>This is a reminder that the following invoice for <b>{student_name}</b> (ID: {student_id}, {year_group}) is due.<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Due:</b> {amount}<br><b>Due Date:</b> {due_date}<br><br>Please make your payment via: {payment_link}<br><br>If you have already made the payment, please disregard this email.<br><br>Best regards,<br>Finance Office<br>{school_name}"
+  },
+  {
+    id: "tpl-payment-confirm",
+    name: "Payment Confirmation",
+    description: "Confirmation email after payment is received",
+    subject: "Payment Received — Thank You",
+    emailTitle: "Payment Confirmation",
+    message: "Dear {parent_name},<br><br>We are pleased to confirm that we have received your payment for <b>{student_name}</b> (ID: {student_id}, {year_group}).<br><br><b>Invoice No:</b> {invoice_number}<br><b>Amount Paid:</b> {amount}<br><b>Date of Payment:</b> {due_date}<br><b>Term:</b> {term}, Academic Year {academic_year}<br><br>This email serves as initial proof of payment. Kindly keep this email for your records.<br><br>Thank you for your continued support and cooperation.<br><br>This email was automatically generated. Please do not reply.<br>For further enquiries, please contact our Finance Office on +66 (0) 2481 9955.<br><br>Kind regards,<br>Finance Office<br>{school_name}"
   }
 ]
 
-// Preset email subject options based on system menus
+// Preset email subject options — synced with templates & system invoice categories
 const PRESET_EMAIL_SUBJECTS = [
   "Tuition Payment Reminder",
   "ECA Payment Reminder",
   "Trip & Activity Payment Reminder",
   "Exam Payment Reminder",
+  "Summer Activity Payment Reminder",
   "School Bus Payment Reminder",
-  "External Invoice Payment Reminder"
+  "External Invoice Payment Reminder",
+  "Urgent: Final Payment Notice",
+  "Overdue Payment Notice",
+  "Payment Received — Thank You"
 ]
 
 type InvoiceStatus = "unpaid" | "overdue"
@@ -286,6 +347,17 @@ export function DebtReminderSettings() {
   const [reminderTemplates, setReminderTemplates] = usePersistedState<DebtReminderTemplate[]>("debt-reminder:templates", DEFAULT_REMINDER_TEMPLATES)
   const [templateManageDialog, setTemplateManageDialog] = useState<{ isOpen: boolean; editing: DebtReminderTemplate | null }>({ isOpen: false, editing: null })
   const [isTemplateListOpen, setIsTemplateListOpen] = useState(false)
+
+  // Send modal state
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false)
+  const [sendModalReminder, setSendModalReminder] = useState<ReminderConfig | null>(null)
+  const [sendModalTab, setSendModalTab] = useState<string>("confirm")
+  const [testEmailAddress, setTestEmailAddress] = useState("")
+  const [sendInvoiceSearch, setSendInvoiceSearch] = useState("")
+  const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false)
+  const [isTestConfirmOpen, setIsTestConfirmOpen] = useState(false)
+  const [sendMatchingInvoices, setSendMatchingInvoices] = useState<any[]>([])
+  const [sendSelectedIds, setSendSelectedIds] = useState<Set<string>>(new Set())
 
   // Create/Edit reminder dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -514,6 +586,7 @@ export function DebtReminderSettings() {
     }
     setIsEditDialogOpen(false)
     setEditingReminder(null)
+    return editingReminder
   }
 
   const openNewTemplate = () => {
@@ -710,6 +783,53 @@ export function DebtReminderSettings() {
     return scheduledTime > new Date()
   }
 
+  // Load invoices matching a reminder's criteria
+  const getMatchingInvoices = (reminder: ReminderConfig): any[] => {
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      if (!stored) return []
+      const invoices: any[] = JSON.parse(stored)
+
+      const normalizeYear = (y: string) => (y || "").replace("/", "-").trim()
+      const extractTermNum = (t: string): string => {
+        const m = (t || "").match(/[Tt]erm\s*(\d+)/)
+        if (m) return m[1]
+        const n = (t || "").match(/^\s*(\d+)\s*$/)
+        if (n) return n[1]
+        return ""
+      }
+
+      return invoices.filter(inv => {
+        if (reminder.academicYear) {
+          const ry = normalizeYear(reminder.academicYear)
+          const iy = normalizeYear(inv.academicYear || "")
+          if (iy && ry && ry !== iy) return false
+        }
+        if (reminder.term) {
+          const rt = extractTermNum(reminder.term)
+          const it = extractTermNum(inv.term || inv.termName || "")
+          if (rt && it && rt !== it) return false
+        }
+        const statuses = reminder.invoiceStatuses || []
+        if (statuses.length > 0) {
+          const invStatus = inv.status === "paid" ? "paid" : inv.status === "overdue" ? "overdue" : "unpaid"
+          if (!statuses.includes(invStatus as InvoiceStatus)) return false
+        }
+        return true
+      })
+    } catch { return [] }
+  }
+
+  const openSendModal = (reminder: ReminderConfig) => {
+    const matching = getMatchingInvoices(reminder)
+    setSendMatchingInvoices(matching)
+    setSendSelectedIds(new Set(matching.map((inv: any) => inv.id)))
+    setSendModalReminder(reminder)
+    setSendModalTab("confirm")
+    setTestEmailAddress("")
+    setSendInvoiceSearch("")
+    setIsSendModalOpen(true)
+  }
 
   const handleSendNow = (reminder: ReminderConfig) => {
     // Validate reminder has required fields
@@ -731,8 +851,8 @@ export function DebtReminderSettings() {
     const academicYear = academicYears.find(y => y.id === reminder.academicYear)
     const term = academicYear?.terms.find(t => t.id === reminder.term)
 
-    // Mock recipient count (in real app, this would come from backend based on filters)
-    const mockRecipientCount = Math.floor(Math.random() * 150) + 50
+    // Use selected invoice count, fallback to mock
+    const mockRecipientCount = sendSelectedIds.size > 0 ? sendSelectedIds.size : Math.floor(Math.random() * 150) + 50
 
     // Create history entry
     const historyEntry = {
@@ -1178,7 +1298,7 @@ export function DebtReminderSettings() {
                                 toast.error("Please fill in all required fields before sending")
                                 return
                               }
-                              handleSendNow(reminder)
+                              openSendModal(reminder)
                             }}
                             disabled={!userCanEdit || !reminder.enabled || reminder.status === "reminded"}
                             title="Send Now"
@@ -1383,7 +1503,7 @@ export function DebtReminderSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>
-                    {t("debtReminder.sendDate")} <span className="text-destructive">*</span>
+                    {t("debtReminder.sendDate")}
                   </Label>
                   <Popover open={openCalendarId === `edit-${editingReminder.id}`} onOpenChange={(open) => setOpenCalendarId(open ? `edit-${editingReminder.id}` : null)}>
                     <PopoverTrigger asChild>
@@ -1414,7 +1534,7 @@ export function DebtReminderSettings() {
 
                 <div className="space-y-2">
                   <Label>
-                    {t("debtReminder.sendTime")} <span className="text-destructive">*</span>
+                    {t("debtReminder.sendTime")}
                   </Label>
                   <Input
                     type="time"
@@ -1454,7 +1574,7 @@ export function DebtReminderSettings() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-xs text-muted-foreground">Variables:</span>
-                  {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
+                  {["{parent_name}", "{student_name}", "{student_id}", "{year_group}", "{invoice_number}", "{amount}", "{due_date}", "{days_remaining}", "{term}", "{academic_year}", "{school_name}", "{payment_link}"].map(v => (
                     <Badge
                       key={v}
                       variant="outline"
@@ -1474,17 +1594,83 @@ export function DebtReminderSettings() {
                   ))}
                 </div>
               </div>
+
+              {/* Live Email Preview */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  Email Preview
+                </Label>
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  {/* Email header */}
+                  <div className="bg-gray-50 border-b px-4 py-3 space-y-1">
+                    <p className="text-xs text-muted-foreground">Subject: <span className="font-medium text-foreground">{editingReminder.subject || "—"}</span></p>
+                  </div>
+                  {/* Email body */}
+                  <div className="p-4">
+                    {editingReminder.emailTitle && (
+                      <h2 className="text-lg font-bold text-center mb-4 pb-3 border-b">{editingReminder.emailTitle}</h2>
+                    )}
+                    <div className="text-sm leading-relaxed min-h-[80px]">
+                      {(() => {
+                        const msg = editingReminder.message || ""
+                        const sampleVars: Record<string, string> = {
+                          "{parent_name}": "John Smith",
+                          "{student_name}": "Emma Smith",
+                          "{student_id}": "STU-2025-001",
+                          "{year_group}": "Year 10",
+                          "{invoice_number}": "INV-2025-00001",
+                          "{amount}": "฿45,000",
+                          "{due_date}": "15 Jan 2025",
+                          "{days_remaining}": "7",
+                          "{term}": "Term 1",
+                          "{academic_year}": "2025/2026",
+                          "{school_name}": "King College",
+                          "{payment_link}": "https://pay.example.com/inv001"
+                        }
+                        if (!msg || msg === "<p><br></p>") return <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
+                        return renderFormattedPreview(msg, sampleVars) || <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingReminder(null) }}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={saveEditingReminder} disabled={!userCanEdit}>
-              <Save className="w-4 h-4 mr-2" />
-              Save Reminder
-            </Button>
+          <DialogFooter className="border-t pt-4 flex-col gap-2 sm:flex-row">
+            <p className="text-xs text-muted-foreground mr-auto">Fill Send Date & Time to schedule, or use Save & Send to send immediately.</p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingReminder(null) }}>
+                {t("common.cancel")}
+              </Button>
+              <Button variant="outline" onClick={() => {
+                if (editingReminder && (!editingReminder.sendDate || !editingReminder.sendTime)) {
+                  toast.error("Send Date and Send Time are required for scheduling")
+                  return
+                }
+                saveEditingReminder()
+              }} disabled={!userCanEdit}>
+                <Save className="w-4 h-4 mr-2" />
+                Save & Schedule
+              </Button>
+              <Button
+                onClick={() => {
+                  const saved = saveEditingReminder()
+                  if (saved) {
+                    if (!saved.academicYear || !saved.term || !saved.subject || !saved.message) {
+                      toast.error("Please fill in all required fields before sending")
+                      return
+                    }
+                    openSendModal(saved)
+                  }
+                }}
+                disabled={!userCanEdit}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Save & Send
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1570,9 +1756,16 @@ export function DebtReminderSettings() {
                       const sampleVars: Record<string, string> = {
                         "{parent_name}": "Mr. John Smith",
                         "{student_name}": "James Smith",
+                        "{student_id}": "STU-2025-001",
+                        "{year_group}": "Year 10",
+                        "{invoice_number}": "INV-2025-00001",
                         "{amount}": "฿45,000",
                         "{due_date}": "31 Mar 2026",
                         "{days_remaining}": "15",
+                        "{term}": "Term 1",
+                        "{academic_year}": "2025/2026",
+                        "{school_name}": "King College",
+                        "{payment_link}": "https://pay.example.com/inv001"
                       }
                       const msg = previewReminder.message || ""
                       if (!msg) return <span className="text-gray-300 italic">No message content</span>
@@ -1596,22 +1789,6 @@ export function DebtReminderSettings() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>{t("common.close")}</Button>
-            {(!previewReminder?.status || previewReminder?.status === "scheduled") && (
-              <Button
-                onClick={handleScheduleReminder}
-                disabled={!userCanEdit || !previewReminder?.sendDate}
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <Save className="w-4 h-4" />
-                Save & Schedule
-              </Button>
-            )}
-            {previewReminder?.status === "scheduled" && (
-              <Button onClick={() => handleEditScheduled(previewReminder)} disabled={!userCanEdit} className="gap-2">
-                <Edit className="w-4 h-4" />
-                Edit
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1756,7 +1933,7 @@ export function DebtReminderSettings() {
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     <span className="text-xs text-muted-foreground">Variables:</span>
-                    {["{parent_name}", "{student_name}", "{amount}", "{due_date}", "{days_remaining}"].map(v => (
+                    {["{parent_name}", "{student_name}", "{student_id}", "{year_group}", "{invoice_number}", "{amount}", "{due_date}", "{days_remaining}", "{term}", "{academic_year}", "{school_name}", "{payment_link}"].map(v => (
                       <Badge
                         key={v}
                         variant="outline"
@@ -1819,9 +1996,16 @@ export function DebtReminderSettings() {
                       const sampleVars: Record<string,string> = {
                         "{parent_name}": "John Smith",
                         "{student_name}": "Oliver Smith",
+                        "{student_id}": "STU-2025-001",
+                        "{year_group}": "Year 10",
+                        "{invoice_number}": "INV-2025-00001",
                         "{amount}": "125,000 THB",
                         "{due_date}": "30 April 2026",
                         "{days_remaining}": "14",
+                        "{term}": "Term 1",
+                        "{academic_year}": "2025/2026",
+                        "{school_name}": "King College",
+                        "{payment_link}": "https://pay.example.com/inv001"
                       }
                       const msg = templateForm.message || ""
                       if (!msg || msg === "<p><br></p>") return <span className="text-gray-300 italic">Message preview will appear here as you type...</span>
@@ -1846,7 +2030,7 @@ export function DebtReminderSettings() {
 
       {/* Template Picker Dialog */}
       <Dialog open={templatePickerDialog.isOpen} onOpenChange={(open) => !open && setTemplatePickerDialog({ isOpen: false, reminderId: null })}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
@@ -1856,7 +2040,7 @@ export function DebtReminderSettings() {
           <p className="text-sm text-muted-foreground -mt-2">
             Select a template to auto-fill the subject, title, and message. You can edit the content after applying.
           </p>
-          <div className="grid gap-3 mt-2">
+          <div className="grid gap-2 mt-2 overflow-y-auto pr-1" style={{ maxHeight: "400px" }}>
             {(reminderTemplates || []).length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No templates available. Create one in the Email Templates section.</p>
             )}
@@ -1864,16 +2048,14 @@ export function DebtReminderSettings() {
               <button
                 key={template.id}
                 onClick={() => templatePickerDialog.reminderId && applyTemplate(templatePickerDialog.reminderId, template)}
-                className="text-left p-4 border rounded-lg hover:border-primary hover:bg-muted/50 transition-all group"
+                className="text-left p-3 border rounded-lg hover:border-primary hover:bg-muted/50 transition-all group"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm mb-0.5 group-hover:text-primary">{template.name}</div>
-                    <div className="text-xs text-muted-foreground mb-2">{template.description}</div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div><span className="font-medium text-foreground">Subject:</span> {template.subject}</div>
-                      <div><span className="font-medium text-foreground">Title:</span> {template.emailTitle}</div>
-                      <div className="line-clamp-2"><span className="font-medium text-foreground">Message:</span> {template.message.split("\n")[0]}</div>
+                    <div className="text-xs text-muted-foreground mb-1">{template.description}</div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">Subject:</span> {template.subject}
                     </div>
                   </div>
                   <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap pt-0.5">Use this</span>
@@ -1963,6 +2145,238 @@ export function DebtReminderSettings() {
         confirmTextKey="common.confirm"
         variant="destructive"
       />
+
+      {/* Send Email Modal */}
+      <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
+        <DialogContent style={{ maxWidth: "640px" }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-4 h-4" />
+              {t("debtReminder.sendEmail") || "Send Email"}
+            </DialogTitle>
+            {sendModalReminder && (
+              <DialogDescription>{sendModalReminder.subject}</DialogDescription>
+            )}
+          </DialogHeader>
+
+          <Tabs value={sendModalTab} onValueChange={setSendModalTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="confirm">{t("debtReminder.sendConfirm") || "Send Now"}</TabsTrigger>
+              <TabsTrigger value="test">{t("debtReminder.testSend") || "Send Verification Email"}</TabsTrigger>
+            </TabsList>
+
+            {/* Tab 1: Send Now — shows subject & message preview */}
+            <TabsContent value="confirm" className="space-y-4 mt-4">
+              {sendModalReminder && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border p-4 space-y-3">
+                    <div>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">{t("debtReminder.subject") || "Subject"}</span>
+                      <p className="text-sm font-medium mt-1">{sendModalReminder.subject}</p>
+                    </div>
+                    <div className="border-t pt-3">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">{t("debtReminder.messagePreview") || "Message Preview"}</span>
+                      <div className="text-sm mt-1 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sendModalReminder.message || "" }} />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsSendModalOpen(false)}>
+                      {t("common.cancel") || "Cancel"}
+                    </Button>
+                    <Button
+                      onClick={() => setIsFinalConfirmOpen(true)}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      {t("debtReminder.confirmSend") || "Send Now"}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Tab 2: Test Send — shows invoice list */}
+            <TabsContent value="test" className="space-y-3 mt-4">
+              {sendModalReminder && (() => {
+                const ay = academicYears.find(y => y.id === sendModalReminder.academicYear)
+                const tm = ay?.terms.find(t => t.id === sendModalReminder.term)
+                const allSelected = sendMatchingInvoices.length > 0 && sendSelectedIds.size === sendMatchingInvoices.length
+                return (
+                  <div className="space-y-3">
+                    {/* Test Email Address */}
+                    <div className="space-y-2">
+                      <Label>{t("debtReminder.testEmailAddress") || "Email Address (for Testing)"}</Label>
+                      <Input
+                        type="email"
+                        placeholder="test@example.com"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Summary */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{ay?.name || sendModalReminder.academicYear} · {tm?.name || sendModalReminder.term}</span>
+                      <span className="font-medium">{t("debtReminder.selected") || "Selected"}: {sendSelectedIds.size}/{sendMatchingInvoices.length}</span>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or invoice number..."
+                        value={sendInvoiceSearch}
+                        onChange={(e) => setSendInvoiceSearch(e.target.value)}
+                        className="pl-8 h-8 text-sm"
+                      />
+                    </div>
+
+                    {/* Select All */}
+                    <div className="flex items-center gap-2 pb-1 border-b">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSendSelectedIds(new Set(sendMatchingInvoices.map((inv: any) => inv.id)))
+                          } else {
+                            setSendSelectedIds(new Set())
+                          }
+                        }}
+                      />
+                      <span className="text-sm font-medium">{t("common.selectAll") || "Select All"}</span>
+                    </div>
+
+                    {/* Invoice List */}
+                    <div className="overflow-y-auto space-y-1" style={{ maxHeight: "350px" }}>
+                      {(() => {
+                        const q = sendInvoiceSearch.toLowerCase().trim()
+                        const filtered = q
+                          ? sendMatchingInvoices.filter((inv: any) =>
+                              (inv.studentName || "").toLowerCase().includes(q) ||
+                              (inv.invoiceNumber || inv.id || "").toLowerCase().includes(q) ||
+                              (inv.studentId || "").toLowerCase().includes(q)
+                            )
+                          : sendMatchingInvoices
+                        if (filtered.length === 0) return (
+                          <p className="text-sm text-muted-foreground text-center py-6">{q ? "No matching results" : (t("debtReminder.noMatchingInvoices") || "No matching invoices found")}</p>
+                        )
+                        return filtered.map((inv: any) => (
+                          <div
+                            key={inv.id}
+                            className={cn(
+                              "flex items-center gap-3 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors",
+                              sendSelectedIds.has(inv.id) && "bg-muted/50 border-primary/30"
+                            )}
+                            onClick={() => {
+                              setSendSelectedIds(prev => {
+                                const next = new Set(prev)
+                                if (next.has(inv.id)) next.delete(inv.id)
+                                else next.add(inv.id)
+                                return next
+                              })
+                            }}
+                          >
+                            <Checkbox
+                              checked={sendSelectedIds.has(inv.id)}
+                              onCheckedChange={() => {
+                                setSendSelectedIds(prev => {
+                                  const next = new Set(prev)
+                                  if (next.has(inv.id)) next.delete(inv.id)
+                                  else next.add(inv.id)
+                                  return next
+                                })
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{inv.studentName || inv.studentId || "-"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{inv.invoiceNumber || inv.id}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-medium">฿{(inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0).toLocaleString()}</p>
+                              <Badge variant="outline" className={cn("text-xs",
+                                inv.status === "overdue" ? "border-red-200 text-red-700" : "border-amber-200 text-amber-700"
+                              )}>
+                                {inv.status || "unpaid"}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsSendModalOpen(false)}>
+                        {t("common.cancel") || "Cancel"}
+                      </Button>
+                      <Button
+                        disabled={sendSelectedIds.size === 0 || !testEmailAddress || !testEmailAddress.includes("@")}
+                        onClick={() => setIsTestConfirmOpen(true)}
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        {t("debtReminder.sendTest") || "Send Test"} ({sendSelectedIds.size})
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                )
+              })()}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Final Confirm Modal */}
+      <Dialog open={isFinalConfirmOpen} onOpenChange={setIsFinalConfirmOpen}>
+        <DialogContent style={{ maxWidth: "400px" }}>
+          <DialogHeader>
+            <DialogTitle>{t("debtReminder.confirmSend") || "Send Now"}</DialogTitle>
+            <DialogDescription>
+              {t("debtReminder.finalConfirm") || "Confirm sending reminder email to all recipients?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFinalConfirmOpen(false)}>
+              {t("common.cancel") || "Cancel"}
+            </Button>
+            <Button onClick={() => {
+              if (sendModalReminder) {
+                handleSendNow(sendModalReminder)
+              }
+              setIsFinalConfirmOpen(false)
+              setIsSendModalOpen(false)
+            }}>
+              <Send className="w-4 h-4 mr-2" />
+              {t("common.confirm") || "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Send Confirm Modal */}
+      <Dialog open={isTestConfirmOpen} onOpenChange={setIsTestConfirmOpen}>
+        <DialogContent style={{ maxWidth: "400px" }}>
+          <DialogHeader>
+            <DialogTitle>{t("debtReminder.sendTest") || "Send Test"}</DialogTitle>
+            <DialogDescription>
+              Send test email to <span className="font-medium">{testEmailAddress}</span> with {sendSelectedIds.size} selected invoice(s)?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTestConfirmOpen(false)}>
+              {t("common.cancel") || "Cancel"}
+            </Button>
+            <Button onClick={() => {
+              toast.success(t("debtReminder.testSent") || "Test email sent", {
+                description: `${t("debtReminder.sentTo") || "Sent to"}: ${testEmailAddress} (${sendSelectedIds.size} invoices)`
+              })
+              logActivity({ action: "Send Test Email", module: "Debt Reminders", detail: `Test email sent to ${testEmailAddress}, ${sendSelectedIds.size} invoices selected` })
+              setIsTestConfirmOpen(false)
+            }}>
+              <Send className="w-4 h-4 mr-2" />
+              {t("common.confirm") || "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

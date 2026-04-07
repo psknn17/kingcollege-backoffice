@@ -4163,7 +4163,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <p className="text-sm text-muted-foreground mb-2">Upload Excel file with student information</p>
                           <Input
                             type="file"
-                            accept=".xlsx,.xls,.csv"
+                            accept=".xlsx,.xls"
                             onChange={handleCsvUpload}
                             className="max-w-xs mx-auto"
                           />

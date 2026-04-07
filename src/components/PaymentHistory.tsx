@@ -33,7 +33,7 @@ interface PaymentRecord {
   paymentMethod: string
   paymentChannel: "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank"
   payerName: string
-  status: "paid" | "partial" | "unpaid" | "cancelled" | "overdue" | "failed"
+  status: "success" | "pending" | "failed"
   transactionDate: Date
   parentType?: "internal" | "external"
   referenceNumber?: string
@@ -69,7 +69,7 @@ const generateMockPayments = (t?: any): PaymentRecord[] => {
   ] : ["Credit Card", "PromptPay", "Bank Counter", "WeChat Pay", "Bank Transfer", "Cash"]
   const paymentChannels: ("credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank")[] = ["credit_card", "wechat_pay", "alipay", "qr_payment", "counter_bank"]
   const payerNames = ["Mr. John Smith", "Mrs. Sarah Smith", "Mr. David Johnson", "Mrs. Lisa Johnson", "Mr. Robert Williams", "Mrs. Jennifer Williams", "Mr. Thomas Brown", "Mrs. Emma Brown", "Mr. Andrew Davis", "Mr. Daniel Miller"]
-  const statuses: ("paid" | "partial" | "unpaid" | "cancelled" | "overdue")[] = ["paid", "paid", "paid", "partial", "unpaid", "cancelled", "overdue"]
+  const statuses: ("success" | "pending" | "failed")[] = ["success", "success", "success", "pending", "pending", "failed"]
   const termOptions: ("1" | "2" | "3")[] = ["1", "2", "3"]
 
   const payments: PaymentRecord[] = []
@@ -103,11 +103,9 @@ const generateMockPayments = (t?: any): PaymentRecord[] => {
       referenceNumber: `REF-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
       paymentDescription: `Term ${term} tuition fee payment for academic year 2025-2026`,
       dueDate: new Date(date.getTime() + 15 * 24 * 60 * 60 * 1000),
-      notes: status === "cancelled" ? "Payment cancelled by parent request" :
-        status === "overdue" ? "Payment overdue - reminder sent" :
-          status === "unpaid" ? "Payment not yet received" :
-            status === "partial" ? "Partial payment received, balance pending" :
-              "Payment completed successfully"
+      notes: status === "failed" ? "Payment failed" :
+        status === "pending" ? "Payment pending" :
+          "Payment completed successfully"
     })
   }
 
@@ -371,6 +369,43 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
         </Button>
       </div>
 
+      {/* Key Metrics */}
+      {(() => {
+        const totalTransactions = filteredPayments.length
+        const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
+        const successCount = filteredPayments.filter(p => p.status === "success").length
+        const successRate = totalTransactions > 0 ? ((successCount / totalTransactions) * 100).toFixed(1) : "0.0"
+        const uniqueStudents = new Set(filteredPayments.map(p => p.studentId)).size
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <p className="text-sm text-muted-foreground">{t("payment.totalTransactions")}</p>
+                <p className="text-2xl font-bold">{totalTransactions.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <p className="text-sm text-muted-foreground">{t("payment.totalAmount")}</p>
+                <p className="text-2xl font-bold">฿{totalAmount.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <p className="text-sm text-muted-foreground">{t("payment.successRate")}</p>
+                <p className="text-2xl font-bold">{successRate}%</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-xl gap-0">
+              <CardContent className="p-4 pb-4">
+                <p className="text-sm text-muted-foreground">{t("payment.uniqueStudents")}</p>
+                <p className="text-2xl font-bold">{uniqueStudents.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      })()}
+
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
@@ -466,29 +501,19 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("common.allStatus")}</SelectItem>
-                  <SelectItem value="paid" className="text-green-800">
+                  <SelectItem value="success" className="text-green-800">
                     <span className="inline-flex items-center rounded-md bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
-                      {t("common.paid")}
+                      {t("status.success")}
                     </span>
                   </SelectItem>
-                  <SelectItem value="partial" className="text-yellow-800">
+                  <SelectItem value="pending" className="text-yellow-800">
                     <span className="inline-flex items-center rounded-md bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-800">
-                      {t("payment.partial")}
+                      {t("status.pending")}
                     </span>
                   </SelectItem>
-                  <SelectItem value="unpaid" className="text-gray-800">
-                    <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-800">
-                      {t("common.unpaid")}
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="overdue" className="text-orange-800">
-                    <span className="inline-flex items-center rounded-md bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800">
-                      {t("common.overdue")}
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="cancelled" className="text-red-800">
+                  <SelectItem value="failed" className="text-red-800">
                     <span className="inline-flex items-center rounded-md bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
-                      {t("common.cancelled")}
+                      {t("status.failed")}
                     </span>
                   </SelectItem>
                 </SelectContent>

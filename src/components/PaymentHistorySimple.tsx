@@ -31,7 +31,8 @@ interface PaymentRecord {
   term: string
   paymentMethod: string
   module: string // tuition, eca, trip, exam, bus, external
-  status: "paid"
+  status: "success" | "pending" | "failed"
+  failureReason?: string
   transactionDate: Date
   paymentProofs?: { name: string; dataUrl: string }[]
 }
@@ -50,12 +51,12 @@ const mockPayments: PaymentRecord[] = [
     term: "Term 1",
     paymentMethod: "Credit Card",
     module: "tuition",
-    status: "paid",
+    status: "success",
     transactionDate: new Date("2025-08-15T09:34:25")
   },
   {
     id: "2",
-    invoiceNumber: "20250000001",
+    invoiceNumber: "20250000002",
     referenceOrder: "REF-KC2024002-20250816101530",
     studentName: "Emily Smith",
     studentId: "KC2024002",
@@ -65,12 +66,12 @@ const mockPayments: PaymentRecord[] = [
     term: "Term 1",
     paymentMethod: "Bank Transfer",
     module: "eca",
-    status: "paid",
+    status: "pending",
     transactionDate: new Date("2025-08-16T10:15:30")
   },
   {
     id: "3",
-    invoiceNumber: "20250000001",
+    invoiceNumber: "20250000003",
     referenceOrder: "REF-KC2024003-20250817143022",
     studentName: "Michael Johnson",
     studentId: "KC2024003",
@@ -80,8 +81,115 @@ const mockPayments: PaymentRecord[] = [
     term: "Term 1",
     paymentMethod: "Thai QR",
     module: "tuition",
-    status: "paid" as const,
+    status: "failed",
+    failureReason: "Payment session expired. Please try again.",
     transactionDate: new Date("2025-08-17T14:30:22")
+  },
+  {
+    id: "4",
+    invoiceNumber: "20250000004",
+    referenceOrder: "REF-KC2024004-20250818112045",
+    studentName: "Sophia Williams",
+    studentId: "KC2024004",
+    studentGrade: "Year 9",
+    email: "sophia.parent@email.com",
+    amount: 55000,
+    term: "Term 1",
+    paymentMethod: "Cashier's cheque",
+    module: "tuition",
+    status: "success",
+    transactionDate: new Date("2025-08-18T11:20:45")
+  },
+  {
+    id: "5",
+    invoiceNumber: "20250000005",
+    referenceOrder: "REF-KC2024005-20250819084512",
+    studentName: "Oliver Brown",
+    studentId: "KC2024005",
+    studentGrade: "Year 2",
+    email: "oliver.parent@email.com",
+    amount: 38000,
+    term: "Term 2",
+    paymentMethod: "EDC",
+    module: "bus",
+    status: "pending",
+    transactionDate: new Date("2025-08-19T08:45:12")
+  },
+  {
+    id: "6",
+    invoiceNumber: "20250000006",
+    referenceOrder: "REF-KC2024006-20250820163301",
+    studentName: "Charlotte Davis",
+    studentId: "KC2024006",
+    studentGrade: "Year 11",
+    email: "charlotte.parent@email.com",
+    amount: 25000,
+    term: "Term 1",
+    paymentMethod: "Credit Card",
+    module: "exam",
+    status: "failed",
+    failureReason: "Transaction declined by bank. Please contact your card issuer.",
+    transactionDate: new Date("2025-08-20T16:33:01")
+  },
+  {
+    id: "7",
+    invoiceNumber: "20250000007",
+    referenceOrder: "REF-KC2024007-20250821091230",
+    studentName: "Liam Wilson",
+    studentId: "KC2024007",
+    studentGrade: "Year 1",
+    email: "liam.parent@email.com",
+    amount: 75000,
+    term: "Term 1",
+    paymentMethod: "Thai QR",
+    module: "tuition",
+    status: "success",
+    transactionDate: new Date("2025-08-21T09:12:30")
+  },
+  {
+    id: "8",
+    invoiceNumber: "20250000008",
+    referenceOrder: "REF-KC2024008-20250822140055",
+    studentName: "Ava Martinez",
+    studentId: "KC2024008",
+    studentGrade: "Year 8",
+    email: "ava.parent@email.com",
+    amount: 15000,
+    term: "Term 2",
+    paymentMethod: "Bank Transfer",
+    module: "trip",
+    status: "success",
+    transactionDate: new Date("2025-08-22T14:00:55")
+  },
+  {
+    id: "9",
+    invoiceNumber: "20250000009",
+    referenceOrder: "REF-NA-20250823175500",
+    studentName: "",
+    studentId: "",
+    studentGrade: "",
+    email: "client215@company.com",
+    amount: 50000,
+    term: "-",
+    paymentMethod: "EDC",
+    module: "external",
+    status: "pending",
+    transactionDate: new Date("2025-08-23T17:55:00")
+  },
+  {
+    id: "10",
+    invoiceNumber: "20250000010",
+    referenceOrder: "REF-KC2024010-20250824103322",
+    studentName: "Noah Garcia",
+    studentId: "KC2024010",
+    studentGrade: "Nursery",
+    email: "noah.parent@email.com",
+    amount: 8000,
+    term: "Term 1",
+    paymentMethod: "Cashier's cheque",
+    module: "eca",
+    status: "success",
+    transactionDate: new Date("2025-08-24T10:33:22")
   }
 ]
 
@@ -94,6 +202,7 @@ export function PaymentHistorySimple() {
   const [academicYearFilter, setAcademicYearFilter] = useState<string>("all")
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all")
   const [moduleFilter, setModuleFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
   const [viewingPaymentProof, setViewingPaymentProof] = useState<PaymentRecord | null>(null)
@@ -141,12 +250,20 @@ export function PaymentHistorySimple() {
         const stored = localStorage.getItem("createdInvoices")
         if (stored) {
           const invoices = JSON.parse(stored)
-          // Filter only paid invoices and transform to PaymentRecord format
-          const paidInvoices = invoices
-            .filter((inv: any) => inv.status === "paid")
+          // Map invoice statuses to payment statuses
+          const mapStatus = (inv: any): "success" | "pending" | "failed" => {
+            const s = (inv.status || "").toLowerCase()
+            if (s === "paid") return "success"
+            if (s === "failed" || s === "cancelled") return "failed"
+            return "pending"
+          }
+          // Include all invoices with payment-related statuses
+          const paymentRecords = invoices
+            .filter((inv: any) => ["paid", "pending", "failed", "cancelled", "partial", "unpaid", "overdue"].includes((inv.status || "").toLowerCase()))
             .map((inv: any) => {
-              const paidDate = inv.paidDate ? new Date(inv.paidDate) : new Date()
-              const refTimestamp = format(paidDate, "yyyyMMddHHmmss")
+              const txDate = inv.paidDate ? new Date(inv.paidDate) : new Date(inv.createdAt || Date.now())
+              const refTimestamp = format(txDate, "yyyyMMddHHmmss")
+              const status = mapStatus(inv)
               return {
                 id: inv.id,
                 invoiceNumber: inv.invoiceNumber,
@@ -159,14 +276,22 @@ export function PaymentHistorySimple() {
                 term: inv.term || "-",
                 paymentMethod: normalizePaymentMethod(inv.paymentMethod || "-"),
                 module: inv.category || inv.invoiceType || "tuition",
-                status: "paid" as const,
-                transactionDate: paidDate,
+                status,
+                failureReason: status === "failed" ? (inv.failureReason || inv.cancelReason || "") : undefined,
+                transactionDate: txDate,
                 paymentProofs: inv.paymentProofs || []
               }
             })
 
-          if (paidInvoices.length > 0) {
-            setPayments(paidInvoices)
+          if (paymentRecords.length > 0) {
+            // Append mock data that has pending/failed statuses if real data lacks them
+            const hasAllStatuses = paymentRecords.some((r: any) => r.status === "pending") && paymentRecords.some((r: any) => r.status === "failed")
+            if (!hasAllStatuses) {
+              const missingMock = mockPayments.filter(m => !paymentRecords.some((r: any) => r.status === m.status))
+              setPayments([...paymentRecords, ...missingMock])
+            } else {
+              setPayments(paymentRecords)
+            }
             return
           }
         }
@@ -195,11 +320,12 @@ export function PaymentHistorySimple() {
     const matchesAcademicYear = academicYearFilter === "all" || true // Would need academic year field
     const matchesPaymentMethod = paymentMethodFilter === "all" || payment.paymentMethod === paymentMethodFilter
     const matchesModule = moduleFilter === "all" || payment.module === moduleFilter
+    const matchesStatus = statusFilter === "all" || payment.status === statusFilter
 
     const matchesDateFrom = !dateFrom || payment.transactionDate >= dateFrom
     const matchesDateTo = !dateTo || payment.transactionDate <= dateTo
 
-    return matchesSearch && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesModule && matchesDateFrom && matchesDateTo
+    return matchesSearch && matchesYearGroup && matchesTerm && matchesAcademicYear && matchesPaymentMethod && matchesModule && matchesStatus && matchesDateFrom && matchesDateTo
   })
 
   const sortedPayments = useMemo(() => {
@@ -243,6 +369,10 @@ export function PaymentHistorySimple() {
           aVal = a.module
           bVal = b.module
           break
+        case "status":
+          aVal = a.status
+          bVal = b.status
+          break
         default:
           return 0
       }
@@ -259,39 +389,33 @@ export function PaymentHistorySimple() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { bg: string; text: string; border: string; label: string }> = {
+      success: {
+        bg: "bg-green-100",
+        text: "text-green-800",
+        border: "border-green-200",
+        label: t("status.success")
+      },
       paid: {
         bg: "bg-green-100",
         text: "text-green-800",
         border: "border-green-200",
-        label: t("common.paid")
+        label: t("status.success")
       },
-      partial: {
+      pending: {
         bg: "bg-yellow-100",
         text: "text-yellow-800",
         border: "border-yellow-200",
-        label: "Partial"
+        label: t("status.pending")
       },
-      unpaid: {
-        bg: "bg-gray-100",
-        text: "text-gray-800",
-        border: "border-gray-200",
-        label: t("common.unpaid")
-      },
-      overdue: {
-        bg: "bg-orange-100",
-        text: "text-orange-800",
-        border: "border-orange-200",
-        label: t("common.overdue")
-      },
-      cancelled: {
+      failed: {
         bg: "bg-red-100",
         text: "text-red-800",
         border: "border-red-200",
-        label: t("common.cancelled")
+        label: t("status.failed")
       }
     }
 
-    const variant = variants[status] || variants.paid
+    const variant = variants[status] || variants.success
     return (
       <Badge className={`${variant.bg} ${variant.text} ${variant.border} border hover:${variant.bg}`}>
         {variant.label}
@@ -484,6 +608,29 @@ export function PaymentHistorySimple() {
                   </Select>
                 </div>
 
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder={t("status.allStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("status.allStatus")}</SelectItem>
+                      <SelectItem value="success">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t("status.success")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="pending">
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{t("status.pending")}</Badge>
+                      </SelectItem>
+                      <SelectItem value="failed">
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{t("status.failed")}</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Date Range */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground">{t("receipt.transactionDate")}</label>
@@ -591,13 +738,16 @@ export function PaymentHistorySimple() {
                 <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("email")}>
                   <div className="flex items-center gap-1">Email <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                  <div className="flex items-center gap-1 justify-center">{t("common.status")} <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead align="center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     No records found
                   </TableCell>
                 </TableRow>
@@ -646,6 +796,8 @@ export function PaymentHistorySimple() {
                     <TableCell align="left">{payment.paymentMethod}</TableCell>
                     {/* Text alignment */}
                     <TableCell align="left" className="text-sm">{payment.email}</TableCell>
+                    {/* Status badge */}
+                    <TableCell align="center">{getStatusBadge(payment.status)}</TableCell>
                     {/* Actions alignment */}
                     <TableCell align="center">
                       <Button
@@ -722,6 +874,16 @@ export function PaymentHistorySimple() {
                     <span className="text-xs text-muted-foreground uppercase">Email</span>
                     <span className="font-medium">{viewingPaymentProof?.email}</span>
                   </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase">{t("common.status")}</span>
+                    <span>{viewingPaymentProof && getStatusBadge(viewingPaymentProof.status)}</span>
+                  </div>
+                  {viewingPaymentProof?.status === "failed" && viewingPaymentProof?.failureReason && (
+                    <div className="flex flex-col space-y-1 md:col-span-2">
+                      <span className="text-xs text-muted-foreground uppercase">{t("status.failureReason")}</span>
+                      <span className="font-medium text-red-600">{viewingPaymentProof.failureReason}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

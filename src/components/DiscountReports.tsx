@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -126,6 +127,7 @@ interface DiscountItem {
   value: number  // percentage value or fixed amount
   amount: number // calculated discount amount
   appliedTo: string[]
+  invoiceCategory?: string // e.g. "Tuition", "ECA", "Trip & Activity"
 }
 
 // Sample student discount data
@@ -136,6 +138,7 @@ interface StudentDiscount {
   yearGroup: string
   academicYear: string
   term: string
+  invoiceCategory: string
   discounts: DiscountItem[]
   totalDiscountAmount: number
   status: "active" | "graduated" | "withdrawn" | "on_leave"
@@ -180,6 +183,7 @@ export function DiscountReports() {
   const [filterAcademicYear, setFilterAcademicYear] = useState<string>("all")
   const [filterTerm, setFilterTerm] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [viewingDiscountStudent, setViewingDiscountStudent] = useState<any>(null)
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState("")
@@ -200,10 +204,17 @@ export function DiscountReports() {
     const result: StudentDiscount[] = []
 
     // --- Source 1: Real invoices with stored discounts ---
-    const INVOICE_KEYS = ["createdInvoices", "createdInvoices_eca", "createdInvoices_trip", "createdInvoices_exam", "createdInvoices_bus", "createdInvoices_external"]
+    const INVOICE_KEYS: { key: string; category: string }[] = [
+      { key: "createdInvoices", category: "Tuition" },
+      { key: "createdInvoices_eca", category: "ECA" },
+      { key: "createdInvoices_trip", category: "Trip & Activity" },
+      { key: "createdInvoices_exam", category: "Exam" },
+      { key: "createdInvoices_bus", category: "School Bus" },
+      { key: "createdInvoices_external", category: "External" },
+    ]
     const seenInvoiceIds = new Set<string>()
 
-    INVOICE_KEYS.forEach(key => {
+    INVOICE_KEYS.forEach(({ key, category }) => {
       try {
         const stored = localStorage.getItem(key)
         if (!stored) return
@@ -256,6 +267,7 @@ export function DiscountReports() {
             yearGroup: inv.studentGrade || ctx?.gradeLevel || "",
             academicYear: inv.academicYear || ctx?.academicYear || "",
             term: termDisplay,
+            invoiceCategory: category,
             discounts: discountItems,
             totalDiscountAmount,
             status: (ctx?.status || "active") as StudentDiscount["status"]
@@ -320,6 +332,7 @@ export function DiscountReports() {
             yearGroup: gs.yearGroup || ctx?.gradeLevel || "",
             academicYear: ctx?.academicYear || "",
             term: "-",
+            invoiceCategory: "Tuition",
             discounts: data.discounts,
             totalDiscountAmount,
             status: (ctx?.status || "active") as StudentDiscount["status"]
@@ -355,6 +368,7 @@ export function DiscountReports() {
             yearGroup: ctx.gradeLevel || "",
             academicYear: ctx.academicYear || "",
             term: "-",
+            invoiceCategory: "Tuition",
             discounts: [{
               type,
               name,
@@ -370,6 +384,180 @@ export function DiscountReports() {
         })
       } catch { /* skip */ }
     })
+
+    // --- Mock data (always included for demo) ---
+    // Concept: 1 student × 1 term = 1 row, discounts can span multiple invoice categories
+    const mockStudents: StudentDiscount[] = [
+      // Term 1
+      { id: "mock-t1-01", studentId: "KC20250001", studentName: "Charlotte Johnson", yearGroup: "Year 12", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 70000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 4000, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 88000, status: "active" },
+      { id: "mock-t1-02", studentId: "KC20250003", studentName: "Oliver Smith", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 7000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 21000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 42000, status: "active" },
+      { id: "mock-t1-03", studentId: "KC20250005", studentName: "Sophia Williams", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 100, amount: 140000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 140000, status: "active" },
+      { id: "mock-t1-04", studentId: "KC20250008", studentName: "Liam Brown", yearGroup: "Year 10", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 21000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 7000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 800, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 28800, status: "active" },
+      { id: "mock-t1-05", studentId: "KC20250010", studentName: "Emma Davis", yearGroup: "Year 3", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 9500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "campaign", name: "Refer a Friend", mode: "fixed", value: 5000, amount: 5000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 800, appliedTo: ["Trip"], invoiceCategory: "Trip & Activity" },
+        ], totalDiscountAmount: 15300, status: "active" },
+      { id: "mock-t1-06", studentId: "KC20250012", studentName: "Noah Wilson", yearGroup: "Year 7", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 65000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 5000, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 1500, appliedTo: ["Trip"], invoiceCategory: "Trip & Activity" },
+        ], totalDiscountAmount: 71500, status: "active" },
+      { id: "mock-t1-07", studentId: "KC20250015", studentName: "Ava Taylor", yearGroup: "Year 1", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "school_bus", name: "School Bus Discount", mode: "fixed", value: 3000, amount: 3000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 4500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 7500, status: "active" },
+      { id: "mock-t1-08", studentId: "KC20250018", studentName: "Isabella Martinez", yearGroup: "Year 9", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 50, amount: 70000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 50, amount: 4500, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 88500, status: "active" },
+      { id: "mock-t1-09", studentId: "KC20250020", studentName: "Mia Anderson", yearGroup: "Pre-Nursery", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 4500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "group", name: "Embassy Staff", mode: "percentage", value: 20, amount: 18000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 22500, status: "active" },
+      { id: "mock-t1-10", studentId: "KC20250022", studentName: "Ethan Thomas", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 1", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "group", name: "Embassy Staff", mode: "percentage", value: 20, amount: 32000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 80000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 112000, status: "active" },
+
+      // Term 2
+      { id: "mock-t2-01", studentId: "KC20250001", studentName: "Charlotte Johnson", yearGroup: "Year 12", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 70000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 4000, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 88000, status: "active" },
+      { id: "mock-t2-02", studentId: "KC20250003", studentName: "Oliver Smith", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 7000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 21000, status: "active" },
+      { id: "mock-t2-03", studentId: "KC20250005", studentName: "Sophia Williams", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 100, amount: 140000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 140000, status: "active" },
+      { id: "mock-t2-04", studentId: "KC20250008", studentName: "Liam Brown", yearGroup: "Year 10", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 21000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 35000, status: "active" },
+      { id: "mock-t2-05", studentId: "KC20250010", studentName: "Emma Davis", yearGroup: "Year 3", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 9500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "school_bus", name: "School Bus Discount", mode: "fixed", value: 3000, amount: 3000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 1800, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 14300, status: "active" },
+      { id: "mock-t2-06", studentId: "KC20250025", studentName: "James Lee", yearGroup: "Year 6", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 55000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 11000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 2500, appliedTo: ["Trip"], invoiceCategory: "Trip & Activity" },
+        ], totalDiscountAmount: 68500, status: "active" },
+      { id: "mock-t2-07", studentId: "KC20250018", studentName: "Isabella Martinez", yearGroup: "Year 9", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 50, amount: 70000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 84000, status: "active" },
+      { id: "mock-t2-08", studentId: "KC20250028", studentName: "Lucas Garcia", yearGroup: "Year 2", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "campaign", name: "Refer a Friend", mode: "fixed", value: 5000, amount: 5000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 4500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 9500, status: "active" },
+      { id: "mock-t2-09", studentId: "KC20250022", studentName: "Ethan Thomas", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "group", name: "Embassy Staff", mode: "percentage", value: 20, amount: 32000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 80000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 112000, status: "active" },
+      { id: "mock-t2-10", studentId: "KC20250030", studentName: "Harper Clark", yearGroup: "Nursery", academicYear: "2025/2026", term: "Term 2", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 4000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 12000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 16000, status: "active" },
+
+      // Term 3
+      { id: "mock-t3-01", studentId: "KC20250001", studentName: "Charlotte Johnson", yearGroup: "Year 12", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 70000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 4000, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 1500, appliedTo: ["Trip"], invoiceCategory: "Trip & Activity" },
+        ], totalDiscountAmount: 89500, status: "active" },
+      { id: "mock-t3-02", studentId: "KC20250003", studentName: "Oliver Smith", yearGroup: "Year 8", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 21000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 35000, status: "active" },
+      { id: "mock-t3-03", studentId: "KC20250005", studentName: "Sophia Williams", yearGroup: "Year 5", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 100, amount: 140000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 100, amount: 8000, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 148000, status: "active" },
+      { id: "mock-t3-04", studentId: "KC20250008", studentName: "Liam Brown", yearGroup: "Year 10", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 21000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 7000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 42000, status: "active" },
+      { id: "mock-t3-05", studentId: "KC20250010", studentName: "Emma Davis", yearGroup: "Year 3", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 9500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 1800, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 9000, appliedTo: ["ECA"], invoiceCategory: "ECA" },
+        ], totalDiscountAmount: 20300, status: "active" },
+      { id: "mock-t3-06", studentId: "KC20250018", studentName: "Isabella Martinez", yearGroup: "Year 9", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "scholarship", name: "Scholarship", mode: "percentage", value: 50, amount: 70000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 14000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "campaign", name: "Refer a Friend", mode: "fixed", value: 5000, amount: 5000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 89000, status: "active" },
+      { id: "mock-t3-07", studentId: "KC20250015", studentName: "Ava Taylor", yearGroup: "Year 1", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "school_bus", name: "School Bus Discount", mode: "fixed", value: 3000, amount: 3000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 4500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 7500, status: "active" },
+      { id: "mock-t3-08", studentId: "KC20250022", studentName: "Ethan Thomas", yearGroup: "Year 13", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "group", name: "Embassy Staff", mode: "percentage", value: 20, amount: 32000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 80000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 112000, status: "graduated" },
+      { id: "mock-t3-09", studentId: "KC20250032", studentName: "Amelia White", yearGroup: "Reception", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "staff", name: "Staff Children", mode: "percentage", value: 50, amount: 45000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "sibling", name: "Sibling Discount", mode: "percentage", value: 10, amount: 9000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 54000, status: "active" },
+      { id: "mock-t3-10", studentId: "KC20250035", studentName: "Benjamin Harris", yearGroup: "Year 11", academicYear: "2025/2026", term: "Term 3", invoiceCategory: "Tuition",
+        discounts: [
+          { type: "early_bird", name: "Early Bird Discount", mode: "percentage", value: 5, amount: 7500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "group", name: "Corporate Partner", mode: "percentage", value: 15, amount: 22500, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+          { type: "school_bus", name: "School Bus Discount", mode: "fixed", value: 3000, amount: 3000, appliedTo: ["Tuition"], invoiceCategory: "Tuition" },
+        ], totalDiscountAmount: 33000, status: "active" },
+    ]
+    result.push(...mockStudents)
 
     return result
   }, [students])
@@ -747,10 +935,8 @@ export function DiscountReports() {
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  {/* Discount Types - LEFT aligned (text/badges) */}
-                  <TableHead align="left">{t("discountReports.discountTypes")}</TableHead>
-                  {/* Discount Details - LEFT aligned (text) */}
-                  <TableHead align="left">{t("discountReports.discountsDetail")}</TableHead>
+                  {/* Discounts - CENTER aligned (count) */}
+                  <TableHead align="center">{t("discountReports.discounts")}</TableHead>
                   {/* Status - CENTER aligned (badge) */}
                   <TableHead align="center" className="cursor-pointer hover:bg-muted" onClick={() => handleSort("status")}>
                     <div className="flex items-center justify-center gap-1">
@@ -763,7 +949,7 @@ export function DiscountReports() {
               <TableBody>
                 {paginatedStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {t("discountReports.noStudentsFound")}
                     </TableCell>
                   </TableRow>
@@ -780,28 +966,16 @@ export function DiscountReports() {
                       <TableCell align="left">{formatAcademicYear(student.academicYear)}</TableCell>
                       {/* Term - LEFT aligned (matches header) */}
                       <TableCell align="left">{student.term}</TableCell>
-                      {/* Discount Types - LEFT aligned (matches header) */}
-                      <TableCell align="left">
-                        <div className="flex gap-1 flex-wrap">
-                          {student.discounts.map((d, idx) => (
-                            <Badge key={idx} variant="outline" style={discountTypeStyles[d.type]}>
-                              {d.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      {/* Discount Details - LEFT aligned (matches header) */}
-                      <TableCell align="left">
-                        <div className="space-y-1">
-                          {student.discounts.map((d, idx) => (
-                            <div key={idx} className="text-sm">
-                              <span className="text-muted-foreground">{d.name}: </span>
-                              <span className="text-green-600 font-medium">
-                                {d.mode === "percentage" ? `${d.value}%` : formatCurrency(d.value)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                      {/* Discounts - CENTER aligned (count, clickable) */}
+                      <TableCell align="center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="font-medium text-primary underline-offset-4 hover:underline"
+                          onClick={() => setViewingDiscountStudent(student)}
+                        >
+                          {student.discounts.length}
+                        </Button>
                       </TableCell>
                       {/* Status - CENTER aligned (matches header) */}
                       <TableCell align="center">
@@ -881,6 +1055,53 @@ export function DiscountReports() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Discount Detail Dialog */}
+      <Dialog open={!!viewingDiscountStudent} onOpenChange={(open) => !open && setViewingDiscountStudent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("discountReports.discountsDetail")}</DialogTitle>
+            {viewingDiscountStudent && (
+              <p className="text-sm text-muted-foreground">
+                {viewingDiscountStudent.studentName} ({viewingDiscountStudent.studentId})
+              </p>
+            )}
+          </DialogHeader>
+          {viewingDiscountStudent && (() => {
+            // Group discounts by invoiceCategory
+            const groupedByCat = viewingDiscountStudent.discounts.reduce((acc: Record<string, DiscountItem[]>, d: DiscountItem) => {
+              const cat = d.invoiceCategory || viewingDiscountStudent.invoiceCategory || "Other"
+              if (!acc[cat]) acc[cat] = []
+              acc[cat].push(d)
+              return acc
+            }, {} as Record<string, DiscountItem[]>)
+
+            return (
+              <div className="space-y-4">
+                {viewingDiscountStudent.term && viewingDiscountStudent.term !== "-" && (
+                  <span className="text-sm text-muted-foreground">{viewingDiscountStudent.term}</span>
+                )}
+
+                {Object.entries(groupedByCat).map(([cat, items]) => (
+                  <div key={cat} className="space-y-1">
+                    <Badge variant="secondary">{cat}</Badge>
+                    <div className="space-y-1 pl-2">
+                      {(items as DiscountItem[]).map((d, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-1">
+                          <span className="text-sm">{d.name}</span>
+                          <span className="text-sm font-medium">
+                            {d.mode === "percentage" ? `${d.value}%` : formatCurrency(d.value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
