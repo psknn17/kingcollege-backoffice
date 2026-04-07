@@ -1396,7 +1396,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       </TabsList>
 
       <TabsContent value="basic" className="space-y-4 mt-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t("student.studentId")}</Label>
             <Input
@@ -1425,7 +1425,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t("student.firstName")} <span className="text-destructive">*</span></Label>
             <Input
@@ -1446,7 +1446,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t("student.nickname")}</Label>
             <Input
@@ -1546,7 +1546,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       <TabsContent value="academic" className="space-y-6 mt-4">
         {/* Academic Info */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t("student.academicYear")} <span className="text-destructive">*</span></Label>
             <Select
@@ -1585,7 +1585,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t("student.yearGroup")} <span className="text-destructive">*</span></Label>
             <Select
@@ -1616,7 +1616,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t("student.enrollmentDate")}</Label>
             <Popover>
@@ -1673,7 +1673,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                 Invoices for earlier terms are not affected.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("student.academicYear")}</Label>
                 <Select
@@ -1744,7 +1744,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </div>
             {formData.gradeHistory.map((entry: GradeHistoryEntry, idx: number) => (
               <div key={idx} className="border rounded-lg p-4 bg-muted/30 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">{t("student.academicYear")}</Label>
                     <Select
@@ -1788,7 +1788,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">{t("student.yearGroup")}</Label>
                     <Select
@@ -1866,7 +1866,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
         {/* Add New Parent */}
         <div className="border rounded-lg p-4 space-y-4">
           <Label className="text-base font-medium">Add Parent/Guardian</Label>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("student.nameLabel")}</Label>
               <Input
@@ -1895,7 +1895,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("student.phoneLabel")}</Label>
               <Input
@@ -1932,21 +1932,21 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("student.title")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("student.description")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            {t("common.export")}
+            Export Interface File
           </Button>
           <Button variant="outline" onClick={handleImport} disabled={!userCanEdit} className="flex items-center gap-2">
             <Upload className="w-4 h-4" />
-            {t("common.import")}
+            Import Interface File
           </Button>
           <Button variant="outline" onClick={handleOpenPromoteDialog} disabled={!userCanEdit} className="flex items-center gap-2">
             <ArrowUpCircle className="w-4 h-4" />
@@ -1960,7 +1960,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -2019,7 +2019,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
             </Button>
           </div>
           {showFilters && (<>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Select value={filterGrade} onValueChange={setFilterGrade}>
                 <SelectTrigger>
                   <Filter className="w-4 h-4 mr-2" />
@@ -2088,7 +2088,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Student Table */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 overflow-x-auto">
           {selectedStudentIds.size > 0 && (
             <div className="mb-4 flex items-center justify-end gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
               <span className="text-sm font-medium text-red-800">
@@ -2366,7 +2366,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Add Student Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} modal={true}>
-        <DialogContent className="max-w-2xl p-6">
+        <DialogContent className="max-w-2xl w-[95vw] p-6">
           <DialogHeader>
             <DialogTitle>{t("student.addNewStudent")}</DialogTitle>
           </DialogHeader>
@@ -2386,7 +2386,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Edit Student Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} modal={true}>
-        <DialogContent className="max-w-2xl p-6">
+        <DialogContent className="max-w-2xl w-[95vw] p-6">
           <DialogHeader>
             <DialogTitle>{t("student.editStudent")}</DialogTitle>
           </DialogHeader>
@@ -2406,7 +2406,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* View Student Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl p-6">
+        <DialogContent className="max-w-2xl w-[95vw] p-6">
           <DialogHeader>
             <DialogTitle>{t("student.studentDetails")}</DialogTitle>
           </DialogHeader>
@@ -2425,7 +2425,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               </div>
 
               {/* Academic Info */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div>
                   <p className="text-sm text-muted-foreground">{t("common.academicYear")}</p>
                   <p className="font-medium">{formatAcademicYear(selectedStudent.academicYear)}</p>
@@ -2461,7 +2461,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
                   </h4>
                   {selectedStudent.gradeHistory.map((entry: GradeHistoryEntry, idx: number) => (
                     <div key={idx} className="border rounded-lg p-4 bg-muted/30">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">{t("common.academicYear")}</p>
                           <p className="font-medium">{entry.academicYear}</p>
@@ -2588,7 +2588,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
               {/* Audit Info */}
               <div className="border-t pt-4 mt-4">
                 <h4 className="font-medium mb-3 text-sm text-muted-foreground">{t("student.recordInformation")}</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">{t("student.createdBy")}</p>
                     <p className="font-medium">{selectedStudent.createdBy || "System"}</p>
@@ -2809,7 +2809,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
       {/* Promote Grade Dialog */}
       <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-6">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-6">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpCircle className="w-5 h-5" />
@@ -2822,7 +2822,7 @@ export function StudentList({ onNavigate }: StudentListProps = {}) {
 
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             {/* Year Selection */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("student.fromAcademicYear")}</Label>
                 <Select value={promoteFromYear} onValueChange={handleFromYearChange} disabled={!userCanEdit}>

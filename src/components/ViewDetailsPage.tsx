@@ -352,7 +352,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
   const renderInvoiceView = () => (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
           <h3 className="text-xl font-semibold">Invoice #{data.invoiceNumber || data.id}</h3>
           <p className="text-muted-foreground">{data.description || "Invoice Details"}</p>
@@ -519,6 +519,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
               </div>
             ) : (
               <>
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -547,6 +548,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
                     ))}
                   </TableBody>
                 </Table>
+                </div>
                 <Separator className="my-4" />
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold">Total Amount:</span>
@@ -563,7 +565,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
   const renderStudentView = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
           <h3 className="text-xl font-semibold">{data.name}</h3>
           <p className="text-muted-foreground">Student ID: {data.id}</p>
@@ -661,7 +663,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
   const renderItemView = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
           <h3 className="text-xl font-semibold">{data.name}</h3>
           {data.description && <p className="text-muted-foreground">{data.description}</p>}
@@ -716,7 +718,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
   const renderReceiptView = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
           <h3 className="text-xl font-semibold">Receipt #{data.receiptNumber || data.id}</h3>
           <p className="text-muted-foreground">Payment Receipt</p>
@@ -853,7 +855,7 @@ export function ViewDetailsPage({ type, data, onEdit, onDownload, onPrint, onBac
     <div className="space-y-6">
       {/* Action Buttons (Header is rendered by App.tsx) */}
       <div className="flex items-center justify-end">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {isEditMode ? (
             <>
               <Button

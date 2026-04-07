@@ -251,7 +251,7 @@ export function EventPaymentDeadline() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="mb-2">{t("eventPayment.title")}</h2>
           <p className="text-muted-foreground">
@@ -341,7 +341,7 @@ export function EventPaymentDeadline() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("eventPayment.activeDeadlines")}</CardTitle>
@@ -393,7 +393,7 @@ export function EventPaymentDeadline() {
             {t("eventPayment.listDescription")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

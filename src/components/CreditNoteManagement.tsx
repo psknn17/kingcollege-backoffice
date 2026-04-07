@@ -737,7 +737,7 @@ export function CreditNoteManagement() {
 
         {/* Tabs for Receipts and Credit Notes */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "receipts" | "credit-notes")}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
             <TabsList>
               <TabsTrigger value="receipts" className="flex items-center gap-2">
                 <Receipt className="w-4 h-4" />
@@ -749,7 +749,7 @@ export function CreditNoteManagement() {
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
@@ -785,7 +785,7 @@ export function CreditNoteManagement() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
                     <Input placeholder={t("creditNote.searchReceiptPlaceholder")} />
                   </div>
@@ -811,7 +811,7 @@ export function CreditNoteManagement() {
               <CardHeader>
                 <CardTitle>{t("creditNote.receiptList")}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-x-auto">
                 {/* Receipts Table - Standard Alignment */}
                 <Table>
                   <TableHeader>
@@ -1042,7 +1042,7 @@ export function CreditNoteManagement() {
             </Card>
 
             {/* Results Summary */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
               <p className="text-sm text-muted-foreground">
                 {t("creditNote.showingOf2").replace("{filtered}", String(filteredCreditNotes.length)).replace("{total}", String(creditNotes.length))}
               </p>
@@ -1050,7 +1050,7 @@ export function CreditNoteManagement() {
 
             {/* Credit Notes Table - Standard Alignment */}
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

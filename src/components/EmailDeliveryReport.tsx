@@ -379,14 +379,14 @@ export function EmailDeliveryReport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold">{t("email.deliveryReport")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("email.deliveryReportDesc")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={exportReport} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
             {t("email.exportReport")}
@@ -570,7 +570,7 @@ export function EmailDeliveryReport() {
 
       {/* Email Records Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -321,7 +321,7 @@ export function TuitionTermSettings() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("termSettings.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -408,7 +408,7 @@ export function TuitionTermSettings() {
                 <CollapsibleContent>
                   <CardContent className="pt-0 pb-6">
                     {/* Terms Table */}
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border rounded-lg overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-50">
                           <tr>

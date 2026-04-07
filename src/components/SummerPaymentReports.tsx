@@ -294,7 +294,7 @@ export function SummerPaymentReports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("summerPayment.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -302,7 +302,7 @@ export function SummerPaymentReports() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => exportReport('csv')}>
             <Download className="w-4 h-4 mr-2" />
             {t("common.exportCsv")}
@@ -328,7 +328,7 @@ export function SummerPaymentReports() {
 
         <TabsContent value="overview" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
                 <div className="flex items-center gap-1.5">
@@ -480,7 +480,7 @@ export function SummerPaymentReports() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-7">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 <div className="space-y-2">
                   <Label>{t("common.search")}</Label>
                   <div className="relative">
@@ -611,7 +611,7 @@ export function SummerPaymentReports() {
                 {t("summerPayment.showingOfRecords").replace("{count}", String(currentPagePayments.length)).replace("{total}", String(filteredPayments.length))}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

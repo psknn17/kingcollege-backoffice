@@ -234,8 +234,8 @@ export function ActivityLog() {
 
   return (
     <div className="space-y-6 font-sans" style={{ fontFamily: "'Lato', sans-serif" }}>
-      <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm mb-6 bg-gradient-to-r from-white to-gray-50">
-        <div className="flex items-center justify-between">
+      <div className="bg-white p-4 md:p-8 rounded-2xl border border-gray-100 shadow-sm mb-6 bg-gradient-to-r from-white to-gray-50">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{t("activityLog.title")}</h2>
             <p className="text-base text-muted-foreground mt-1">
@@ -264,7 +264,7 @@ export function ActivityLog() {
 
       {/* Activity Log Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

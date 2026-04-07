@@ -2357,26 +2357,13 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   // Import functions
   const downloadTemplate = () => {
     const headers = [
-      "Item Code",
-      "Name",
+      "No.",
+      "Gen. Prod. Posting Group",
       "Description",
-      "Amount",
-      "Nominal Code",
-      "Document Type",
-      "Status"
+      "Price"
     ]
 
-    const exampleRow = [
-      "ITEM-001",
-      "Sample Item",
-      "This is a sample item description",
-      "50000",
-      "4110001",
-      "SI",
-      "active"
-    ]
-
-    downloadAsXlsx(headers, [exampleRow], "item_import_template")
+    downloadAsXlsx(headers, [], "item_import_template")
 
     toast.success(t("item.templateDownloaded"))
     logActivity({
@@ -2387,15 +2374,12 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
   }
 
   const handleExportItems = () => {
-    const headers = ["Item Code", "Name", "Description", "Amount", "Nominal Code", "Document Type", "Status"]
+    const headers = ["No.", "Gen. Prod. Posting Group", "Description", "Price"]
     const rows = filteredItems.map(item => [
       item.itemCode,
-      item.name,
-      item.description,
-      item.amount,
       item.nominalCode || "",
-      "SI",
-      item.isActive ? "active" : "inactive"
+      item.name,
+      item.amount
     ])
     downloadAsXlsx(headers, rows, `items_export_${invoiceType}_${new Date().toISOString().split("T")[0]}`)
     toast.success(`Exported ${rows.length} items`)
@@ -2841,64 +2825,6 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">
-            {activeTab === "items" 
-              ? (isExternalView ? t("item.externalItems") : t("item.manageItems"))
-              : (isExternalView ? t("item.externalTemplates") : t("item.manageTemplates"))
-            }
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {activeTab === "items"
-              ? (isSimplifiedView ? t("item.manageActivityItemsDesc") : t("item.manageItemsDesc"))
-              : (isSimplifiedView ? t("item.manageActivityTemplatesDesc") : t("item.manageTemplatesDesc"))
-            }
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {activeTab === "items" ? (
-            <>
-              <Button
-                variant="outline"
-                onClick={handleExportItems}
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!userCanEdit}
-                onClick={handleImport}
-                className="flex items-center gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                {t("common.import")}
-              </Button>
-              <Button 
-                disabled={!userCanEdit} 
-                onClick={openCreateItemModal}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                {t("item.createItem")}
-              </Button>
-            </>
-          ) : (
-            <Button 
-              disabled={!userCanEdit} 
-              onClick={openCreateTemplateModal}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              {t("item.createTemplate")}
-            </Button>
-          )}
-        </div>
-      </div>
-
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <Button
@@ -2919,6 +2845,64 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           <Bookmark className="w-4 h-4" />
           {t("tabs.templates")}
         </Button>
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">
+            {activeTab === "items"
+              ? (isExternalView ? t("item.externalItems") : t("item.manageItems"))
+              : (isExternalView ? t("item.externalTemplates") : t("item.manageTemplates"))
+            }
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {activeTab === "items"
+              ? (isSimplifiedView ? t("item.manageActivityItemsDesc") : t("item.manageItemsDesc"))
+              : (isSimplifiedView ? t("item.manageActivityTemplatesDesc") : t("item.manageTemplatesDesc"))
+            }
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {activeTab === "items" ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleExportItems}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export Interface File
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!userCanEdit}
+                onClick={handleImport}
+                className="flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Import Interface File
+              </Button>
+              <Button
+                disabled={!userCanEdit}
+                onClick={openCreateItemModal}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {t("item.createItem")}
+              </Button>
+            </>
+          ) : (
+            <Button
+              disabled={!userCanEdit}
+              onClick={openCreateTemplateModal}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              {t("item.createTemplate")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Items Tab */}
@@ -2986,7 +2970,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
         <Card>
           <CardContent className="p-0">
             {/* Items Table */}
-            <div className="border rounded-lg">
+            <div className="border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -3006,28 +2990,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         disabled={!userCanEdit}
                       />
                     </TableHead>
-                    {/* Item Code - left aligned */}
+                    {/* No. - left aligned */}
                     <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itemCode")}>
                       <div className="flex items-center gap-1">
-                        {t("table.itemCode")}
+                        No.
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Nominal Code - left aligned */}
-                    <TableHead align="left">{t("item.nominalCode")}</TableHead>
-                    {/* Item Name/Description - left aligned */}
+                    {/* Gen. Prod. Posting Group - left aligned */}
+                    <TableHead align="left">Gen. Prod. Posting Group</TableHead>
+                    {/* Description - left aligned */}
                     <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                       <div className="flex items-center gap-1">
-                        {t("table.itemName")}
+                        Description
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
-                    {/* Type - center aligned */}
-                    <TableHead align="center">{t("item.type")}</TableHead>
-                    {/* Amount - right aligned (currency) */}
+                    {/* Price - right aligned (currency) */}
                     <TableHead align="right" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                       <div className="flex items-center justify-end gap-1">
-                        {t("table.amountTHB")}
+                        Price
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
@@ -3068,22 +3050,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                         {item.nominalCode || "-"}
                       </TableCell>
                       <TableCell align="left" className="py-2">
-                        <div className="flex flex-col space-y-0.5">
-                          <div className="flex items-center gap-2 leading-none">
-                            <p className="font-medium text-sm">{item.name}</p>
-                            {isTuitionItem && item.academicYear && (
-                              <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 bg-blue-50 text-blue-700 border-blue-200">
-                                {formatAcademicYear(item.academicYear)}
-                              </Badge>
-                            )}
-                          </div>
-                          {item.description && (
-                            <p className="text-[10px] text-muted-foreground leading-tight">{item.description}</p>
+                        <div className="flex items-center gap-2 leading-none">
+                          <p className="font-medium text-sm">{item.name}</p>
+                          {isTuitionItem && item.academicYear && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                              {formatAcademicYear(item.academicYear)}
+                            </Badge>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell align="center" className="py-2 text-xs">
-                        SI
                       </TableCell>
                       <TableCell align="right" className="py-2 font-medium text-sm">
                         {formatCurrency(item.amount)}
@@ -3278,7 +3252,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Create/Edit Item Modal */}
       <Dialog open={isCreateItemModalOpen} onOpenChange={closeItemModal}>
-        <DialogContent className="max-w-2xl p-6">
+        <DialogContent className="max-w-2xl w-[95vw] p-6">
           <DialogHeader>
             <DialogTitle>{editingItem ? t("item.editItem") : t("item.createNewItem")}</DialogTitle>
             <DialogDescription>
@@ -3287,48 +3261,36 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="font-medium">{t("item.itemCodeRequired")}</label>
+                <label className="font-medium">No. *</label>
                 <Input
-                  placeholder="TUI-001"
+                  placeholder="ECA3DPENKS101"
                   value={newItem.itemCode}
                   onChange={(e) => setNewItem({ ...newItem, itemCode: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <label className="font-medium">{t("item.itemNameRequired")}</label>
+                <label className="font-medium">Gen. Prod. Posting Group</label>
                 <Input
-                  placeholder="Swimming Program Fee"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <label className="font-medium">{t("item.nominalCode")}</label>
-                <Input
-                  placeholder="2130001"
+                  placeholder="213-0002"
                   value={newItem.nominalCode}
                   onChange={(e) => setNewItem({ ...newItem, nominalCode: e.target.value })}
                 />
               </div>
-
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">{t("item.description")}</label>
-              <Textarea
-                placeholder={t("item.descriptionPlaceholder")}
-                value={newItem.description}
-                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+              <label className="font-medium">Description *</label>
+              <Input
+                placeholder="Block 1 3D Pen Toy Character material fee"
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="font-medium">{t("item.amountRequired")}</label>
+              <label className="font-medium">Price *</label>
               <Input
                 type="number"
                 placeholder="50000"
@@ -3372,7 +3334,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Create/Edit Template Modal */}
       <Dialog open={isCreateTemplateModalOpen} onOpenChange={closeTemplateModal}>
-        <DialogContent className="max-w-3xl p-6">
+        <DialogContent className="max-w-3xl w-[95vw] p-6">
           <DialogHeader>
             <DialogTitle>{editingTemplate ? t("item.editTemplate") : t("item.createNewTemplate")}</DialogTitle>
             <DialogDescription>
@@ -3381,7 +3343,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="font-medium">{t("item.templateNameRequired")}</label>
                 <Input
@@ -3605,11 +3567,10 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                     <Table className="min-w-[600px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead align="left" className="w-32">{t("table.itemCode")}</TableHead>
-                          <TableHead align="left">{t("table.itemName")}</TableHead>
-                          <TableHead align="right" className="w-32">{t("table.amount")}</TableHead>
-
-                          <TableHead align="center" className="w-24">{t("table.status")}</TableHead>
+                          <TableHead align="left" className="w-32">No.</TableHead>
+                          <TableHead align="left" className="w-40">Gen. Prod. Posting Group</TableHead>
+                          <TableHead align="left">Description</TableHead>
+                          <TableHead align="right" className="w-32">Price</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3621,13 +3582,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                                 {row["Item Code"]}
                                 {isDuplicate && <span className="ml-1 text-xs text-yellow-700">(ซ้ำ)</span>}
                               </TableCell>
+                              <TableCell align="left" className="whitespace-nowrap">{row["Nominal Code"] || ""}</TableCell>
                               <TableCell align="left" className={`max-w-xs ${isDuplicate ? "text-yellow-700" : ""}`}>
                                 <span className="block truncate" title={row["Name"]}>{row["Name"]}</span>
                               </TableCell>
                               <TableCell align="right" className="whitespace-nowrap">{parseFloat(row["Amount"] || "0").toLocaleString()}</TableCell>
-                              <TableCell align="center" className="whitespace-nowrap">
-                                <Badge variant="outline">{row["Status"] || "active"}</Badge>
-                              </TableCell>
                             </TableRow>
                           )
                         })}

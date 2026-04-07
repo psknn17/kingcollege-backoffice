@@ -946,7 +946,7 @@ export function ApprovalQueue() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-130px)] gap-4">
-      <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex-shrink-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm flex-shrink-0">
         <div>
           <h2 className="text-xl font-semibold">{t("approvalQueue.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -960,7 +960,7 @@ export function ApprovalQueue() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -1222,7 +1222,7 @@ export function ApprovalQueue() {
       </Card>
 
       <Card className="flex-1 min-h-0 flex flex-col">
-        <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-x-auto">
           {selectedInvoiceIds.size > 0 && (
             <div className="flex items-center justify-between p-3 bg-blue-50 border-b border-blue-200 flex-shrink-0">
               <div className="text-sm font-medium text-blue-800">

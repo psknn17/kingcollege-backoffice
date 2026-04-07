@@ -546,7 +546,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold">{t("course.quotaOverview")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -683,7 +683,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
 
       {/* Course Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -832,7 +832,7 @@ export function CourseQuotaOverview({ onNavigateToSubPage }: CourseQuotaOverview
                           size="sm"
                           variant="ghost"
                           onClick={() => exportCourseReport(course)}
-                          title="Export Report"
+                          title="Export Excel"
                         >
                           <Download className="w-4 h-4" />
                         </Button>

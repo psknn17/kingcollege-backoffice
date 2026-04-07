@@ -177,7 +177,7 @@ export function SummerActivitiesImport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("summer.importTitle")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -358,7 +358,7 @@ export function SummerActivitiesImport() {
                         <h4 className="font-medium">{activity.name}</h4>
                         {getCategoryBadge(activity.category)}
                       </div>
-                      <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-muted-foreground">
                         <span>{t("summer.age")}: {activity.ageGroup}</span>
                         <span>{t("summer.duration")}: {activity.duration}</span>
                         <span>{t("summer.capacity")}: {activity.capacity} {t("summer.students")}</span>

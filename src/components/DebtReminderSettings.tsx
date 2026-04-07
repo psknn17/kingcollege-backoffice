@@ -934,14 +934,14 @@ export function DebtReminderSettings() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-semibold">{t("debt.reminderSettings")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("debt.reminderSettingsDesc")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => setIsTemplateListOpen(true)} className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Templates Debt Reminder
@@ -954,7 +954,7 @@ export function DebtReminderSettings() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -1502,7 +1502,7 @@ export function DebtReminderSettings() {
           {previewReminder && (
             <div className="space-y-4 py-2">
               {/* Recipient + Schedule row */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-blue-300 bg-blue-50">
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-center justify-between">
@@ -1724,7 +1724,7 @@ export function DebtReminderSettings() {
       {/* Create / Edit Template Dialog -- with live preview */}
       <Dialog open={templateManageDialog.isOpen} onOpenChange={(open) => !open && setTemplateManageDialog({ isOpen: false, editing: null })}>
         <DialogContent className="p-0 gap-0 overflow-hidden" style={{ maxWidth: "95vw", width: "1500px", minHeight: "80vh" }}>
-          <div className="grid grid-cols-2 min-h-[75vh]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[75vh]">
             {/* Left Panel: Form */}
             <div className="p-6 border-r border-gray-200 flex flex-col">
               <div className="flex items-center gap-2 mb-5">

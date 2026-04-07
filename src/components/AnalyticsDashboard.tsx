@@ -371,10 +371,10 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-muted/20 min-h-screen">
+    <div className="p-3 md:p-6 space-y-6 bg-muted/20 min-h-screen">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
             <BarChart3 className="w-5 h-5 text-primary-foreground" />
@@ -425,13 +425,13 @@ export function AnalyticsDashboard() {
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all font-semibold shadow-sm hover:shadow-md disabled:opacity-50 text-sm"
           >
             {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-            <span>Export</span>
+            <span>Export Excel</span>
           </button>
         </div>
       </div>
 
       {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
         <SummaryCard label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" icon={DollarSign} />
         <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e" icon={TrendingUp} />
         <SummaryCard label="Bank Fees"      value={fmtB(totalBankFees)}  accent="#ef4444" icon={Landmark} />

@@ -664,21 +664,21 @@ export default function App() {
               </Sidebar>
 
               <main className="flex-1 flex flex-col">
-                <header className="border-b p-4 flex items-center gap-4">
+                <header className="border-b p-2 md:p-4 flex items-center gap-2 md:gap-4">
                   <SidebarTrigger />
                   {isSubPage && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={navigateBack}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-1 md:gap-2"
                     >
                       <ArrowLeft className="w-4 h-4" />
-                      {t("common.back")}
+                      <span className="hidden sm:inline">{t("common.back")}</span>
                     </Button>
                   )}
-                  <div className="flex-1">
-                    <h1 className="text-lg font-semibold">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-sm md:text-lg font-semibold truncate">
                       {(() => {
                         // 1. Invoice-related pages with category prefixes (check FIRST to override generic labels)
                         if (activeSection === "student-invoices") return "Tuition Invoice";
@@ -751,15 +751,15 @@ export default function App() {
                     variant="outline"
                     size="sm"
                     onClick={() => setLanguage(language === 'en' ? 'th' : 'en')}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1 md:gap-2 shrink-0"
                   >
                     <Globe className="w-4 h-4" />
-                    {language === 'en' ? 'EN' : 'TH'}
+                    <span className="hidden sm:inline">{language === 'en' ? 'EN' : 'TH'}</span>
                   </Button>
 
                 </header>
 
-                <div className="flex-1 min-h-0 p-6 flex flex-col" data-content-area>
+                <div className="flex-1 min-h-0 p-3 md:p-6 flex flex-col" data-content-area>
                   <Routes>
                     {/* Dashboard */}
                     <Route path="/" element={<ReportOverview />} />

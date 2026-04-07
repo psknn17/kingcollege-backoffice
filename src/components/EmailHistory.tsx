@@ -322,7 +322,7 @@ export function EmailHistory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">Email History</h2>
           <p className="text-sm text-muted-foreground">
@@ -331,7 +331,7 @@ export function EmailHistory() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -464,7 +464,7 @@ export function EmailHistory() {
       {/* Data Table */}
       <Card>
         <CardContent className="p-0">
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

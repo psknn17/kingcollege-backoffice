@@ -2383,8 +2383,12 @@ export function InvoiceManagement({
   }
 
   const exportAllInvoicesZip = async () => {
-    if (filteredInvoices.length === 0) {
-      toast.error("No invoices to export")
+    const invoicesToExport = selectedInvoiceIds.size > 0
+      ? filteredInvoices.filter(inv => selectedInvoiceIds.has(inv.id))
+      : []
+
+    if (invoicesToExport.length === 0) {
+      toast.error("Please select invoices to export")
       return
     }
 
@@ -2498,11 +2502,11 @@ export function InvoiceManagement({
         }))
       }
 
-      const total = filteredInvoices.length
+      const total = invoicesToExport.length
       setExportProgress({ current: 0, total })
 
-      for (let index = 0; index < filteredInvoices.length; index += 1) {
-        const invoice = filteredInvoices[index]
+      for (let index = 0; index < invoicesToExport.length; index += 1) {
+        const invoice = invoicesToExport[index]
         setExportProgress({ current: index + 1, total })
 
         const container = buildInvoicePreviewElement(invoice)
@@ -3687,7 +3691,7 @@ export function InvoiceManagement({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">
             {category === "tuition" ? t("menu.tuitionInvoices") :
@@ -3702,36 +3706,15 @@ export function InvoiceManagement({
             {t("invoice.subtitle")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             className="flex items-center gap-2"
             onClick={downloadInterfaceFile}
           >
             <Download className="w-4 h-4" />
-            Download Interface File
+            Export Interface File
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2" disabled={isExportingAll}>
-                <Download className="w-4 h-4" />
-                {isExportingAll
-                  ? `${t("invoice.exporting")} ${exportProgress?.current ?? 0}/${exportProgress?.total ?? 0}`
-                  : "Export"}
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={exportAllInvoicesZip} disabled={isExportingAll}>
-                <FileText className="w-4 h-4 mr-2" />
-                Export PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportInvoiceReport}>
-                <Download className="w-4 h-4 mr-2" />
-                Export .xlsx
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <Button
             variant="outline"
             className="flex items-center gap-2"
@@ -3748,6 +3731,19 @@ export function InvoiceManagement({
             className="hidden"
             onChange={handleImportInterfaceFile}
           />
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={exportAllInvoicesZip}
+            disabled={isExportingAll || selectedInvoiceIds.size === 0}
+          >
+            <Download className="w-4 h-4" />
+            {isExportingAll
+              ? `${t("invoice.exporting")} ${exportProgress?.current ?? 0}/${exportProgress?.total ?? 0}`
+              : selectedInvoiceIds.size > 0
+                ? `Export PDF (${selectedInvoiceIds.size})`
+                : "Export PDF"}
+          </Button>
           <Button
             variant="outline"
             className="flex items-center gap-2"
@@ -4213,7 +4209,7 @@ export function InvoiceManagement({
 
           {/* Invoices Table */}
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -4636,7 +4632,7 @@ export function InvoiceManagement({
 
           {/* External Invoice Table */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 overflow-x-auto">
               {filteredInvoices.length === 0 ? (
                 <EmptyState
                   icon={<FileText className="h-8 w-8 text-muted-foreground" />}
@@ -5301,7 +5297,7 @@ export function InvoiceManagement({
 
       {/* Create Invoice Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+        <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] max-h-[90vh] overflow-y-auto p-3 md:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
@@ -5408,7 +5404,7 @@ export function InvoiceManagement({
                       </Button>
                     </div>
 
-                    <div className="border rounded-lg">
+                    <div className="border rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -5489,7 +5485,7 @@ export function InvoiceManagement({
                 <h3 className="font-medium">3. Select Students</h3>
 
                 {/* Selection Type */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Card className={`cursor-pointer transition-all ${studentSelectionType === "individual" ? "ring-2 ring-primary" : ""}`}>
                     <CardContent className="p-4" onClick={() => setStudentSelectionType("individual")}>
                       <div className="flex items-center justify-center mb-2">
@@ -5679,7 +5675,7 @@ export function InvoiceManagement({
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 mb-2">Invoice Summary</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-blue-700">Grade: <span className="font-medium">{selectedGrade}</span></p>
                       <p className="text-blue-700">Students: <span className="font-medium">{selectedStudents.length}</span></p>
@@ -5808,7 +5804,7 @@ export function InvoiceManagement({
 
       {/* Add More Items Dialog */}
       <Dialog open={isAddItemsDialogOpen} onOpenChange={setIsAddItemsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] p-6">
+        <DialogContent className="max-w-3xl w-[95vw] md:w-[90vw] max-h-[80vh] p-3 md:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
@@ -6209,7 +6205,7 @@ export function InvoiceManagement({
 
             {/* EDC Amount & CC Fee inputs (inline, above summary) */}
             {!_fullyByCN && paymentMethod === "EDC" && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-sm font-medium">EDC Amount (฿) <span className="text-red-500">*</span></label>
                   <Input
@@ -6380,7 +6376,7 @@ export function InvoiceManagement({
 
       {/* Edit Draft Invoice Modal - Professional SaaS Design */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
+        <DialogContent className="max-w-5xl w-[95vw] md:w-[90vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
           {selectedInvoice && (
             <>
               {/* Header Section */}
@@ -6399,7 +6395,7 @@ export function InvoiceManagement({
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-gray-50">
                 {/* 2-Column Layout: Student/Parent Info & Invoice Details */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Student Information Card */}
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <div className="flex items-center gap-3 mb-4">
@@ -6453,7 +6449,7 @@ export function InvoiceManagement({
                     </div>
                     <h3 className="text-base font-semibold text-gray-900">Invoice Details</h3>
                   </div>
-                  <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-500 mb-1">Invoice Date</span>
                       <span className="text-sm font-medium text-gray-900">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "-"}</span>
@@ -7181,7 +7177,7 @@ export function InvoiceManagement({
             return (
               <div className="px-8 pt-6 pb-6">
                 {/* Main Information - Flat Style */}
-                <div className="grid grid-cols-3 gap-8 mb-6 pb-4 border-b">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-6 pb-4 border-b">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Invoice Number</p>
                     <p className="text-base font-bold text-foreground">{displayInvoiceNumber(selectedInvoiceForEmail.invoiceNumber, getApprovalStatus(selectedInvoiceForEmail))}</p>

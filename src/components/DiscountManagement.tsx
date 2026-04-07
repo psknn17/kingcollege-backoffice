@@ -99,7 +99,11 @@ const convertStudentsToDiscountFormat = (contextStudents: any[]): Student[] => {
     return {
       id: student.studentId, // Use studentId (e.g., KC2024001)
       name: `${student.firstName} ${student.lastName}`,
-      yearGroup: student.gradeLevel,
+      yearGroup: (student.gradeLevel || "")
+        .replace(/^pre-nursery$/i, "Pre-Nursery")
+        .replace(/^nursery$/i, "Nursery")
+        .replace(/^reception$/i, "Reception")
+        .replace(/^year\s*(\d+)$/i, "Year $1"),
       parentName: primaryParent?.name || "N/A",
       isActive: student.status === "active"
     }
@@ -392,6 +396,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [currentStudentsSearch, setCurrentStudentsSearch] = useState("")
+  const [studentYearGroupFilter, setStudentYearGroupFilter] = useState("all")
 
   // Confirm dialog hooks
   const saveDialog = useConfirmDialog()
@@ -729,7 +734,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const downloadStudentTemplate = () => {
     downloadAsXlsx(
       ["Student ID"],
-      [["KC2024001"], ["KC2024002"], ["KC2024003"], ["KC2024004"], ["KC2024005"]],
+      [],
       "student_ids_template"
     )
     toast.success(t("discount.studentIDTemplateDownloaded"))
@@ -961,7 +966,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("menu.studentGroups")}</h2>
           <p className="text-sm text-muted-foreground">{t("discount.activeGroups")}</p>
@@ -1201,29 +1206,9 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                       <TabsContent value="individual" className="space-y-3">
                         <div className="space-y-2">
-                          <Label>{t("discount.filterByYearGroup")}</Label>
-                          <Select
-                            value={selectedYearGroup}
-                            onValueChange={setSelectedYearGroup}
-                            disabled={!userCanEdit}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={t("discount.filterByYearGroup")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {uniqueYearGroups.map(group => (
-                                <SelectItem key={group} value={group}>
-                                  {group === "All" ? t("discount.allYearGroups") : group}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
                           <Label htmlFor="student-input">{t("discount.searchAddStudent")}</Label>
-                          <div className="relative">
-                            <div className="relative">
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
                               <Input
                                 id="student-input"
                                 value={studentInput}
@@ -1231,10 +1216,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 onFocus={() => setIsInputFocused(true)}
                                 onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                                 placeholder={searchPlaceholder}
-                                className="rounded-none"
                                 disabled={!userCanEdit}
                               />
-                            </div>
                             {/* Search Results Dropdown */}
                             {isInputFocused && (
                               <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -1278,6 +1261,23 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 )}
                               </div>
                             )}
+                            </div>
+                            <Select
+                              value={selectedYearGroup}
+                              onValueChange={setSelectedYearGroup}
+                              disabled={!userCanEdit}
+                            >
+                              <SelectTrigger className="w-48">
+                                <SelectValue placeholder={t("discount.filterByYearGroup")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {uniqueYearGroups.map(group => (
+                                  <SelectItem key={group} value={group}>
+                                    {group === "All" ? t("discount.allYearGroups") : group}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {t("discount.selectYearGroupHint")}
@@ -1428,8 +1428,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           <div className="space-y-4">
             {studentGroups.map((group) => (
               <Card key={group.id} className={group.isActive === false ? "opacity-60" : ""}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex flex-col md:flex-row items-start justify-between gap-4 mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="font-medium">{group.name}</h4>
@@ -1454,7 +1454,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button variant="ghost" size="sm" onClick={() => handleViewGroup(group)}>
                         <Eye className="w-4 h-4 mr-1" />
                         {t("discount.viewAll")}
@@ -1553,28 +1553,6 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       >
                         <Download className="w-4 h-4 mr-2" />
                         {t("discount.downloadList")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setCsvUploadDialog({ isOpen: true, groupId: viewGroupDialog.group?.id })
-                          setViewGroupDialog({ isOpen: false, group: null })
-                        }}
-                        disabled={!userCanEdit}
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        {t("discount.uploadCSVBtn")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setAddIndividualDialog({ isOpen: true, groupId: viewGroupDialog.group?.id })
-                          setViewGroupDialog({ isOpen: false, group: null })
-                        }}
-                        disabled={!userCanEdit}
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        {t("discount.addIndividualBtn")}
                       </Button>
                     </div>
                     <Button onClick={() => setViewGroupDialog({ isOpen: false, group: null })}>
@@ -1682,26 +1660,24 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     </span>
                   </div>
 
-                  <Tabs defaultValue="add-student" className="space-y-4">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="add-student">{t("discount.addIndividualTab")}</TabsTrigger>
+                  <Tabs defaultValue="students" className="space-y-4">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="students">{t("discount.currentStudentsTab").replace("{count}", String(groupForm.selectedStudents.length))}</TabsTrigger>
                       <TabsTrigger value="csv-upload">{t("discount.csvUpload")}</TabsTrigger>
-                      <TabsTrigger value="current-students">{t("discount.currentStudentsTab").replace("{count}", String(groupForm.selectedStudents.length))}</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="add-student" className="space-y-3">
+                    <TabsContent value="students" className="space-y-3">
+                      {/* Add Student Search + Year Group Filter */}
                       <div className="space-y-2">
                         <Label htmlFor="edit-student-input">{t("discount.searchAddStudent")}</Label>
-                        <div className="relative">
-                          <div className="relative">
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
                             <Input
                               id="edit-student-input"
                               value={studentInput}
                               onChange={(e) => setStudentInput(e.target.value)}
                               placeholder={searchPlaceholder}
-                              className="rounded-none"
                             />
-                          </div>
                           {/* Search Results Dropdown */}
                           {studentInput.length >= 1 && (
                             <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
@@ -1709,7 +1685,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 .filter(s =>
                                   !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
                                   (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                    s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                    s.name.toLowerCase().includes(studentInput.toLowerCase())) &&
+                                  (studentYearGroupFilter === "all" || s.yearGroup === studentYearGroupFilter)
                                 )
                                 .slice(0, 10)
                                 .map(student => (
@@ -1744,7 +1721,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                               {availableStudents.filter(s =>
                                 !groupForm.selectedStudents.find(sel => sel.id === s.id) &&
                                 (s.id.toLowerCase().includes(studentInput.toLowerCase()) ||
-                                  s.name.toLowerCase().includes(studentInput.toLowerCase()))
+                                  s.name.toLowerCase().includes(studentInput.toLowerCase())) &&
+                                (studentYearGroupFilter === "all" || s.yearGroup === studentYearGroupFilter)
                               ).length === 0 && (
                                   <div className="px-3 py-2 text-sm text-muted-foreground">
                                     No students found
@@ -1752,11 +1730,75 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                                 )}
                             </div>
                           )}
+                          </div>
+                          <Select value={studentYearGroupFilter} onValueChange={setStudentYearGroupFilter}>
+                            <SelectTrigger className="w-48">
+                              <SelectValue placeholder="All Year Groups" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Year Groups</SelectItem>
+                              {Array.from(new Set(groupForm.selectedStudents.map(s => s.yearGroup))).sort().map(yg => (
+                                <SelectItem key={yg} value={yg}>{yg}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {t("discount.typeToSearchStudent")}
                         </p>
                       </div>
+
+                      {/* Current Student List */}
+                      {groupForm.selectedStudents.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="border rounded-lg p-3 max-h-60 overflow-y-auto">
+                            <div className="grid gap-2">
+                              {groupForm.selectedStudents
+                                .filter(student =>
+                                  (student.name.toLowerCase().includes(studentInput.toLowerCase()) ||
+                                  student.id.toLowerCase().includes(studentInput.toLowerCase()) ||
+                                  studentInput === "") &&
+                                  (studentYearGroupFilter === "all" || student.yearGroup === studentYearGroupFilter)
+                                )
+                                .map(student => (
+                                  <div key={student.id} className={`flex items-center justify-between p-2 rounded text-sm ${student.isActive === false ? 'bg-muted/30 opacity-60' : 'bg-muted/50'}`}>
+                                    <div className="flex items-center gap-2">
+                                      <div>
+                                        <span className="font-medium">{student.name}</span>
+                                        <span className="text-muted-foreground ml-2">({student.id})</span>
+                                        <span className="text-muted-foreground ml-2">{student.yearGroup}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <Switch
+                                          checked={student.isActive !== false}
+                                          onCheckedChange={() => toggleStudentStatus(student.id)}
+                                          disabled={!userCanEdit}
+                                        />
+                                        <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
+                                          {student.isActive === false ? t("discount.studentInactiveStatus") : t("discount.studentActiveStatus")}
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeStudentFromGroup(student.id)}
+                                        className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={!userCanEdit}
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          {t("discount.noStudentsInGroup")}
+                        </div>
+                      )}
                     </TabsContent>
 
                     <TabsContent value="csv-upload" className="space-y-3">
@@ -1841,77 +1883,6 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                           </span>
                         </div>
                       </div>
-                    </TabsContent>
-
-                    <TabsContent value="current-students" className="space-y-3">
-                      {groupForm.selectedStudents.length > 0 ? (
-                        <div className="space-y-3">
-                          {/* Search Input */}
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                              value={currentStudentsSearch}
-                              onChange={(e) => setCurrentStudentsSearch(e.target.value)}
-                              placeholder={t("discount.searchStudentsPlaceholder")}
-                              className="pl-10"
-                            />
-                          </div>
-
-                          {/* Student List */}
-                          <div className="border rounded-lg p-3 max-h-60 overflow-y-auto">
-                            <div className="grid gap-2">
-                              {groupForm.selectedStudents
-                                .filter(student =>
-                                  student.name.toLowerCase().includes(currentStudentsSearch.toLowerCase()) ||
-                                  student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
-                                )
-                                .map(student => (
-                                  <div key={student.id} className={`flex items-center justify-between p-2 rounded text-sm ${student.isActive === false ? 'bg-muted/30 opacity-60' : 'bg-muted/50'}`}>
-                                    <div className="flex items-center gap-2">
-                                      <div>
-                                        <span className="font-medium">{student.name}</span>
-                                        <span className="text-muted-foreground ml-2">({student.id})</span>
-                                        <span className="text-muted-foreground ml-2">{student.yearGroup}</span>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1">
-                                        <Switch
-                                          checked={student.isActive !== false}
-                                          onCheckedChange={() => toggleStudentStatus(student.id)}
-                                          disabled={!userCanEdit}
-                                        />
-                                        <span className={`text-xs ${student.isActive === false ? 'text-gray-400' : 'text-green-600'}`}>
-                                          {student.isActive === false ? t("discount.studentInactiveStatus") : t("discount.studentActiveStatus")}
-                                        </span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => removeStudentFromGroup(student.id)}
-                                        className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={!userCanEdit}
-                                      >
-                                        <X className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              {groupForm.selectedStudents.filter(student =>
-                                student.name.toLowerCase().includes(currentStudentsSearch.toLowerCase()) ||
-                                student.id.toLowerCase().includes(currentStudentsSearch.toLowerCase())
-                              ).length === 0 && currentStudentsSearch && (
-                                  <div className="text-center py-4 text-muted-foreground text-sm">
-                                    No students found matching "{currentStudentsSearch}"
-                                  </div>
-                                )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          {t("discount.noStudentsInGroup")}
-                        </div>
-                      )}
                     </TabsContent>
                   </Tabs>
                 </div>

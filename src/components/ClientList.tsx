@@ -270,7 +270,7 @@ export function ClientList() {
   }, [importPreview, clients])
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-6">
       <ConfirmDialog
         open={confirmDialog.isOpen}
         onOpenChange={confirmDialog.setIsOpen}
@@ -286,12 +286,12 @@ export function ClientList() {
         descriptionKey={`Import ${importPreview.length} clients? ${duplicateNames.size > 0 ? `${duplicateNames.size} duplicate(s) will be skipped.` : ""}`}
       />
 
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("menu.clientList")}</h2>
           <p className="text-sm text-muted-foreground">{t("clientList.description")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
             {t("clientList.export")}
@@ -329,7 +329,7 @@ export function ClientList() {
       <Card>
         <CardContent className="p-0">
           {/* Table */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -432,7 +432,7 @@ export function ClientList() {
             <DialogTitle>{editingClient ? t("clientList.editClient") : t("clientList.addClient")}</DialogTitle>
           </DialogHeader>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%", marginTop: "0px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
             {/* Client ID */}
             <div className="space-y-1.5">
               <Label>

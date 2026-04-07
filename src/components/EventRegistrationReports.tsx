@@ -227,7 +227,7 @@ export function EventRegistrationReports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="mb-2">{t("eventReports.title")}</h2>
           <p className="text-muted-foreground">
@@ -235,7 +235,7 @@ export function EventRegistrationReports() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => exportReport('csv')}>
             <Download className="w-4 h-4 mr-2" />
             {t("common.exportCsv")}
@@ -256,7 +256,7 @@ export function EventRegistrationReports() {
 
         <TabsContent value="overview" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
                 <div className="flex items-center gap-1.5">
@@ -304,7 +304,7 @@ export function EventRegistrationReports() {
               <CardTitle>{t("eventReports.eventSummary")}</CardTitle>
               <CardDescription>{t("eventReports.eventSummaryDesc")}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -377,7 +377,7 @@ export function EventRegistrationReports() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-7">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 <div className="space-y-2">
                   <Label>{t("common.search")}</Label>
                   <div className="relative">
@@ -500,7 +500,7 @@ export function EventRegistrationReports() {
                   .replace("{total}", String(filteredRegistrations.length))}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

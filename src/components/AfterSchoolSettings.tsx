@@ -135,7 +135,7 @@ export function AfterSchoolSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("settings.afterSchoolTitle")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -430,7 +430,7 @@ export function AfterSchoolSettings() {
                     <Clock className="w-4 h-4" />
                     {t("settings.periodSummary")}
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">{t("common.status")}:</span>{" "}
                       <span className={

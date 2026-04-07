@@ -332,7 +332,7 @@ export function ExternalParentManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold">{t("externalParent.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -346,7 +346,7 @@ export function ExternalParentManagement() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("externalParent.stats.totalApplications")}</p>
@@ -386,12 +386,12 @@ export function ExternalParentManagement() {
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
               {t("common.searchAndFilter")}
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
               <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
@@ -456,7 +456,7 @@ export function ExternalParentManagement() {
 
       {/* Applications Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

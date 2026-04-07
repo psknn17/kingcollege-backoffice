@@ -118,9 +118,9 @@ export function SchoolSettings() {
   )
 
   return (
-    <div className="p-6 w-full space-y-6">
+    <div className="p-3 md:p-6 w-full space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">School Settings</h2>
           <p className="text-sm text-muted-foreground">Manage school information and system settings</p>

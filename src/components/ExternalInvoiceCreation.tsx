@@ -622,7 +622,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                 <span className="font-semibold text-lg">1</span>
                 <h3 className="font-semibold">Client Information</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-9">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 ml-9">
                 <div className="space-y-1.5" ref={studentSearchRef}>
                   <Label className="text-sm font-medium">
                     Client name <span className="text-red-500">*</span>
@@ -824,7 +824,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
                   </div>
                 </div>
 
-                <div className="border rounded-lg">
+                <div className="border rounded-lg overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>

@@ -427,14 +427,14 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2>{isExternalView ? t("emailJobs.externalTitle") : isSimplifiedView ? t("emailJobs.activityTitle") : t("emailJobs.title")}</h2>
           <p className="text-muted-foreground">
             {isSimplifiedView ? t("emailJobs.activitySubtitle") : t("emailJobs.subtitle")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleSaveChanges} disabled={!userCanEdit}>
             <Save className="w-4 h-4 mr-2" />
             Save Changes
@@ -447,7 +447,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -552,7 +552,7 @@ export function EmailJobsManagement({ onNavigateToSubPage, jobType = "student" }
 
       {/* Email Jobs Table */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -391,7 +391,7 @@ export function SummerRegistrationControl() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="mb-2">{t("summer.title")}</h2>
           <p className="text-muted-foreground">
@@ -399,7 +399,7 @@ export function SummerRegistrationControl() {
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch
               checked={globalRegistrationEnabled}
@@ -511,7 +511,7 @@ export function SummerRegistrationControl() {
 
         <TabsContent value="periods" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t("summer.activePeriods")}</CardTitle>
@@ -593,7 +593,7 @@ export function SummerRegistrationControl() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-muted-foreground mb-2">
                         <span>{t("summer.start")}: {format(period.startDate, "dd MMM yyyy")}</span>
                         <span>{t("summer.end")}: {format(period.endDate, "dd MMM yyyy")}</span>
                         <span>{t("summer.target")}: {period.targetGroups.join(", ")}</span>
@@ -603,7 +603,7 @@ export function SummerRegistrationControl() {
                       
                       {/* Pricing Information */}
                       {period.pricingSettings && (
-                        <div className="grid grid-cols-3 gap-4 text-sm mb-2 p-2 bg-gray-50 rounded">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm mb-2 p-2 bg-gray-50 rounded">
                           <div>
                             <span className="text-muted-foreground">{t("summer.basePrice")}:</span>
                             <span className="ml-1 font-medium">฿{period.pricingSettings.regularPrice.toLocaleString()}</span>
@@ -693,7 +693,7 @@ export function SummerRegistrationControl() {
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground mb-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-muted-foreground mb-2">
                           <span>{t("summer.age")}: {activity.ageGroup}</span>
                           <span>{t("summer.fee")}: ฿{activity.fee.toLocaleString()}</span>
                           <span>{t("summer.deadline")}: {format(activity.registrationDeadline, "dd MMM")}</span>

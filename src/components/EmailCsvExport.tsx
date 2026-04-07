@@ -168,7 +168,7 @@ export function EmailCsvExport({ jobData, onBack }: EmailCsvExportProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2>{t("email.exportEmailLogs")}</h2>
           <p className="text-muted-foreground">

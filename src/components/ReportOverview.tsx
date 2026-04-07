@@ -350,7 +350,7 @@ export function ReportOverview() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Collection by Module Bar Chart */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm min-w-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">{t("report.collected")} vs {t("report.outstanding")}</CardTitle>
           </CardHeader>
@@ -374,7 +374,7 @@ export function ReportOverview() {
         </Card>
 
         {/* Collection Distribution Pie Chart */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm min-w-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">{t("report.collected")} — {t("report.moduleBreakdown")}</CardTitle>
           </CardHeader>

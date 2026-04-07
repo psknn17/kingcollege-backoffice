@@ -383,7 +383,7 @@ export function EventReceipts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("eventReceipt.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -412,7 +412,7 @@ export function EventReceipts() {
                 {t("eventReceipt.viewAndDownload")}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 {t("receipt.bulkResend")}
@@ -563,7 +563,7 @@ export function EventReceipts() {
 
           {/* Receipt Table */}
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

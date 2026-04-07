@@ -313,14 +313,14 @@ export function TuitionByYear() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("tuition.title")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("tuition.description")}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Label htmlFor="academic-year" className="text-sm whitespace-nowrap">{t("common.academicYear")}:</Label>
             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={!userCanEdit}>
@@ -352,7 +352,7 @@ export function TuitionByYear() {
             {t("tuition.feesAcademicYear")} {formatAcademicYear(selectedYear)}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -635,7 +635,7 @@ export function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">{t("users.title")}</h2>
           <p className="text-sm text-muted-foreground">
@@ -796,7 +796,7 @@ export function UserManagement() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("userManagement.totalUsers")}</p>
@@ -844,12 +844,12 @@ export function UserManagement() {
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
               {t("userManagement.searchAndFilter")}
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
               <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
             </div>
@@ -914,7 +914,7 @@ export function UserManagement() {
 
       {/* Users Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

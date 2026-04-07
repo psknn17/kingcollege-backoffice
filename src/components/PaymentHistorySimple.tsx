@@ -344,7 +344,7 @@ export function PaymentHistorySimple() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">Payment History</h2>
           <p className="text-sm text-muted-foreground">View payment records and transaction details</p>
@@ -563,7 +563,7 @@ export function PaymentHistorySimple() {
 
       {/* Payment Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -596,7 +596,7 @@ export function ViewModal({
       {/* Item Details - Compact Table */}
       <div className="bg-muted/50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-700 mb-3">Item Information</h4>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Item ID</span>
             <span className="font-mono text-gray-900">{data.id || '-'}</span>
@@ -851,13 +851,13 @@ export function ViewModal({
       return (
         <div className="space-y-4 p-4">
           {/* Header */}
-          <div className="flex items-center justify-between border-b pb-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b pb-3">
             <h2 className="text-lg font-semibold">Edit Invoice - {editedData.invoiceNumber || editedData.id}</h2>
             <Badge variant="outline">{editedData.status}</Badge>
           </div>
 
           {/* Student Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <h3 className="font-medium text-sm text-gray-600">Student Information</h3>
               <div className="space-y-2">

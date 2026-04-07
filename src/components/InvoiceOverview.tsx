@@ -386,14 +386,14 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold">{t("invoiceOverview.title")}</h2>
           <p className="text-sm text-muted-foreground">
             {t("invoiceOverview.subtitle")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={refreshInvoices} className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
             {t("common.refresh")}
@@ -406,7 +406,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <p className="text-sm text-muted-foreground">{t("invoiceOverview.totalInvoices")}</p>
@@ -439,12 +439,12 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="w-4 h-4" />
               {t("invoiceOverview.searchFilter")}
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={applyFilters} className="h-9" disabled={!userCanEdit}>{t("common.apply")}</Button>
               <Button variant="outline" onClick={clearFilters} className="h-9" disabled={!userCanEdit}>{t("common.clear")}</Button>
             </div>
@@ -595,7 +595,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
 
       {/* Results Summary */}
       {invoices.length > 0 && (
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <p className="text-sm text-muted-foreground">
             {t("invoiceOverview.showing")} {startIndex + 1}-{Math.min(endIndex, filteredInvoices.length)} {t("invoiceOverview.of")} {filteredInvoices.length} {t("invoiceOverview.invoices")}
             {filteredInvoices.length !== invoices.length && (
@@ -612,7 +612,7 @@ export function InvoiceOverview({ showOnlyInternal = false }: InvoiceOverviewPro
 
       {/* Invoice Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           {invoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />

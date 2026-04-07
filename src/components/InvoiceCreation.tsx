@@ -3774,7 +3774,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                       </Button>
                     </div>
 
-                    <div className="border rounded-lg">
+                    <div className="border rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -4022,7 +4022,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   <>
                     {/* Standard Selection Type Cards - Only show for non-simplified views */}
                     {!isSimplifiedView && (
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <Card className={`cursor-pointer transition-all ${studentSelectionType === "individual" ? "ring-2 ring-primary" : ""}`}>
                           <CardContent className="p-4" onClick={() => setStudentSelectionType("individual")}>
                             <div className="flex items-center justify-center mb-2">
@@ -4463,7 +4463,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Student Information */}
             <div className="border rounded-lg p-4 space-y-3">
               <h4 className="font-medium text-sm text-gray-700">{t('invoiceCreation.studentInformation')}</h4>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>{t('common.firstName')} <span className="text-red-500">*</span></Label>
                   <Input
@@ -4489,7 +4489,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>{t('common.gender')}</Label>
                   <Select value={newStudentGender} onValueChange={(v: "male" | "female" | "other") => setNewStudentGender(v)}>

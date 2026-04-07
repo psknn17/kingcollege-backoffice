@@ -302,14 +302,14 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="mb-2">{t("waiveFee.title")}</h2>
           <p className="text-muted-foreground">
             {t("waiveFee.subtitle")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
             {t("waiveFee.exportData")}
@@ -349,7 +349,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -399,7 +399,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
       {/* Registration Fee Waiver Program */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Gift className="w-5 h-5 text-purple-600" />
@@ -416,7 +416,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-sm">{t("waiveFee.minYearGroup")}</Label>
               <Input
@@ -460,7 +460,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-100">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-purple-50 rounded-lg border border-purple-100">
             <div>
               <Label className="text-sm font-medium text-purple-900">{t("waiveFee.firstChildPrivilege")}</Label>
               <p className="text-sm text-purple-700 mt-1">{t("waiveFee.skipMinTerms")}</p>
@@ -476,7 +476,7 @@ export function WaiveFeeManagement({ onNavigateToSubPage }: WaiveFeeManagementPr
           {waiverSettings.enabled && (
             <div className="p-4 bg-muted/50 rounded-lg">
               <h5 className="text-sm font-medium mb-3">{t("waiveFee.eligibilitySummary")}</h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                   <span>{t("waiveFee.yearPlusStudents").replace("{year}", String(waiverSettings.minimumGradeLevel))}</span>

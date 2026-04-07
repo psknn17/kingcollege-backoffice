@@ -236,8 +236,8 @@ export function BankSettings() {
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div className="p-3 md:p-6 space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
                 <div>
                     <h2 className="text-xl font-semibold">
                         {t("bankSettings.title")}
@@ -248,7 +248,7 @@ export function BankSettings() {
 
             {/* ── Offline Payment (Local) ── */}
             <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h3 className="text-lg font-semibold">{t("bankSettings.offlinePaymentTitle") || "Offline Payment"}</h3>
                         <p className="text-sm text-muted-foreground">Manage bank accounts for offline/counter payments</p>
@@ -262,7 +262,7 @@ export function BankSettings() {
                 </div>
 
                 <Card>
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 overflow-x-auto">
                         <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>
@@ -323,7 +323,7 @@ export function BankSettings() {
 
             {/* ── Online Payment (Gateway) ── */}
             <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h3 className="text-lg font-semibold">{t("bankSettings.onlinePaymentTitle") || "Online Payment (Gateway)"}</h3>
                         <p className="text-sm text-muted-foreground">{t("bankSettings.onlinePaymentSubtitle") || "Manage bank accounts and GL account mappings for online payments"}</p>
@@ -331,7 +331,7 @@ export function BankSettings() {
                 </div>
 
                 <Card>
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 overflow-x-auto">
                         <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow>

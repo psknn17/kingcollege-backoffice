@@ -415,7 +415,7 @@ export function SummerActivitiesReceipts() {
                 {t("summer.receipts.viewDownload")}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 {t("receipt.bulkResend")}
@@ -575,7 +575,7 @@ export function SummerActivitiesReceipts() {
 
           {/* Receipt Table */}
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

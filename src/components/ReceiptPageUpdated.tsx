@@ -1417,7 +1417,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">
             {activeTab === "credit-notes" ? t("receipt.creditNotes") : t("receipt.receiptsTab")}
@@ -1426,7 +1426,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             {activeTab === "credit-notes" ? t("receipt.viewManageCreditNotes") : t("receipt.viewManageReceipts")}
           </p>
         </div>
-        <div className="flex gap-2 shrink-0 items-center">
+        <div className="flex gap-2 shrink-0 items-center flex-wrap">
           {(activeTab === "credit-notes" || viewMode === "credit-notes") && (
             <Button
               variant="outline"
@@ -1438,15 +1438,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               {t("common.import")}
             </Button>
           )}
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            disabled={!userCanEdit}
-            onClick={exportToExcel}
-          >
-            <FileDown className="w-4 h-4" />
-            {t("common.exportCsv")}
-          </Button>
           {(activeTab !== "credit-notes" && viewMode !== "credit-notes") && (
             <Button
               variant="outline"
@@ -1454,7 +1445,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               onClick={downloadInterfaceFile}
             >
               <Download className="w-4 h-4" />
-              {t("receipt.downloadInterfaceFile")}
+              Export Interface File
             </Button>
           )}
           {activeTab !== "credit-notes" && viewMode !== "credit-notes" && (
@@ -1472,12 +1463,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               {t("receipt.receiptTemplate")}
             </Button>
           )}
-          <Button
-            className="flex items-center gap-2"
-            disabled={!userCanEdit}
-            onClick={() => {
-              const isCreditNoteMode = activeTab === "credit-notes" || viewMode === "credit-notes"
-              if (isCreditNoteMode) {
+          {(activeTab === "credit-notes" || viewMode === "credit-notes") && (
+            <Button
+              className="flex items-center gap-2"
+              disabled={!userCanEdit}
+              onClick={() => {
                 setCreditNoteForm({
                   creditNoteNumber: `CN-${new Date().getFullYear()}-${String(creditNotes.length + 1).padStart(6, '0')}`,
                   invoiceNumber: "",
@@ -1491,14 +1481,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   issueDate: new Date()
                 })
                 setIsCreateCreditNoteOpen(true)
-              } else {
-                setIsCreateDialogOpen(true)
-              }
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            {(activeTab === "credit-notes" || viewMode === "credit-notes") ? t("receipt.createCreditNote") : t("receipt.createReceipt")}
-          </Button>
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              {t("receipt.createCreditNote")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1705,7 +1693,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
           {/* Receipt Table */}
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2306,7 +2294,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
             {/* Credit Notes Table */}
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -2511,7 +2499,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     </div>
 
                     {/* Amount highlight */}
-                    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 grid grid-cols-3 gap-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground mb-0.5">Amount</p>
                         <p className="text-2xl font-bold">฿{viewingCreditNote.amount.toLocaleString()}</p>
@@ -2529,7 +2517,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     </div>
 
                     {/* Student + Issue info grid */}
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Student ID</p>
                         <p className="text-sm font-medium font-mono">{viewingCreditNote.studentId}</p>
@@ -2653,13 +2641,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       {/* Create Credit Note Dialog - Hidden for ECA, Trip, Exam, Bus */}
       {
         !hideCreditNotes && <Dialog open={isCreateCreditNoteOpen} onOpenChange={setIsCreateCreditNoteOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl w-[95vw] md:w-[90vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader className="px-6 pt-6">
               <DialogTitle>{t("receipt.createCreditNote")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 px-6 py-4">
               {/* Row 1: Credit Note Number | Student ID */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t("receipt.creditNoteNumber")}</Label>
                   <Input
@@ -2744,7 +2732,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               {/* Row 2: Student Name | Year Group | Family Code */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>{t("receipt.studentName")}</Label>
                   <Input
@@ -2774,7 +2762,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               {/* Row 3: Amount | Amount Including VAT | Remaining Amount */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>{t("receipt.amountTHB")}</Label>
                   <Input
@@ -2815,7 +2803,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
               </div>
 
               {/* Row 5: Posting Date | Due Date */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Posting Date</Label>
                   <Popover>

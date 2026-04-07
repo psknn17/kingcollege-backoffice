@@ -638,7 +638,7 @@ export function InternalEmailManagement({
               )}
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto"><Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
@@ -727,7 +727,7 @@ export function InternalEmailManagement({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
           <PaginationBar
             currentPage={currentPage}

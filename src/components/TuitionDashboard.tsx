@@ -135,7 +135,7 @@ export function TuitionDashboard() {
       {/* Filter Bar */}
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Filter className="w-4 h-4 text-primary" />
@@ -340,7 +340,7 @@ export function TuitionDashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Payment Type Distribution */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>{t("dashboard.paymentTypeDistribution")}</CardTitle>
             <p className="text-sm text-muted-foreground">{getFilteredDisplay()}</p>
@@ -360,7 +360,7 @@ export function TuitionDashboard() {
         </Card>
 
         {/* Payment Channels */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>{t("dashboard.paymentChannels")}</CardTitle>
             <p className="text-sm text-muted-foreground">{getFilteredDisplay()}</p>
