@@ -62,228 +62,124 @@ interface CreditNote {
 const CREDIT_NOTES_STORAGE_KEY = "creditNotes"
 const CREATED_INVOICES_STORAGE_KEY = "createdInvoices"
 
-// Mock credit notes for demo
-const getMockCreditNotes = (): CreditNote[] => [
-  {
-    id: "cn-mock-1",
-    creditNoteNumber: "CN-2026-000001",
-    noteType: "CN",
-    invoiceNumber: "INV-2026-001234",
-    studentName: "Charlotte Johnson",
-    studentId: "KC20250001",
-    studentGrade: "Year 12",
-    parentName: "Michael Johnson",
-    familyCode: "FAM001",
-    originalAmount: 150000,
-    creditAmount: 15000,
-    amountIncludingVat: 15000,
-    remainingAmount: 0,
-    reason: "Overcharged tuition fee for Term 2",
-    description: "Overcharged tuition fee for Term 2",
-    type: "adjustment",
-    status: "issued",
-    issueDate: new Date("2026-03-15"),
-    postingDate: new Date("2026-03-15"),
-    dueDate: new Date("2026-04-15"),
-    issuedBy: "Finance Team",
-    approvedBy: "Admin",
-    notes: "",
-    paid: false,
-    cancelled: false,
-    corrective: false
-  },
-  {
-    id: "cn-mock-2",
-    creditNoteNumber: "CN-2026-000002",
-    noteType: "CN",
-    invoiceNumber: "INV-2026-001180",
-    studentName: "Oliver Smith",
-    studentId: "KC20250003",
-    studentGrade: "Year 8",
-    parentName: "James Smith",
-    familyCode: "FAM003",
-    originalAmount: 120000,
-    creditAmount: 120000,
-    amountIncludingVat: 120000,
-    remainingAmount: 0,
-    reason: "Student withdrawn - full refund",
-    description: "Student withdrawn - full refund",
-    type: "cancellation",
-    status: "applied",
-    issueDate: new Date("2026-02-20"),
-    postingDate: new Date("2026-02-20"),
-    appliedDate: new Date("2026-02-25"),
-    issuedBy: "Finance Team",
-    approvedBy: "Admin",
-    notes: "Full refund processed",
-    paid: true,
-    cancelled: false,
-    corrective: false
-  },
-  {
-    id: "cn-mock-3",
-    creditNoteNumber: "OP-2026-000001",
-    noteType: "OP",
-    invoiceNumber: "INV-2026-001205",
-    studentName: "Sophia Williams",
-    studentId: "KC20250005",
-    studentGrade: "Year 5",
-    parentName: "David Williams",
-    familyCode: "FAM005",
-    originalAmount: 95000,
-    creditAmount: 5000,
-    amountIncludingVat: 5000,
-    remainingAmount: 5000,
-    reason: "Overpayment on Term 1 tuition",
-    description: "Overpayment on Term 1 tuition",
-    type: "overpayment",
-    status: "issued",
-    issueDate: new Date("2026-03-01"),
-    postingDate: new Date("2026-03-01"),
-    issuedBy: "Finance Team",
-    notes: "To be applied to Term 2",
-    paid: false,
-    cancelled: false,
-    corrective: false
-  },
-  {
-    id: "cn-mock-4",
-    creditNoteNumber: "CN-2026-000003",
-    noteType: "CN",
-    invoiceNumber: "INV-2026-001310",
-    studentName: "Liam Brown",
-    studentId: "KC20250008",
-    studentGrade: "Year 10",
-    parentName: "Sarah Brown",
-    familyCode: "FAM008",
-    originalAmount: 135000,
-    creditAmount: 6750,
-    amountIncludingVat: 6750,
-    remainingAmount: 0,
-    reason: "Sibling discount applied retroactively",
-    description: "Sibling discount applied retroactively",
-    type: "discount",
-    status: "applied",
-    issueDate: new Date("2026-03-10"),
-    postingDate: new Date("2026-03-10"),
-    appliedDate: new Date("2026-03-12"),
-    issuedBy: "Finance Team",
-    approvedBy: "Admin",
-    notes: "",
-    paid: true,
-    cancelled: false,
-    corrective: false
-  },
-  {
-    id: "cn-mock-5",
-    creditNoteNumber: "CN-2026-000004",
-    noteType: "CN",
-    invoiceNumber: "INV-2026-001150",
-    studentName: "Emma Davis",
-    studentId: "KC20250010",
-    studentGrade: "Year 3",
-    parentName: "Robert Davis",
-    familyCode: "FAM010",
-    originalAmount: 85000,
-    creditAmount: 8500,
-    amountIncludingVat: 8500,
-    remainingAmount: 8500,
-    reason: "ECA course cancelled by school",
-    description: "ECA course cancelled by school",
-    type: "refund",
-    status: "draft",
-    issueDate: new Date("2026-04-01"),
-    postingDate: new Date("2026-04-01"),
-    issuedBy: "Finance Team",
-    notes: "Pending approval",
-    paid: false,
-    cancelled: false,
-    corrective: false
-  },
-  {
-    id: "cn-mock-6",
-    creditNoteNumber: "OP-2026-000002",
-    noteType: "OP",
-    invoiceNumber: "INV-2026-001290",
-    studentName: "Noah Wilson",
-    studentId: "KC20250012",
-    studentGrade: "Year 7",
-    parentName: "Jennifer Wilson",
-    familyCode: "FAM012",
-    originalAmount: 110000,
-    creditAmount: 10000,
-    amountIncludingVat: 10000,
-    remainingAmount: 10000,
-    reason: "Double payment received",
-    description: "Double payment received",
-    type: "overpayment",
-    status: "issued",
-    issueDate: new Date("2026-03-25"),
-    postingDate: new Date("2026-03-25"),
-    issuedBy: "Finance Team",
-    notes: "Parent paid twice via bank transfer",
-    paid: false,
-    cancelled: false,
-    corrective: false
-  },
-  {
-    id: "cn-mock-7",
-    creditNoteNumber: "CN-2026-000005",
-    noteType: "CN",
-    invoiceNumber: "INV-2026-001095",
-    studentName: "Ava Taylor",
-    studentId: "KC20250015",
-    studentGrade: "Year 1",
-    parentName: "Mark Taylor",
-    familyCode: "FAM015",
-    originalAmount: 75000,
-    creditAmount: 75000,
-    amountIncludingVat: 75000,
-    remainingAmount: 0,
-    reason: "Invoice issued in error",
-    description: "Invoice issued in error",
-    type: "cancellation",
-    status: "cancelled",
-    issueDate: new Date("2026-01-15"),
-    postingDate: new Date("2026-01-15"),
-    issuedBy: "Finance Team",
-    notes: "Credit note voided - invoice was correct",
-    paid: false,
-    cancelled: true,
-    corrective: false
-  },
-  {
-    id: "cn-mock-8",
-    creditNoteNumber: "CN-2026-000006",
-    noteType: "CN",
-    invoiceNumber: "INV-2026-001350",
-    studentName: "Isabella Martinez",
-    studentId: "KC20250018",
-    studentGrade: "Year 9",
-    parentName: "Carlos Martinez",
-    familyCode: "FAM018",
-    originalAmount: 140000,
-    creditAmount: 14000,
-    amountIncludingVat: 14000,
-    remainingAmount: 0,
-    reason: "Scholarship awarded mid-term",
-    description: "Scholarship awarded mid-term",
-    type: "discount",
-    status: "applied",
-    issueDate: new Date("2026-03-20"),
-    postingDate: new Date("2026-03-20"),
-    appliedDate: new Date("2026-03-22"),
-    issuedBy: "Finance Team",
-    approvedBy: "Admin",
-    notes: "10% scholarship applied",
-    paid: true,
-    cancelled: false,
-    corrective: false
-  },
-]
+// Mock credit notes for demo — references real invoices from Invoice Management
+// Reads `createdInvoices` localStorage so each CN points to an actual invoice/student
+const getMockCreditNotes = (): CreditNote[] => {
+  // Try to read real invoices from Invoice Management
+  let invoices: any[] = []
+  try {
+    const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
+    if (stored) invoices = JSON.parse(stored)
+  } catch {
+    invoices = []
+  }
+
+  // Filter to invoices with full student info (skip externals — they don't get credit notes)
+  const eligible = invoices.filter((inv: any) =>
+    inv.invoiceNumber &&
+    inv.studentId &&
+    inv.studentName &&
+    inv.category !== "external" &&
+    (inv.netAmount || inv.finalAmount || 0) > 0
+  )
+
+  // Templates: status, type, percent of net amount used as credit, reason, noteType
+  const templates: Array<{
+    status: CreditNote["status"]
+    noteType: CreditNote["noteType"]
+    type: CreditNote["type"]
+    pct: number
+    reason: string
+    daysAgo: number
+    paid: boolean
+    cancelled: boolean
+    hasRemaining: boolean
+    appliedOffsetDays?: number
+  }> = [
+    { status: "issued",    noteType: "CN", type: "adjustment",   pct: 0.10, reason: "Overcharged tuition fee for Term 2",   daysAgo: 24, paid: false, cancelled: false, hasRemaining: false },
+    { status: "applied",   noteType: "CN", type: "cancellation", pct: 1.00, reason: "Student withdrawn - full refund",      daysAgo: 47, paid: true,  cancelled: false, hasRemaining: false, appliedOffsetDays: 5 },
+    { status: "issued",    noteType: "OP", type: "overpayment",  pct: 0.05, reason: "Overpayment on Term 1 tuition",        daysAgo: 38, paid: false, cancelled: false, hasRemaining: true },
+    { status: "applied",   noteType: "CN", type: "discount",     pct: 0.05, reason: "Sibling discount applied retroactively", daysAgo: 29, paid: true,  cancelled: false, hasRemaining: false, appliedOffsetDays: 2 },
+    { status: "draft",     noteType: "CN", type: "refund",       pct: 0.10, reason: "ECA course cancelled by school",       daysAgo: 7,  paid: false, cancelled: false, hasRemaining: true },
+    { status: "issued",    noteType: "OP", type: "overpayment",  pct: 0.09, reason: "Double payment received",              daysAgo: 14, paid: false, cancelled: false, hasRemaining: true },
+    { status: "cancelled", noteType: "CN", type: "cancellation", pct: 1.00, reason: "Invoice issued in error",              daysAgo: 84, paid: false, cancelled: true,  hasRemaining: false },
+    { status: "applied",   noteType: "CN", type: "discount",     pct: 0.10, reason: "Scholarship awarded mid-term",         daysAgo: 19, paid: true,  cancelled: false, hasRemaining: false, appliedOffsetDays: 2 },
+  ]
+
+  // Fallback static data when no invoices have been seeded yet
+  const fallback: Array<Pick<CreditNote, "studentName" | "studentId" | "studentGrade" | "parentName" | "familyCode"> & { invoiceNumber: string; netAmount: number }> = [
+    { invoiceNumber: "2026-00001", studentName: "Charlotte Johnson", studentId: "KC20250001", studentGrade: "Year 12", parentName: "Michael Johnson", familyCode: "FAM001", netAmount: 150000 },
+    { invoiceNumber: "2026-00003", studentName: "Oliver Smith",     studentId: "KC20250003", studentGrade: "Year 8",  parentName: "James Smith",     familyCode: "FAM003", netAmount: 120000 },
+    { invoiceNumber: "2026-00005", studentName: "Sophia Williams",  studentId: "KC20250005", studentGrade: "Year 5",  parentName: "David Williams",  familyCode: "FAM005", netAmount: 95000  },
+    { invoiceNumber: "2026-00008", studentName: "Liam Brown",       studentId: "KC20250008", studentGrade: "Year 10", parentName: "Sarah Brown",     familyCode: "FAM008", netAmount: 135000 },
+    { invoiceNumber: "2026-00010", studentName: "Emma Davis",       studentId: "KC20250010", studentGrade: "Year 3",  parentName: "Robert Davis",    familyCode: "FAM010", netAmount: 85000  },
+    { invoiceNumber: "2026-00012", studentName: "Noah Wilson",      studentId: "KC20250012", studentGrade: "Year 7",  parentName: "Jennifer Wilson", familyCode: "FAM012", netAmount: 110000 },
+    { invoiceNumber: "2026-00015", studentName: "Ava Taylor",       studentId: "KC20250015", studentGrade: "Year 1",  parentName: "Mark Taylor",     familyCode: "FAM015", netAmount: 75000  },
+    { invoiceNumber: "2026-00018", studentName: "Isabella Martinez",studentId: "KC20250018", studentGrade: "Year 9",  parentName: "Carlos Martinez", familyCode: "FAM018", netAmount: 140000 },
+  ]
+
+  // Pick the source list — prefer real invoices, else fallback
+  const sources = eligible.length >= templates.length
+    ? eligible.slice(0, templates.length).map((inv: any) => ({
+        invoiceNumber: inv.invoiceNumber,
+        studentName: inv.studentName,
+        studentId: inv.studentId,
+        studentGrade: inv.studentGrade || "",
+        parentName: inv.parentName || "",
+        familyCode: inv.familyCode || "",
+        netAmount: inv.netAmount || inv.finalAmount || 0,
+      }))
+    : fallback
+
+  let cnSeq = 1
+  let opSeq = 1
+  return templates.map((tpl, idx) => {
+    const src = sources[idx % sources.length]
+    const creditAmount = Math.round(src.netAmount * tpl.pct)
+    const issueDate = new Date(Date.now() - tpl.daysAgo * 86400000)
+    const postingDate = new Date(issueDate)
+    const dueDate = new Date(issueDate.getTime() + 30 * 86400000)
+    const appliedDate = tpl.appliedOffsetDays
+      ? new Date(issueDate.getTime() + tpl.appliedOffsetDays * 86400000)
+      : undefined
+
+    const seq = tpl.noteType === "OP" ? opSeq++ : cnSeq++
+    const creditNoteNumber = `${tpl.noteType}-2026-${String(seq).padStart(6, "0")}`
+
+    return {
+      id: `cn-mock-${idx + 1}`,
+      creditNoteNumber,
+      noteType: tpl.noteType,
+      invoiceNumber: src.invoiceNumber,
+      studentName: src.studentName,
+      studentId: src.studentId,
+      studentGrade: src.studentGrade,
+      parentName: src.parentName,
+      familyCode: src.familyCode,
+      originalAmount: src.netAmount,
+      creditAmount,
+      amountIncludingVat: creditAmount,
+      remainingAmount: tpl.hasRemaining ? creditAmount : 0,
+      reason: tpl.reason,
+      description: tpl.reason,
+      type: tpl.type,
+      status: tpl.status,
+      issueDate,
+      postingDate,
+      dueDate,
+      appliedDate,
+      issuedBy: "Finance Team",
+      approvedBy: tpl.status !== "draft" ? "Admin" : undefined,
+      notes: tpl.status === "applied" ? `Applied to ${src.invoiceNumber}` : "",
+      paid: tpl.paid,
+      cancelled: tpl.cancelled,
+      corrective: false,
+    }
+  })
+}
 
 // Load Credit Notes from localStorage
-const CREDIT_NOTES_MOCK_VERSION = "v2"
+const CREDIT_NOTES_MOCK_VERSION = "v3"
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
     const mockVersion = localStorage.getItem("creditNotes_mockVersion")
