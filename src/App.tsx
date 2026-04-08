@@ -115,7 +115,6 @@ import { FamilyGroups } from "./components/FamilyGroups"
 import { SchoolSettings } from "./components/SchoolSettings"
 import { ReportOverview } from "./components/ReportOverview"
 import { UserProfile } from "./components/UserProfile"
-import { UserActivity } from "./components/UserActivity"
 import { BankSettings } from "./components/BankSettings"
 import { ClientList } from "./components/ClientList"
 import { InvoiceReceiptTemplate } from "./components/InvoiceReceiptTemplate"
@@ -267,7 +266,7 @@ export default function App() {
 
 
   // Redirect Approver role to approval-queue (allow profile/settings/activity)
-  const approverAllowedPages = ["approval-queue", "user-profile", "user-activity"]
+  const approverAllowedPages = ["approval-queue", "user-profile"]
   useEffect(() => {
     if (user?.role === "approver" && !approverAllowedPages.includes(activeSection)) {
       navigate("/approval-queue", { replace: true })
@@ -637,14 +636,6 @@ export default function App() {
                           <span className="text-sm">Profile</span>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                          onClick={() => handleMenuItemClick("user-activity")}
-                          className="flex items-center gap-2 px-3 py-2 cursor-pointer"
-                        >
-                          <Activity className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">Activity</span>
-                        </DropdownMenuItem>
-
                         <DropdownMenuSeparator />
 
                         <DropdownMenuItem
@@ -904,7 +895,6 @@ export default function App() {
 
                     {/* Profile */}
                     <Route path="/user-profile" element={<UserProfile />} />
-                    <Route path="/user-activity" element={<UserActivity />} />
 
                     {/* Fallback - Redirect to Dashboard if no path or invalid path */}
                     <Route path="/" element={<Navigate to="/tuition-dashboard" replace />} />

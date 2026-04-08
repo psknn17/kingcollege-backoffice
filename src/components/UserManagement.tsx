@@ -13,7 +13,8 @@ import { Checkbox } from "./ui/checkbox"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { canPerformActions } from "@/utils/rolePermissions"
-import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown } from "lucide-react"
+import { Search, Filter, Plus, Edit, Trash2, Shield, UserCheck, UserX, RotateCcw, Eye, EyeOff, ArrowUpDown, ChevronDown } from "lucide-react"
+import { cn } from "./ui/utils"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -236,6 +237,7 @@ export function UserManagement() {
     return mockUsers
   })
   const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortColumn, setSortColumn] = useState<string>("")
@@ -429,7 +431,7 @@ export function UserManagement() {
 
   const performEditUser = () => {
     if (!selectedUser) return
-    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.username.trim() || !formData.email.trim()) {
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -476,11 +478,11 @@ export function UserManagement() {
 
     setIsEditDialogOpen(false)
     resetForm()
-    toast.success(`User ${formData.username} updated successfully`)
+    toast.success(`User ${formData.firstName} ${formData.lastName} updated successfully`)
     logActivity({
       action: "Updated user",
       module: "User Management",
-      detail: `Username: ${formData.username}, Role: ${formData.role}`
+      detail: `${formData.firstName} ${formData.lastName} (${formData.email}), Role: ${formData.role}`
     })
   }
 
@@ -497,11 +499,11 @@ export function UserManagement() {
     setUsers(updatedUsers)
     setFilteredUsers(updatedUsers)
     setIsDeleteDialogOpen(false)
-    toast.success(`User ${selectedUser.username} deleted successfully`)
+    toast.success(`User ${selectedUser.firstName} ${selectedUser.lastName} deleted successfully`)
     logActivity({
       action: "Deleted user",
       module: "User Management",
-      detail: `Username: ${selectedUser.username}`
+      detail: `${selectedUser.firstName} ${selectedUser.lastName} (${selectedUser.email})`
     })
     setSelectedUser(null)
   }
@@ -561,12 +563,13 @@ export function UserManagement() {
     const updatedUsers = users.map(user => {
       if (user.id === userId) {
         const newStatus = user.status === "active" ? "inactive" : "active"
-        toast.success(`User ${user.username} is now ${newStatus}`)
+        toast.success(`User ${user.firstName} ${user.lastName} is now ${newStatus}`)
         logActivity({
           action: "Toggled user status",
           module: "User Management",
-          detail: `Username: ${user.username} -> ${newStatus}`
+          detail: `${user.firstName} ${user.lastName} (${user.email}) -> ${newStatus}`
         })
+        return { ...user, status: newStatus as UserStatus }
       }
       return user
     })
@@ -686,26 +689,15 @@ export function UserManagement() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">{t("userManagement.usernameLabel")} <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder={t("userManagement.enterUsername")}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t("userManagement.emailLabel")} <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder={t("userManagement.enterEmail")}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">{t("userManagement.emailLabel")} <span className="text-destructive">*</span></Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder={t("userManagement.enterEmail")}
+                />
               </div>
 
               <div className="space-y-2">
@@ -841,79 +833,82 @@ export function UserManagement() {
       </div>
 
 
-      {/* Filters */}
+      {/* Search & Filter */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="w-4 h-4" />
-              {t("userManagement.searchAndFilter")}
-            </CardTitle>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={applyFilters} className="h-9">{t("common.apply")}</Button>
-              <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
-            </div>
-          </div>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Filter className="w-4 h-4" />
+            {t("common.searchAndFilter")}
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("userManagement.searchLabel")}</label>
-              <div className="relative">
-                <Input
-                  placeholder={t("userManagement.searchUsersPlaceholder")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className=""
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("userManagement.roleLabel")}</label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger>
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder={t("userManagement.allRoles")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("userManagement.allRoles")}</SelectItem>
-                  <SelectItem value="super_admin">{t("userManagement.superAdmin")}</SelectItem>
-                  <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
-                  <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
-                  <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("userManagement.statusLabel")}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("userManagement.allStatus")}</SelectItem>
-                  <SelectItem value="active">{t("userManagement.active")}</SelectItem>
-                  <SelectItem value="inactive">{t("userManagement.inactive")}</SelectItem>
-                  <SelectItem value="suspended">{t("userManagement.suspended")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder={t("userManagement.searchUsersPlaceholder")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9"
+            />
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 shrink-0"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showFilters && "rotate-180")} />
+            </Button>
           </div>
+
+          {showFilters && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("userManagement.roleLabel")}</label>
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("userManagement.allRoles")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("userManagement.allRoles")}</SelectItem>
+                      <SelectItem value="super_admin">{t("userManagement.superAdmin")}</SelectItem>
+                      <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
+                      <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
+                      <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("userManagement.statusLabel")}</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("userManagement.allStatus")}</SelectItem>
+                      <SelectItem value="active">{t("userManagement.active")}</SelectItem>
+                      <SelectItem value="inactive">{t("userManagement.inactive")}</SelectItem>
+                      <SelectItem value="suspended">{t("userManagement.suspended")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          {t("userManagement.showingCount").replace("{filtered}", String(filteredUsers.length)).replace("{total}", String(users.length))}
-        </p>
-      </div>
-
       {/* Users Table */}
       <Card>
+        <CardHeader className="pb-2">
+          <p className="text-sm text-muted-foreground">
+            {t("userManagement.showingCount").replace("{filtered}", String(filteredUsers.length)).replace("{total}", String(users.length))}
+          </p>
+        </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
@@ -922,13 +917,6 @@ export function UserManagement() {
                 <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                   <div className="flex items-center gap-1">
                     {t("table.user")}
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                {/* Username - LEFT aligned */}
-                <TableHead align="left" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("username")}>
-                  <div className="flex items-center gap-1">
-                    {t("table.username")}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -974,8 +962,6 @@ export function UserManagement() {
                       <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                   </TableCell>
-                  {/* Username - LEFT aligned */}
-                  <TableCell align="left">{user.username}</TableCell>
                   {/* Role Badge - CENTER aligned */}
                   <TableCell align="center">{getRoleBadge(user.role || user.roles[0])}</TableCell>
                   {/* Status Badge - CENTER aligned */}
@@ -999,28 +985,21 @@ export function UserManagement() {
                       >
                         <Edit className="w-4 h-4 text-gray-600" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => toggleUserStatus(user.id)}
-                        disabled={!userCanEdit}
-                        title={user.status === "active" ? t("userManagement.deactivateUser") : t("userManagement.activateUser")}
-                      >
-                        {user.status === "active" ? (
-                          <UserX className="w-4 h-4 text-orange-600" />
-                        ) : (
-                          <UserCheck className="w-4 h-4 text-green-600" />
-                        )}
-                      </Button>
                       {!user.roles.includes("super_admin") && (
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => openDeleteDialog(user)}
-                          disabled={!userCanEdit}
-                          title={t("userManagement.deleteUserTooltip")}
+                          onClick={() => {
+                            if (user.status === "active") {
+                              toast.error(t("userManagement.cannotDeleteActive"))
+                              return
+                            }
+                            openDeleteDialog(user)
+                          }}
+                          disabled={!userCanEdit || user.status === "active"}
+                          title={user.status === "active" ? t("userManagement.cannotDeleteActive") : t("userManagement.deleteUserTooltip")}
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
+                          <Trash2 className={cn("w-4 h-4", user.status === "active" ? "text-gray-300" : "text-red-600")} />
                         </Button>
                       )}
                     </div>
@@ -1068,15 +1047,6 @@ export function UserManagement() {
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-username">{t("userManagement.usernameEditLabel")}</Label>
-              <Input
-                id="edit-username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              />
             </div>
 
             <div className="space-y-2">
@@ -1150,6 +1120,16 @@ export function UserManagement() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleEditUser}>{t("common.saveChanges")}</Button>
           </DialogFooter>
+
+          {/* Edit Confirm - inside edit dialog so it renders on top */}
+          <ConfirmDialog
+            open={editConfirmDialog.isOpen}
+            onOpenChange={editConfirmDialog.setIsOpen}
+            onConfirm={editConfirmDialog.handleConfirm}
+            titleKey="confirmDialog.editTitle"
+            descriptionKey="confirmDialog.editDescription"
+            confirmTextKey="common.save"
+          />
         </DialogContent>
       </Dialog>
 
@@ -1251,15 +1231,6 @@ export function UserManagement() {
         confirmTextKey="common.create"
       />
 
-      {/* Edit User Confirmation Dialog */}
-      <ConfirmDialog
-        open={editConfirmDialog.isOpen}
-        onOpenChange={editConfirmDialog.setIsOpen}
-        onConfirm={editConfirmDialog.handleConfirm}
-        titleKey="confirmDialog.editTitle"
-        descriptionKey="confirmDialog.editDescription"
-        confirmTextKey="common.save"
-      />
     </div>
   )
 }

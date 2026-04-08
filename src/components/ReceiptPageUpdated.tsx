@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react"
+import html2canvas from "html2canvas"
+import { jsPDF } from "jspdf"
 import * as XLSX from "xlsx"
 import { downloadAsXlsx, normalizeAcademicYear, formatAcademicYear } from "@/utils/xlsxUtils"
 import { PAYMENT_SOURCES } from "@/constants/paymentConstants"
@@ -169,9 +171,15 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
       // Find matching invoice to get parent info
       const invoiceNumber = (r.invoices?.[0]?.invoiceNo || "").trim()
       const matchingInvoice = invoices.find((inv: any) => (inv.invoiceNumber || "").trim().toLowerCase() === invoiceNumber.toLowerCase())
+      const isExternal = matchingInvoice?.invoiceType === "external" || matchingInvoice?.category === "external" || category === "external"
       const parentName = matchingInvoice?.parentName || r.clientName || ""
-      const studentName = matchingInvoice?.studentName || r.contactName || r.clientName
-      const address = matchingInvoice?.address || ""
+      // For external invoices, "studentName" displays as Client Name → use recipientName (company name)
+      const studentName = isExternal
+        ? (matchingInvoice?.recipientName || r.clientName || "")
+        : (matchingInvoice?.studentName || r.contactName || r.clientName || "")
+      const address = isExternal
+        ? (matchingInvoice?.recipientAddress || r.address || "")
+        : (matchingInvoice?.address || r.address || "")
       const familyCode = matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || r.familyCode || ""
 
       return {
@@ -179,7 +187,9 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         receiptNumber: r.receiptNo,
         invoiceNumber: invoiceNumber,
         studentName: studentName,
-        studentId: matchingInvoice?.studentId || r.clientNo || "",
+        studentId: isExternal
+          ? (matchingInvoice?.clientId || r.clientId || r.clientNo || "")
+          : (matchingInvoice?.studentId || r.clientNo || ""),
         studentGrade: r.yearGroup || "",
         contactName: parentName,
         address: address,
@@ -526,7 +536,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [viewingReceipt, setViewingReceipt] = useState<Receipt | null>(null)
   const [viewingCreditNote, setViewingCreditNote] = useState<CreditNote | null>(null)
-
   // Create Receipt Dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
@@ -670,26 +679,209 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
   }
 
-  const downloadReceipt = (receiptId: string) => {
+  const buildReceiptHtml = (receipt: Receipt): string => {
+    const fmtNum = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const fmtDate = (d: Date) => format(d, "dd MMMM yyyy")
+    const receivedAmount = receipt.amount
+    const cnAmount = receipt.appliedCNAmount || 0
+    const hasCN = cnAmount > 0
+    const netAmount = receivedAmount - cnAmount
+    const overpayment = hasCN ? netAmount - (receipt.invoiceAmount || receivedAmount) : 0
+    const totalDisplay = overpayment > 0 ? receivedAmount : netAmount
+
+    const cnRow = hasCN ? `<tr>
+      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">2</td>
+      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.appliedCNNumbers?.join(', ') || 'Credit Note'}</td>
+      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">-</td>
+      <td style="padding:8px 10px;text-align:right">(${fmtNum(cnAmount)})</td>
+    </tr>` : ''
+
+    const emptyRows = Array.from({ length: hasCN ? 4 : 5 }).map(() =>
+      `<tr style="height:28px"><td style="border-right:1px solid black;padding:8px 10px"></td><td style="border-right:1px solid black;padding:8px 10px"></td><td style="border-right:1px solid black;padding:8px 10px"></td><td style="padding:8px 10px"></td></tr>`
+    ).join('')
+
+    const overpaymentRow = overpayment > 0 ? `<tr>
+      <td colspan="3" style="border-right:1px solid black;border-top:1px solid black;padding:8px 10px;text-align:center">Overpayment amount</td>
+      <td style="border-top:1px solid black;padding:8px 10px;text-align:right">${fmtNum(overpayment)}</td>
+    </tr>` : ''
+
+    return `<div style="font-family:'Times New Roman',serif;font-size:14px;line-height:1.5;padding:48px 56px;width:794px;background:white;color:black">
+      <!-- School Header -->
+      <div style="text-align:center;margin-bottom:8px">
+        <img src="${SchoolLogo}" style="height:110px;margin-bottom:-12px;display:block;margin-left:auto;margin-right:auto" crossorigin="anonymous" />
+        <div style="font-size:16px;font-weight:bold;letter-spacing:3px;margin-bottom:2px">KING'S COLLEGE INTERNATIONAL SCHOOL</div>
+        <div style="font-size:11px;letter-spacing:4px;margin-bottom:6px">BANGKOK</div>
+        <div style="font-size:10px">${SCHOOL_INFO.address}</div>
+        <div style="font-size:10px">${SCHOOL_INFO.phone}, ${SCHOOL_INFO.email}, ${SCHOOL_INFO.website}</div>
+      </div>
+
+      <!-- RECEIPT Title -->
+      <h1 style="text-align:center;font-size:32px;font-weight:bold;margin:28px 0;letter-spacing:3px">RECEIPT</h1>
+
+      <!-- Client/Student & Receipt Info -->
+      <table style="width:100%;border:1px solid black;border-collapse:collapse;margin-bottom:20px;font-size:13px">
+        <tr>
+          <td style="padding:6px 12px;width:110px;vertical-align:top">${category === "external" ? "Client ID no." : "Student ID no."}</td>
+          <td style="padding:6px 4px;vertical-align:top">${receipt.studentId}</td>
+          <td style="padding:6px 12px;width:90px;text-align:left;vertical-align:top">Receipt no.</td>
+          <td style="padding:6px 12px;text-align:right;width:140px;vertical-align:top">${receipt.receiptNumber}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 12px;vertical-align:top">${category === "external" ? "Client name" : "Student name"}</td>
+          <td style="padding:6px 4px;vertical-align:top">${receipt.studentName}</td>
+          <td style="padding:6px 12px;text-align:left;vertical-align:top">Receipt date</td>
+          <td style="padding:6px 12px;text-align:right;vertical-align:top">${fmtDate(receipt.transactionDate)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 12px;vertical-align:top">Contact name</td>
+          <td style="padding:6px 4px;vertical-align:top">${receipt.contactName}</td>
+          <td style="padding:6px 12px;text-align:left;vertical-align:top">${category === "external" ? "" : "Year group"}</td>
+          <td style="padding:6px 12px;text-align:right;vertical-align:top">${category === "external" ? "" : receipt.studentGrade}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 12px;vertical-align:top">Address</td>
+          <td style="padding:6px 4px;vertical-align:top">${receipt.address}</td>
+          <td style="padding:6px 12px;text-align:left;vertical-align:top">${category === "external" ? "" : "School year"}</td>
+          <td style="padding:6px 12px;text-align:right;vertical-align:top">${category === "external" ? "" : formatAcademicYear(receipt.academicYear)}</td>
+        </tr>
+      </table>
+
+      <!-- Document Table (combined with Overpayment + Total for aligned column dividers) -->
+      <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:13px;table-layout:fixed;margin-bottom:24px">
+        <colgroup>
+          <col style="width:50px" />
+          <col style="width:180px" />
+          <col style="width:180px" />
+          <col />
+        </colgroup>
+        <thead><tr style="border-bottom:1px solid black">
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">No.</th>
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">Document no.</th>
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">Issue date</th>
+          <th style="padding:8px 10px;text-align:right">Received amount (THB)</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="border-right:1px solid black;padding:8px 10px;text-align:center">1</td>
+            <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.invoiceNumber}</td>
+            <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${fmtDate(receipt.invoiceDate)}</td>
+            <td style="padding:8px 10px;text-align:right">${fmtNum(receivedAmount)}</td>
+          </tr>
+          ${cnRow}
+          ${emptyRows}
+          ${overpaymentRow}
+          <tr>
+            <td colspan="2" style="border-top:1px solid black;padding:8px 10px;font-weight:bold;text-transform:uppercase;font-size:12px">${numberToWords(totalDisplay)}</td>
+            <td style="border-right:1px solid black;border-top:1px solid black;padding:8px 12px;font-weight:bold;text-align:center">TOTAL</td>
+            <td style="border-top:1px solid black;padding:8px 10px;font-weight:bold;text-align:right">${fmtNum(totalDisplay)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Payment Method Table -->
+      <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:13px;margin-bottom:20px">
+        <thead><tr style="border-bottom:1px solid black">
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">Payment method</th>
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">Bank name</th>
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">Bank branch</th>
+          <th style="border-right:1px solid black;padding:8px 10px;text-align:center">Cheque no.</th>
+          <th style="padding:8px 10px;text-align:center">Cheque date</th>
+        </tr></thead>
+        <tbody><tr>
+          <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.paymentMethod}</td>
+          <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.bankName || '-'}</td>
+          <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.bankBranch || '-'}</td>
+          <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.chequeNo || '-'}</td>
+          <td style="padding:8px 10px;text-align:center">${receipt.chequeDate ? format(receipt.chequeDate, "dd/MM/yyyy") : '-'}</td>
+        </tr></tbody>
+      </table>
+
+      <!-- Notes -->
+      <div style="font-size:11px;margin-bottom:20px">
+        <p style="margin-bottom:4px">In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.</p>
+        <p>Please note that any overpayment amount is non-refundable and will be credited against future school fee invoices.</p>
+      </div>
+
+      <!-- Signature Section -->
+      <table style="width:100%;margin-top:24px;font-size:13px">
+        <tr>
+          <td style="text-align:center;width:50%;vertical-align:bottom;padding:0 24px">
+            <div style="margin-bottom:40px">${receipt.collectorName || 'System'}</div>
+            <div style="border-top:1px solid black;padding-top:8px">
+              <div style="font-weight:bold">Collector</div>
+            </div>
+          </td>
+          <td style="text-align:center;width:50%;vertical-align:bottom;padding:0 24px">
+            <div style="margin-bottom:40px"></div>
+            <div style="border-top:1px solid black;padding-top:8px">
+              <div style="font-weight:bold">Authorised signature</div>
+              <div style="font-size:11px">Head of Finance and Accounting</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Footer -->
+      <div style="text-align:center;font-size:9px;margin-top:32px;border-top:1px solid #999;padding-top:8px">
+        <p>${SCHOOL_INFO.address}</p>
+        <p>${SCHOOL_INFO.phone}, ${SCHOOL_INFO.email}, ${SCHOOL_INFO.website}</p>
+      </div>
+    </div>`
+  }
+
+  const downloadReceipt = async (receiptId: string) => {
     const receipt = receipts.find(r => r.id === receiptId)
-    if (receipt) {
-      // Simulate PDF download
-      // In production, this would call an API to generate and download the PDF
-      const link = document.createElement('a')
-      link.href = '#' // Replace with actual PDF URL from API
-      link.download = `${receipt.receiptNumber}.pdf`
-      // link.click()
+    if (!receipt) return
 
+    try {
+      // Create hidden off-screen iframe to avoid Tailwind oklch color issues
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.left = '-9999px'
+      iframe.style.top = '0'
+      iframe.style.width = '794px'
+      iframe.style.height = '1123px'
+      iframe.style.border = 'none'
+      document.body.appendChild(iframe)
+
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+      if (!iframeDoc) throw new Error("Cannot access iframe document")
+      iframeDoc.open()
+      iframeDoc.write(`<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{background:white}</style></head><body>${buildReceiptHtml(receipt)}</body></html>`)
+      iframeDoc.close()
+
+      const container = iframeDoc.body
+
+      // Wait for all images to load
+      const images = container.querySelectorAll('img')
+      await Promise.all(Array.from(images).map(img =>
+        img.complete ? Promise.resolve() : new Promise(resolve => {
+          img.onload = resolve
+          img.onerror = resolve
+        })
+      ))
+
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false })
+      document.body.removeChild(iframe)
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`${receipt.receiptNumber}.pdf`)
       toast.success(t("receipt.downloadingReceipt").replace("{number}", receipt.receiptNumber))
-      logActivity({ action: "Download Receipt PDF", module: "Receipts", detail: `Receipt: ${receipt.receiptNumber}, Student: ${receipt.studentName} (${receipt.studentId}), Amount: ฿${receipt.amount.toLocaleString()}, Invoice: ${receipt.invoiceNumber}` })
-
-      // Update download count
-      const updatedReceipts = receipts.map(r =>
-        r.id === receiptId ? { ...r, downloadCount: r.downloadCount + 1 } : r
-      )
-      setReceipts(updatedReceipts)
-      setFilteredReceipts(updatedReceipts)
+    } catch (err) {
+      console.error("PDF generation error:", err)
+      toast.error("Failed to generate PDF")
     }
+
+    // Update download count
+    const updatedReceipts = receipts.map(r =>
+      r.id === receiptId ? { ...r, downloadCount: r.downloadCount + 1 } : r
+    )
+    setReceipts(updatedReceipts)
+    setFilteredReceipts(updatedReceipts)
   }
 
   const resendReceipt = (receiptId: string) => {
@@ -1882,166 +2074,175 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
 
           {/* View Receipt Dialog - Official Receipt Template */}
           <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent className="max-h-[95vh] overflow-y-auto p-0" style={{ width: "794px", maxWidth: "90vw" }}>
+            <DialogContent className="max-h-[95vh] overflow-y-auto p-0" style={{ width: "700px", maxWidth: "90vw", padding: 0, gap: 0, maxHeight: "95vh" }}>
               <DialogHeader className="sr-only">
                 <DialogTitle>Receipt Details</DialogTitle>
               </DialogHeader>
               {viewingReceipt && (
                 <div className="bg-white">
                   {/* Receipt Document - A4 style */}
-                  <div id="receipt-print-area" className="p-8" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12px', lineHeight: '1.4' }}>
+                  <div id="receipt-print-area" style={{ fontFamily: "'Times New Roman', serif", fontSize: '13px', lineHeight: '1.5', padding: '13px 36px', background: 'white', color: 'black' }}>
                     {/* School Header */}
-                    <div className="text-center mb-4">
-                      <img src={SchoolLogo} alt="King's College International School" className="mx-auto mb-2" style={{ height: '60px' }} />
-                      <p className="text-xs tracking-wider">BANGKOK</p>
-                      <p className="text-xs mt-1">{SCHOOL_INFO.address}</p>
-                      <p className="text-xs">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+                    <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                      <img src={SchoolLogo} alt="King's College International School" style={{ height: '110px', marginBottom: '-12px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', letterSpacing: '3px', marginBottom: '2px' }}>KING'S COLLEGE INTERNATIONAL SCHOOL</div>
+                      <div style={{ fontSize: '11px', letterSpacing: '4px', marginBottom: '6px' }}>BANGKOK</div>
+                      <div style={{ fontSize: '10px' }}>{SCHOOL_INFO.address}</div>
+                      <div style={{ fontSize: '10px' }}>{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</div>
                     </div>
 
                     {/* RECEIPT Title */}
-                    <h1 className="text-center text-2xl font-bold my-6 tracking-wide">RECEIPT</h1>
+                    <h1 style={{ textAlign: 'center', fontSize: '32px', fontWeight: 'bold', margin: '28px 0', letterSpacing: '3px' }}>RECEIPT</h1>
 
-                    {/* Student & Receipt Info Section */}
-                    <div className="border border-black p-4 mb-4">
-                      <div className="flex justify-between">
-                        {/* Left Column - Student Info */}
-                        <div className="space-y-1">
-                          <div className="flex">
-                            <span className="w-28">Family Code</span>
-                            <span>{viewingReceipt.familyCode || viewingReceipt.studentId}</span>
-                          </div>
-                          <div className="flex">
-                            <span className="w-28">Student name</span>
-                            <span>{viewingReceipt.studentName}</span>
-                          </div>
-                          <div className="flex">
-                            <span className="w-28">Contact name</span>
-                            <span>{viewingReceipt.contactName}</span>
-                          </div>
-                          <div className="flex">
-                            <span className="w-28">Address</span>
-                            <span>{viewingReceipt.address}</span>
-                          </div>
-                        </div>
-                        {/* Right Column - Receipt Info */}
-                        <div className="space-y-1 text-right">
-                          <div className="flex justify-end">
-                            <span className="w-24 text-left">Receipt no.</span>
-                            <span className="w-28 text-right">{viewingReceipt.receiptNumber}</span>
-                          </div>
-                          <div className="flex justify-end">
-                            <span className="w-24 text-left">Receipt date</span>
-                            <span className="w-28 text-right">{format(viewingReceipt.transactionDate, "dd MMMM yyyy")}</span>
-                          </div>
-                          <div className="flex justify-end">
-                            <span className="w-24 text-left">Year group</span>
-                            <span className="w-28 text-right">{viewingReceipt.studentGrade}</span>
-                          </div>
-                          <div className="flex justify-end">
-                            <span className="w-24 text-left">School year</span>
-                            <span className="w-28 text-right">{formatAcademicYear(viewingReceipt.academicYear)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Invoice Table */}
-                    <table className="w-full border-collapse border border-black mb-4" style={{ fontSize: '11px' }}>
-                      <thead>
-                        <tr className="border-b border-black">
-                          <th className="border-r border-black p-2 text-left w-10">No.</th>
-                          <th className="border-r border-black p-2 text-left w-28">Invoice no.</th>
-                          <th className="border-r border-black p-2 text-left w-32">Invoice date</th>
-                          <th className="border-r border-black p-2 text-right">Invoice amount<br />(THB)</th>
-                          <th className="border-r border-black p-2 text-right">Received amount<br />(THB)</th>
-                          <th className="p-2 text-right">Outstanding amount<br />(THB)</th>
-                        </tr>
-                      </thead>
+                    {/* Client/Student & Receipt Info */}
+                    <table style={{ width: '100%', border: '1px solid black', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '13px' }}>
                       <tbody>
-                        <tr className="border-b border-black">
-                          <td className="border-r border-black p-2">1</td>
-                          <td className="border-r border-black p-2">{viewingReceipt.invoiceNumber}</td>
-                          <td className="border-r border-black p-2">{format(viewingReceipt.invoiceDate, "dd MMMM yyyy")}</td>
-                          <td className="border-r border-black p-2 text-right">{viewingReceipt.invoiceAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="border-r border-black p-2 text-right">{viewingReceipt.invoiceAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="p-2 text-right">{(viewingReceipt.outstandingAmount || 0) > 0 ? viewingReceipt.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                        <tr>
+                          <td style={{ padding: '6px 12px', width: '110px', verticalAlign: 'top' }}>{category === "external" ? "Client ID no." : "Student ID no."}</td>
+                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.studentId}</td>
+                          <td style={{ padding: '6px 12px', width: '90px', textAlign: 'left', verticalAlign: 'top' }}>Receipt no.</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', width: '140px', verticalAlign: 'top' }}>{viewingReceipt.receiptNumber}</td>
                         </tr>
-                        {viewingReceipt.appliedCNAmount && viewingReceipt.appliedCNAmount > 0 ? (
-                          <tr className="border-b border-black text-red-600">
-                            <td className="border-r border-black p-2">2</td>
-                            <td className="border-r border-black p-2">{viewingReceipt.appliedCNNumbers && viewingReceipt.appliedCNNumbers.length > 0 ? viewingReceipt.appliedCNNumbers.join(', ') : 'Credit Note'}</td>
-                            <td className="border-r border-black p-2 text-center">-</td>
-                            <td className="border-r border-black p-2 text-right">-</td>
-                            <td className="border-r border-black p-2 text-right">-{viewingReceipt.appliedCNAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td className="p-2 text-right">-</td>
-                          </tr>
-                        ) : null}
-                        {/* Empty rows for spacing */}
-                        <tr className="border-b border-black h-8">
-                          <td className="border-r border-black p-2"></td>
-                          <td className="border-r border-black p-2"></td>
-                          <td className="border-r border-black p-2"></td>
-                          <td className="border-r border-black p-2"></td>
-                          <td className="border-r border-black p-2"></td>
-                          <td className="p-2"></td>
+                        <tr>
+                          <td style={{ padding: '6px 12px', verticalAlign: 'top' }}>{category === "external" ? "Client name" : "Student name"}</td>
+                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.studentName}</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'left', verticalAlign: 'top' }}>Receipt date</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', verticalAlign: 'top' }}>{format(viewingReceipt.transactionDate, "dd MMMM yyyy")}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 12px', verticalAlign: 'top' }}>Contact name</td>
+                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.contactName}</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'left', verticalAlign: 'top' }}>{category === "external" ? "" : "Year group"}</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', verticalAlign: 'top' }}>{category === "external" ? "" : viewingReceipt.studentGrade}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 12px', verticalAlign: 'top' }}>Address</td>
+                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.address}</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'left', verticalAlign: 'top' }}>{category === "external" ? "" : "School year"}</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', verticalAlign: 'top' }}>{category === "external" ? "" : formatAcademicYear(viewingReceipt.academicYear)}</td>
                         </tr>
                       </tbody>
                     </table>
 
-                    {/* Total Row */}
-                    <div className="border border-black p-2 mb-6 flex">
-                      <div className="flex-1 uppercase text-xs">{numberToWords(viewingReceipt.amount)}</div>
-                      <div className="w-20 text-center font-bold border-l border-r border-black px-2">TOTAL</div>
-                      <div className="w-28 text-right font-bold">{viewingReceipt.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="w-28 text-right">{viewingReceipt.outstandingAmount > 0 ? viewingReceipt.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</div>
-                    </div>
+                    {/* Document Table */}
+                    {(() => {
+                      const receivedAmount = viewingReceipt.amount
+                      const cnAmount = viewingReceipt.appliedCNAmount || 0
+                      const hasCN = cnAmount > 0
+                      const netAmount = receivedAmount - cnAmount
+                      const overpayment = hasCN ? netAmount - (viewingReceipt.invoiceAmount || receivedAmount) : 0
+                      const totalDisplay = overpayment > 0 ? receivedAmount : netAmount
+                      const fmtNum = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      return (
+                        <>
+                          {/* Combined Document + Overpayment + Total Table for aligned column dividers */}
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '13px', tableLayout: 'fixed', marginBottom: '24px' }}>
+                            <colgroup>
+                              <col style={{ width: '50px' }} />
+                              <col style={{ width: '180px' }} />
+                              <col style={{ width: '180px' }} />
+                              <col />
+                            </colgroup>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid black' }}>
+                                <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>No.</th>
+                                <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Document no.</th>
+                                <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Issue date</th>
+                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Received amount (THB)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>1</td>
+                                <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.invoiceNumber}</td>
+                                <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{format(viewingReceipt.invoiceDate, "dd MMMM yyyy")}</td>
+                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmtNum(receivedAmount)}</td>
+                              </tr>
+                              {hasCN && (
+                                <tr>
+                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>2</td>
+                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.appliedCNNumbers && viewingReceipt.appliedCNNumbers.length > 0 ? viewingReceipt.appliedCNNumbers.join(', ') : 'Credit Note'}</td>
+                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>-</td>
+                                  <td style={{ padding: '8px 10px', textAlign: 'right' }}>({fmtNum(cnAmount)})</td>
+                                </tr>
+                              )}
+                              {Array.from({ length: hasCN ? 4 : 5 }).map((_, i) => (
+                                <tr key={i} style={{ height: '28px' }}>
+                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px' }}></td>
+                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px' }}></td>
+                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px' }}></td>
+                                  <td style={{ padding: '8px 10px' }}></td>
+                                </tr>
+                              ))}
+                              {overpayment > 0 && (
+                                <tr>
+                                  <td colSpan={3} style={{ borderRight: '1px solid black', borderTop: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Overpayment amount</td>
+                                  <td style={{ borderTop: '1px solid black', padding: '8px 10px', textAlign: 'right' }}>{fmtNum(overpayment)}</td>
+                                </tr>
+                              )}
+                              <tr>
+                                <td colSpan={2} style={{ borderTop: '1px solid black', padding: '8px 10px', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '12px' }}>{numberToWords(totalDisplay)}</td>
+                                <td style={{ borderRight: '1px solid black', borderTop: '1px solid black', padding: '8px 12px', fontWeight: 'bold', textAlign: 'center' }}>TOTAL</td>
+                                <td style={{ borderTop: '1px solid black', padding: '8px 10px', fontWeight: 'bold', textAlign: 'right' }}>{fmtNum(totalDisplay)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </>
+                      )
+                    })()}
 
                     {/* Payment Method Table */}
-                    <table className="w-full border-collapse border border-black mb-6" style={{ fontSize: '11px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '13px', marginBottom: '20px' }}>
                       <thead>
-                        <tr className="border-b border-black">
-                          <th className="border-r border-black p-2 text-center">Payment method</th>
-                          <th className="border-r border-black p-2 text-center">Bank name</th>
-                          <th className="border-r border-black p-2 text-center">Bank branch</th>
-                          <th className="border-r border-black p-2 text-center">Cheque no.</th>
-                          <th className="p-2 text-center">Cheque date</th>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Payment method</th>
+                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Bank name</th>
+                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Bank branch</th>
+                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Cheque no.</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center' }}>Cheque date</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td className="border-r border-black p-2 text-center">{viewingReceipt.paymentMethod}</td>
-                          <td className="border-r border-black p-2 text-center">{viewingReceipt.bankName || '-'}</td>
-                          <td className="border-r border-black p-2 text-center">{viewingReceipt.bankBranch || '-'}</td>
-                          <td className="border-r border-black p-2 text-center">{viewingReceipt.chequeNo || '-'}</td>
-                          <td className="p-2 text-center">{viewingReceipt.chequeDate ? format(viewingReceipt.chequeDate, "dd/MM/yyyy") : '-'}</td>
+                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.paymentMethod}</td>
+                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.bankName || '-'}</td>
+                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.bankBranch || '-'}</td>
+                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.chequeNo || '-'}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.chequeDate ? format(viewingReceipt.chequeDate, "dd/MM/yyyy") : '-'}</td>
                         </tr>
                       </tbody>
                     </table>
 
-                    {/* Signature Section */}
-                    <div className="mt-8 mb-4">
-                      <div className="border border-black">
-                        <div className="flex">
-                          <div className="flex-1 p-4 border-r border-black text-center">
-                            <p className="mb-8">{viewingReceipt.collectorName || viewingReceipt.createdBy || ""}</p>
-                            <div className="border-t border-black pt-2">
-                              <p className="font-semibold">Collector</p>
-                            </div>
-                          </div>
-                          <div className="flex-1 p-4 text-center">
-                            <p className="mb-8 italic">{viewingReceipt.approvedBy || ""}</p>
-                            <div className="border-t border-black pt-2">
-                              <p className="font-semibold">Authorised signature</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {/* Notes */}
+                    <div style={{ fontSize: '11px', marginBottom: '20px' }}>
+                      <p style={{ marginBottom: '4px' }}>In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.</p>
+                      <p>Please note that any overpayment amount is non-refundable and will be credited against future school fee invoices.</p>
                     </div>
 
-                    {/* Footer Note */}
-                    <p className="text-xs text-center italic mt-4">
-                      In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.
-                    </p>
+                    {/* Signature Section */}
+                    <table style={{ width: '100%', marginTop: '24px', fontSize: '13px' }}>
+                      <tbody><tr>
+                        <td style={{ textAlign: 'center', width: '50%', verticalAlign: 'bottom', padding: '0 24px' }}>
+                          <div style={{ marginBottom: '40px' }}>{viewingReceipt.collectorName || 'System'}</div>
+                          <div style={{ borderTop: '1px solid black', paddingTop: '8px' }}>
+                            <div style={{ fontWeight: 'bold' }}>Collector</div>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center', width: '50%', verticalAlign: 'bottom', padding: '0 24px' }}>
+                          <div style={{ marginBottom: '40px' }}></div>
+                          <div style={{ borderTop: '1px solid black', paddingTop: '8px' }}>
+                            <div style={{ fontWeight: 'bold' }}>Authorised signature</div>
+                            <div style={{ fontSize: '11px' }}>Head of Finance and Accounting</div>
+                          </div>
+                        </td>
+                      </tr></tbody>
+                    </table>
+
+                    {/* Footer */}
+                    <div style={{ textAlign: 'center', fontSize: '9px', marginTop: '32px', borderTop: '1px solid #999', paddingTop: '8px' }}>
+                      <p>{SCHOOL_INFO.address}</p>
+                      <p>{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+                    </div>
                   </div>
 
                   {/* Action Buttons - Outside print area */}
@@ -2084,8 +2285,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        downloadReceipt(viewingReceipt.id)
+                      onClick={async () => {
+                        await downloadReceipt(viewingReceipt.id)
                         setIsViewDialogOpen(false)
                       }}
                       className="flex items-center gap-2"
@@ -3039,6 +3240,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             }]
           }
           saveTemplates(updated)
+          if (templateToEdit) {
+            toast.success("Receipt template updated")
+            logActivity({ action: "Edit Receipt Template", module: "Receipts", detail: `Updated receipt template "${form.name}"` })
+          } else {
+            toast.success("Receipt template created")
+            logActivity({ action: "Create Receipt Template", module: "Receipts", detail: `Created receipt template "${form.name}"` })
+          }
           setIsTemplateDialogOpen(false)
         }}
       />

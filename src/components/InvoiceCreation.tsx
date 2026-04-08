@@ -4747,126 +4747,43 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   return (
                     <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
                       {/* School Header */}
-                      <div className="text-center py-4 border-b border-gray-300 mb-3">
+                      <div className="text-center py-4 mb-3">
                         <img
                           src={schoolSettings.logoUrl || SchoolLogo}
                           alt={schoolSettings.schoolName}
                           style={{ height: '140px', margin: '0 auto 8px auto', display: 'block' }}
                         />
-                        <p className="text-xs text-gray-600">
-                          {schoolSettings.address}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
-                        </p>
-                        <h1 style={{ fontSize: '56px', fontWeight: 'bold', marginTop: '12px', marginBottom: '2px', letterSpacing: '0.05em' }}>INVOICE</h1>
+                        <h1 style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '56px', fontWeight: 'bold', marginTop: '12px', marginBottom: '2px', letterSpacing: '0.08em' }}>INVOICE</h1>
                       </div>
 
-                      {/* Client & Invoice Info - Two Column Layout */}
+                      {/* Client & Invoice Info - 4-col Table with Horizontal Dividers */}
                       <div className="px-4" style={{ paddingTop: '2px', paddingBottom: '12px' }}>
-                        <div className="border border-black p-4" style={{ fontSize: '11px' }}>
-                          <div className="flex justify-between">
-                            {/* Left Column - Client Info */}
-                            <div style={{ width: '45%' }}>
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Client name</span>
-                                <span>{manualClientName}</span>
-                              </div>
-                              {manualContactName && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>Contact name</span>
-                                  <span>{manualContactName}</span>
-                                </div>
-                              )}
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Email</span>
-                                <span>{manualClientEmail}</span>
-                              </div>
-                              {manualClientPhone && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>Phone</span>
-                                  <span>{manualClientPhone}</span>
-                                </div>
-                              )}
-                              {manualClientAddress && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>Address</span>
-                                  <span>{manualClientAddress}</span>
-                                </div>
-                              )}
-                              {/* Menu-specific info */}
-                              {invoiceType === "afterschool" && tripName && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>Trip/Activity</span>
-                                  <span>{tripName}</span>
-                                </div>
-                              )}
-                              {invoiceType === "exam" && examName && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>Exam</span>
-                                  <span>{examName}</span>
-                                </div>
-                              )}
-                              {invoiceType === "eca" && examName && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>ECA Activity</span>
-                                  <span>{examName}</span>
-                                </div>
-                              )}
-                              {invoiceType === "bus" && busRoute && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '110px' }}>Bus Route</span>
-                                  <span>{busRoute}</span>
-                                </div>
-                              )}
-                            </div>
-                            {/* Right Column - Invoice Info */}
-                            <div style={{ width: '45%' }}>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Invoice no.</span>
-                                <span className="flex-1 text-right">Pending Approval</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Invoice date</span>
-                                <span className="flex-1 text-right">{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Due date</span>
-                                <span className="flex-1 text-right">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>
-                              </div>
-                              {invoiceType === "afterschool" && tripDate && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '90px' }}>Trip date</span>
-                                  <span className="flex-1 text-right">{tripDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                                </div>
-                              )}
-                              {invoiceType === "exam" && examDate && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '90px' }}>Exam date</span>
-                                  <span className="flex-1 text-right">{examDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                                </div>
-                              )}
-                              {invoiceType === "eca" && examType && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '90px' }}>Term</span>
-                                  <span className="flex-1 text-right">{examType}</span>
-                                </div>
-                              )}
-                              {invoiceType === "eca" && tripLocation && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '90px' }}>Academic Year</span>
-                                  <span className="flex-1 text-right">{tripLocation}</span>
-                                </div>
-                              )}
-                              {invoiceType === "bus" && busServiceType && (
-                                <div className="flex py-1">
-                                  <span style={{ width: '90px' }}>Service type</span>
-                                  <span className="flex-1 text-right">{busServiceTypes.find(t => t.value === busServiceType)?.label || busServiceType}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        <table style={{ width: '100%', border: '1px solid #000', borderCollapse: 'collapse', fontSize: '11px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: '10px 16px', width: '19%', fontWeight: 600 }}>Client name</td>
+                              <td style={{ padding: '10px 8px', width: '31%' }}>{manualClientName}</td>
+                              <td style={{ padding: '10px 16px', width: '19%', fontWeight: 600 }}>Invoice no.</td>
+                              <td style={{ padding: '10px 8px', width: '31%' }}>Pending Approval</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Contact name</td>
+                              <td style={{ padding: '10px 8px' }}>{manualContactName || '-'}</td>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Invoice date</td>
+                              <td style={{ padding: '10px 8px' }}>{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Email</td>
+                              <td style={{ padding: '10px 8px' }}>{manualClientEmail || '-'}</td>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Due date</td>
+                              <td style={{ padding: '10px 8px' }}>{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600, verticalAlign: 'top' }}>Address</td>
+                              <td colSpan={3} style={{ padding: '10px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{manualClientAddress || '-'}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
 
                       {/* Invoice Items Table */}
@@ -4874,16 +4791,16 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
                           <thead>
                             <tr className="border-b border-black bg-gray-50">
-                              <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
-                              <th className="py-1.5 px-2 text-left font-semibold">Description</th>
-                              <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
+                              <th className="py-1.5 px-2 text-center font-semibold" style={{ width: '40px', borderRight: '1px solid #000' }}>No.</th>
+                              <th className="py-1.5 px-2 text-center font-semibold" style={{ borderRight: '1px solid #000' }}>Description</th>
+                              <th className="py-1.5 px-2 text-center font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
                             </tr>
                           </thead>
                           <tbody>
                             {selectedItems.map((item, index) => (
                               <tr key={item.id} className="border-b border-gray-200">
-                                <td className="py-1.5 px-2 align-top">{index + 1}</td>
-                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                <td className="py-1.5 px-2 align-top text-center" style={{ borderRight: '1px solid #000' }}>{index + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word', borderRight: '1px solid #000' }}>
                                   <div>{item.name}</div>
                                   {item.description && (
                                     <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
@@ -4894,7 +4811,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             ))}
                             {/* Total Row */}
                             <tr className="border-t border-black bg-gray-100">
-                              <td colSpan={2} className="py-2 px-2">
+                              <td colSpan={2} className="py-2 px-2" style={{ borderRight: '1px solid #000' }}>
                                 <div className="flex justify-between items-center">
                                   <span style={{ fontSize: '10px' }}>{numberToWords(finalTotal)}</span>
                                   <span className="font-bold ml-4">TOTAL</span>
@@ -4906,6 +4823,11 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </table>
                       </div>
 
+
+                      {/* Late payment note */}
+                      <div className="px-4" style={{ fontSize: '9px', lineHeight: 1.4, marginTop: '8px', marginBottom: '12px', color: '#444' }}>
+                        <p style={{ margin: 0 }}>Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.</p>
+                      </div>
 
                       {/* Payment Methods */}
                       <div className="px-4 py-2" style={{ fontSize: '11px', lineHeight: '1.5' }}>
@@ -4920,7 +4842,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <div className="flex">
                             <span className="mr-2">-</span>
                             <div className="flex-1">
-                              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {schoolSettings.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
+                              <span className="font-bold">Bank Transfer:</span> Further bank details are provided below. Kindly email your name and invoice number to {schoolSettings.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
                             </div>
                           </div>
                           <div className="mt-2 flex justify-center">
@@ -4938,10 +4860,10 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <div className="flex mt-2">
                             <span className="mr-2">-</span>
                             <div className="flex-1">
-                              <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+                              <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
                             </div>
                           </div>
-                          <div className="mt-2" style={{ marginLeft: '178px' }}>
+                          <div className="mt-2" style={{ marginLeft: '178px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingRight: '24px' }}>
                             <table>
                               <tbody>
                                 <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td><td className="text-left">099-4-00259063-3</td></tr>
@@ -4949,6 +4871,21 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td><td className="text-left">-</td></tr>
                               </tbody>
                             </table>
+                            <div style={{ width: '72px', height: '72px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', flexShrink: 0 }}>
+                              <span style={{ fontSize: '9px', color: '#6b7280' }}>QR</span>
+                            </div>
+                          </div>
+                          <div className="flex mt-2">
+                            <span className="mr-2">-</span>
+                            <div className="flex-1">
+                              <span className="font-bold">Credit card:</span> The online payment link will be provided on the parent portal. Visa & Mastercard issued by local banks in Thailand are accepted. Kindly note that a 1.3% bank fee will be applied to individual online payment transaction.
+                            </div>
+                          </div>
+                          <div className="flex">
+                            <span className="mr-2">-</span>
+                            <div className="flex-1">
+                              <span className="font-bold">On-site credit card payment:</span> Credit cards issued by both local and overseas banks (VISA, Mastercard, JCB, UnionPay, and Alipay) are accepted. Please note that a bank fee may be applied, subject to your bank. The applicable rate can be viewed at the Cashier.
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -4965,8 +4902,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <p className="italic mb-6" style={{ fontSize: '10px' }}>{""}</p>
                             <div className="w-40 border-t border-black mb-1"></div>
                             <p style={{ fontSize: '10px' }}>Authorised officer</p>
+                            <p style={{ fontSize: '9px' }}>Head of Finance and Accounting</p>
                           </div>
                         </div>
+                      </div>
+
+                      {/* School info footer */}
+                      <div className="px-4" style={{ textAlign: 'center', marginTop: '12px', fontSize: '9px', color: '#666', borderTop: '1px solid #ddd', paddingTop: '8px', paddingBottom: '8px' }}>
+                        <p style={{ margin: 0 }}>{schoolSettings.schoolName}, {schoolSettings.address}</p>
+                        <p style={{ margin: '2px 0 0 0' }}>{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
                       </div>
                     </div>
                   )
@@ -5022,73 +4966,49 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                   return (
                     <div className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px', fontSize: '12px' }}>
                       {/* School Header */}
-                      <div className="text-center py-4 border-b border-gray-300 mb-3">
+                      <div className="text-center py-4 mb-3">
                         <img
                           src={schoolSettings.logoUrl || SchoolLogo}
                           alt={schoolSettings.schoolName}
                           style={{ height: '140px', margin: '0 auto 8px auto', display: 'block' }}
                         />
-                        <p className="text-xs text-gray-600">
-                          {schoolSettings.address}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          {schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}
-                        </p>
-                        <h1 style={{ fontSize: '56px', fontWeight: 'bold', marginTop: '12px', marginBottom: '2px', letterSpacing: '0.05em' }}>INVOICE</h1>
+                        <h1 style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '56px', fontWeight: 'bold', marginTop: '12px', marginBottom: '2px', letterSpacing: '0.08em' }}>INVOICE</h1>
                       </div>
 
-                      {/* Student & Invoice Info - Two Column Layout */}
+                      {/* Student & Invoice Info - 4-col Table with Horizontal Dividers */}
                       <div className="px-4" style={{ paddingTop: '2px', paddingBottom: '12px' }}>
-                        <div className="border border-black p-4" style={{ fontSize: '11px' }}>
-                          <div className="flex justify-between">
-                            {/* Left Column - Student Info */}
-                            <div style={{ width: '45%' }}>
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Student ID no.</span>
-                                <span>{currentStudent.id}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Student name</span>
-                                <span>{currentStudent.name}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Year group</span>
-                                <span>{currentStudent.grade || selectedGrade || '-'}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Contact name</span>
-                                <span>{currentStudent.parentName}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '110px' }}>Address</span>
-                                <span>{currentStudent.originalStudent?.parents?.[0]?.address || '-'}</span>
-                              </div>
-                            </div>
-                            {/* Right Column - Invoice Info */}
-                            <div style={{ width: '45%' }}>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Invoice no.</span>
-                                <span className="flex-1 text-right">Pending Approval</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Invoice date</span>
-                                <span className="flex-1 text-right">{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Due date</span>
-                                <span className="flex-1 text-right">{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>School year</span>
-                                <span className="flex-1 text-right">{selectedAcademicYear || (issueDate ? getAcademicYear(issueDate) : '')}</span>
-                              </div>
-                              <div className="flex py-1">
-                                <span style={{ width: '90px' }}>Term</span>
-                                <span className="flex-1 text-right">{selectedTerm || '-'}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        <table style={{ width: '100%', border: '1px solid #000', borderCollapse: 'collapse', fontSize: '11px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: '10px 16px', width: '19%', fontWeight: 600 }}>Student ID no.</td>
+                              <td style={{ padding: '10px 8px', width: '31%' }}>{currentStudent.id}</td>
+                              <td style={{ padding: '10px 16px', width: '19%', fontWeight: 600 }}>Invoice no.</td>
+                              <td style={{ padding: '10px 8px', width: '31%' }}>Pending Approval</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Student name</td>
+                              <td style={{ padding: '10px 8px' }}>{currentStudent.name}</td>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Invoice date</td>
+                              <td style={{ padding: '10px 8px' }}>{issueDate ? issueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pending Approval'}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Year group</td>
+                              <td style={{ padding: '10px 8px' }}>{currentStudent.grade || selectedGrade || '-'}</td>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Due date</td>
+                              <td style={{ padding: '10px 8px' }}>{dueDate ? dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>Contact name</td>
+                              <td style={{ padding: '10px 8px' }}>{currentStudent.parentName}</td>
+                              <td style={{ padding: '10px 16px', fontWeight: 600 }}>School year</td>
+                              <td style={{ padding: '10px 8px' }}>{selectedAcademicYear || (issueDate ? getAcademicYear(issueDate) : '')}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '10px 16px', fontWeight: 600, verticalAlign: 'top' }}>Address</td>
+                              <td colSpan={3} style={{ padding: '10px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{currentStudent.originalStudent?.parents?.[0]?.address || '-'}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
 
                       {/* Invoice Items Table */}
@@ -5096,17 +5016,17 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         <table className="w-full border border-black" style={{ borderCollapse: 'collapse', fontSize: '11px' }}>
                           <thead>
                             <tr className="border-b border-black bg-gray-50">
-                              <th className="py-1.5 px-2 text-left font-semibold" style={{ width: '40px' }}>No.</th>
-                              <th className="py-1.5 px-2 text-left font-semibold">Description</th>
-                              <th className="py-1.5 px-2 text-right font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
+                              <th className="py-1.5 px-2 text-center font-semibold" style={{ width: '40px', borderRight: '1px solid #000' }}>No.</th>
+                              <th className="py-1.5 px-2 text-center font-semibold" style={{ borderRight: '1px solid #000' }}>Description</th>
+                              <th className="py-1.5 px-2 text-center font-semibold" style={{ width: '100px' }}>Amount (THB)</th>
                             </tr>
                           </thead>
                           <tbody>
                             {/* Regular Items */}
                             {selectedItems.map((item, index) => (
                               <tr key={item.id} className="border-b border-gray-200">
-                                <td className="py-1.5 px-2 align-top">{index + 1}</td>
-                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                <td className="py-1.5 px-2 align-top text-center" style={{ borderRight: '1px solid #000' }}>{index + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word', borderRight: '1px solid #000' }}>
                                   <div>{item.name}</div>
                                   {item.description && (
                                     <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
@@ -5118,8 +5038,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             {/* Registration Fee Items (New Students Only) - Orange */}
                             {registrationFeeItems.map((item, idx) => (
                               <tr key={item.id} className="border-b border-gray-200 text-orange-600">
-                                <td className="py-1.5 px-2 align-top">{selectedItems.length + idx + 1}</td>
-                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                <td className="py-1.5 px-2 align-top text-center" style={{ borderRight: '1px solid #000' }}>{selectedItems.length + idx + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word', borderRight: '1px solid #000' }}>
                                   {item.name}
                                 </td>
                                 <td className="py-1.5 px-2 text-right align-top">{formatCurrency(item.amount)}</td>
@@ -5130,8 +5050,8 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             {/* Discount Section */}
                             {discountCalc.discountItems.map((discount, idx) => (
                               <tr key={`discount-${idx}`} className="border-b border-gray-200 text-red-500">
-                                <td className="py-1.5 px-2 align-top">{selectedItems.length + registrationFeeItems.length + idx + 1}</td>
-                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word' }}>
+                                <td className="py-1.5 px-2 align-top text-center" style={{ borderRight: '1px solid #000' }}>{selectedItems.length + registrationFeeItems.length + idx + 1}</td>
+                                <td className="py-1.5 px-2" style={{ wordBreak: 'break-word', borderRight: '1px solid #000' }}>
                                   {discount.name} {discount.percentage ? `(${discount.percentage}%)` : ''}
                                 </td>
                                 <td className="py-1.5 px-2 text-right align-top">-{formatCurrency(discount.amount)}</td>
@@ -5139,7 +5059,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             ))}
                             {/* Total Row */}
                             <tr className="border-t border-black bg-gray-100">
-                              <td colSpan={2} className="py-2 px-2">
+                              <td colSpan={2} className="py-2 px-2" style={{ borderRight: '1px solid #000' }}>
                                 <div className="flex justify-between items-center">
                                   <span style={{ fontSize: '10px' }}>{numberToWords(finalTotal)}</span>
                                   <span className="font-bold ml-4">TOTAL</span>
@@ -5151,6 +5071,12 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                         </table>
                       </div>
 
+
+                      {/* Late payment + refund notes */}
+                      <div className="px-4" style={{ fontSize: '9px', lineHeight: 1.4, marginTop: '8px', marginBottom: '12px', color: '#444' }}>
+                        <p style={{ margin: 0 }}>Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.</p>
+                        <p style={{ margin: '2px 0 0 0' }}>The condition for refund of the security deposit is subject to the terms and conditions of King's College International School Bangkok.</p>
+                      </div>
 
                       {/* Payment Methods */}
                       <div className="px-4 py-2" style={{ fontSize: '11px', lineHeight: '1.5' }}>
@@ -5166,7 +5092,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                           <div className="flex">
                             <span className="mr-2">-</span>
                             <div className="flex-1">
-                              <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to finance@kingsbangkok.ac.th with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
+                              <span className="font-bold">Bank Transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to finance@kingsbangkok.ac.th with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
                             </div>
                           </div>
 
@@ -5208,7 +5134,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             </div>
                           </div>
 
-                          <div className="mt-2" style={{ marginLeft: '178px' }}>
+                          <div className="mt-2" style={{ marginLeft: '178px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingRight: '24px' }}>
                             <table>
                               <tbody>
                                 <tr>
@@ -5225,6 +5151,23 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                                 </tr>
                               </tbody>
                             </table>
+                            <div style={{ width: '72px', height: '72px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', flexShrink: 0 }}>
+                              <span style={{ fontSize: '9px', color: '#6b7280' }}>QR</span>
+                            </div>
+                          </div>
+
+                          <div className="flex mt-2">
+                            <span className="mr-2">-</span>
+                            <div className="flex-1">
+                              <span className="font-bold">Credit card:</span> The online payment link will be provided on the parent portal. Visa & Mastercard issued by local banks in Thailand are accepted. Kindly note that a 1.3% bank fee will be applied to individual online payment transaction.
+                            </div>
+                          </div>
+
+                          <div className="flex">
+                            <span className="mr-2">-</span>
+                            <div className="flex-1">
+                              <span className="font-bold">On-site credit card payment:</span> Credit cards issued by both local and overseas banks (VISA, Mastercard, JCB, UnionPay, and Alipay) are accepted. Please note that a bank fee may be applied, subject to your bank. The applicable rate can be viewed at the Cashier.
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -5241,8 +5184,15 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
                             <p className="italic mb-6" style={{ fontSize: '10px' }}>{""}</p>
                             <div className="w-40 border-t border-black mb-1"></div>
                             <p style={{ fontSize: '10px' }}>Authorised officer</p>
+                            <p style={{ fontSize: '9px' }}>Head of Finance and Accounting</p>
                           </div>
                         </div>
+                      </div>
+
+                      {/* School info footer */}
+                      <div className="px-4" style={{ textAlign: 'center', marginTop: '12px', fontSize: '9px', color: '#666', borderTop: '1px solid #ddd', paddingTop: '8px', paddingBottom: '8px' }}>
+                        <p style={{ margin: 0 }}>{schoolSettings.schoolName}, {schoolSettings.address}</p>
+                        <p style={{ margin: '2px 0 0 0' }}>{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
                       </div>
                     </div>
                   )

@@ -510,6 +510,14 @@ export function InvoiceManagement({
   // Invoice type tab state (unique key per category to avoid conflicts)
   const [invoiceTypeTab, setInvoiceTypeTab] = usePersistedState<"student" | "external">(`invoice-management:invoiceTypeTab:${category || 'default'}`, defaultTab || "student")
 
+  // When tabs are hidden, the user can't switch — force the tab to always match defaultTab
+  // (prevents stale localStorage values from rendering the wrong tab content)
+  useEffect(() => {
+    if (!showTypeTabs && invoiceTypeTab !== defaultTab) {
+      setInvoiceTypeTab(defaultTab)
+    }
+  }, [showTypeTabs, defaultTab, invoiceTypeTab, setInvoiceTypeTab])
+
   // Confirm dialog for delete operations
   const deleteConfirmDialog = useConfirmDialog()
 
@@ -2413,73 +2421,91 @@ export function InvoiceManagement({
       }
 
       const buildInvoicePreviewElement = (invoice: Invoice) => {
-        const itemsRows = invoice.items.map(item => `
+        const itemsRows = invoice.items.map((item, index) => `
           <tr>
-            <td style="padding:6px 8px; border:1px solid #e5e7eb;">${escapeHtml(item.description)}</td>
-            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">฿${item.amount.toLocaleString()}</td>
-            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">${item.discountPercent || 0}%</td>
-            <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">฿${item.discountedAmount.toLocaleString()}</td>
+            <td style="padding:10px 10px; text-align:center; vertical-align:top; border-right:1px solid #000;">${index + 1}</td>
+            <td style="padding:10px 14px; vertical-align:top; border-right:1px solid #000;">${escapeHtml(item.description)}</td>
+            <td style="padding:10px 14px; text-align:right; vertical-align:top;">${item.discountedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           </tr>
         `).join("")
 
+        const minRows = 5
+        const emptyRowCount = Math.max(0, minRows - invoice.items.length)
+        const emptyRows = Array(emptyRowCount).fill('<tr><td style="padding:10px; border-right:1px solid #000;">&nbsp;</td><td style="border-right:1px solid #000;"></td><td></td></tr>').join("")
+
+        const invoiceNumberDisplay = (invoice.status === 'sent' || getApprovalStatus(invoice) === 'approved')
+          ? (invoice.invoiceNumber || "-")
+          : "Pending Approval"
+
         const container = document.createElement("div")
         container.style.width = "794px"
-        container.style.padding = "24px"
+        container.style.padding = "16px 48px 24px 48px"
         container.style.background = "white"
-        container.style.color = "#111827"
+        container.style.color = "black"
         container.style.fontFamily = "Arial, sans-serif"
         container.style.fontSize = "12px"
         container.style.boxSizing = "border-box"
 
         container.innerHTML = `
-          <div style="text-align:center; border-bottom:1px solid #d1d5db; padding-bottom:12px; margin-bottom:12px;">
-            <img src="${SchoolLogo}" style="height:80px; margin:0 auto 8px; display:block;" alt="School Logo" />
-            <div style="font-size:12px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.address)}</div>
-            <div style="font-size:12px; color:#6b7280;">${escapeHtml(SCHOOL_INFO.phone)}, ${escapeHtml(SCHOOL_INFO.email)}, ${escapeHtml(SCHOOL_INFO.website)}</div>
-            <div style="margin-top:8px; font-size:72px; font-weight:700; letter-spacing:2px;">INVOICE</div>
+          <div style="text-align:center; margin-bottom:6px;">
+            <img src="${SchoolLogo}" style="height:70px; margin:0 auto 4px; display:block;" alt="School Logo" />
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; margin:2px 0 0 0;">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
+            <p style="font-size:10px; letter-spacing:0.05em; margin:1px 0 0 0;">BANGKOK</p>
           </div>
 
-          <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:11px;">
+          <div style="text-align:center; margin:8px 0 14px 0;">
+            <h1 style="font-family:'Times New Roman', Times, serif; font-size:36px; font-weight:700; letter-spacing:0.08em; margin:0;">INVOICE</h1>
+          </div>
+
+          <table style="width:100%; border:1px solid #000; border-collapse:collapse; margin-bottom:12px; font-size:11px;">
             <tr>
-              <td style="width:50%; vertical-align:top; padding-right:12px;">
-                <table style="width:100%; border-collapse:collapse;">
-                  <tr><td style="padding:4px 0; width:120px;">Student ID</td><td style="padding:4px 0;">${escapeHtml(invoice.studentId)}</td></tr>
-                  <tr><td style="padding:4px 0;">Student Name</td><td style="padding:4px 0;">${escapeHtml(invoice.studentName)}</td></tr>
-                  <tr><td style="padding:4px 0;">Year Group</td><td style="padding:4px 0;">${escapeHtml(invoice.studentGrade)}</td></tr>
-                  <tr><td style="padding:4px 0;">Parent Name</td><td style="padding:4px 0;">${escapeHtml(invoice.parentName)}</td></tr>
-                  <tr><td style="padding:4px 0;">Parent Email</td><td style="padding:4px 0;">${escapeHtml(invoice.parentEmail)}</td></tr>
-                </table>
-              </td>
-              <td style="width:50%; vertical-align:top; padding-left:12px;">
-                <table style="width:100%; border-collapse:collapse;">
-                  <tr><td style="padding:4px 0; width:120px;">Invoice No.</td><td style="padding:4px 0;">${escapeHtml(invoice.invoiceNumber)}</td></tr>
-                  <tr><td style="padding:4px 0;">Issue Date</td><td style="padding:4px 0;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, "dd/MM/yyyy") : "Pending")}</td></tr>
-                  <tr><td style="padding:4px 0;">Due Date</td><td style="padding:4px 0;">${escapeHtml(format(invoice.dueDate, "dd/MM/yyyy"))}</td></tr>
-                  <tr><td style="padding:4px 0;">Status</td><td style="padding:4px 0;">${escapeHtml(invoice.status)}</td></tr>
-                </table>
-              </td>
+              <td style="padding:10px 16px; width:19%;">Student ID no.</td>
+              <td style="padding:10px 8px; width:31%;">${escapeHtml(invoice.studentId)}</td>
+              <td style="padding:10px 16px; width:19%;">Invoice no.</td>
+              <td style="padding:10px 8px; width:31%;">${escapeHtml(invoiceNumberDisplay)}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 16px;">Student name</td>
+              <td style="padding:10px 8px;">${escapeHtml(invoice.studentName)}</td>
+              <td style="padding:10px 16px;">Invoice date</td>
+              <td style="padding:10px 8px;">${escapeHtml(invoice.issueDate ? format(invoice.issueDate, 'dd MMMM yyyy') : 'Pending Approval')}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 16px;">Year group</td>
+              <td style="padding:10px 8px;">${escapeHtml(invoice.studentGrade)}</td>
+              <td style="padding:10px 16px;">Due date</td>
+              <td style="padding:10px 8px;">${escapeHtml(format(invoice.dueDate, 'dd MMMM yyyy'))}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 16px;">Contact name</td>
+              <td colspan="3" style="padding:10px 8px;">${escapeHtml(invoice.parentName)}</td>
             </tr>
           </table>
 
-          <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:11px;">
+          <table style="width:100%; border:1px solid #000; border-collapse:collapse; margin-bottom:4px; font-size:11px;">
             <thead>
-              <tr style="background:#f3f4f6;">
-                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:left;">Description</th>
-                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">Amount</th>
-                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">Discount %</th>
-                <th style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right;">Net Amount</th>
+              <tr style="border-bottom:1px solid #000;">
+                <th style="padding:8px 10px; text-align:center; font-weight:600; width:40px; border-right:1px solid #000;">No.</th>
+                <th style="padding:8px 14px; text-align:center; font-weight:600; border-right:1px solid #000;">Description</th>
+                <th style="padding:8px 14px; text-align:center; font-weight:600; width:120px;">Amount<br/>(THB)</th>
               </tr>
             </thead>
             <tbody>
               ${itemsRows}
-              <tr>
-                <td colspan="3" style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">Total</td>
-                <td style="padding:6px 8px; border:1px solid #e5e7eb; text-align:right; font-weight:700;">฿${getDisplayAmount(invoice).toLocaleString()}</td>
+              ${emptyRows}
+              <tr style="border-top:1px solid #000;">
+                <td colspan="2" style="padding:10px 14px; font-weight:700; border-right:1px solid #000;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:10px; font-weight:700;">${escapeHtml(numberToWords(getDisplayAmount(invoice)))}</span>
+                    <span>TOTAL</span>
+                  </div>
+                </td>
+                <td style="padding:10px 14px; text-align:right; font-weight:700;">${getDisplayAmount(invoice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               </tr>
             </tbody>
           </table>
 
-          <div style="font-size:11px; color:#374151;">
+          <div style="font-size:11px; color:#374151; margin-top:12px;">
             <div style="font-weight:700; margin-bottom:4px;">Notes</div>
             <div>${escapeHtml(INVOICE_NOTES.bankTransferInstruction)}</div>
           </div>
@@ -3091,6 +3117,9 @@ export function InvoiceManagement({
     const approvalDate = new Date()
     const emailSentAt = approvalDate.toISOString()
 
+    // External invoices don't auto-send email: staff downloads PDF and sends manually
+    const isExternal = invoice.invoiceType === "external" || invoice.studentId === "EXTERNAL"
+
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoice.id
         ? {
@@ -3100,8 +3129,8 @@ export function InvoiceManagement({
           approvedBy: user?.name || "Admin",
           approvedAt: approvalDate,
           issueDate: approvalDate,
-          status: "sent" as const,
-          emailSentAt: approvalDate
+          status: isExternal ? ("approved" as const) : ("sent" as const),
+          ...(isExternal ? {} : { emailSentAt: approvalDate })
         }
         : inv
     )
@@ -3121,8 +3150,8 @@ export function InvoiceManagement({
               approvedBy: user?.name || "Admin",
               approvedAt: emailSentAt,
               issueDate: approvalDate.toISOString().split('T')[0],
-              status: "sent",
-              emailSentAt
+              status: isExternal ? "approved" : "sent",
+              ...(isExternal ? {} : { emailSentAt })
             }
             : inv
         )
@@ -3134,11 +3163,17 @@ export function InvoiceManagement({
 
     applyFilters()
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
-    toast.success(`Invoice ${finalInvoiceNumber} approved & email sent`)
+    if (isExternal) {
+      toast.success(`Invoice ${finalInvoiceNumber} approved`)
+    } else {
+      toast.success(`Invoice ${finalInvoiceNumber} approved & email sent`)
+    }
     logActivity({
       action: `Approved invoice ${finalInvoiceNumber}`,
       module: "Invoices",
-      detail: "Approval Status: wait → approved, Email: sent immediately"
+      detail: isExternal
+        ? "Approval Status: wait → approved (external, no auto-email)"
+        : "Approval Status: wait → approved, Email: sent immediately"
     })
     setIsApprovalDialogOpen(false)
     setSelectedInvoiceForApproval(null)
@@ -4210,6 +4245,15 @@ export function InvoiceManagement({
           {/* Invoices Table */}
           <Card>
             <CardContent className="p-0 overflow-x-auto">
+              {filteredInvoices.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState
+                    icon={<FileText className="h-8 w-8 text-muted-foreground" />}
+                    title={t("invoice.noInvoicesFound") || "No invoices found"}
+                    description={t("invoice.createInvoiceDesc") || "Create an invoice to get started"}
+                  />
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -4440,14 +4484,17 @@ export function InvoiceManagement({
                   ))}
                 </TableBody>
               </Table>
+              )}
 
-              <PaginationBar
-                currentPage={currentPage}
-                pageSize={pageSize}
-                totalCount={filteredInvoices.length}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-              />
+              {filteredInvoices.length > 0 && (
+                <PaginationBar
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalCount={filteredInvoices.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -4915,7 +4962,7 @@ export function InvoiceManagement({
                           <span className="text-sm text-gray-500">Invoice No.</span>
                           <span className="text-sm font-medium text-gray-800">
                             {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                              ? selectedInvoice.invoiceNumber
+                              ? (displayInvoiceNumber(selectedInvoice.invoiceNumber, getApprovalStatus(selectedInvoice)) || "-")
                               : 'Pending Approval'}
                           </span>
                         </div>
@@ -4939,7 +4986,6 @@ export function InvoiceManagement({
                               : (() => {
                                 if (selectedInvoice.academicYear) return selectedInvoice.academicYear
                                 if (selectedInvoice.issueDate) return getAcademicYear(selectedInvoice.issueDate)
-                                // Extract year from term field e.g. "2025-2026 - Term 2 ..."
                                 const termYearMatch = (selectedInvoice.term || "").match(/(\d{4}[-\/]\d{4})/)
                                 if (termYearMatch) return termYearMatch[1]
                                 if (selectedInvoice.dueDate) return getAcademicYear(selectedInvoice.dueDate)
@@ -4970,15 +5016,7 @@ export function InvoiceManagement({
                             {selectedInvoice.cancelledAt ? (
                               <>
                                 {selectedInvoice.cancelledBy && <> on </>}
-                                {new Date(selectedInvoice.cancelledAt).toLocaleDateString('en-GB', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric'
-                                })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: false
-                                })}
+                                {new Date(selectedInvoice.cancelledAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                               </>
                             ) : (
                               "Date and time not recorded"
@@ -5008,15 +5046,7 @@ export function InvoiceManagement({
                             {selectedInvoice.rejectedAt ? (
                               <>
                                 {selectedInvoice.rejectedBy && <> on </>}
-                                {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric'
-                                })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: false
-                                })}
+                                {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                               </>
                             ) : (
                               "Date and time not recorded"
@@ -5112,9 +5142,8 @@ export function InvoiceManagement({
                       }
 
                       // 3. Student group discounts - use stored invoice.discounts (set at creation time)
-                      // Never recalculate from current group state for existing invoices
                       if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                        ; (selectedInvoice.discounts || [])
+                        ;(selectedInvoice.discounts || [])
                           .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
                           .forEach(d => {
                             discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
@@ -5133,7 +5162,7 @@ export function InvoiceManagement({
 
                       // 6. Scholarship
                       if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('scholarship')) {
-                        const scholarshipAmount = subtotal // 100% scholarship
+                        const scholarshipAmount = subtotal
                         discountLines.push({
                           name: "Scholarship",
                           amount: scholarshipAmount,
@@ -5153,15 +5182,7 @@ export function InvoiceManagement({
 
                       // Get registration fees from saved invoice data (new students)
                       const savedRegistrationFees = (selectedInvoice as any).registrationFees || []
-                      const isNewStudent = (selectedInvoice as any).isNewStudent || savedRegistrationFees.length > 0
                       const registrationFeesTotal = savedRegistrationFees.reduce((sum: number, fee: any) => sum + fee.amount, 0)
-
-                      // Calculate late fee (1.5% if overdue)
-                      const today = new Date()
-                      const dueDate = new Date(selectedInvoice.dueDate)
-                      const isOverdue = today > dueDate && selectedInvoice.status !== "paid"
-                      const lateFeeAmount = 0
-                      const lateFeePercent = 0
 
                       // Calculate total discounts
                       let totalDiscounts = discountLines.reduce((sum, d) => sum + d.amount, 0)
@@ -5171,8 +5192,8 @@ export function InvoiceManagement({
                         totalDiscounts = subtotal
                       }
 
-                      // Final total (ID Charges removed)
-                      const finalTotal = subtotal - totalDiscounts + registrationFeesTotal + lateFeeAmount
+                      // Final total
+                      const finalTotal = subtotal - totalDiscounts + registrationFeesTotal
 
                       // Find specific registration fees
                       const applicationFee = savedRegistrationFees.find((f: any) => f.name.includes('Application Fee'))
@@ -5277,7 +5298,6 @@ export function InvoiceManagement({
                             studentName: selectedInvoice.studentName,
                             status: selectedInvoice.status
                           }
-                          // Open cancel dialog
                           setCancelTargetData(modalData)
                           setCancelReasonInput("")
                           setIsCancelDialogOpen(true)
@@ -6932,228 +6952,223 @@ export function InvoiceManagement({
 
       {/* External Invoice Preview Dialog */}
       <Dialog open={isExternalPreviewOpen} onOpenChange={setIsExternalPreviewOpen}>
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto p-0">
-          <DialogHeader className="p-4 border-b">
-            <DialogTitle>Invoice Preview</DialogTitle>
-            <DialogDescription>Preview of the external invoice</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] p-0 flex flex-col">
           {selectedInvoice && (
-            <div className="bg-white text-black p-8 max-w-[794px] mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
-              {/* School Header */}
-              <div className="text-center mb-2">
-                <img src={SchoolLogo} alt="School Logo" className="mx-auto mb-1" style={{ height: '180px' }} />
-                <p className="text-xs font-bold tracking-wider">KING'S COLLEGE INTERNATIONAL SCHOOL</p>
-                <p className="text-[10px] text-gray-600 tracking-wide">BANGKOK</p>
-                <p className="text-[9px] text-gray-500 mt-1">{SCHOOL_INFO.address}</p>
-                <p className="text-[9px] text-gray-500">{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
-              </div>
-
-              {/* Invoice Title */}
-              <h1 className="font-black text-center my-6" style={{ fontSize: '72px' }}>INVOICE</h1>
-
-              {/* Client & Invoice Info */}
-              <div className="border border-black p-4 mb-6" style={{ fontSize: '12px' }}>
-                <div className="flex justify-between">
-                  {/* Left side - Client Info */}
-                  <table>
-                    <tbody>
-                      <tr>
-                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client no.</td>
-                        <td className="py-1">000000</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Client name</td>
-                        <td className="py-1">{selectedInvoice.recipientName || selectedInvoice.studentName}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Contact name</td>
-                        <td className="py-1">{selectedInvoice.parentName || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold align-top" style={{ paddingRight: '24px' }}>Address</td>
-                        <td className="py-1 whitespace-pre-line">{selectedInvoice.recipientAddress || '-'}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  {/* Right side - Invoice Info */}
-                  <table>
-                    <tbody>
-                      <tr>
-                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice no.</td>
-                        <td className="py-1">
-                          {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                            ? (displayInvoiceNumber(selectedInvoice.invoiceNumber) || "-")
-                            : "Pending Approval"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Invoice date</td>
-                        <td className="py-1">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, 'd MMMM yyyy') : 'Pending Approval'}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold" style={{ paddingRight: '24px' }}>Due date</td>
-                        <td className="py-1">{selectedInvoice.dueDate ? format(selectedInvoice.dueDate, 'd MMMM yyyy') : '-'}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+            <div className="flex flex-col h-full">
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 bg-white">
+                {/* School Header */}
+                <div className="text-center pt-6 pb-4 border-b">
+                  <img
+                    src={schoolSettings.logoUrl || SchoolLogo}
+                    alt={schoolSettings.schoolName}
+                    style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
+                  />
+                  <h2 className="text-sm font-semibold tracking-wide text-gray-800">{schoolSettings.schoolName.toUpperCase()}</h2>
+                  <p className="text-xs text-gray-500 mt-1">{schoolSettings.address}</p>
+                  <p className="text-xs text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
                 </div>
-              </div>
 
-              {/* Items Table */}
-              <table className="w-full border border-black mb-6" style={{ borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr className="border-b border-black">
-                    <th className="py-2 px-4 text-center font-bold border-r border-black">Description</th>
-                    <th className="py-2 px-4 text-center font-bold" style={{ width: '100px' }}>Amount<br />(THB)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedInvoice.items.map((item, index) => (
-                    <tr key={item.id || index}>
-                      <td className="py-3 px-4 align-top border-r border-black">
-                        <div>{item.description}</div>
-                        {item.notes && (
-                          <div className="text-gray-600">{item.notes}</div>
+                {/* Invoice Title */}
+                <div className="text-center py-4">
+                  <h1 className="text-7xl font-bold tracking-wider">INVOICE</h1>
+                  <Badge variant="outline" className="mt-2">
+                    <Eye className="w-3 h-3 mr-1" />
+                    View Only
+                  </Badge>
+                </div>
+
+                {/* Recipient & Invoice Info */}
+                <div className="px-8 py-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+                    {/* Left - Client Info */}
+                    <div className="p-6 pr-8">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="text-sm text-gray-500 shrink-0">Client Name</span>
+                          <span className="text-sm font-medium text-gray-800 text-right">{selectedInvoice.recipientName || selectedInvoice.studentName}</span>
+                        </div>
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="text-sm text-gray-500 shrink-0">Contact Name</span>
+                          <span className="text-sm font-medium text-gray-800 text-right">{selectedInvoice.parentName || '-'}</span>
+                        </div>
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="text-sm text-gray-500 shrink-0">Email</span>
+                          <span className="text-sm font-medium text-gray-800 text-right break-all">{selectedInvoice.parentEmail || '-'}</span>
+                        </div>
+                        {selectedInvoice.recipientAddress && (
+                          <div className="flex justify-between items-start gap-4">
+                            <span className="text-sm text-gray-500 shrink-0">Address</span>
+                            <span className="text-sm font-medium text-gray-800 text-right whitespace-pre-line">{selectedInvoice.recipientAddress}</span>
+                          </div>
                         )}
-                      </td>
-                      <td className="py-3 px-4 text-right align-top">
-                        {item.discountedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                  {/* Total row */}
-                  <tr className="border-t border-black">
-                    <td className="py-3 px-4 border-r border-black">
-                      <div className="flex justify-between items-center">
-                        <span>{numberToWords(selectedInvoice.finalAmount)}</span>
-                        <span className="font-bold">Total</span>
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-right font-bold">
-                      {selectedInvoice.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Payment Methods */}
-              <div className="mb-6" style={{ fontSize: '11px', lineHeight: '1.5' }}>
-                <p className="font-bold mb-2">Payment methods</p>
-                <div className="space-y-2">
-                  <div className="flex">
-                    <span className="mr-2">-</span>
-                    <div>
-                      <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
                     </div>
-                  </div>
-
-                  <div className="flex">
-                    <span className="mr-2">-</span>
-                    <div className="flex-1">
-                      <span className="font-bold">Bank transfer:</span> Further bank details are provided below. Kindly email your child's name, ID number, and invoice number to {schoolSettings.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex justify-center">
-                    <table>
-                      <tbody>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td>
-                          <td className="py-0.5 text-left">{schoolSettings.bankAccountName}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td>
-                          <td className="py-0.5 text-left">{schoolSettings.bankAccountNumber}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td>
-                          <td className="py-0.5 text-left">{schoolSettings.bankName}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td>
-                          <td className="py-0.5 text-left">{schoolSettings.bankBranch}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td>
-                          <td className="py-0.5 text-left">{schoolSettings.swiftCode}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td>
-                          <td className="py-0.5 text-left">{schoolSettings.address}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex mt-2">
-                    <span className="mr-2">-</span>
-                    <div className="flex-1">
-                      <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-                    </div>
-                  </div>
-
-                  <div className="mt-2" style={{ marginLeft: '178px' }}>
-                    <table>
-                      <tbody>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td>
-                          <td className="py-0.5 text-left">099-4-00259063-3</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td>
-                          <td className="py-0.5 text-left">700002</td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td>
-                          <td className="py-0.5 text-left">
+                    {/* Right - Invoice Info */}
+                    <div className="p-6 pl-8">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Invoice Details</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Invoice No.</span>
+                          <span className="text-sm font-medium text-gray-800">
                             {(selectedInvoice.status === 'sent' || getApprovalStatus(selectedInvoice) === 'approved')
-                              ? (displayInvoiceNumber(selectedInvoice.invoiceNumber) || "-")
-                              : "-"}
-                          </td>
+                              ? (displayInvoiceNumber(selectedInvoice.invoiceNumber, getApprovalStatus(selectedInvoice)) || "-")
+                              : 'Pending Approval'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Invoice Date</span>
+                          <span className="text-sm font-medium text-gray-800">{getApprovalStatus(selectedInvoice) === "approved" && selectedInvoice.issueDate ? format(selectedInvoice.issueDate, "dd MMM yyyy") : "Pending Approval"}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Due Date</span>
+                          <span className="text-sm font-medium text-red-600">{selectedInvoice.dueDate ? format(selectedInvoice.dueDate, "dd MMM yyyy") : "-"}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Event</span>
+                          <span className="text-sm font-medium text-gray-800">{selectedInvoice.eventName || "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cancellation Information - Full Width */}
+                  {selectedInvoice.status === "cancelled" && (
+                    <div className="my-6 bg-red-50 border border-red-200 rounded-md p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-800 mb-1">Invoice Cancelled</p>
+                          <p className="text-sm text-red-700">
+                            <span className="font-medium">Reason:</span> {selectedInvoice.cancelReason || "No reason recorded"}
+                          </p>
+                          <p className="text-xs text-red-600 mt-1">
+                            {selectedInvoice.cancelledBy && <>Cancelled by {selectedInvoice.cancelledBy}</>}
+                            {selectedInvoice.cancelledAt ? (
+                              <>
+                                {selectedInvoice.cancelledBy && <> on </>}
+                                {new Date(selectedInvoice.cancelledAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} at {new Date(selectedInvoice.cancelledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                              </>
+                            ) : (
+                              "Date and time not recorded"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rejection Information - Full Width */}
+                  {selectedInvoice.approvalStatus === "rejected" && (
+                    <div className="my-6 bg-orange-50 border border-orange-200 rounded-md p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-orange-800 mb-1">Invoice Rejected</p>
+                          <p className="text-sm text-orange-700">
+                            <span className="font-medium">Reason:</span> {selectedInvoice.rejectedReason || "No reason recorded"}
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            {selectedInvoice.rejectedBy && <>Rejected by {selectedInvoice.rejectedBy}</>}
+                            {selectedInvoice.rejectedAt ? (
+                              <>
+                                {selectedInvoice.rejectedBy && <> on </>}
+                                {new Date(selectedInvoice.rejectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} at {new Date(selectedInvoice.rejectedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                              </>
+                            ) : (
+                              "Date and time not recorded"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Invoice Items Table */}
+                <div className="px-8 pb-6">
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
+                          <th className="py-3 px-4 text-left font-semibold">Description</th>
+                          <th className="py-3 px-4 text-right font-semibold w-28">Amount</th>
                         </tr>
+                      </thead>
+                      <tbody>
+                        {selectedInvoice.items.map((item, index) => (
+                          <tr key={item.id} className="border-b last:border-b-0">
+                            <td className="py-3 px-4 align-top text-gray-600">{index + 1}</td>
+                            <td className="py-3 px-4 align-top" style={{ wordBreak: 'break-word' }}>
+                              <div>{item.description}</div>
+                              {item.notes && (
+                                <div className="text-gray-500 text-xs mt-0.5">{item.notes}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium whitespace-nowrap align-top">
+                              {formatCurrency(item.discountedAmount)}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
+                    {/* Total */}
+                    <div className="border-t bg-gray-50 p-4">
+                      <div className="text-xs text-gray-500 mb-2">{numberToWords(selectedInvoice.finalAmount)}</div>
+                      <div className="flex justify-between items-center font-bold text-base">
+                        <span>TOTAL</span>
+                        <span>{formatCurrency(selectedInvoice.finalAmount)}</span>
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Payment Methods Preview */}
+                <div className="px-8 pb-6">
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Payment methods: </span>
+                    <span className="text-gray-500">Credit Card, PromptPay, Bank Counter, WeChat Pay, Alipay, Cash</span>
+                  </p>
                 </div>
               </div>
 
-              {/* Signatures */}
-              <div className="flex justify-between mt-8 px-8">
-                <div className="text-center">
-                  <p className="mb-4" style={{ fontSize: '10px' }}>{selectedInvoice?.createdBy || user?.name || ""}</p>
-                  <div className="border-t border-black w-40 mx-auto"></div>
-                  <p className="mt-1" style={{ fontSize: '10px' }}>Prepared by</p>
-                </div>
-                <div className="text-center">
-                  <p className="mb-4" style={{ fontSize: '10px' }}>{selectedInvoice?.approvedBy || ""}</p>
-                  <div className="border-t border-black w-40 mx-auto"></div>
-                  <p className="mt-1" style={{ fontSize: '10px' }}>Authorised officer</p>
+              {/* Action Buttons - Sticky Footer */}
+              <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setIsExternalPreviewOpen(false)}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
+                    disabled={isDownloadingPDF}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isDownloadingPDF ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Generating PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
           )}
-          <div className="flex justify-end gap-3 p-4 border-t">
-            <Button variant="outline" onClick={() => setIsExternalPreviewOpen(false)}>
-              Close
-            </Button>
-            <Button
-              onClick={() => selectedInvoice && downloadSingleInvoicePDF(selectedInvoice)}
-              disabled={isDownloadingPDF}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isDownloadingPDF ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Generating PDF...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download PDF
-                </>
-              )}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 

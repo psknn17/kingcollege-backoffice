@@ -363,7 +363,7 @@ export function PaymentHistory({ type = "tuition" }: PaymentHistoryProps) {
             {t("payment.viewRecordsDesc")}
           </p>
         </div>
-        <Button onClick={exportData} className="flex items-center gap-2">
+        <Button variant="outline" onClick={exportData} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
           {t("payment.exportData")}
         </Button>

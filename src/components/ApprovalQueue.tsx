@@ -562,6 +562,9 @@ export function ApprovalQueue() {
     const approvalDate = new Date()
     const emailSentAt = approvalDate.toISOString()
 
+    // External invoices don't auto-send email: staff downloads PDF and sends manually
+    const isExternal = (invoice as any).invoiceType === "external" || invoice.studentId === "EXTERNAL"
+
     const updatedInvoices: Invoice[] = invoices.map(inv =>
       inv.id === invoice.id
         ? ({
@@ -571,8 +574,8 @@ export function ApprovalQueue() {
           approvedBy: user?.name || "Admin",
           approvedAt: approvalDate,
           issueDate: inv.issueDate || approvalDate,
-          status: "sent" as const,
-          emailSentAt: approvalDate,
+          status: isExternal ? ("approved" as const) : ("sent" as const),
+          ...(isExternal ? {} : { emailSentAt: approvalDate }),
         } as Invoice)
         : inv
     )
@@ -587,17 +590,23 @@ export function ApprovalQueue() {
         approvedBy: user?.name || "Admin",
         approvedAt: approvalDate.toISOString(),
         issueDate: (invoice.issueDate || approvalDate).toISOString().split('T')[0],
-        status: "sent",
-        emailSentAt,
+        status: isExternal ? "approved" : "sent",
+        ...(isExternal ? {} : { emailSentAt }),
       },
       invoice.invoiceNumber
     )
 
-    toast.success(`Invoice ${finalInvoiceNumber} has been approved and sent via email`)
+    if (isExternal) {
+      toast.success(`Invoice ${finalInvoiceNumber} has been approved`)
+    } else {
+      toast.success(`Invoice ${finalInvoiceNumber} has been approved and sent via email`)
+    }
     logActivity({
-      action: `Approved and sent invoice ${finalInvoiceNumber}`,
+      action: isExternal ? `Approved invoice ${finalInvoiceNumber}` : `Approved and sent invoice ${finalInvoiceNumber}`,
       module: "Approval Queue",
-      detail: "Approval Status: wait → approved, Email: sent immediately"
+      detail: isExternal
+        ? "Approval Status: wait → approved (external, no auto-email)"
+        : "Approval Status: wait → approved, Email: sent immediately"
     })
     window.dispatchEvent(new CustomEvent("invoicesUpdated"))
   }
@@ -643,6 +652,9 @@ export function ApprovalQueue() {
         ? generateInvoiceNumber(inv.academicYear)
         : inv.invoiceNumber
 
+      // External invoices don't auto-send email: staff downloads PDF and sends manually
+      const isExternal = (inv as any).invoiceType === "external" || inv.studentId === "EXTERNAL"
+
       approvalMap.set(inv.id, finalInvoiceNumber)
       approvalPatches.push({
         target: inv,
@@ -652,8 +664,8 @@ export function ApprovalQueue() {
           approvedBy: user?.name || "Admin",
           approvedAt: now.toISOString(),
           issueDate: (inv.issueDate || now).toISOString().split('T')[0],
-          status: "sent",
-          emailSentAt: now.toISOString(),
+          status: isExternal ? "approved" : "sent",
+          ...(isExternal ? {} : { emailSentAt: now.toISOString() }),
         },
         overrideNumber: inv.invoiceNumber
       })
@@ -665,8 +677,8 @@ export function ApprovalQueue() {
         approvedBy: user?.name || "Admin",
         approvedAt: now,
         issueDate: inv.issueDate || now,
-        status: "sent" as const,
-        emailSentAt: now,
+        status: isExternal ? ("approved" as const) : ("sent" as const),
+        ...(isExternal ? {} : { emailSentAt: now }),
       } as Invoice
     })
 

@@ -204,11 +204,11 @@ function generateInvoices(students: any[], families: any[]) {
       // Term 3 — 50 invoices: mostly draft/pending (upcoming)
       ...repeat(["draft"], 25), ...repeat(["pending_approval"], 20), ...repeat(["rejected"], 5),
     ]},
-    { cat: "eca",         count: 20, dist: [...repeat(["paid"], 6), ...repeat(["partial"], 2), ...repeat(["sent"], 4), ...repeat(["overdue"], 3), ...repeat(["approved"], 2), ...repeat(["draft"], 2), "pending_approval"] },
-    { cat: "trip",        count: 15, dist: [...repeat(["paid"], 5), "partial", ...repeat(["sent"], 3), ...repeat(["overdue"], 2), "approved", "draft", "draft", "pending_approval", "rejected"] },
-    { cat: "exam",        count: 12, dist: [...repeat(["paid"], 4), "partial", ...repeat(["sent"], 3), "overdue", "overdue", "draft", "pending_approval"] },
-    { cat: "bus",         count: 15, dist: [...repeat(["paid"], 5), ...repeat(["partial"], 2), ...repeat(["sent"], 3), ...repeat(["overdue"], 2), "approved", "draft", "pending_approval"] },
-    { cat: "external",    count: 8,  dist: ["paid","paid","paid","sent","sent","draft","draft","pending_approval"] },
+    { cat: "eca",         count: 40, dist: [...repeat(["paid"], 12), ...repeat(["partial"], 4), ...repeat(["sent"], 8), ...repeat(["overdue"], 6), ...repeat(["approved"], 4), ...repeat(["draft"], 3), ...repeat(["pending_approval"], 2), "rejected"] },
+    { cat: "trip",        count: 30, dist: [...repeat(["paid"], 10), ...repeat(["partial"], 2), ...repeat(["sent"], 6), ...repeat(["overdue"], 4), ...repeat(["approved"], 3), ...repeat(["draft"], 3), ...repeat(["pending_approval"], 1), "rejected"] },
+    { cat: "exam",        count: 25, dist: [...repeat(["paid"], 8), ...repeat(["partial"], 2), ...repeat(["sent"], 5), ...repeat(["overdue"], 3), ...repeat(["approved"], 2), ...repeat(["draft"], 3), "pending_approval", "rejected"] },
+    { cat: "bus",         count: 30, dist: [...repeat(["paid"], 10), ...repeat(["partial"], 3), ...repeat(["sent"], 6), ...repeat(["overdue"], 4), ...repeat(["approved"], 3), ...repeat(["draft"], 2), "pending_approval", "rejected"] },
+    { cat: "external",    count: 20, dist: [...repeat(["paid"], 7), ...repeat(["partial"], 1), ...repeat(["sent"], 4), ...repeat(["overdue"], 2), ...repeat(["approved"], 2), ...repeat(["draft"], 2), "pending_approval", "rejected"] },
     { cat: "afterschool", count: 20, dist: [...repeat(["paid"], 6), ...repeat(["partial"], 2), ...repeat(["sent"], 4), ...repeat(["overdue"], 3), "approved", "approved", "draft", "draft", "pending_approval"] },
     { cat: "event",       count: 10, dist: [...repeat(["paid"], 3), "partial", ...repeat(["sent"], 2), "overdue", "approved", "draft", "pending_approval"] },
   ]
@@ -317,6 +317,7 @@ function generateInvoices(students: any[], families: any[]) {
         parentEmail: isExternal ? `client${invSeq}@company.com` : (s.parents[0]?.email || family?.email || ""),
         recipientName: isExternal ? `Company ${invSeq} Ltd.` : undefined,
         recipientAddress: isExternal ? `${invSeq} Business Ave, Bangkok 10500` : undefined,
+        clientId: isExternal ? `CL${pad(invSeq, 4)}` : undefined,
         items, subtotal, discounts, totalDiscount, netAmount,
         finalAmount: netAmount, // alias used by some components
         dueDate, issueDate,
@@ -372,15 +373,18 @@ function generateReceipts(invoices: any[]) {
     const rcpDate = inv.paidDate || randomDate(new Date("2025-09-01"), new Date("2026-03-15"))
     const rcpYear = new Date(rcpDate).getFullYear()
 
+    const isExtCat = cat === "external"
     // ReceiptPageUpdated expected format
     receipts[storageKey].push({
       id: `rcp-${pad(idx + 1)}`,
       receiptNo: `R${rcpYear}-${String(idx + 1).padStart(5, "0")}`,
       receiptDate: rcpDate,
-      clientType: cat === "external" ? "external" : "student",
-      clientNo: inv.studentId || inv.familyCode || "",
-      clientName: inv.studentName || inv.recipientName || "",
+      clientType: isExtCat ? "external" : "student",
+      clientNo: isExtCat ? (inv.clientId || "") : (inv.studentId || inv.familyCode || ""),
+      clientId: isExtCat ? (inv.clientId || "") : "",
+      clientName: isExtCat ? (inv.recipientName || "") : (inv.studentName || ""),
       contactName: inv.parentName || "",
+      address: isExtCat ? (inv.recipientAddress || "") : "",
       yearGroup: inv.studentGrade || "",
       schoolYear: CURRENT_YEAR,
       academicYear: CURRENT_YEAR,
@@ -737,6 +741,60 @@ function generateSchoolSettings() {
   }
 }
 
+// ── Clients (External Invoice Recipients) ────────────────────
+// Matches the external-invoice pattern in generateInvoices():
+//   external invSeq range 276..295 → Client {seq} / Company {seq} Ltd.
+function generateClients() {
+  const EXTERNAL_SEQ_START = 276
+  const EXTERNAL_COUNT = 20
+  const STREET_NAMES = [
+    "Sukhumvit","Sathorn","Silom","Rama 4","Rama 9","Wireless","Phaholyothin",
+    "Ratchadaphisek","Asok","Ploenchit","Charoen Krung","Bang Na","Ramkhamhaeng",
+    "Lat Phrao","Vibhavadi","Petchaburi","Ekkamai","Thonglor","Sri Nakarin","Rangsit",
+  ]
+  const POSTAL_CODES = ["10110","10120","10220","10310","10330","10400","10500","10900"]
+
+  const clients: any[] = []
+  const baseTime = new Date("2025-06-01").getTime()
+
+  // 20 clients matching external invoices (so the dropdown/search is consistent)
+  for (let i = 0; i < EXTERNAL_COUNT; i++) {
+    const seq = EXTERNAL_SEQ_START + i
+    clients.push({
+      id: `cli-${pad(seq)}`,
+      clientName: `Company ${seq} Ltd.`,
+      clientId: `CL${pad(seq, 4)}`,
+      contactName: `Client ${seq}`,
+      address: `${seq} ${STREET_NAMES[i % STREET_NAMES.length]} Road, Bangkok ${POSTAL_CODES[i % POSTAL_CODES.length]}`,
+      createdAt: new Date(baseTime + i * 86400000).toISOString(),
+    })
+  }
+
+  // A few extra realistic client entries (no linked invoices yet)
+  const EXTRA_CLIENTS: { name: string; contact: string; addr: string }[] = [
+    { name: "Bangkok Hospitality Group Co., Ltd.", contact: "Khun Somchai Ratanawong", addr: "88 Sukhumvit Soi 24, Klongton, Bangkok 10110" },
+    { name: "Siam Catering Services", contact: "Khun Niran Phumirat", addr: "123 Silom Road, Bang Rak, Bangkok 10500" },
+    { name: "Thailand Conference Center", contact: "Ms. Patcharin Lim", addr: "456 Ratchadaphisek, Huai Khwang, Bangkok 10310" },
+    { name: "Phoenix Event Solutions", contact: "Mr. David Johnson", addr: "77 Asok Montri Road, Bangkok 10110" },
+    { name: "Royal Garden Florist", contact: "Khun Malee Suksawat", addr: "29 Wireless Road, Lumpini, Bangkok 10330" },
+    { name: "Pacific Travel Agency", contact: "Khun Anan Wongchai", addr: "199 Ploenchit Road, Lumpini, Bangkok 10330" },
+    { name: "Star Audio Visual Co., Ltd.", contact: "Mr. Kenji Tanaka", addr: "315 Phaholyothin Road, Chatuchak, Bangkok 10900" },
+    { name: "Bangkok Sports Equipment", contact: "Khun Wichai Boonmee", addr: "42 Lat Phrao Road, Wang Thonglang, Bangkok 10310" },
+  ]
+  EXTRA_CLIENTS.forEach((c, idx) => {
+    clients.push({
+      id: `cli-extra-${idx + 1}`,
+      clientName: c.name,
+      clientId: `CL${pad(1000 + idx + 1, 4)}`,
+      contactName: c.contact,
+      address: c.addr,
+      createdAt: new Date(baseTime + (EXTERNAL_COUNT + idx) * 86400000).toISOString(),
+    })
+  })
+
+  return clients
+}
+
 // ══════════════════════════════════════════════════════════════
 // MAIN SEEDER
 // ══════════════════════════════════════════════════════════════
@@ -744,14 +802,14 @@ export function seedAllData() {
   try {
     // ── Force reseed v2: clear old mock data ─────────────────
     const RESEED_KEY = "seed_version"
-    const SEED_VER = "2.4"
+    const SEED_VER = "2.7"
     if (localStorage.getItem(RESEED_KEY) !== SEED_VER) {
       const keysToRemove = [
         "students_v1600","families_v1600","student_data_version_v3","academicYears","tuitionByYearData",
         "createdInvoices","paymentRecords","creditNotes","creditNotesRecords","invoiceEmailLogs","emailReminderHistory",
         "receiptRecords_tuition","receiptRecords_eca","receiptRecords_trip","receiptRecords_event","receiptRecords_summer","receiptRecords_external",
         "studentGroups","discountOptions","scholarshipRecords","staffChildRecords","earlyBirdRecords","schoolBusRecords",
-        "activityLogs","schoolSettings",
+        "activityLogs","schoolSettings","clientList","kingscollege_backoffice_clientList",
         "invoiceItems","afterschoolItems","ecaItems","eventItems","tripItems","examItems","summerItems","busItems","externalItems",
         "bankAccounts","onlineBankAccounts","kingscollege_backoffice_bankAccounts",
         "kingscollege_backoffice_debt-reminder:reminders-v2","kingscollege_backoffice_debt-reminder:globalSettings",
@@ -816,7 +874,7 @@ export function seedAllData() {
 
     // ── Invoices (all categories) ────────────────────────────
     // Version check: re-seed invoices when seed data structure changes
-    const INVOICE_SEED_VERSION = "2.6" // Bump when invoice seed data changes
+    const INVOICE_SEED_VERSION = "2.8" // Bump when invoice seed data changes
     const currentSeedVersion = localStorage.getItem("invoice_seed_version")
     if (currentSeedVersion !== INVOICE_SEED_VERSION) {
       localStorage.removeItem("createdInvoices")
@@ -871,6 +929,10 @@ export function seedAllData() {
 
     // ── School Settings ──────────────────────────────────────
     seedIfEmpty("schoolSettings", generateSchoolSettings())
+
+    // ── Client List (External Invoice Recipients) ────────────
+    // Note: ClientList component uses usePersistedState which adds "kingscollege_backoffice_" prefix
+    seedIfEmpty("kingscollege_backoffice_clientList", generateClients())
 
     // ── Debt Reminder Config (usePersistedState prefixed) ────
     seedIfEmpty("kingscollege_backoffice_debt-reminder:reminders-v2", generateDebtReminders())

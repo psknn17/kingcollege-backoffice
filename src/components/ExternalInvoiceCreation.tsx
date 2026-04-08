@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
-import { SCHOOL_INFO, BANK_DETAILS, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
+import { SCHOOL_INFO, BANK_DETAILS, BILL_PAYMENT, numberToWords, formatCurrency } from "@/lib/invoiceUtils"
 import { downloadInvoicePDF } from "@/lib/invoicePDF"
 import SchoolLogo from "@/assets/Logo.png"
 import { logActivity } from "@/lib/activityLog"
@@ -439,166 +439,202 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
     }
   }
 
-  // Render invoice preview (matching the sample format)
-  const renderPreview = () => (
-    <div className="bg-white text-black mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '794px', minHeight: '1123px', padding: '32px 48px' }}>
+  // Render invoice preview (matching Student invoice template format)
+  const renderPreview = () => {
+    const previewInvoiceNumber = isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
+      ? editInvoice.invoiceNumber
+      : isEditMode ? "Pending Approval" : "-"
+    const minRows = 5
+    const emptyRowCount = Math.max(0, minRows - lineItems.length)
+
+    return (
+    <div className="bg-white text-black mx-auto" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px', width: '794px', padding: '16px 48px 24px 48px', boxSizing: 'border-box' }}>
       {/* School Header */}
-      <div className="text-center mb-4">
-        <img src={schoolSettings.logoUrl || SchoolLogo} alt="School Logo" className="mx-auto mb-2" style={{ height: '100px' }} />
-        <p className="text-sm font-bold tracking-wider">{schoolSettings.schoolName.toUpperCase()}</p>
-        <p className="text-xs text-gray-600 tracking-wide">BANGKOK</p>
-        <p className="text-[10px] text-gray-500 mt-1">{schoolSettings.address}</p>
-        <p className="text-[10px] text-gray-500">{schoolSettings.phone}, {schoolSettings.email}, {schoolSettings.website}</p>
+      <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+        <img src={schoolSettings.logoUrl || SchoolLogo} alt="School Logo" style={{ height: '70px', margin: '0 auto 4px', display: 'block' }} />
+        <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', margin: '2px 0 0 0' }}>KING'S COLLEGE INTERNATIONAL SCHOOL</p>
+        <p style={{ fontSize: '10px', letterSpacing: '0.05em', margin: '1px 0 0 0' }}>BANGKOK</p>
       </div>
 
       {/* Invoice Title */}
-      <h1 className="font-black text-center mb-6" style={{ fontSize: '72px' }}>INVOICE</h1>
-
-      {/* Client & Invoice Info */}
-      <div className="border border-black p-4 mb-6" style={{ fontSize: '13px' }}>
-        <div className="flex justify-between">
-          {/* Left Column - Client Info */}
-          <div style={{ width: '45%' }}>
-            <div className="flex py-1">
-              <span style={{ width: '110px' }}>Client no.</span>
-              <span>000000</span>
-            </div>
-            <div className="flex py-1">
-              <span style={{ width: '110px' }}>Client name</span>
-              <span>{clientName}</span>
-            </div>
-            <div className="flex py-1">
-              <span style={{ width: '110px' }}>Contact name</span>
-              <span>{contactName || '-'}</span>
-            </div>
-            <div className="flex py-1">
-              <span style={{ width: '110px' }}>Address</span>
-              <span>{address || '-'}</span>
-            </div>
-          </div>
-          {/* Right Column - Invoice Info */}
-          <div style={{ width: '45%' }}>
-            <div className="flex py-1">
-              <span style={{ width: '90px' }}>Invoice no.</span>
-              <span className="flex-1 text-right">
-                {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
-                  ? editInvoice.invoiceNumber
-                  : isEditMode ? "Pending Approval" : "-"}
-              </span>
-            </div>
-            <div className="flex py-1">
-              <span style={{ width: '90px' }}>Invoice date</span>
-              <span className="flex-1 text-right">{format(invoiceDate, 'd MMMM yyyy')}</span>
-            </div>
-            <div className="flex py-1">
-              <span style={{ width: '90px' }}>Due date</span>
-              <span className="flex-1 text-right">{dueDate ? format(dueDate, 'd MMMM yyyy') : '-'}</span>
-            </div>
-          </div>
-        </div>
+      <div style={{ textAlign: 'center', margin: '8px 0' }}>
+        <h1 style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '36px', fontWeight: 700, letterSpacing: '0.08em', margin: 0 }}>INVOICE</h1>
       </div>
 
+      {/* Client & Invoice Info */}
+      <table style={{ width: '100%', border: '1px solid #000', borderCollapse: 'collapse', marginBottom: '12px', fontSize: '11px' }}>
+        <tbody>
+          <tr>
+            <td style={{ padding: '10px 16px', width: '19%', fontWeight: 600 }}>Client no.</td>
+            <td style={{ padding: '10px 8px', width: '31%' }}>000000</td>
+            <td style={{ padding: '10px 16px', width: '19%', fontWeight: 600 }}>Invoice no.</td>
+            <td style={{ padding: '10px 8px', width: '31%' }}>{previewInvoiceNumber}</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '10px 16px', fontWeight: 600 }}>Client name</td>
+            <td style={{ padding: '10px 8px' }}>{clientName || '-'}</td>
+            <td style={{ padding: '10px 16px', fontWeight: 600 }}>Invoice date</td>
+            <td style={{ padding: '10px 8px' }}>{format(invoiceDate, 'dd MMMM yyyy')}</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '10px 16px', fontWeight: 600 }}>Contact name</td>
+            <td style={{ padding: '10px 8px' }}>{contactName || '-'}</td>
+            <td style={{ padding: '10px 16px', fontWeight: 600 }}>Due date</td>
+            <td style={{ padding: '10px 8px' }}>{dueDate ? format(dueDate, 'dd MMMM yyyy') : '-'}</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '10px 16px', fontWeight: 600, verticalAlign: 'top' }}>Address</td>
+            <td colSpan={3} style={{ padding: '10px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{address || '-'}</td>
+          </tr>
+        </tbody>
+      </table>
+
       {/* Items Table */}
-      <table className="w-full border border-black mb-6" style={{ borderCollapse: 'collapse', fontSize: '13px' }}>
+      <table style={{ width: '100%', border: '1px solid #000', borderCollapse: 'collapse', marginBottom: '4px', fontSize: '11px' }}>
         <thead>
-          <tr className="border-b border-black">
-            <th className="py-2 px-4 text-center font-semibold">Description</th>
-            <th className="py-2 px-4 text-center font-semibold" style={{ width: '150px' }}>Amount<br />(THB)</th>
+          <tr style={{ borderBottom: '1px solid #000' }}>
+            <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600, width: '40px', borderRight: '1px solid #000' }}>No.</th>
+            <th style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 600, borderRight: '1px solid #000' }}>Description</th>
+            <th style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 600, width: '120px' }}>Amount<br />(THB)</th>
           </tr>
         </thead>
         <tbody>
-          {lineItems.map((item) => (
+          {lineItems.map((item, index) => (
             <tr key={item.id}>
-              <td className="py-3 px-4 align-top border-r border-black">
+              <td style={{ padding: '10px 10px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000' }}>{index + 1}</td>
+              <td style={{ padding: '10px 14px', verticalAlign: 'top', borderRight: '1px solid #000' }}>
                 <div>{item.description}</div>
                 {item.details && (
-                  <div className="text-xs text-gray-500 mt-0.5">{item.details}</div>
+                  <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>{item.details}</div>
                 )}
               </td>
-              <td className="py-3 px-4 text-right align-top">
+              <td style={{ padding: '10px 14px', textAlign: 'right', verticalAlign: 'top' }}>
                 {item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
             </tr>
           ))}
+          {Array.from({ length: emptyRowCount }).map((_, idx) => (
+            <tr key={`empty-${idx}`}>
+              <td style={{ padding: '10px', borderRight: '1px solid #000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000' }}></td>
+              <td></td>
+            </tr>
+          ))}
           {/* Total row */}
-          <tr className="border-t border-black">
-            <td className="py-3 px-4 border-r border-black">
-              <div className="flex justify-end items-center">
-                <span className="font-bold">Total</span>
+          <tr style={{ borderTop: '1px solid #000' }}>
+            <td colSpan={2} style={{ padding: '10px 14px', fontWeight: 700, borderRight: '1px solid #000' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700 }}>{numberToWords(total)}</span>
+                <span>TOTAL</span>
               </div>
             </td>
-            <td className="py-3 px-4 text-right font-bold">
+            <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>
               {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
         </tbody>
       </table>
 
+      {/* Late payment note */}
+      <div style={{ fontSize: '9px', lineHeight: 1.4, marginBottom: '12px', color: '#444' }}>
+        <p style={{ margin: 0 }}>Late payment charges of 1.5% per month or part thereof will be applied to payments made after the invoice due date.</p>
+      </div>
+
       {/* Payment Methods */}
-      <div className="mb-6" style={{ fontSize: '11px', lineHeight: '1.5' }}>
-        <p className="font-bold mb-2">Payment methods</p>
-        <div className="space-y-2">
-          <div className="flex">
-            <span className="mr-2">-</span>
+      <div style={{ fontSize: '10px', lineHeight: 1.6 }}>
+        <p style={{ fontWeight: 700, margin: '0 0 8px 0' }}>Payment methods</p>
+
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ display: 'flex' }}>
+            <span style={{ marginRight: '6px' }}>-</span>
             <div>
-              <span className="font-bold">Cheque:</span> Cheques must be made payable to {schoolSettings.schoolName} and marked A/C Payee Only. Please deliver cheques to the Finance & Accounting Department.
+              <span style={{ fontWeight: 600 }}>Cheque:</span> Cheques must be made payable to King's College International School Bangkok and marked A/C Payee Only. Please deliver cheques to the Finance &amp; Accounting Department.
             </div>
           </div>
-          <div className="flex">
-            <span className="mr-2">-</span>
-            <div className="flex-1">
-              <span className="font-bold">Bank transfer:</span> Further bank details are shown below. Kindly email your name and invoice number to {schoolSettings.email}, with the proof of payment attached on the completion of the transfer process. Please ensure that your payment covers all bank charges.
+        </div>
+
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ display: 'flex' }}>
+            <span style={{ marginRight: '6px' }}>-</span>
+            <div>
+              <span style={{ fontWeight: 600 }}>Bank Transfer:</span> Further bank details are provided below. Kindly email your name and invoice number to {SCHOOL_INFO.email} with proof of payment attached upon completion of the transfer process. Please ensure that your payment covers all bank charges.
+              <table style={{ marginTop: '6px', marginLeft: '24px', fontSize: '10px' }}>
+                <tbody>
+                  <tr><td style={{ padding: '2px 24px 2px 0' }}>Account name</td><td style={{ padding: '2px 0' }}>{BANK_DETAILS.accountName}</td></tr>
+                  <tr><td style={{ padding: '2px 24px 2px 0' }}>Account number</td><td style={{ padding: '2px 0' }}>{BANK_DETAILS.accountNumber}</td></tr>
+                  <tr><td style={{ padding: '2px 24px 2px 0' }}>Bank name</td><td style={{ padding: '2px 0' }}>{BANK_DETAILS.bankName}</td></tr>
+                  <tr><td style={{ padding: '2px 24px 2px 0' }}>Branch</td><td style={{ padding: '2px 0' }}>{BANK_DETAILS.branch}</td></tr>
+                  <tr><td style={{ padding: '2px 24px 2px 0' }}>Swift code</td><td style={{ padding: '2px 0' }}>{BANK_DETAILS.swiftCode}</td></tr>
+                  <tr><td style={{ padding: '2px 24px 2px 0' }}>Bank address</td><td style={{ padding: '2px 0' }}>{BANK_DETAILS.bankAddress}</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          <div className="mt-2 flex justify-center">
-            <table>
-              <tbody>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account name</td><td className="text-left">{schoolSettings.bankAccountName}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Account number</td><td className="text-left">{schoolSettings.bankAccountNumber}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank name</td><td className="text-left">{schoolSettings.bankName}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Branch</td><td className="text-left">{schoolSettings.bankBranch}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Swift code</td><td className="text-left">{schoolSettings.swiftCode}</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Bank address</td><td className="text-left">1 Soi Rat Burana 27/1, Rat Burana Road, Bangkok 10140</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="flex mt-2">
-            <span className="mr-2">-</span>
-            <div className="flex-1">
-              <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or at Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+        </div>
+
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ display: 'flex' }}>
+            <span style={{ marginRight: '6px' }}>-</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontWeight: 600 }}>Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '6px' }}>
+                <table style={{ marginLeft: '24px', fontSize: '10px' }}>
+                  <tbody>
+                    <tr><td style={{ padding: '2px 24px 2px 0' }}>Biller ID no.</td><td style={{ padding: '2px 0' }}>{BILL_PAYMENT.billerId}</td></tr>
+                    <tr><td style={{ padding: '2px 24px 2px 0' }}>Reference no. (Ref 1)</td><td style={{ padding: '2px 0' }}>700002</td></tr>
+                    <tr><td style={{ padding: '2px 24px 2px 0' }}>Reference no. (Ref 2)</td><td style={{ padding: '2px 0' }}>{previewInvoiceNumber}</td></tr>
+                  </tbody>
+                </table>
+                <div style={{ width: '64px', height: '64px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', flexShrink: 0 }}>
+                  <span style={{ fontSize: '8px', color: '#6b7280' }}>QR</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mt-2" style={{ marginLeft: '105px' }}>
-            <table>
-              <tbody>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td><td className="text-left">099-4-00259063-3</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td><td className="text-left">700002</td></tr>
-                <tr><td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td><td className="text-left">
-                  {isEditMode && editInvoice?.invoiceNumber && (editInvoice?.status === 'sent' || editInvoice?.status === 'approved')
-                    ? editInvoice.invoiceNumber
-                    : "-"}
-                </td></tr>
-              </tbody>
-            </table>
+        </div>
+
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ display: 'flex' }}>
+            <span style={{ marginRight: '6px' }}>-</span>
+            <div>
+              <span style={{ fontWeight: 600 }}>Credit card:</span> The online payment link will be provided on the parent portal. Visa &amp; Mastercard issued by local banks in Thailand are accepted. Kindly note that a 1.3% bank fee will be applied to individual online payment transaction.
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ display: 'flex' }}>
+            <span style={{ marginRight: '6px' }}>-</span>
+            <div>
+              <span style={{ fontWeight: 600 }}>On-site credit card payment:</span> Credit cards issued by both local and overseas banks (VISA, Mastercard, JCB, UnionPay, and Alipay) are accepted. Please note that a bank fee may be applied, subject to your bank. The applicable rate can be viewed at the Cashier.
+            </div>
           </div>
         </div>
       </div>
 
       {/* Signatures */}
-      <div className="flex justify-between mt-8 px-8">
-        <div className="text-center">
-          <p className="mb-4" style={{ fontSize: '10px' }}>{user?.name || ""}</p>
-          <div className="border-t border-black w-40 mx-auto"></div>
-          <p className="mt-1" style={{ fontSize: '10px' }}>Prepared by</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '36px', padding: '0 40px', fontSize: '11px' }}>
+        <div style={{ textAlign: 'center', width: '200px' }}>
+          <p style={{ marginBottom: '24px' }}>{user?.name || ""}</p>
+          <div style={{ borderTop: '1px solid black', margin: '0 auto 4px' }}></div>
+          <p style={{ marginTop: '4px' }}>Prepared by</p>
         </div>
-        <div className="text-center">
-          <p className="mb-4" style={{ fontSize: '10px' }}>{""}</p>
-          <div className="border-t border-black w-40 mx-auto"></div>
-          <p className="mt-1" style={{ fontSize: '10px' }}>Authorised officer</p>
+        <div style={{ textAlign: 'center', width: '200px' }}>
+          <p style={{ marginBottom: '24px' }}>{""}</p>
+          <div style={{ borderTop: '1px solid black', margin: '0 auto 4px' }}></div>
+          <p style={{ marginTop: '2px' }}>Authorised officer</p>
+          <p style={{ marginTop: '1px', fontSize: '10px' }}>Head of Finance and Accounting</p>
         </div>
       </div>
+
+      {/* School info footer */}
+      <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '8px', color: '#666', borderTop: '1px solid #ddd', paddingTop: '8px' }}>
+        <p style={{ margin: 0 }}>{SCHOOL_INFO.name}, {SCHOOL_INFO.address}</p>
+        <p style={{ margin: '2px 0 0 0' }}>{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+      </div>
     </div>
-  )
+    )
+  }
 
   return (
     <div className="space-y-6">

@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
 import { ActivityLogEntry, loadActivityLogs } from "@/lib/activityLog"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { ArrowUpDown } from "lucide-react"
+import { ArrowUpDown, ChevronDown, Download, Filter } from "lucide-react"
+import { downloadAsXlsx } from "@/utils/xlsxUtils"
+import { toast } from "@/components/ui/sonner"
+import { cn } from "./ui/utils"
 
 // Module grouping: map raw module names to display groups
 const MODULE_GROUP_MAP: Record<string, string> = {
@@ -80,70 +85,53 @@ const MODULE_GROUP_MAP: Record<string, string> = {
 
 
 const mockActivityLogs: ActivityLogEntry[] = [
-  {
-    id: "log-001",
-    user: "Admin",
-    action: "Approved invoice 202603001",
-    module: "Invoices",
-    detail: "Approval Status: wait -> approved",
-    ip: "192.168.1.100",
-    device: "Desktop",
-    status: "success",
-    timestamp: new Date().toISOString()
-  },
-  {
-    id: "log-002",
-    user: "System",
-    action: "Import",
-    module: "Items & Templates",
-    detail: "Imported 20 items (15 items updated with prices from Tuition by Year) successfully for tuition: [Tuition fee - Term 1 / Nursery, Tuition fee - Term 2 / Year 1... and 15 more]",
-    ip: "127.0.0.1",
-    device: "Background Service",
-    status: "success",
-    timestamp: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: "log-003",
-    user: "Admin",
-    action: "Save Tuition Data",
-    module: "Tuition by Year",
-    detail: "Saved tuition data for academic year 2026-2027, Grand Total: 5,450,000",
-    ip: "192.168.1.100",
-    device: "Desktop",
-    status: "success",
-    timestamp: new Date(Date.now() - 7200000).toISOString()
-  },
-  {
-    id: "log-004",
-    user: "Finance Manager",
-    action: "Delete",
-    module: "Items & Templates",
-    detail: "Bulk deleted 5 items: [TUI005, TUI006, wsss... and 2 more]",
-    ip: "192.168.1.101",
-    device: "Laptop",
-    status: "success",
-    timestamp: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: "log-005",
-    user: "Admin",
-    action: "Approved invoice 20250000001",
-    module: "Approval Queue",
-    detail: "Approval Status: wait → approved",
-    ip: "192.168.1.100",
-    device: "Mock Device",
-    status: "success",
-    timestamp: new Date("2026-01-27T12:05:00").toISOString()
-  }
+  { id: "log-001", user: "admin@school.com", action: "Approve Invoice", module: "Approval Queue", detail: "Approved 1 invoice", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date().toISOString() },
+  { id: "log-002", user: "admin@school.com", action: "Import Items", module: "Items & Templates", detail: "Imported 20 items", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 1800000).toISOString() },
+  { id: "log-003", user: "admin@school.com", action: "Save Tuition Data", module: "Tuition by Year", detail: "Saved 2026-2027", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 3600000).toISOString() },
+  { id: "log-004", user: "adminfinance@gmail.com", action: "Create Invoice", module: "Invoice Management", detail: "Created 58 invoices", ip: "192.168.1.101", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 7200000).toISOString() },
+  { id: "log-005", user: "adminfinance@gmail.com", action: "Send Reminder", module: "Payment Reminders", detail: "Sent to 45 recipients", ip: "192.168.1.101", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 10800000).toISOString() },
+  { id: "log-006", user: "approver@gmaill.com", action: "Approve Invoice", module: "Approval Queue", detail: "Approved 1 invoice", ip: "192.168.1.102", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 14400000).toISOString() },
+  { id: "log-007", user: "approver@gmaill.com", action: "Reject Invoice", module: "Approval Queue", detail: "Rejected 1 invoice", ip: "192.168.1.102", device: "Desktop", status: "warning", timestamp: new Date(Date.now() - 18000000).toISOString() },
+  { id: "log-008", user: "admin@school.com", action: "Create User", module: "User Management", detail: "Created 1 user", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 86400000).toISOString() },
+  { id: "log-009", user: "admin@school.com", action: "Update Settings", module: "School Settings", detail: "Updated contact info", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 90000000).toISOString() },
+  { id: "log-010", user: "adminfinance@gmail.com", action: "Export Report", module: "Discount Management", detail: "Exported CSV", ip: "192.168.1.101", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 172800000).toISOString() },
+  { id: "log-011", user: "viewver@gmail.com", action: "Login", module: "Login & Authentication", detail: "Logged in", ip: "192.168.1.103", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 180000000).toISOString() },
+  { id: "log-012", user: "admin@school.com", action: "Delete Item", module: "Items & Templates", detail: "Deleted 3 items", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 259200000).toISOString() },
 ]
 
 function getModuleGroup(module: string): string {
   return MODULE_GROUP_MAP[module] || module
 }
 
+// Extract email from user field — handles "name (email)", "email", or legacy names
+function displayUserEmail(user: string): string {
+  // "super admin (admin@school.com)" → "admin@school.com"
+  const parenMatch = user.match(/\(([^)]+@[^)]+)\)/)
+  if (parenMatch) return parenMatch[1]
+  // Already an email
+  if (user.includes("@")) return user
+  // Legacy name mapping to seed emails
+  const legacyMap: Record<string, string> = {
+    "admin": "admin@school.com",
+    "Admin": "admin@school.com",
+    "super admin": "admin@school.com",
+    "System Administrator": "admin@school.com",
+    "System": "admin@school.com",
+    "Finance Manager": "adminfinance@gmail.com",
+    "finance admin": "adminfinance@gmail.com",
+    "test approver": "approver@gmaill.com",
+    "test viewver": "viewver@gmail.com",
+  }
+  return legacyMap[user] || user
+}
+
 export function ActivityLog() {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  const [moduleFilter, setModuleFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [userFilter, setUserFilter] = useState("all")
 
   const getStatusBadge = (status: ActivityLogEntry["status"]) => {
     switch (status) {
@@ -173,6 +161,22 @@ export function ActivityLog() {
     }
   }
 
+  // Derive unique filter options from logs
+  const filterOptions = useMemo(() => {
+    const logsWithoutViewed = logs.filter(log => !log.action.toLowerCase().startsWith("viewed"))
+    const modules = [...new Set(logsWithoutViewed.map(l => getModuleGroup(l.module)))].sort()
+    const users = [...new Set(logsWithoutViewed.map(l => displayUserEmail(l.user)))].sort()
+    const statuses = [...new Set(logsWithoutViewed.map(l => l.status))].sort()
+    return { modules, users, statuses }
+  }, [logs])
+
+  const clearFilters = () => {
+    setSearchTerm("")
+    setModuleFilter("all")
+    setStatusFilter("all")
+    setUserFilter("all")
+  }
+
   const filteredLogs = useMemo(() => {
     const logsWithoutViewed = logs.filter(log => !log.action.toLowerCase().startsWith("viewed"))
 
@@ -181,13 +185,24 @@ export function ActivityLog() {
     if (searchTerm) {
       const needle = searchTerm.toLowerCase()
       result = result.filter(log =>
-        log.user.toLowerCase().includes(needle) ||
+        displayUserEmail(log.user).toLowerCase().includes(needle) ||
         log.action.toLowerCase().includes(needle) ||
         log.module.toLowerCase().includes(needle) ||
         log.detail.toLowerCase().includes(needle) ||
-        log.ip.toLowerCase().includes(needle) ||
         log.device.toLowerCase().includes(needle)
       )
+    }
+
+    if (moduleFilter !== "all") {
+      result = result.filter(log => getModuleGroup(log.module) === moduleFilter)
+    }
+
+    if (statusFilter !== "all") {
+      result = result.filter(log => log.status === statusFilter)
+    }
+
+    if (userFilter !== "all") {
+      result = result.filter(log => displayUserEmail(log.user) === userFilter)
     }
 
     // Apply sorting
@@ -210,7 +225,7 @@ export function ActivityLog() {
     })
 
     return result
-  }, [searchTerm, logs, sortColumn, sortDirection])
+  }, [searchTerm, moduleFilter, statusFilter, userFilter, logs, sortColumn, sortDirection])
 
   useEffect(() => {
     const load = () => {
@@ -227,39 +242,120 @@ export function ActivityLog() {
     return () => window.removeEventListener("activityLogsUpdated", handleUpdate)
   }, [])
 
-  useEffect(() => { setCurrentPage(1) }, [searchTerm])
+  useEffect(() => { setCurrentPage(1) }, [searchTerm, moduleFilter, statusFilter, userFilter])
 
   const totalCount = filteredLogs.length
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  const exportData = () => {
+    const headers = ["Timestamp", "User", "Module", "Action", "Detail", "Status"]
+    const dataRows = filteredLogs.map(log => [
+      format(new Date(log.timestamp), "dd MMM yyyy HH:mm"),
+      displayUserEmail(log.user),
+      getModuleGroup(log.module),
+      log.action,
+      log.detail,
+      log.status,
+    ])
+    const filename = `activity-log-${format(new Date(), "yyyy-MM-dd")}`
+    downloadAsXlsx(headers, dataRows, filename)
+    toast.success(`Exported ${filteredLogs.length} logs`, { description: `${filename}.xlsx` })
+  }
+
   return (
-    <div className="space-y-6 font-sans" style={{ fontFamily: "'Lato', sans-serif" }}>
-      <div className="bg-white p-4 md:p-8 rounded-2xl border border-gray-100 shadow-sm mb-6 bg-gradient-to-r from-white to-gray-50">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{t("activityLog.title")}</h2>
-            <p className="text-base text-muted-foreground mt-1">
-              {t("activityLog.subtitle")}
-            </p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("activityLog.title")}</h2>
+          <p className="text-sm text-muted-foreground">
+            {t("activityLog.subtitle")}
+          </p>
         </div>
+        <Button variant="outline" onClick={exportData} className="flex items-center gap-2">
+          <Download className="w-4 h-4" />
+          {t("payment.exportData")}
+        </Button>
       </div>
 
-      {/* Search + Module Filter */}
+      {/* Search & Filter */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <CardTitle className="text-base mb-2">{t("activityLog.search")}</CardTitle>
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder={t("activityLog.searchPlaceholder")}
-                className="h-9"
-              />
-            </div>
-          </div>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Filter className="w-4 h-4" />
+            {t("common.searchAndFilter")}
+          </CardTitle>
         </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={t("activityLog.searchPlaceholder")}
+              className="h-9"
+            />
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 shrink-0"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showFilters && "rotate-180")} />
+            </Button>
+          </div>
+
+          {showFilters && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("activityLog.module")}</label>
+                  <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("common.all")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("common.all")}</SelectItem>
+                      {filterOptions.modules.map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("activityLog.user")}</label>
+                  <Select value={userFilter} onValueChange={setUserFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("common.all")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("common.all")}</SelectItem>
+                      {filterOptions.users.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={t("common.all")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("common.all")}</SelectItem>
+                      {filterOptions.statuses.map(s => (
+                        <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={clearFilters} className="h-9">{t("common.clear")}</Button>
+              </div>
+            </>
+          )}
+        </CardContent>
       </Card>
 
       {/* Activity Log Table */}
@@ -309,16 +405,6 @@ export function ActivityLog() {
                   </div>
                 </TableHead>
                 <TableHead align="left">{t("activityLog.detail")}</TableHead>
-                <TableHead
-                  align="left"
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort("ip")}
-                >
-                  <div className="flex items-center gap-1">
-                    {t("activityLog.ip")}
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
                 <TableHead align="center">{t("common.status")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -326,7 +412,7 @@ export function ActivityLog() {
               {paginatedLogs.map(log => (
                 <TableRow key={log.id}>
                   <TableCell align="left" className="pl-6">{format(new Date(log.timestamp), "dd MMM yyyy HH:mm")}</TableCell>
-                  <TableCell align="left" className="font-medium">{log.user}</TableCell>
+                  <TableCell align="left" className="font-medium">{displayUserEmail(log.user)}</TableCell>
                   <TableCell align="left">
                     <Badge variant="outline" className="text-xs font-normal">
                       {getModuleGroup(log.module)}
@@ -334,13 +420,12 @@ export function ActivityLog() {
                   </TableCell>
                   <TableCell align="left">{log.action}</TableCell>
                   <TableCell align="left" className="max-w-[360px] truncate" title={log.detail}>{log.detail}</TableCell>
-                  <TableCell align="left">{log.ip}</TableCell>
                   <TableCell align="center">{getStatusBadge(log.status)}</TableCell>
                 </TableRow>
               ))}
               {filteredLogs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                     {t("activityLog.noLogsFound")}
                   </TableCell>
                 </TableRow>

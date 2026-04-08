@@ -17,10 +17,10 @@ const DEFAULT_IP = "192.168.1.100"
 
 const getCurrentUser = () => {
   try {
-    // Read from authUser (AuthContext storage) first
     const authUserRaw = localStorage.getItem("authUser")
     if (authUserRaw) {
       const authUser = JSON.parse(authUserRaw)
+      if (authUser.email) return authUser.email
       if (authUser.name) return authUser.name
     }
     return (
