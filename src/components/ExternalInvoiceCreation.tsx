@@ -572,35 +572,7 @@ export function ExternalInvoiceCreation({ onNavigateBack, editInvoice }: Externa
           </div>
         </div>
 
-        <div style={{ marginBottom: '8px' }}>
-          <div style={{ display: 'flex' }}>
-            <span style={{ marginRight: '6px' }}>-</span>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontWeight: 600 }}>Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '6px' }}>
-                <table style={{ marginLeft: '24px', fontSize: '10px' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '2px 24px 2px 0' }}>Biller ID no.</td><td style={{ padding: '2px 0' }}>{BILL_PAYMENT.billerId}</td></tr>
-                    <tr><td style={{ padding: '2px 24px 2px 0' }}>Reference no. (Ref 1)</td><td style={{ padding: '2px 0' }}>700002</td></tr>
-                    <tr><td style={{ padding: '2px 24px 2px 0' }}>Reference no. (Ref 2)</td><td style={{ padding: '2px 0' }}>{previewInvoiceNumber}</td></tr>
-                  </tbody>
-                </table>
-                <div style={{ width: '64px', height: '64px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', flexShrink: 0 }}>
-                  <span style={{ fontSize: '8px', color: '#6b7280' }}>QR</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '8px' }}>
-          <div style={{ display: 'flex' }}>
-            <span style={{ marginRight: '6px' }}>-</span>
-            <div>
-              <span style={{ fontWeight: 600 }}>Credit card:</span> The online payment link will be provided on the parent portal. Visa &amp; Mastercard issued by local banks in Thailand are accepted. Kindly note that a 1.3% bank fee will be applied to individual online payment transaction.
-            </div>
-          </div>
-        </div>
+        {/* Removed Bill Payment and Online Credit Card per user request */}
 
         <div>
           <div style={{ display: 'flex' }}>

@@ -151,7 +151,7 @@ const canEditInvoice = (_status: string, approvalStatus?: ApprovalStatus): boole
 }
 
 // Helper function to get student group discounts based on category
-const getStudentGroupDiscounts = (studentId: string, category: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number }[] => {
+const getStudentGroupDiscounts = (studentId: string, category: string): { name: string; discountType: string; discountPercentage: number; fixedAmount: number; financeCode?: string; nominalCode?: string }[] => {
   try {
     // No discounts for ECA, Trip, Exam, and External invoices
     if (category === "eca" || category === "trip" || category === "exam" || category === "external") {
@@ -182,7 +182,9 @@ const getStudentGroupDiscounts = (studentId: string, category: string): { name: 
         name: group.name,
         discountType: group.discountType || "percentage",
         discountPercentage: group.discountPercentage || 0,
-        fixedAmount: group.fixedAmount || 0
+        fixedAmount: group.fixedAmount || 0,
+        financeCode: group.financeCode,
+        nominalCode: group.nominalCode
       }))
   } catch (error) {
     console.error("Failed to get student group discounts:", error)
@@ -2247,16 +2249,10 @@ export function InvoiceManagement({
 
       const totalAmount = items.reduce((sum, i) => sum + i.amount, 0)
 
-      // Calculate and store student group discounts at import time (checks isActive)
       const invoiceCategory = (category || "tuition") as string
-      const groupDiscountsAtImport = getStudentGroupDiscounts(pupilId, invoiceCategory)
-      const storedDiscounts = groupDiscountsAtImport.map(g => ({
-        name: g.name,
-        amount: g.discountType === "percentage"
-          ? Math.round(totalAmount * g.discountPercentage / 100)
-          : g.fixedAmount,
-        percentage: g.discountType === "percentage" ? g.discountPercentage : undefined
-      })).filter(d => d.amount > 0)
+      // Dynamic discount calculation removed from import time as requested.
+      // It will be calculated dynamically during export/display instead.
+      const storedDiscounts: any[] = []
 
       const issueDateRaw = first["DocumentDate"] || first["Date"] || first["InvoiceDate"]
       const issueDate = issueDateRaw ? parseDate(issueDateRaw) : null
@@ -2766,7 +2762,7 @@ export function InvoiceManagement({
       const isNonDiscountableInvoice =
         invoice.category === "eca" || invoice.category === "trip" || invoice.category === "exam"
 
-      const dynamicDiscounts: { name: string; amount: number; percentage?: number }[] = []
+      const dynamicDiscounts: { name: string; amount: number; percentage?: number; financeCode?: string; nominalCode?: string }[] = []
 
       if (!isNonDiscountableInvoice && invoice.invoiceType !== "external" && invoice.studentId !== "EXTERNAL") {
         // 1. Sibling discount
@@ -2778,13 +2774,22 @@ export function InvoiceManagement({
           }
         }
 
-        // 2. Student group discounts - use stored invoice.discounts (set at creation time)
-        // Never recalculate from current group state for existing invoices
-        ; (invoice.discounts || [])
-          .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
-          .forEach(d => {
-            if (d.amount > 0) dynamicDiscounts.push({ name: d.name, amount: d.amount, percentage: d.percentage })
-          })
+        // 2. Student group discounts - calculate dynamically during export
+        const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoice.category || category || "tuition")
+        groupDiscounts.forEach(g => {
+          const discAmount = g.discountType === "percentage"
+            ? Math.round(subtotalForDiscounts * g.discountPercentage / 100)
+            : g.fixedAmount
+          if (discAmount > 0) {
+            dynamicDiscounts.push({
+              name: g.name,
+              amount: discAmount,
+              percentage: g.discountType === "percentage" ? g.discountPercentage : undefined,
+              financeCode: g.financeCode,
+              nominalCode: g.nominalCode
+            })
+          }
+        })
 
         // 3. Staff Child (50%)
         if (student && student.notes?.toLowerCase().includes('staff')) {
@@ -2817,7 +2822,7 @@ export function InvoiceManagement({
         rows.push([
           pupilID,
           adultIDNo,
-          "",
+          disc.nominalCode || discCatalogItem?.nominalCode || "4110000",
           "SI",
           documentNo,
           invoiceDate,
@@ -2825,7 +2830,7 @@ export function InvoiceManagement({
           schoolYear,
           yearGroup,
           schoolTerm,
-          discFinanceCode,
+          disc.financeCode || discFinanceCode,
           disc.name || "Discount",
           lineCounter.toString(),
           discAmount
@@ -2998,7 +3003,7 @@ export function InvoiceManagement({
       const student = students.find(s => s.id === invoice.studentId)
 
       // Calculate discounts
-      const discountLines: Array<{ name: string; amount: number; percent?: number }> = []
+      const discountLines: Array<{ name: string; amount: number; percent?: number; financeCode?: string; nominalCode?: string }> = []
       const subtotal = invoice.items.reduce((sum, item) => sum + item.amount, 0)
 
       // Add all discount types (same as preview)
@@ -3020,13 +3025,16 @@ export function InvoiceManagement({
           }
         }
 
-        // 2. Student group discounts - use stored invoice.discounts (set at creation time)
-        // Never recalculate from current group state for existing invoices
-        ; (invoice.discounts || [])
-          .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
-          .forEach(d => {
-            discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
-          })
+        // 2. Student group discounts - calculate dynamically
+        const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoice.category || category || "tuition")
+        groupDiscounts.forEach(g => {
+          const discAmount = g.discountType === "percentage"
+            ? Math.round(subtotal * g.discountPercentage / 100)
+            : g.fixedAmount
+          if (discAmount > 0) {
+            discountLines.push({ name: g.name, amount: discAmount, percent: g.discountType === "percentage" ? g.discountPercentage : undefined })
+          }
+        })
 
         // 3. Staff Child discount
         if (student && student.notes?.toLowerCase().includes('staff')) {
@@ -5106,7 +5114,7 @@ export function InvoiceManagement({
                         `${s.firstName} ${s.lastName}` === selectedInvoice.studentName
                       )
 
-                      const discountLines: { name: string; amount: number; percent?: number }[] = []
+                      const discountLines: { name: string; amount: number; percent?: number; financeCode?: string; nominalCode?: string }[] = []
 
                       // Skip all discounts for ECA, Trip & Activity, Exam, and Bus invoices
                       const isNonDiscountableInvoice = selectedInvoice.category === "eca" ||
@@ -5141,13 +5149,17 @@ export function InvoiceManagement({
                         }
                       }
 
-                      // 3. Student group discounts - use stored invoice.discounts (set at creation time)
+                      // 3. Student group discounts - calculate dynamically
                       if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
-                        ;(selectedInvoice.discounts || [])
-                          .filter(d => !/sibling|staff child|^scholarship$|early bird/i.test(d.name))
-                          .forEach(d => {
-                            discountLines.push({ name: d.name, amount: d.amount, percent: d.percentage })
-                          })
+                        const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId, selectedInvoice.category || category || "tuition")
+                        groupDiscounts.forEach(g => {
+                          const discAmount = g.discountType === "percentage"
+                            ? Math.round(subtotal * g.discountPercentage / 100)
+                            : g.fixedAmount
+                          if (discAmount > 0) {
+                            discountLines.push({ name: g.name, amount: discAmount, percent: g.discountType === "percentage" ? g.discountPercentage : undefined })
+                          }
+                        })
                       }
 
                       // 4. Staff Child (50%)

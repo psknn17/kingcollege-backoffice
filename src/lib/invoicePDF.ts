@@ -197,27 +197,7 @@ export const downloadInvoicePDF = async (invoice: Invoice) => {
             </div></div>
           </div>
 
-          <div style="margin-bottom:8px;">
-            <div style="display:flex;"><span style="margin-right:6px;">-</span><div style="flex:1;">
-              <span style="font-weight:600;">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:6px;">
-                <table style="margin-left:24px; font-size:10px;">
-                  <tr><td style="padding:2px 24px 2px 0;">Biller ID no.</td><td style="padding:2px 0;">${escapeHtml(BILL_PAYMENT.billerId)}</td></tr>
-                  <tr><td style="padding:2px 24px 2px 0;">Reference no. (Ref 1)</td><td style="padding:2px 0;">700002</td></tr>
-                  <tr><td style="padding:2px 24px 2px 0;">Reference no. (Ref 2)</td><td style="padding:2px 0;">${escapeHtml(invoiceNumberDisplay || '-')}</td></tr>
-                </table>
-                <div style="width:64px; height:64px; border:1px solid #000; display:flex; align-items:center; justify-content:center; background:#f3f4f6; flex-shrink:0;">
-                  <span style="font-size:8px; color:#6b7280;">QR</span>
-                </div>
-              </div>
-            </div></div>
-          </div>
-
-          <div style="margin-bottom:8px;">
-            <div style="display:flex;"><span style="margin-right:6px;">-</span><div>
-              <span style="font-weight:600;">Credit card:</span> The online payment link will be provided on the parent portal. Visa &amp; Mastercard issued by local banks in Thailand are accepted. Kindly note that a 1.3% bank fee will be applied to individual online payment transaction.
-            </div></div>
-          </div>
+          <!-- Removed Bill Payment and Online Credit Card per user request -->
 
           <div>
             <div style="display:flex;"><span style="margin-right:6px;">-</span><div>

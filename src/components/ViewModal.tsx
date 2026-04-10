@@ -432,31 +432,36 @@ export function ViewModal({
               </table>
             </div>
 
-            <div className="flex mt-2">
-              <span className="mr-2">-</span>
-              <div className="flex-1">
-                <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
-              </div>
-            </div>
+            {/* Only show Bill Payment for non-external invoices or per system logic */}
+            {!data.isExternal && (
+              <>
+                <div className="flex mt-2">
+                  <span className="mr-2">-</span>
+                  <div className="flex-1">
+                    <span className="font-bold">Bill Payment via Mobile Banking, Internet Banking, ATM or Bank Counter:</span> Please use the QR code provided below to scan for payment. Kindly note that bank charges will apply to payments made via ATM or at the bank counter.
+                  </div>
+                </div>
 
-            <div className="mt-2" style={{ marginLeft: '178px' }}>
-              <table>
-                <tbody>
-                  <tr>
-                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td>
-                    <td className="py-0.5 text-left">099-4-00259063-3</td>
-                  </tr>
-                  <tr>
-                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td>
-                    <td className="py-0.5 text-left">700002</td>
-                  </tr>
-                  <tr>
-                    <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td>
-                    <td className="py-0.5 text-left">-</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                <div className="mt-2" style={{ marginLeft: '178px' }}>
+                  <table>
+                    <tbody>
+                      <tr>
+                        <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Biller ID no.</td>
+                        <td className="py-0.5 text-left">099-4-00259063-3</td>
+                      </tr>
+                      <tr>
+                        <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 1)</td>
+                        <td className="py-0.5 text-left">700002</td>
+                      </tr>
+                      <tr>
+                        <td className="py-0.5 align-top text-left" style={{ width: '200px', paddingRight: '40px' }}>Reference no. (Ref 2)</td>
+                        <td className="py-0.5 text-left">-</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

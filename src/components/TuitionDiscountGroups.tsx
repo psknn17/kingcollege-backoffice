@@ -38,6 +38,8 @@ interface Student {
 interface DiscountGroup {
   id: string
   name: string
+  financeCode: string
+  nominalCode: string
   students: Student[]
   discountType: "percentage" | "fixed"
   discountPercentage: number
@@ -109,6 +111,8 @@ export function TuitionDiscountGroups() {
   // Form states
   const [formData, setFormData] = useState({
     name: "",
+    financeCode: "",
+    nominalCode: "",
     discountType: "percentage" as "percentage" | "fixed",
     discountPercentage: 0,
     fixedAmount: 0,
@@ -120,6 +124,8 @@ export function TuitionDiscountGroups() {
   const resetForm = () => {
     setFormData({
       name: "",
+      financeCode: "",
+      nominalCode: "",
       discountType: "percentage",
       discountPercentage: 0,
       fixedAmount: 0,
@@ -158,6 +164,8 @@ export function TuitionDiscountGroups() {
           ? {
             ...g,
             name: formData.name,
+            financeCode: formData.financeCode,
+            nominalCode: formData.nominalCode,
             discountType: formData.discountType,
             discountPercentage: formData.discountPercentage,
             fixedAmount: formData.fixedAmount,
@@ -180,6 +188,8 @@ export function TuitionDiscountGroups() {
       const newGroup: DiscountGroup = {
         id: `GRP${Date.now()}`,
         name: formData.name,
+        financeCode: formData.financeCode,
+        nominalCode: formData.nominalCode,
         discountType: formData.discountType,
         discountPercentage: formData.discountPercentage,
         fixedAmount: formData.fixedAmount,
@@ -208,6 +218,8 @@ export function TuitionDiscountGroups() {
     setEditingGroup(group)
     setFormData({
       name: group.name,
+      financeCode: group.financeCode || "",
+      nominalCode: group.nominalCode || "",
       discountType: group.discountType,
       discountPercentage: group.discountPercentage,
       fixedAmount: group.fixedAmount,
@@ -315,13 +327,35 @@ export function TuitionDiscountGroups() {
             <div className="space-y-4 py-4">
               {/* Group Name */}
               <div className="space-y-2">
-                <Label>Group Name</Label>
+                <Label>Group Name <span className="text-red-500">*</span></Label>
                 <Input
                   placeholder="Year 7 Excellence Group"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={!userCanEdit}
                 />
+              </div>
+
+              {/* Finance Settings */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Finance Code</Label>
+                  <Input
+                    placeholder="e.g. SCH-001"
+                    value={formData.financeCode}
+                    onChange={(e) => setFormData({ ...formData, financeCode: e.target.value })}
+                    disabled={!userCanEdit}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nominal Code</Label>
+                  <Input
+                    placeholder="e.g. 4110001"
+                    value={formData.nominalCode}
+                    onChange={(e) => setFormData({ ...formData, nominalCode: e.target.value })}
+                    disabled={!userCanEdit}
+                  />
+                </div>
               </div>
 
               {/* Discount Settings */}

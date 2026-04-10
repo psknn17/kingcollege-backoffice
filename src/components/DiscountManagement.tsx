@@ -85,6 +85,8 @@ interface DiscountCode {
 interface StudentGroup {
   id: string
   name: string
+  financeCode?: string
+  nominalCode?: string
   students: Student[]
   discountType: string
   discountPercentage: number
@@ -283,42 +285,50 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     return [
       {
         id: "GRP001",
-        name: "Year 7 Excellence",
+        name: "Scholarship Recipients",
+        financeCode: "SCH-001",
+        nominalCode: "4110001",
         students: year7Students,
         discountType: "percentage" as "percentage" | "fixed",
-        discountPercentage: 15,
+        discountPercentage: 100,
         fixedAmount: 0,
         departments: [department],
         isActive: true
       },
       {
         id: "GRP002",
-        name: "Secondary School Scholarship",
-        students: [...year8Students, ...year9Students, ...year10Students],
+        name: "Staff Children",
+        financeCode: "STAFF-01",
+        nominalCode: "4110002",
+        students: [...year3Students, ...year4Students],
         discountType: "percentage" as "percentage" | "fixed",
-        discountPercentage: 10,
+        discountPercentage: 50,
         fixedAmount: 0,
-        departments: [department], // Discount applies to Tuition only
+        departments: [department],
         isActive: true
       },
       {
         id: "GRP003",
-        name: "Senior School Merit",
-        students: [...year11Students, ...year12Students, ...year13Students],
+        name: "Corporate Partner Families",
+        financeCode: "CORP-001",
+        nominalCode: "4110004",
+        students: [...year11Students, ...year12Students],
         discountType: "fixed" as "percentage" | "fixed",
         discountPercentage: 0,
-        fixedAmount: 25000,
+        fixedAmount: 20000,
         departments: [department],
         isActive: true
       },
       {
         id: "GRP004",
-        name: "Primary School Support",
-        students: [...year3Students, ...year4Students, ...year5Students],
+        name: "Early Bird 2025/2026",
+        financeCode: "EB-2526",
+        nominalCode: "4110005",
+        students: [...year9Students, ...year10Students],
         discountType: "percentage" as "percentage" | "fixed",
         discountPercentage: 5,
         fixedAmount: 0,
-        departments: [department], // Discount applies to Tuition only
+        departments: [department],
         isActive: true
       }
     ]
@@ -349,6 +359,21 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
   // Save studentGroups to localStorage when it changes (but not on initial load)
   const isInitialMount = useRef(true)
+  
+  // Migration: Force Reset Mock Data once to include new Finance/Nominal codes
+  useEffect(() => {
+    const migrationKey = "app:studentGroups_migrated_v2"
+    const hasMigrated = localStorage.getItem(migrationKey)
+    
+    if (!hasMigrated && availableStudents.length > 0) {
+      console.log("Forcing Mock Data Reset with Finance/Nominal Codes...")
+      const mockData = generateDefaultGroups(availableStudents, departmentType)
+      setStudentGroups(mockData)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mockData))
+      localStorage.setItem(migrationKey, "true")
+    }
+  }, [availableStudents, departmentType, STORAGE_KEY])
+
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false
@@ -359,6 +384,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false)
   const [groupForm, setGroupForm] = useState({
     name: "",
+    financeCode: "",
+    nominalCode: "",
     discountType: "percentage" as "percentage" | "fixed",
     discountPercentage: 0,
     fixedAmount: 0,
@@ -597,6 +624,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const resetGroupForm = () => {
     setGroupForm({
       name: "",
+      financeCode: "",
+      nominalCode: "",
       discountType: "percentage",
       discountPercentage: 0,
       fixedAmount: 0,
@@ -784,6 +813,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       const updatedGroup = {
         ...editGroupDialog.group,
         name: groupForm.name,
+        financeCode: groupForm.financeCode,
+        nominalCode: groupForm.nominalCode,
         students: groupForm.selectedStudents,
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
@@ -805,6 +836,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       const newGroup = {
         id: `GRP${String(studentGroups.length + 1).padStart(3, '0')}`,
         name: groupForm.name,
+        financeCode: groupForm.financeCode,
+        nominalCode: groupForm.nominalCode,
         students: groupForm.selectedStudents,
         discountType: groupForm.discountType,
         discountPercentage: groupForm.discountPercentage,
@@ -840,6 +873,8 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
     setEditGroupDialog({ isOpen: true, group })
     setGroupForm({
       name: group.name,
+      financeCode: group.financeCode || "",
+      nominalCode: group.nominalCode || "",
       discountType: group.discountType || "percentage",
       discountPercentage: group.discountPercentage,
       fixedAmount: group.fixedAmount || 0,
@@ -1149,6 +1184,27 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                       disabled={!userCanEdit}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Finance Code</Label>
+                      <Input
+                        placeholder="e.g. SCH-001"
+                        value={groupForm.financeCode}
+                        onChange={(e) => setGroupForm({ ...groupForm, financeCode: e.target.value })}
+                        disabled={!userCanEdit}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nominal Code</Label>
+                      <Input
+                        placeholder="e.g. 4110001"
+                        value={groupForm.nominalCode}
+                        onChange={(e) => setGroupForm({ ...groupForm, nominalCode: e.target.value })}
+                        disabled={!userCanEdit}
+                      />
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="group-discount-type">{t("discount.discountTypeLabel")} <span className="text-destructive">*</span></Label>
@@ -1448,9 +1504,6 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                             : `${group.discountPercentage}% ${t("discount.discount")}`
                           }
                         </Badge>
-                        {group.departments.map(dept => (
-                          <Badge key={dept} variant="outline" className="text-xs">{dept}</Badge>
-                        ))}
                         {group.isActive === false && (
                           <Badge variant="outline" className="text-red-500 border-red-300">{t("discount.disabled")}</Badge>
                         )}
@@ -1516,20 +1569,42 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
 
               {viewGroupDialog.group && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        {viewGroupDialog.group.discountType === "fixed"
-                          ? `฿${viewGroupDialog.group.fixedAmount?.toLocaleString() || 0} ${t("discount.discount")}`
-                          : `${viewGroupDialog.group.discountPercentage}% ${t("discount.discount")}`
-                        }
-                      </Badge>
-                      {viewGroupDialog.group.departments.map((dept: string) => (
-                        <Badge key={dept} variant="outline" className="text-xs">{dept}</Badge>
-                      ))}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {t("discount.studentsTotal").replace("{count}", String(viewGroupDialog.group.students.length))}
+                  <div className="bg-muted/30 rounded-xl p-6">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-8">
+                      <div className="space-y-4">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2">Group Details</span>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 text-sm font-bold">
+                              {viewGroupDialog.group.discountType === "fixed"
+                                ? `฿${viewGroupDialog.group.fixedAmount?.toLocaleString() || 0} ${t("discount.discount")}`
+                                : `${viewGroupDialog.group.discountPercentage}% ${t("discount.discount")}`
+                              }
+                            </Badge>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 font-medium px-3 py-1.5 bg-white rounded-lg border border-gray-100 shadow-sm">
+                              <Users className="w-4 h-4 text-blue-500" />
+                              {t("discount.studentsTotal").replace("{count}", String(viewGroupDialog.group.students.length))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {(viewGroupDialog.group.financeCode || viewGroupDialog.group.nominalCode) && (
+                        <div className="flex gap-6 md:gap-8">
+                          {viewGroupDialog.group.financeCode && (
+                            <div className="space-y-1">
+                              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold block mb-1">Finance Code</span>
+                              <span className="text-sm font-bold text-gray-900">{viewGroupDialog.group.financeCode}</span>
+                            </div>
+                          )}
+                          {viewGroupDialog.group.nominalCode && (
+                            <div className="space-y-1">
+                              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold block mb-1">Nominal Code</span>
+                              <span className="text-sm font-bold text-gray-900">{viewGroupDialog.group.nominalCode}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1612,6 +1687,27 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
                     placeholder={t("discount.groupNamePlaceholder")}
                     disabled={!userCanEdit}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Finance Code</Label>
+                    <Input
+                      placeholder="e.g. SCH-001"
+                      value={groupForm.financeCode}
+                      onChange={(e) => setGroupForm({ ...groupForm, financeCode: e.target.value })}
+                      disabled={!userCanEdit}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nominal Code</Label>
+                    <Input
+                      placeholder="e.g. 4110001"
+                      value={groupForm.nominalCode}
+                      onChange={(e) => setGroupForm({ ...groupForm, nominalCode: e.target.value })}
+                      disabled={!userCanEdit}
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
