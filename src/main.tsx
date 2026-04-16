@@ -8,6 +8,7 @@
   import { StudentProvider } from "./contexts/StudentContext.tsx";
   import { DiscountOptionsProvider } from "./contexts/DiscountOptionsContext.tsx";
   import { TooltipProvider } from "./components/ui/tooltip.tsx";
+  import { Agentation } from "agentation";
   import "./index.css";
   import { seedAllData } from "./utils/seedData";
 
@@ -23,6 +24,7 @@
               <DiscountOptionsProvider>
                 <StudentProvider>
                   <App />
+                  {import.meta.env.DEV && <Agentation />}
                 </StudentProvider>
               </DiscountOptionsProvider>
             </AcademicYearProvider>

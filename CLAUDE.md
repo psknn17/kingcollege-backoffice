@@ -70,3 +70,12 @@ Use the `cn()` utility for conditional class merging:
 import { cn } from "@/components/ui/utils"
 cn("base-class", condition && "conditional-class")
 ```
+
+## Workflow Preference
+
+ทุกครั้งที่เริ่มงาน implementation ให้ใช้ workflow นี้เสมอ:
+
+1. **Plan Phase**: เข้า Plan Mode ใช้ Opus model วางแผนก่อน — วิเคราะห์ปัญหา, สำรวจ codebase, เขียนแผนเป็นขั้นตอน
+2. **Execute Phase**: หลังแผนผ่านการอนุมัติแล้ว ใช้ builder agent (`subagent_type: "builder"`, `run_in_background: true`) ดำเนินการตามแผน — run in background เสมอ
+
+ห้ามข้าม Plan Mode ไป execute ตรงๆ ต้องวางแผนและให้ user approve ก่อนทุกครั้ง

@@ -28,6 +28,7 @@ import {
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { getSortedYearGroups } from "@/utils/gradeLevels"
+import { syncInvoiceDiscounts } from "@/utils/discountSync"
 
 interface Student {
   id: string
@@ -175,6 +176,7 @@ export function SummerDiscountGroups() {
       )
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
+      syncInvoiceDiscounts(STORAGE_KEY, "summer")
       toast.success("Student group updated successfully")
       logActivity({ action: "Update Group", module: "Summer Discount Groups", detail: `Updated group "${groupForm.name}"` })
     } else {
@@ -193,6 +195,7 @@ export function SummerDiscountGroups() {
       const updatedGroups = [...groups, newGroup]
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
+      syncInvoiceDiscounts(STORAGE_KEY, "summer")
       toast.success("Student group created successfully")
       logActivity({
         action: "Create Group",
@@ -224,6 +227,7 @@ export function SummerDiscountGroups() {
     const updatedGroups = groups.filter(g => g.id !== groupId)
     setGroups(updatedGroups)
     saveGroupsToStorage(updatedGroups)
+    syncInvoiceDiscounts(STORAGE_KEY, "summer")
     toast.success("Student group deleted successfully")
     logActivity({ action: "Delete Group", module: "Summer Discount Groups", detail: `Deleted group "${groups.find(g => g.id === groupId)?.name || groupId}"` })
     setDeleteGroupId(null)
@@ -307,9 +311,10 @@ export function SummerDiscountGroups() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
-          <h3 className="font-medium">{t("menu.discountGroups")}</h3>
+          <h2 className="text-xl font-semibold">{t("menu.discountGroups")}</h2>
+          <p className="text-sm text-muted-foreground">Manage summer discount groups</p>
         </div>
 
         <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {

@@ -16,71 +16,115 @@ import { cn } from "./ui/utils"
 
 // Module grouping: map raw module names to display groups
 const MODULE_GROUP_MAP: Record<string, string> = {
+  // Login & Authentication
   "Login": "Login & Authentication",
   "Authentication": "Login & Authentication",
+  "Login & Authentication": "Login & Authentication",
   "OTP": "Login & Authentication",
+  // User Management
   "Users": "User Management",
   "User Management": "User Management",
   "User Profile": "User Management",
   "User Settings": "User Management",
+  // Students & Families
   "Students": "Students & Families",
   "Student Management": "Students & Families",
+  "Student List": "Students & Families",
+  "Student": "Students & Families",
   "Family Groups": "Students & Families",
+  "Family Group": "Students & Families",
+  // School & Bank Settings
   "School Settings": "School Settings",
   "Bank Settings": "Bank Settings",
+  // Tuition Settings
   "Tuition Settings": "Tuition Settings",
   "Tuition Term Settings": "Tuition Settings",
+  "Term Settings": "Tuition Settings",
   "Tuition By Year": "Tuition Settings",
+  "Tuition by Year": "Tuition Settings",
   "Tuition Discount Groups": "Tuition Settings",
+  // Payment Reminders / Debt Reminder
   "Payment Reminders": "Payment Reminders",
   "Debt Reminders": "Payment Reminders",
   "Debt Reminder Settings": "Payment Reminders",
+  "Debt Reminder": "Payment Reminders",
+  // Payment History
   "Payment History": "Payment History",
+  // Approval Queue
+  "Approval Queue": "Approval Queue",
+  // Invoice Management (all types)
   "Invoices": "Invoice Management",
   "Invoice Management": "Invoice Management",
   "Invoice Creation": "Invoice Management",
   "External Invoice": "Invoice Management",
   "Invoice Overview": "Invoice Management",
-  "Approval Queue": "Approval Queue",
+  "Tuition Invoice": "Invoice Management",
+  "ECA Invoice": "Invoice Management",
+  "Trip & Activity Invoice": "Invoice Management",
+  "Exam Invoice": "Invoice Management",
+  "School Bus Invoice": "Invoice Management",
+  "External Invoice": "Invoice Management",
+  "Invoice Details": "Invoice Management",
+  // Receipts & Credit Notes
   "Receipts": "Receipts & Credit Notes",
   "Receipt Management": "Receipts & Credit Notes",
   "Credit Notes": "Receipts & Credit Notes",
   "Credit Note Management": "Receipts & Credit Notes",
+  // Items & Templates
   "Items": "Item & Template Management",
   "Item Management": "Item & Template Management",
+  "Items & Templates": "Item & Template Management",
+  "Items / Templates": "Item & Template Management",
   "Invoice Templates": "Item & Template Management",
   "Invoice Receipt Template": "Item & Template Management",
+  // Discount Management
+  "Discounts": "Discount Management",
+  "Discount Management": "Discount Management",
+  "Discount Options": "Discount Management",
+  "Discount Reports": "Discount Management",
+  "Discount Group": "Discount Management",
+  "Student Groups": "Discount Management",
+  "Summer Discount Groups": "Discount Management",
+  // Email Management
   "Email": "Email Management",
   "Email Jobs": "Email Management",
   "Invoice Email": "Email Management",
   "Internal Email": "Email Management",
   "Email Delivery": "Email Management",
+  "Email Delivery Report": "Email Management",
   "Email History": "Email Management",
-  "Discounts": "Discount Management",
-  "Discount Management": "Discount Management",
-  "Discount Options": "Discount Management",
-  "Discount Reports": "Discount Management",
-  "Summer Discount Groups": "Discount Management",
+  // After School Activities
   "After School": "After School Activities",
   "Course Management": "After School Activities",
   "Course Quota": "After School Activities",
   "Course Reports": "After School Activities",
+  "Course Student Report": "After School Activities",
   "External Parents": "After School Activities",
   "External Parent Management": "After School Activities",
   "External Parents Approval": "After School Activities",
+  // Event Management
   "Events": "Event Management",
   "Event Import": "Event Management",
   "Event Payment Deadline": "Event Management",
   "Event Registration": "Event Management",
+  "Event Registration Reports": "Event Management",
+  // Summer Activities
   "Summer": "Summer Activities",
   "Summer Activities": "Summer Activities",
   "Summer Import": "Summer Activities",
   "Summer Registration": "Summer Activities",
   "Summer Payment": "Summer Activities",
+  "Summer Payment Reports": "Summer Activities",
+  // Client Management
   "Clients": "Client Management",
   "Client Management": "Client Management",
+  "Client List": "Client Management",
+  // Analytics & Reports
   "Analytics": "Analytics & Reports",
   "Reports": "Analytics & Reports",
+  "Dashboard & Analytics": "Analytics & Reports",
+  // Activity Log
+  "Activity Log": "Activity Log",
 }
 
 
@@ -94,7 +138,7 @@ const mockActivityLogs: ActivityLogEntry[] = [
   { id: "log-007", user: "approver@gmaill.com", action: "Reject Invoice", module: "Approval Queue", detail: "Rejected 1 invoice", ip: "192.168.1.102", device: "Desktop", status: "warning", timestamp: new Date(Date.now() - 18000000).toISOString() },
   { id: "log-008", user: "admin@school.com", action: "Create User", module: "User Management", detail: "Created 1 user", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 86400000).toISOString() },
   { id: "log-009", user: "admin@school.com", action: "Update Settings", module: "School Settings", detail: "Updated contact info", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 90000000).toISOString() },
-  { id: "log-010", user: "adminfinance@gmail.com", action: "Export Report", module: "Discount Management", detail: "Exported CSV", ip: "192.168.1.101", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 172800000).toISOString() },
+  { id: "log-010", user: "adminfinance@gmail.com", action: "Export Report", module: "Discount Management", detail: "Exported Excel", ip: "192.168.1.101", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 172800000).toISOString() },
   { id: "log-011", user: "viewver@gmail.com", action: "Login", module: "Login & Authentication", detail: "Logged in", ip: "192.168.1.103", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 180000000).toISOString() },
   { id: "log-012", user: "admin@school.com", action: "Delete Item", module: "Items & Templates", detail: "Deleted 3 items", ip: "192.168.1.100", device: "Desktop", status: "success", timestamp: new Date(Date.now() - 259200000).toISOString() },
 ]

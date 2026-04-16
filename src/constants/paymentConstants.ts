@@ -23,10 +23,10 @@ export const BANKS = [
 ]
 
 export const PAYMENT_SOURCES = [
-    { value: "Cashier's cheque", label: "Cashier's cheque" },
-    { value: "Bank Transfer", label: "Bank Transfer" },
-    { value: "Thai QR", label: "Thai QR" },
-    { value: "Credit Card", label: "Credit Card" },
-    { value: "Credit Note", label: "Credit Note" },
+    { value: "Cheque", label: "Cheque" },
+    { value: "Bill payment", label: "Bill payment" },
+    { value: "Direct bank transfer", label: "Direct bank transfer" },
+    { value: "Online - credit card", label: "Online - credit card" },
+    { value: "Online - Thai QR", label: "Online - Thai QR" },
     { value: "EDC", label: "EDC" }
 ]

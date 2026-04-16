@@ -47,6 +47,7 @@ import {
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
+import { syncInvoiceDiscounts } from "@/utils/discountSync"
 import { WaiveFeeManagement } from "./WaiveFeeManagement"
 import { useStudents } from "@/contexts/StudentContext"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -361,16 +362,24 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
   const isInitialMount = useRef(true)
   
   // Migration: Force Reset Mock Data once to include new Finance/Nominal codes
+  // Skip if seedData already populated good data (has financeCode like "DISC-")
   useEffect(() => {
     const migrationKey = "app:studentGroups_migrated_v2"
     const hasMigrated = localStorage.getItem(migrationKey)
-    
+
     if (!hasMigrated && availableStudents.length > 0) {
-      console.log("Forcing Mock Data Reset with Finance/Nominal Codes...")
-      const mockData = generateDefaultGroups(availableStudents, departmentType)
-      setStudentGroups(mockData)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mockData))
-      localStorage.setItem(migrationKey, "true")
+      // Check if seedData already provided good groups (with finance codes)
+      const existing = loadStudentGroupsFromStorage(STORAGE_KEY)
+      if (existing && existing.length > 0 && existing.some((g: any) => g.financeCode)) {
+        // seedData groups are already good — just mark as migrated
+        localStorage.setItem(migrationKey, "true")
+      } else {
+        console.log("Forcing Mock Data Reset with Finance/Nominal Codes...")
+        const mockData = generateDefaultGroups(availableStudents, departmentType)
+        setStudentGroups(mockData)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mockData))
+        localStorage.setItem(migrationKey, "true")
+      }
     }
   }, [availableStudents, departmentType, STORAGE_KEY])
 
@@ -380,6 +389,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
       return
     }
     saveStudentGroupsToStorage(studentGroups, STORAGE_KEY)
+    syncInvoiceDiscounts(STORAGE_KEY, category)
   }, [studentGroups, STORAGE_KEY])
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false)
   const [groupForm, setGroupForm] = useState({

@@ -565,80 +565,75 @@ export function EmailHistory() {
       </Card>
 
       <Dialog open={!!detailsDialog} onOpenChange={() => setDetailsDialog(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Eye className="w-6 h-6" />
-              Email Details
-            </DialogTitle>
-            <DialogDescription className="text-base mt-2">
-              Complete information about this reminder email
-            </DialogDescription>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-8">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="text-xl">Email Details</DialogTitle>
           </DialogHeader>
           {detailsDialog && (
-            <div className="space-y-10 px-6 py-4">
-              <div className="border-b pb-4">
-                <Label className="text-sm font-medium text-muted-foreground">Subject</Label>
-                <p className="text-xl font-semibold mt-1">{detailsDialog.subject}</p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-8">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Sent Date</Label>
-                  <p className="text-base font-medium mt-1">{formatDisplayDate(detailsDialog.sentDate)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Academic Year</Label>
-                  <p className="text-base font-medium mt-1">{formatAcademicYear(detailsDialog.academicYear)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Term</Label>
-                  <p className="text-base font-medium mt-1">{detailsDialog.term}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Recipients</Label>
-                  <p className="text-lg font-semibold mt-1">{detailsDialog.recipients} parents/students</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <div className="mt-1">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-600 text-white">
-                      <CheckCircle className="w-4 h-4" />
-                      {detailsDialog.status.charAt(0).toUpperCase() + detailsDialog.status.slice(1)}
-                    </span>
+            <div className="space-y-6 px-2">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="flex flex-col space-y-1 col-span-1 md:col-span-2">
+                      <span className="text-xs text-muted-foreground uppercase">Subject</span>
+                      <span className="font-medium text-base">{detailsDialog.subject}</span>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs text-muted-foreground uppercase">Sent Date</span>
+                      <span className="font-medium">{formatDisplayDate(detailsDialog.sentDate)}</span>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs text-muted-foreground uppercase">Academic Year</span>
+                      <span className="font-medium">{formatAcademicYear(detailsDialog.academicYear)}</span>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs text-muted-foreground uppercase">Term</span>
+                      <span className="font-medium">{detailsDialog.term}</span>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs text-muted-foreground uppercase">Recipients</span>
+                      <span className="font-medium">{detailsDialog.recipients} parents/students</span>
+                    </div>
+                    <div className="flex flex-col space-y-1 md:col-span-2">
+                      <span className="text-xs text-muted-foreground uppercase">Status</span>
+                      <span className="font-medium">
+                        <Badge className="bg-green-100 text-green-800 border-transparent hover:bg-green-100 font-medium">
+                          {detailsDialog.status.charAt(0).toUpperCase() + detailsDialog.status.slice(1)}
+                        </Badge>
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Message Preview</Label>
-                <div className="mt-2 p-6 bg-muted rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
-                  {detailsDialog.message ? (
-                    <>{detailsDialog.message}</>
-                  ) : (
-                    <>
-                      <p>Dear Parent,</p>
-                      <p className="mt-3">
-                        This is an official communication regarding: {detailsDialog.subject}.
-                        Please review the attached documents or information below for further details.
-                      </p>
-                      <p className="mt-3">
-                        Academic Year: {formatAcademicYear(detailsDialog.academicYear)}<br />
-                        Term: {detailsDialog.term}
-                      </p>
-                      <p className="mt-3">
-                        If you have any questions, please contact our office.
-                      </p>
-                      <p className="mt-3">
-                        Best regards,<br />
-                        {schoolSettings.schoolName}
-                      </p>
-                    </>
-                  )}
-                </div>
+                <h4 className="font-semibold mb-4 text-base">Message Preview</h4>
+                <Card className="border-none shadow-none">
+                  <CardContent className="p-6 bg-gray-50 rounded-xl text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                    {detailsDialog.message ? (
+                      <>{detailsDialog.message}</>
+                    ) : (
+                      <div className="space-y-3">
+                        <p>Dear Parent,</p>
+                        <p>
+                          This is an official communication regarding: {detailsDialog.subject}.
+                          Please review the attached documents or information below for further details.
+                        </p>
+                        <p>
+                          Academic Year: {formatAcademicYear(detailsDialog.academicYear)}<br />
+                          Term: {detailsDialog.term}
+                        </p>
+                        <p>
+                          If you have any questions, please contact our office.
+                        </p>
+                        <p>
+                          Best regards,<br />
+                          {schoolSettings.schoolName}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
@@ -646,7 +641,7 @@ export function EmailHistory() {
       </Dialog>
 
       <Dialog open={!!recipientsDialog} onOpenChange={() => setRecipientsDialog(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Users className="w-6 h-6" />

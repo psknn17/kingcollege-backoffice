@@ -192,6 +192,37 @@ const getStudentGroupDiscounts = (studentId: string, category: string): { name: 
   }
 }
 
+const SCHOLARSHIP_RECORDS_KEY = "scholarshipRecords"
+const STAFF_CHILD_RECORDS_KEY = "staffChildRecords"
+const EARLY_BIRD_RECORDS_KEY = "earlyBirdRecords"
+
+const hasScholarshipDiscount = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(SCHOLARSHIP_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) => record.studentId === studentId || record === studentId)
+  } catch { return false }
+}
+
+const isStaffChildStudent = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(STAFF_CHILD_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) => record.studentId === studentId || record === studentId)
+  } catch { return false }
+}
+
+const hasEarlyBirdDiscount = (studentId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(EARLY_BIRD_RECORDS_KEY)
+    if (!stored) return false
+    const records = JSON.parse(stored)
+    return records.some((record: any) => record.studentId === studentId || record === studentId)
+  } catch { return false }
+}
+
 // Load created invoices from localStorage
 const loadCreatedInvoicesFromStorage = (): Invoice[] => {
   try {
@@ -2775,7 +2806,9 @@ export function InvoiceManagement({
         }
 
         // 2. Student group discounts - calculate dynamically during export
+        // Filter out groups that overlap with specific discount checks (sibling/staff/scholarship/early bird)
         const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoice.category || category || "tuition")
+          .filter(g => !/sibling|staff.?child|^scholarship$|scholarship.?recip|early.?bird/i.test(g.name))
         groupDiscounts.forEach(g => {
           const discAmount = g.discountType === "percentage"
             ? Math.round(subtotalForDiscounts * g.discountPercentage / 100)
@@ -2792,20 +2825,29 @@ export function InvoiceManagement({
         })
 
         // 3. Staff Child (50%)
-        if (student && student.notes?.toLowerCase().includes('staff')) {
-          const staffAmount = Math.round(subtotalForDiscounts * 50 / 100)
-          if (staffAmount > 0) dynamicDiscounts.push({ name: "Staff Child Discount", amount: staffAmount, percentage: 50 })
+        if (isStaffChildStudent(invoice.studentId)) {
+          const alreadyHasStaff = dynamicDiscounts.some(d => /staff/i.test(d.name))
+          if (!alreadyHasStaff) {
+            const staffAmount = Math.round(subtotalForDiscounts * 50 / 100)
+            if (staffAmount > 0) dynamicDiscounts.push({ name: "Staff Child Discount", amount: staffAmount, percentage: 50, financeCode: "STAFF-01", nominalCode: "4110002" })
+          }
         }
 
         // 4. Scholarship
-        if (student && student.notes?.toLowerCase().includes('scholarship')) {
-          dynamicDiscounts.push({ name: "Scholarship", amount: subtotalForDiscounts, percentage: 100 })
+        if (hasScholarshipDiscount(invoice.studentId)) {
+          const alreadyHasScholarship = dynamicDiscounts.some(d => /scholarship/i.test(d.name))
+          if (!alreadyHasScholarship) {
+            dynamicDiscounts.push({ name: "Scholarship", amount: subtotalForDiscounts, percentage: 100, financeCode: "SCH-001", nominalCode: "4110001" })
+          }
         }
 
         // 5. Early Bird (5%)
-        if (student && student.notes?.toLowerCase().includes('early bird')) {
-          const earlyBirdAmount = Math.round(subtotalForDiscounts * 5 / 100)
-          if (earlyBirdAmount > 0) dynamicDiscounts.push({ name: "Early Bird Discount", amount: earlyBirdAmount, percentage: 5 })
+        if (hasEarlyBirdDiscount(invoice.studentId)) {
+          const alreadyHasEarlyBird = dynamicDiscounts.some(d => /early.?bird/i.test(d.name))
+          if (!alreadyHasEarlyBird) {
+            const earlyBirdAmount = Math.round(subtotalForDiscounts * 5 / 100)
+            if (earlyBirdAmount > 0) dynamicDiscounts.push({ name: "Early Bird Discount", amount: earlyBirdAmount, percentage: 5, financeCode: "EB-2526", nominalCode: "4110005" })
+          }
         }
       }
 
@@ -3026,7 +3068,10 @@ export function InvoiceManagement({
         }
 
         // 2. Student group discounts - calculate dynamically
+        // Filter out groups that overlap with specific discount checks (sibling/staff/scholarship/early bird)
+        // to prevent duplication — those are handled individually in steps 1, 3-5
         const groupDiscounts = getStudentGroupDiscounts(invoice.studentId, invoice.category || category || "tuition")
+          .filter(g => !/sibling|staff.?child|^scholarship$|scholarship.?recip|early.?bird/i.test(g.name))
         groupDiscounts.forEach(g => {
           const discAmount = g.discountType === "percentage"
             ? Math.round(subtotal * g.discountPercentage / 100)
@@ -3037,35 +3082,44 @@ export function InvoiceManagement({
         })
 
         // 3. Staff Child discount
-        if (student && student.notes?.toLowerCase().includes('staff')) {
-          const staffAmount = Math.round(subtotal * 50 / 100)
-          if (staffAmount > 0) {
-            discountLines.push({
-              name: "Staff Child Discount",
-              amount: staffAmount,
-              percent: 50
-            })
+        if (isStaffChildStudent(invoice.studentId)) {
+          const alreadyHasStaff = discountLines.some(d => /staff/i.test(d.name))
+          if (!alreadyHasStaff) {
+            const staffAmount = Math.round(subtotal * 50 / 100)
+            if (staffAmount > 0) {
+              discountLines.push({
+                name: "Staff Child Discount",
+                amount: staffAmount,
+                percent: 50
+              })
+            }
           }
         }
 
         // 5. Scholarship
-        if (student && student.notes?.toLowerCase().includes('scholarship')) {
-          discountLines.push({
-            name: "Scholarship",
-            amount: subtotal,
-            percent: 100
-          })
+        if (hasScholarshipDiscount(invoice.studentId)) {
+          const alreadyHasScholarship = discountLines.some(d => /scholarship/i.test(d.name))
+          if (!alreadyHasScholarship) {
+            discountLines.push({
+              name: "Scholarship",
+              amount: subtotal,
+              percent: 100
+            })
+          }
         }
 
         // 6. Early Bird discount
-        if (student && student.notes?.toLowerCase().includes('early bird')) {
-          const earlyBirdAmount = Math.round(subtotal * 5 / 100)
-          if (earlyBirdAmount > 0) {
-            discountLines.push({
-              name: "Early Bird Discount",
-              amount: earlyBirdAmount,
-              percent: 5
-            })
+        if (hasEarlyBirdDiscount(invoice.studentId)) {
+          const alreadyHasEarlyBird = discountLines.some(d => /early.?bird/i.test(d.name))
+          if (!alreadyHasEarlyBird) {
+            const earlyBirdAmount = Math.round(subtotal * 5 / 100)
+            if (earlyBirdAmount > 0) {
+              discountLines.push({
+                name: "Early Bird Discount",
+                amount: earlyBirdAmount,
+                percent: 5
+              })
+            }
           }
         }
       }
@@ -5136,22 +5190,12 @@ export function InvoiceManagement({
                         }
                       }
 
-                      // 2. Registration Fee Waiver - check if any item has waiver
-                      if (!isNonDiscountableInvoice) {
-                        const registrationFeeWaiver = selectedInvoice.items
-                          .filter(item => item.description.toLowerCase().includes('registration') && item.discountPercent > 0)
-                          .reduce((sum, item) => sum + (item.amount - item.discountedAmount), 0)
-                        if (registrationFeeWaiver > 0) {
-                          discountLines.push({
-                            name: "Registration Fee Waiver",
-                            amount: registrationFeeWaiver
-                          })
-                        }
-                      }
-
-                      // 3. Student group discounts - calculate dynamically
+                      // 2. Student group discounts - calculate dynamically
+                      // Filter out groups that overlap with specific discount checks (sibling/staff/scholarship/early bird)
+                      // to prevent duplication — those are handled individually in steps 1, 3-5
                       if (!isNonDiscountableInvoice && selectedInvoice.invoiceType !== "external" && selectedInvoice.studentId !== "EXTERNAL") {
                         const groupDiscounts = getStudentGroupDiscounts(selectedInvoice.studentId, selectedInvoice.category || category || "tuition")
+                          .filter(g => !/sibling|staff.?child|^scholarship$|scholarship.?recip|early.?bird/i.test(g.name))
                         groupDiscounts.forEach(g => {
                           const discAmount = g.discountType === "percentage"
                             ? Math.round(subtotal * g.discountPercentage / 100)
@@ -5163,33 +5207,42 @@ export function InvoiceManagement({
                       }
 
                       // 4. Staff Child (50%)
-                      if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('staff')) {
-                        const staffAmount = Math.round(subtotal * 50 / 100)
-                        discountLines.push({
-                          name: "Staff Child Discount",
-                          amount: staffAmount,
-                          percent: 50
-                        })
+                      if (!isNonDiscountableInvoice && selectedInvoice.studentId !== "EXTERNAL" && isStaffChildStudent(selectedInvoice.studentId)) {
+                        const alreadyHasStaff = discountLines.some(d => /staff/i.test(d.name))
+                        if (!alreadyHasStaff) {
+                          const staffAmount = Math.round(subtotal * 50 / 100)
+                          discountLines.push({
+                            name: "Staff Child Discount",
+                            amount: staffAmount,
+                            percent: 50
+                          })
+                        }
                       }
 
                       // 6. Scholarship
-                      if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('scholarship')) {
-                        const scholarshipAmount = subtotal
-                        discountLines.push({
-                          name: "Scholarship",
-                          amount: scholarshipAmount,
-                          percent: 100
-                        })
+                      if (!isNonDiscountableInvoice && selectedInvoice.studentId !== "EXTERNAL" && hasScholarshipDiscount(selectedInvoice.studentId)) {
+                        const alreadyHasScholarship = discountLines.some(d => /scholarship/i.test(d.name))
+                        if (!alreadyHasScholarship) {
+                          const scholarshipAmount = subtotal
+                          discountLines.push({
+                            name: "Scholarship",
+                            amount: scholarshipAmount,
+                            percent: 100
+                          })
+                        }
                       }
 
                       // 7. Early Bird (5%)
-                      if (!isNonDiscountableInvoice && student && student.notes?.toLowerCase().includes('early bird')) {
-                        const earlyBirdAmount = Math.round(subtotal * 5 / 100)
-                        discountLines.push({
-                          name: "Early Bird Discount",
-                          amount: earlyBirdAmount,
-                          percent: 5
-                        })
+                      if (!isNonDiscountableInvoice && selectedInvoice.studentId !== "EXTERNAL" && hasEarlyBirdDiscount(selectedInvoice.studentId)) {
+                        const alreadyHasEarlyBird = discountLines.some(d => /early.?bird/i.test(d.name))
+                        if (!alreadyHasEarlyBird) {
+                          const earlyBirdAmount = Math.round(subtotal * 5 / 100)
+                          discountLines.push({
+                            name: "Early Bird Discount",
+                            amount: earlyBirdAmount,
+                            percent: 5
+                          })
+                        }
                       }
 
                       // Get registration fees from saved invoice data (new students)
@@ -6553,7 +6606,7 @@ export function InvoiceManagement({
                     })
 
                   // Staff Child
-                  if (student?.notes?.toLowerCase().includes('staff')) {
+                  if (selectedInvoice.studentId !== "EXTERNAL" && isStaffChildStudent(selectedInvoice.studentId)) {
                     discounts.push({
                       name: "Staff Child",
                       value: "50%",
@@ -6562,7 +6615,7 @@ export function InvoiceManagement({
                   }
 
                   // Scholarship
-                  if (student?.notes?.toLowerCase().includes('scholarship')) {
+                  if (selectedInvoice.studentId !== "EXTERNAL" && hasScholarshipDiscount(selectedInvoice.studentId)) {
                     discounts.push({
                       name: "Scholarship",
                       value: "100%",
@@ -6571,7 +6624,7 @@ export function InvoiceManagement({
                   }
 
                   // Early Bird
-                  if (student?.notes?.toLowerCase().includes('early bird')) {
+                  if (selectedInvoice.studentId !== "EXTERNAL" && hasEarlyBirdDiscount(selectedInvoice.studentId)) {
                     discounts.push({
                       name: "Early Bird",
                       value: "5%",

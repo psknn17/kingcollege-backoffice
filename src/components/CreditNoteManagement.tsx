@@ -107,16 +107,37 @@ const getMockCreditNotes = (): CreditNote[] => {
   ]
 
   // Fallback static data when no invoices have been seeded yet
-  const fallback: Array<Pick<CreditNote, "studentName" | "studentId" | "studentGrade" | "parentName" | "familyCode"> & { invoiceNumber: string; netAmount: number }> = [
-    { invoiceNumber: "2026-00001", studentName: "Charlotte Johnson", studentId: "KC20250001", studentGrade: "Year 12", parentName: "Michael Johnson", familyCode: "FAM001", netAmount: 150000 },
-    { invoiceNumber: "2026-00003", studentName: "Oliver Smith",     studentId: "KC20250003", studentGrade: "Year 8",  parentName: "James Smith",     familyCode: "FAM003", netAmount: 120000 },
-    { invoiceNumber: "2026-00005", studentName: "Sophia Williams",  studentId: "KC20250005", studentGrade: "Year 5",  parentName: "David Williams",  familyCode: "FAM005", netAmount: 95000  },
-    { invoiceNumber: "2026-00008", studentName: "Liam Brown",       studentId: "KC20250008", studentGrade: "Year 10", parentName: "Sarah Brown",     familyCode: "FAM008", netAmount: 135000 },
-    { invoiceNumber: "2026-00010", studentName: "Emma Davis",       studentId: "KC20250010", studentGrade: "Year 3",  parentName: "Robert Davis",    familyCode: "FAM010", netAmount: 85000  },
-    { invoiceNumber: "2026-00012", studentName: "Noah Wilson",      studentId: "KC20250012", studentGrade: "Year 7",  parentName: "Jennifer Wilson", familyCode: "FAM012", netAmount: 110000 },
-    { invoiceNumber: "2026-00015", studentName: "Ava Taylor",       studentId: "KC20250015", studentGrade: "Year 1",  parentName: "Mark Taylor",     familyCode: "FAM015", netAmount: 75000  },
-    { invoiceNumber: "2026-00018", studentName: "Isabella Martinez",studentId: "KC20250018", studentGrade: "Year 9",  parentName: "Carlos Martinez", familyCode: "FAM018", netAmount: 140000 },
-  ]
+  // IDs/codes match seedData format (KC2025xxxx, SM2025xxxx, 2025-xxxxx invoices)
+  // Fallback: read student list from localStorage to match seed names
+  let fallback: Array<Pick<CreditNote, "studentName" | "studentId" | "studentGrade" | "parentName" | "familyCode"> & { invoiceNumber: string; netAmount: number }> = []
+  try {
+    const storedStudents = localStorage.getItem("students")
+    if (storedStudents) {
+      const allStudents = JSON.parse(storedStudents)
+      fallback = allStudents.slice(0, 8).map((s: any, i: number) => ({
+        invoiceNumber: `2025-${String((i + 1) * 3).padStart(5, "0")}`,
+        studentName: `${s.firstName} ${s.lastName}`,
+        studentId: s.studentId,
+        studentGrade: s.gradeLevel || "",
+        parentName: `${s.firstName} ${s.lastName}`,
+        familyCode: s.familyCode || `SM2025${String(i + 1).padStart(4, "0")}`,
+        netAmount: [130000, 145000, 115000, 125000, 150000, 135000, 155000, 135000][i],
+      }))
+    }
+  } catch { /* ignore */ }
+  if (fallback.length === 0) {
+    // Hard-coded last resort (matches seedData FN/LN at seq 1-8)
+    fallback = [
+      { invoiceNumber: "2025-00003", studentName: "Charlotte Johnson",  studentId: "KC20250001", studentGrade: "Year 4",   parentName: "James Johnson",    familyCode: "SM20250001", netAmount: 130000 },
+      { invoiceNumber: "2025-00006", studentName: "Sophia Williams",    studentId: "KC20250002", studentGrade: "Year 7",   parentName: "Charlotte Williams",familyCode: "SM20250002", netAmount: 145000 },
+      { invoiceNumber: "2025-00009", studentName: "Emma Brown",         studentId: "KC20250003", studentGrade: "Reception",parentName: "William Brown",     familyCode: "SM20250003", netAmount: 115000 },
+      { invoiceNumber: "2025-00012", studentName: "Mia Jones",          studentId: "KC20250004", studentGrade: "Year 2",   parentName: "Benjamin Jones",    familyCode: "SM20250004", netAmount: 125000 },
+      { invoiceNumber: "2025-00015", studentName: "Amelia Garcia",      studentId: "KC20250005", studentGrade: "Year 9",   parentName: "Lucas Garcia",      familyCode: "SM20250005", netAmount: 150000 },
+      { invoiceNumber: "2025-00018", studentName: "Harper Miller",      studentId: "KC20250006", studentGrade: "Year 5",   parentName: "Henry Miller",      familyCode: "SM20250006", netAmount: 135000 },
+      { invoiceNumber: "2025-00021", studentName: "Evelyn Davis",       studentId: "KC20250007", studentGrade: "Year 11",  parentName: "Alexander Davis",   familyCode: "SM20250007", netAmount: 155000 },
+      { invoiceNumber: "2025-00024", studentName: "Abigail Wilson",     studentId: "KC20250008", studentGrade: "Year 6",   parentName: "Sebastian Wilson",  familyCode: "SM20250008", netAmount: 135000 },
+    ]
+  }
 
   // Pick the source list — prefer real invoices, else fallback
   const sources = eligible.length >= templates.length
@@ -179,7 +200,7 @@ const getMockCreditNotes = (): CreditNote[] => {
 }
 
 // Load Credit Notes from localStorage
-const CREDIT_NOTES_MOCK_VERSION = "v3"
+const CREDIT_NOTES_MOCK_VERSION = "v5"
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
     const mockVersion = localStorage.getItem("creditNotes_mockVersion")
@@ -383,7 +404,9 @@ export function CreditNoteManagement() {
         cn.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cn.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cn.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cn.parentName.toLowerCase().includes(searchTerm.toLowerCase())
+        (cn.parentName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cn.reason || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cn.description || "").toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -1076,7 +1099,6 @@ export function CreditNoteManagement() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 h-9"
-                      disabled={!userCanEdit}
                     />
                   </div>
                   <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
@@ -1091,7 +1113,7 @@ export function CreditNoteManagement() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-sm font-medium text-muted-foreground">{t("common.status")}</label>
-                        <Select value={statusFilter} onValueChange={setStatusFilter} disabled={!userCanEdit}>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
                           <SelectTrigger className="h-9">
                             <Filter className="w-4 h-4 mr-2" />
                             <SelectValue />
@@ -1108,7 +1130,7 @@ export function CreditNoteManagement() {
 
                       <div className="space-y-1.5">
                         <label className="text-sm font-medium text-muted-foreground">{t("creditNote.noteTypeLabel") || "Note Type"}</label>
-                        <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter} disabled={!userCanEdit}>
+                        <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter}>
                           <SelectTrigger className="h-9">
                             <Filter className="w-4 h-4 mr-2" />
                             <SelectValue />

@@ -74,11 +74,13 @@ function generateFamiliesAndStudents() {
       const birthYear = 2022 - gradeIdx - 3
       const dob = `${birthYear}-${pad(1 + Math.floor(Math.random() * 12), 2)}-${pad(1 + Math.floor(Math.random() * 28), 2)}T00:00:00.000Z`
 
+      // Room assignment: A/B/C rotating — ~25 students per room per grade
+      const room = ["A", "B", "C"][studentSeq % 3]
       students.push({
         id: sId, studentId: sCode, firstName: childFirst, lastName: parentLast,
         nickname: childFirst.substring(0, 3),
         dateOfBirth: dob, gender: studentSeq % 2 === 0 ? "female" : "male",
-        gradeLevel: grade, academicYear: CURRENT_YEAR,
+        gradeLevel: grade, room, academicYear: CURRENT_YEAR,
         enrollmentTerm: pick(["term1","term2","term3"]),
         status: studentSeq <= 1550 ? "active" : pick(["active","on_leave","withdrawn"] as const),
         familyId: famId, familyCode: famCode, childOrder: ci + 1,
@@ -260,30 +262,37 @@ function generateInvoices(students: any[], families: any[]) {
           totalDiscount += discAmt
         }
         // Student group discounts (based on student index in active list)
+        // Slices below MUST stay in sync with generateStudentGroups() so every
+        // active student belongs to some discount group
         const activeIdx = students.filter(st => st.status === "active").findIndex(st => st.studentId === s.studentId)
-        if (activeIdx >= 0 && activeIdx < 25) {
+        if (activeIdx >= 0 && activeIdx < 100) {
           // Staff Children — 50%
           const amt = Math.round(subtotal * 50 / 100)
           discounts.push({ name: "Staff Children", amount: amt, percentage: 50 })
           totalDiscount += amt
-        } else if (activeIdx >= 25 && activeIdx < 45) {
+        } else if (activeIdx >= 100 && activeIdx < 200) {
           // Scholarship Recipients — 100%
           const amt = subtotal
           discounts.push({ name: "Scholarship Recipients", amount: amt, percentage: 100 })
           totalDiscount += amt
-        } else if (activeIdx >= 45 && activeIdx < 85) {
+        } else if (activeIdx >= 200 && activeIdx < 450) {
           // Partial Scholarship — 25%
           const amt = Math.round(subtotal * 25 / 100)
           discounts.push({ name: "Partial Scholarship", amount: amt, percentage: 25 })
           totalDiscount += amt
-        } else if (activeIdx >= 85 && activeIdx < 235) {
+        } else if (activeIdx >= 450 && activeIdx < 900) {
           // Early Bird — fixed 10,000
           discounts.push({ name: "Early Bird 2025/2026", amount: 10000 })
           totalDiscount += 10000
-        } else if (activeIdx >= 235 && activeIdx < 295) {
+        } else if (activeIdx >= 900 && activeIdx < 1200) {
           // Corporate Partner — 10%
           const amt = Math.round(subtotal * 10 / 100)
           discounts.push({ name: "Corporate Partner Families", amount: amt, percentage: 10 })
+          totalDiscount += amt
+        } else if (activeIdx >= 1200) {
+          // Loyalty Discount Program — 5% (catch-all for remaining active students)
+          const amt = Math.round(subtotal * 5 / 100)
+          discounts.push({ name: "Loyalty Discount Program", amount: amt, percentage: 5 })
           totalDiscount += amt
         }
       }
@@ -484,28 +493,28 @@ function generateCreditNotes(invoices: any[]) {
     seq++
   }
 
-  // 1) "issued" — 20 credit notes for students with unpaid invoices (usable at payment)
-  for (const inv of unpaid.slice(0, 20)) {
+  // 1) "issued" — 80 credit notes for students with unpaid invoices (usable at payment)
+  for (const inv of unpaid.slice(0, 80)) {
     makeCN(inv, "issued", true, [new Date("2025-10-01"), new Date("2026-02-28")])
   }
 
-  // 2) "applied" — 10 credit notes already used (historical)
-  for (const inv of paid.slice(0, 10)) {
+  // 2) "applied" — 50 credit notes already used (historical)
+  for (const inv of paid.slice(0, 50)) {
     makeCN(inv, "applied", false, [new Date("2025-08-01"), new Date("2025-12-31")])
   }
 
-  // 3) "draft" — 5 credit notes pending approval
-  for (const inv of unpaid.slice(20, 25)) {
+  // 3) "draft" — 30 credit notes pending approval
+  for (const inv of unpaid.slice(80, 110)) {
     makeCN(inv, "draft", true, [new Date("2026-02-01"), new Date("2026-03-15")])
   }
 
-  // 4) "cancelled" — 3 cancelled credit notes
-  for (const inv of paid.slice(10, 13)) {
+  // 4) "cancelled" — 20 cancelled credit notes
+  for (const inv of paid.slice(50, 70)) {
     makeCN(inv, "cancelled", false, [new Date("2025-09-01"), new Date("2026-01-15")])
   }
 
-  // 5) "partial" — 2 partially used credit notes
-  for (const inv of unpaid.slice(25, 27)) {
+  // 5) "partial" — 20 partially used credit notes
+  for (const inv of unpaid.slice(110, 130)) {
     const creditAmt = Math.round(inv.netAmount * (0.1 + Math.random() * 0.1))
     const usedAmt = Math.round(creditAmt * (0.3 + Math.random() * 0.4))
     cnList.push({
@@ -571,14 +580,74 @@ function generateStudentGroups(students: any[]) {
     yearGroup: GRADE_LABELS[s.gradeLevel] || s.gradeLevel,
     parentName: s.parents[0]?.name || "", isActive: true,
   })
+  // Sibling discount — all children with childOrder >= 3 (matches invoice discount logic)
+  const siblingStudents = active.filter((s: any) => s.childOrder >= 3)
+  // NOTE: Slices below MUST stay in sync with generateInvoices() discount logic
+  // so every student with a red discount on an invoice is visible here.
   return [
-    { id: "sg-000", name: "All Students (Tuition)", students: active.map(mapStudent), discountType: "percentage", discountPercentage: 0, fixedAmount: 0, departments: [], isActive: true, description: "Master group — all enrolled students for tuition billing" },
-    { id: "sg-001", name: "Staff Children", students: active.slice(0, 25).map(mapStudent), discountType: "percentage", discountPercentage: 50, fixedAmount: 0, departments: [], isActive: true, description: "Children of school staff — 50% tuition discount" },
-    { id: "sg-002", name: "Scholarship Recipients", students: active.slice(25, 45).map(mapStudent), discountType: "percentage", discountPercentage: 100, fixedAmount: 0, departments: [], isActive: true, description: "Full scholarship students — 100% tuition waiver" },
-    { id: "sg-003", name: "Partial Scholarship", students: active.slice(45, 85).map(mapStudent), discountType: "percentage", discountPercentage: 25, fixedAmount: 0, departments: [], isActive: true, description: "Partial scholarship — 25% tuition discount" },
-    { id: "sg-004", name: "Early Bird 2025/2026", students: active.slice(85, 235).map(mapStudent), discountType: "fixed", discountPercentage: 0, fixedAmount: 10000, departments: [], isActive: true, description: "Early payment discount — 10,000 THB off per term" },
-    { id: "sg-005", name: "Corporate Partner Families", students: active.slice(235, 295).map(mapStudent), discountType: "percentage", discountPercentage: 10, fixedAmount: 0, departments: [], isActive: true, description: "Families from corporate partner companies — 10% discount" },
+    { id: "sg-000", name: "All Students (Tuition)", financeCode: "", nominalCode: "", students: active.map(mapStudent), discountType: "percentage", discountPercentage: 0, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Master group — all enrolled students for tuition billing" },
+    { id: "sg-001", name: "Staff Children", financeCode: "DISC-STAFF", nominalCode: "5101", students: active.slice(0, 100).map(mapStudent), discountType: "percentage", discountPercentage: 50, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Children of school staff — 50% tuition discount" },
+    { id: "sg-002", name: "Scholarship Recipients", financeCode: "DISC-SCHOL", nominalCode: "5102", students: active.slice(100, 200).map(mapStudent), discountType: "percentage", discountPercentage: 100, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Full scholarship students — 100% tuition waiver" },
+    { id: "sg-003", name: "Partial Scholarship", financeCode: "DISC-PSCHOL", nominalCode: "5103", students: active.slice(200, 450).map(mapStudent), discountType: "percentage", discountPercentage: 25, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Partial scholarship — 25% tuition discount" },
+    { id: "sg-004", name: "Early Bird 2025/2026", financeCode: "DISC-EB", nominalCode: "5104", students: active.slice(450, 900).map(mapStudent), discountType: "fixed", discountPercentage: 0, fixedAmount: 10000, departments: ["Tuition"], isActive: true, description: "Early payment discount — 10,000 THB off per term" },
+    { id: "sg-005", name: "Corporate Partner Families", financeCode: "DISC-CORP", nominalCode: "5105", students: active.slice(900, 1200).map(mapStudent), discountType: "percentage", discountPercentage: 10, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Families from corporate partner companies — 10% discount" },
+    { id: "sg-006", name: "Loyalty Discount Program", financeCode: "DISC-LOY", nominalCode: "5106", students: active.slice(1200).map(mapStudent), discountType: "percentage", discountPercentage: 5, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Long-standing families — 5% loyalty discount" },
+    { id: "sg-007", name: "Sibling Discount Families", financeCode: "DISC-SIB", nominalCode: "5107", students: siblingStudents.map(mapStudent), discountType: "percentage", discountPercentage: 5, fixedAmount: 0, departments: ["Tuition"], isActive: true, description: "Families with 3+ children — tiered sibling discount (5%/10%/20%)" },
   ]
+}
+
+// ── 11b. Category Discount Groups — 1 group per menu, varied % / fixed ──
+function generateCategoryDiscountGroups(students: any[], category: string, department: string) {
+  const active = students.filter(s => s.status === "active")
+  const mapStudent = (s: any) => ({
+    id: s.studentId, name: `${s.firstName} ${s.lastName}`,
+    yearGroup: GRADE_LABELS[s.gradeLevel] || s.gradeLevel,
+    parentName: s.parents[0]?.name || "", isActive: true,
+  })
+  const prefix = category.toUpperCase().slice(0, 4)
+  // One discount per menu — mix of % and fixed amounts (no 100%)
+  const SPEC: Record<string, { name: string; type: "percentage" | "fixed"; pct: number; amt: number }> = {
+    eca:         { name: "ECA Scholarship Recipients",          type: "percentage", pct: 30, amt: 0 },
+    trip:        { name: "Trip & Activity Early Bird",          type: "fixed",      pct: 0,  amt: 1500 },
+    exam:        { name: "Exam Fee Waiver",                     type: "percentage", pct: 20, amt: 0 },
+    bus:         { name: "School Bus Staff Discount",           type: "fixed",      pct: 0,  amt: 2000 },
+    afterschool: { name: "After School Sibling Discount",       type: "percentage", pct: 15, amt: 0 },
+    event:       { name: "Event Corporate Partner Discount",    type: "percentage", pct: 10, amt: 0 },
+  }
+  const spec = SPEC[category] || SPEC.eca
+  return [{
+    id: `${prefix}-GRP001`,
+    name: spec.name,
+    financeCode: `${prefix}-DISC`,
+    nominalCode: "4110001",
+    students: active.slice(0, 120).map(mapStudent),
+    discountType: spec.type,
+    discountPercentage: spec.pct,
+    fixedAmount: spec.amt,
+    departments: [department],
+    isActive: true,
+  }]
+}
+
+// Summer discount group — single group, shape includes createdDate + description
+function generateSummerDiscountGroups(students: any[]) {
+  const active = students.filter(s => s.status === "active")
+  const mapStudent = (s: any) => ({
+    id: s.studentId, name: `${s.firstName} ${s.lastName}`,
+    yearGroup: GRADE_LABELS[s.gradeLevel] || s.gradeLevel,
+    parentName: s.parents[0]?.name || "", isActive: true,
+  })
+  return [{
+    id: "SUM-GRP001",
+    name: "Summer Early Bird 2025/2026",
+    students: active.slice(0, 120).map(mapStudent),
+    discountType: "fixed",
+    discountPercentage: 0,
+    fixedAmount: 2500,
+    isActive: true,
+    createdDate: new Date().toISOString(),
+    description: "Early registration discount — ฿2,500 off summer programme",
+  }]
 }
 
 // ── 12. Discount Records ─────────────────────────────────────
@@ -586,9 +655,9 @@ function generateDiscountRecords(students: any[]) {
   const active = students.filter(s => s.status === "active")
   const rec = (s: any) => ({ studentId: s.studentId, studentName: `${s.firstName} ${s.lastName}`, addedAt: new Date().toISOString() })
   return {
-    staffChild: active.slice(0, 25).map(rec),
-    scholarship: active.slice(25, 45).map(rec),
-    earlyBird: active.slice(85, 235).map(rec),
+    staffChild: active.slice(0, 100).map(rec),
+    scholarship: active.slice(100, 200).map(rec),
+    earlyBird: active.slice(450, 900).map(rec),
     schoolBus: active.slice(300, 380).map(rec),
   }
 }
@@ -632,71 +701,154 @@ const BANK_ACCOUNTS_ONLINE = [
 ]
 
 // ── 15. Activity Logs (realistic timeline) ───────────────────
-function generateActivityLogs(invoices: any[], students: any[]) {
+function generateActivityLogs(_invoices: any[], _students: any[]) {
   const logs: any[] = []
-  let ts = new Date("2025-08-15T08:00:00.000Z")
+  let ts = new Date("2025-08-01T08:00:00.000Z")
   const advance = (h: number) => { ts = new Date(ts.getTime() + h * 3600000) }
+  const ips = ["192.168.1.100", "192.168.1.101", "192.168.1.102", "10.0.0.50"]
+  const devices = ["Chrome on macOS", "Chrome on Windows", "Safari on macOS", "Edge on Windows"]
+  let ipIdx = 0
   const add = (user: string, action: string, module: string, detail: string, status = "success") => {
-    logs.push({ id: `log-${pad(logs.length + 1)}`, user, action, module, detail, ip: "192.168.1.100", device: "Chrome on macOS", status, timestamp: ts.toISOString() })
-    advance(0.5 + Math.random() * 4)
+    logs.push({ id: `log-${pad(logs.length + 1)}`, user, action, module, detail, ip: ips[ipIdx % ips.length], device: devices[ipIdx % devices.length], status, timestamp: ts.toISOString() })
+    advance(0.3 + Math.random() * 2)
   }
 
-  add("System Administrator", "Login", "Authentication", "User logged in successfully")
-  add("System Administrator", "Import", "Student", "Imported 1600 students from Excel file")
+  const admin = "System Administrator"
+  const finance = "finance admin"
+  const approver = "test approver"
+  const viewer = "viewer"
+
+  // ── Login & Authentication ──
+  add(admin, "Login", "Login & Authentication", "Logged in"); ipIdx++
+  add(finance, "Login", "Login & Authentication", "Logged in"); ipIdx++
+  add(approver, "Login", "Login & Authentication", "Logged in"); ipIdx++
+  add(viewer, "Login", "Login & Authentication", "Logged in")
+  advance(1)
+
+  // ── Student List ──
+  add(admin, "Import Students", "Student List", "Imported 1550 students")
+  add(admin, "Create Student", "Student List", "Created 1 student")
+  add(admin, "Edit Student", "Student List", "Updated student info")
+  add(admin, "Delete Student", "Student List", "Deleted 1 student")
   advance(2)
-  add("System Administrator", "Create", "Item", "Created item: Tuition Fee (TUI-001)")
-  add("System Administrator", "Create", "Item", "Created item: Lunch Programme (LUN-001)")
-  add("System Administrator", "Create", "Item", "Created item: Swimming Class (AS-001)")
-  add("System Administrator", "Create", "Item", "Created item: Basketball Team (ECA-001)")
-  add("System Administrator", "Create", "Item", "Created item: School Bus Zone A (BUS-001)")
-  add("System Administrator", "Update", "Tuition", `Updated tuition fees for ${CURRENT_YEAR}`)
-  advance(24)
 
-  add("finance admin", "Login", "Authentication", "User logged in successfully")
-  const catInvoices: Record<string,any[]> = {}
-  invoices.forEach(inv => { if (!catInvoices[inv.category]) catInvoices[inv.category] = []; catInvoices[inv.category].push(inv) })
-  for (const [cat, invs] of Object.entries(catInvoices)) {
-    for (let i = 0; i < Math.min(3, invs.length); i++) {
-      add("finance admin", "Create", "Invoice", `Created ${cat} invoice for ${invs[i].studentName || invs[i].recipientName} - ${invs[i].netAmount.toLocaleString()} THB`)
-      advance(0.1)
+  // ── Family Group ──
+  add(admin, "Create Family", "Family Group", "Created 1 family group")
+  add(admin, "Edit Family", "Family Group", "Updated family group")
+  add(admin, "Delete Family", "Family Group", "Deleted 1 family group")
+  advance(2)
+
+  // ── Users ──
+  add(admin, "Create User", "Users", "Created 1 user")
+  add(admin, "Edit User", "Users", "Updated user info")
+  add(admin, "Delete User", "Users", "Deleted 1 user")
+  add(admin, "Change Status", "Users", "Changed status to Inactive")
+  advance(2)
+
+  // ── Term Settings ──
+  add(admin, "Create Term Setting", "Term Settings", "Created Term Setting 2026/2027")
+  add(admin, "Update Term Setting", "Term Settings", "Updated Term Setting")
+  advance(2)
+
+  // ── Tuition by Year ──
+  add(finance, "Save Tuition By Year", "Tuition by Year", `Saved Tuition By Year ${CURRENT_YEAR}`)
+  advance(4)
+
+  // ── Per-invoice-type modules ──
+  const invoiceTypes = [
+    { key: "tuition", label: "Tuition", itemPrefix: "TUI", invPrefix: "2025" },
+    { key: "eca", label: "ECA", itemPrefix: "ECA", invPrefix: "2025" },
+    { key: "trip", label: "Trip & Activity", itemPrefix: "TRP", invPrefix: "2025" },
+    { key: "exam", label: "Exam", itemPrefix: "EXM", invPrefix: "2025" },
+    { key: "bus", label: "School Bus", itemPrefix: "BUS", invPrefix: "2025" },
+    { key: "external", label: "External", itemPrefix: "EXT", invPrefix: "2026" },
+  ]
+
+  for (const t of invoiceTypes) {
+    const itemMod = "Items / Templates"
+    const discMod = "Discount Group"
+    const invMod = `${t.label} Invoice`
+    const rcptMod = "Receipts"
+
+    // Items / Templates
+    add(finance, "Create Item", itemMod, `Created ${t.itemPrefix}-001 item`)
+    add(finance, "Edit Item", itemMod, `Updated ${t.itemPrefix}-001 item`)
+    add(finance, "Delete Item", itemMod, `Deleted 2 items`)
+    add(finance, "Import interface file Items", itemMod, `Imported 15 items`)
+    add(finance, "Export Interface file Items", itemMod, `Exported interface file`)
+    advance(1)
+
+    // Discount Group (skip external)
+    if (t.key !== "external") {
+      add(finance, "Create Group", discMod, `Created 1 group`)
+      add(finance, "Edit Group", discMod, `Updated 1 group`)
+      add(finance, "Delete Group", discMod, `Deleted 1 group`)
+      add(finance, "Download List", discMod, `Download Excel`)
+      advance(1)
     }
+
+    // Invoice
+    add(finance, "Create Invoice", invMod, `Created 58 invoices`)
+    add(finance, "Edit Invoice", invMod, `Updated 1 invoice`)
+    add(finance, "Delete Invoice", invMod, `Deleted 3 invoices`)
+    add(finance, "Import Interface", invMod, `Imported interface file`)
+    add(finance, "Export Interface", invMod, `Exported interface file`)
+    add(finance, "Mark Invoice as Paid", invMod, `Mark Invoice as Paid invoice ${t.invPrefix}-00${Math.floor(Math.random() * 900 + 100)}`)
+    advance(1)
+
+    // Receipts
+    add(finance, "Export Interface", rcptMod, `Exported interface file`)
+    add(finance, "Save Chages Template Email Invoice", rcptMod, `Update Invoice Template Email`)
+    advance(2)
   }
-  advance(8)
 
-  add("test approver", "Login", "Authentication", "User logged in successfully")
-  invoices.filter(inv => inv.approvalStatus === "approved").slice(0, 10).forEach(inv => {
-    add("test approver", "Approve", "Invoice", `Approved ${inv.invoiceNumber} for ${inv.studentName || inv.recipientName}`)
-    advance(0.05)
-  })
-  invoices.filter(inv => inv.approvalStatus === "rejected").slice(0, 3).forEach(inv => {
-    add("test approver", "Reject", "Invoice", `Rejected invoice for ${inv.studentName}: amount discrepancy`, "warning")
-    advance(0.05)
-  })
-  advance(24)
+  // ── Client List (External) ──
+  add(finance, "Create Client", "Client List", "Created 1 client")
+  add(finance, "Edit Client", "Client List", "Updated 1 client")
+  add(finance, "Delete Client", "Client List", "Deleted 1 client")
+  advance(4)
 
-  add("finance admin", "Login", "Authentication", "User logged in successfully")
-  add("finance admin", "Send Email", "Invoice", `Sent invoice emails to ${invoices.filter(i => i.status === "sent").length} recipients`)
-  advance(48)
+  // ── Approval Queue ──
+  add(approver, "Approve Invoice", "Approval Queue", "Approved 5 invoice")
+  add(approver, "Reject Invoice", "Approval Queue", "Rejected 2 invoice")
+  advance(4)
 
-  invoices.filter(inv => inv.status === "paid").slice(0, 8).forEach(inv => {
-    add("finance admin", "Update", "Invoice", `Marked ${inv.invoiceNumber} as paid`)
-    add("finance admin", "Issue", "Receipt", `Issued receipt for ${inv.invoiceNumber}`)
-    advance(0.2)
-  })
-  advance(24)
+  // ── Debt Reminder Settings ──
+  add(finance, "Create Reminder", "Debt Reminder Settings", "Created 1 reminder")
+  add(finance, "Edit Reminder", "Debt Reminder Settings", "Updated 1 reminder")
+  add(finance, "Delete Reminder", "Debt Reminder Settings", "Deleted 1 reminder")
+  add(finance, "Send Reminder", "Debt Reminder Settings", "Sent to 310 recipients")
+  advance(4)
 
-  add("finance admin", "Create", "Credit Note", "Issued credit note CN-2026-0001 - Overpayment refund")
-  add("finance admin", "Create", "Credit Note", "Issued credit note CN-2026-0002 - Course cancellation")
-  advance(48)
-  add("finance admin", "Send", "Debt Reminder", "Sent payment reminder to 310 families with overdue invoices")
-  advance(24)
-  add("System Administrator", "Login", "Authentication", "User logged in successfully")
-  add("System Administrator", "Update", "School Settings", "Updated school contact information")
-  add("System Administrator", "Create", "Discount", "Created discount group: Staff Children (50%)")
-  add("System Administrator", "Create", "Discount", "Created discount group: Scholarship Recipients (100%)")
-  add("System Administrator", "Export", "Reports", "Exported payment history report to CSV")
-  add("System Administrator", "Update", "Student", `Updated ${students[0]?.firstName} ${students[0]?.lastName} grade level`)
-  add("System Administrator", "Logout", "Authentication", "User logged out")
+  // ── Dashboard & Analytics ──
+  add(finance, "Export Report", "Dashboard & Analytics", "Exported Excel")
+  advance(1)
+
+  // ── Payment History ──
+  add(finance, "Export Report", "Payment History", "Exported Excel")
+  advance(1)
+
+  // ── Email History ──
+  add(finance, "Export Report", "Email History", "Exported Excel")
+  advance(1)
+
+  // ── Discount Reports ──
+  add(finance, "Export Report", "Discount Reports", "Exported Excel")
+  advance(1)
+
+  // ── Credit Notes ──
+  add(finance, "Export Interface file", "Credit Notes", "Exported interface file")
+  advance(2)
+
+  // ── Activity Log ──
+  add(admin, "Export Log", "Activity Log", "Exported Excel")
+  advance(2)
+
+  // ── Login & Authentication (additional events) ──
+  add(admin, "Reset Password", "Login & Authentication", "Reset password")
+  add(viewer, "Force log out", "Login & Authentication", "Forcefully logged out due to a password reset")
+  add(finance, "Logout", "Login & Authentication", "Logged out")
+  add(admin, "Logout", "Login & Authentication", "Logged out")
 
   return logs.slice(-500).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 }
@@ -802,13 +954,15 @@ export function seedAllData() {
   try {
     // ── Force reseed v2: clear old mock data ─────────────────
     const RESEED_KEY = "seed_version"
-    const SEED_VER = "2.7"
+    const SEED_VER = "3.9"
     if (localStorage.getItem(RESEED_KEY) !== SEED_VER) {
       const keysToRemove = [
         "students_v1600","families_v1600","student_data_version_v3","academicYears","tuitionByYearData",
         "createdInvoices","paymentRecords","creditNotes","creditNotesRecords","invoiceEmailLogs","emailReminderHistory",
         "receiptRecords_tuition","receiptRecords_eca","receiptRecords_trip","receiptRecords_event","receiptRecords_summer","receiptRecords_external",
-        "studentGroups","discountOptions","scholarshipRecords","staffChildRecords","earlyBirdRecords","schoolBusRecords",
+        "studentGroups","studentGroups_afterschool","studentGroups_event","studentGroups_eca","studentGroups_trip","studentGroups_exam","studentGroups_bus","studentGroups_external","summerDiscountGroups",
+        "app:studentGroups_migrated_v2",
+        "discountOptions","scholarshipRecords","staffChildRecords","earlyBirdRecords","schoolBusRecords",
         "activityLogs","schoolSettings","clientList","kingscollege_backoffice_clientList",
         "invoiceItems","afterschoolItems","ecaItems","eventItems","tripItems","examItems","summerItems","busItems","externalItems",
         "bankAccounts","onlineBankAccounts","kingscollege_backoffice_bankAccounts",
@@ -874,7 +1028,7 @@ export function seedAllData() {
 
     // ── Invoices (all categories) ────────────────────────────
     // Version check: re-seed invoices when seed data structure changes
-    const INVOICE_SEED_VERSION = "2.8" // Bump when invoice seed data changes
+    const INVOICE_SEED_VERSION = "3.0" // Bump when invoice seed data changes
     const currentSeedVersion = localStorage.getItem("invoice_seed_version")
     if (currentSeedVersion !== INVOICE_SEED_VERSION) {
       localStorage.removeItem("createdInvoices")
@@ -886,6 +1040,11 @@ export function seedAllData() {
       localStorage.removeItem("creditNotes")
       localStorage.removeItem("creditNotesRecords")
       localStorage.removeItem("invoiceEmailLogs")
+      // Clear discount groups too so they stay in sync with invoice discounts
+      localStorage.removeItem("studentGroups")
+      localStorage.removeItem("scholarshipRecords")
+      localStorage.removeItem("staffChildRecords")
+      localStorage.removeItem("earlyBirdRecords")
       localStorage.setItem("invoice_seed_version", INVOICE_SEED_VERSION)
     }
     seedIfEmpty("createdInvoices", invoices)
@@ -909,9 +1068,22 @@ export function seedAllData() {
     // ── Discount Options & Groups (all categories) ───────────
     seedIfEmpty("discountOptions", generateDiscountOptions())
     seedIfEmpty("studentGroups", generateStudentGroups(students))
-    for (const cat of ["studentGroups_afterschool","studentGroups_event","studentGroups_eca","studentGroups_trip","studentGroups_exam","studentGroups_bus","studentGroups_external","summerDiscountGroups"]) {
-      seedIfEmpty(cat, [])
+    // Per-category discount groups (matches keys used by DiscountManagement)
+    const CATEGORY_DEPT_MAP: Record<string, { key: string; department: string }> = {
+      afterschool: { key: "studentGroups_afterschool", department: "After School" },
+      event:       { key: "studentGroups_event",       department: "Event" },
+      eca:         { key: "studentGroups_eca",         department: "ECA" },
+      trip:        { key: "studentGroups_trip",        department: "Trip & Activity" },
+      exam:        { key: "studentGroups_exam",        department: "Exam" },
+      bus:         { key: "studentGroups_bus",         department: "School Bus" },
     }
+    for (const [cat, { key, department }] of Object.entries(CATEGORY_DEPT_MAP)) {
+      seedIfEmpty(key, generateCategoryDiscountGroups(students, cat, department))
+    }
+    // External stays empty — user explicitly excluded it
+    seedIfEmpty("studentGroups_external", [])
+    // Summer programme uses a different shape & storage key
+    seedIfEmpty("summerDiscountGroups", generateSummerDiscountGroups(students))
 
     // ── Scholarship / Staff / Early Bird / Bus records ───────
     seedIfEmpty("scholarshipRecords", discountRecords.scholarship)

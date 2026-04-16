@@ -26,6 +26,7 @@ import {
 import { toast } from "@/components/ui/sonner"
 import { logActivity } from "@/lib/activityLog"
 import { getSortedYearGroups } from "@/utils/gradeLevels"
+import { syncInvoiceDiscounts } from "@/utils/discountSync"
 
 interface Student {
   id: string
@@ -177,6 +178,7 @@ export function TuitionDiscountGroups() {
       )
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
+      syncInvoiceDiscounts(STORAGE_KEY, "tuition")
       toast.success("Student group updated successfully")
       logActivity({
         action: "Update Group",
@@ -200,6 +202,7 @@ export function TuitionDiscountGroups() {
       const updatedGroups = [...groups, newGroup]
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
+      syncInvoiceDiscounts(STORAGE_KEY, "tuition")
       toast.success("Student group created successfully")
       logActivity({
         action: "Create Group",
@@ -242,6 +245,7 @@ export function TuitionDiscountGroups() {
       const updatedGroups = groups.filter(g => g.id !== groupToDelete)
       setGroups(updatedGroups)
       saveGroupsToStorage(updatedGroups)
+      syncInvoiceDiscounts(STORAGE_KEY, "tuition")
       const deletedGroup = groups.find(g => g.id === groupToDelete)
       toast.success("Student group deleted successfully")
       logActivity({ action: "Delete Group", module: "Student Groups", detail: `Deleted group "${deletedGroup?.name || groupToDelete}"` })

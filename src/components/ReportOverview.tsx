@@ -385,19 +385,28 @@ export function ReportOverview() {
                   <Pie
                     data={pieChartData}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
+                    cy="42%"
+                    innerRadius={50}
+                    outerRadius={85}
                     paddingAngle={3}
                     dataKey="value"
-                    label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                     {pieChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
-                  <Legend />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value: string) => {
+                      const total = pieChartData.reduce((s, d) => s + d.value, 0)
+                      const item = pieChartData.find(d => d.name === value)
+                      const pct = item && total > 0 ? ((item.value / total) * 100).toFixed(0) : "0"
+                      return <span className="text-xs text-gray-700">{value} <span className="font-semibold">{pct}%</span></span>
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (

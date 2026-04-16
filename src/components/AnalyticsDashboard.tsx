@@ -443,18 +443,18 @@ export function AnalyticsDashboard() {
       {/* ── Tabs ── */}
       <div className="bg-background rounded-2xl border shadow-sm overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="border-b px-4 pt-4">
-            <TabsList className="w-full h-auto flex flex-wrap bg-muted/50 rounded-xl p-1 gap-1">
-              <TabsTrigger value="revenue"   className="flex-1 rounded-lg text-xs py-2 min-w-[120px]">Revenue Comparison</TabsTrigger>
-              <TabsTrigger value="avg"       className="flex-1 rounded-lg text-xs py-2 min-w-[120px]">AVG Amount</TabsTrigger>
-              <TabsTrigger value="methods"   className="flex-1 rounded-lg text-xs py-2 min-w-[120px]">No. of Transactions</TabsTrigger>
-              <TabsTrigger value="status"    className="flex-1 rounded-lg text-xs py-2 min-w-[130px]">Declined vs Successful</TabsTrigger>
-              <TabsTrigger value="fees"      className="flex-1 rounded-lg text-xs py-2 min-w-[100px]">Bank Fees</TabsTrigger>
-              <TabsTrigger value="waterfall" className="flex-1 rounded-lg text-xs py-2 min-w-[130px]">Net vs Gross Revenue</TabsTrigger>
+          <div className="border-b px-6 pt-5 pb-0">
+            <TabsList className="w-full h-auto flex flex-wrap bg-muted/50 rounded-xl p-1 gap-1 mb-5">
+              <TabsTrigger value="revenue"   className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[120px]">Revenue Comparison</TabsTrigger>
+              <TabsTrigger value="avg"       className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[120px]">AVG Amount</TabsTrigger>
+              <TabsTrigger value="methods"   className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[120px]">No. of Transactions</TabsTrigger>
+              <TabsTrigger value="status"    className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[130px]">Declined vs Successful</TabsTrigger>
+              <TabsTrigger value="fees"      className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[100px]">Bank Fees</TabsTrigger>
+              <TabsTrigger value="waterfall" className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[130px]">Net vs Gross Revenue</TabsTrigger>
             </TabsList>
           </div>
 
-          <div className="p-5 space-y-5">
+          <div className="p-6 space-y-5">
 
             {/* ════════════════════════════════════════════════════════════════
                 TAB 1 — Revenue Comparison YoY / ToT

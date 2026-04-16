@@ -3252,26 +3252,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Create/Edit Item Modal */}
       <Dialog open={isCreateItemModalOpen} onOpenChange={closeItemModal}>
-        <DialogContent style={{ maxWidth: 750, width: '95vw' }} className="p-6">
-          <DialogHeader>
+        <DialogContent style={{ maxWidth: 750, width: '95vw' }} className="p-4 gap-2">
+          <DialogHeader className="space-y-1">
             <DialogTitle>{editingItem ? t("item.editItem") : t("item.createNewItem")}</DialogTitle>
             <DialogDescription>
               {editingItem ? t("item.editItemDesc") : t("item.createNewItemDesc")}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="font-medium">No. *</label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">No. *</label>
                 <Input
                   placeholder="ECA3DPENKS101"
                   value={newItem.itemCode}
                   onChange={(e) => setNewItem({ ...newItem, itemCode: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="font-medium">Gen. Prod. Posting Group</label>
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">Gen. Prod. Posting Group</label>
                 <Input
                   placeholder="213-0002"
                   value={newItem.nominalCode}
@@ -3280,32 +3280,33 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="font-medium">Description *</label>
-              <Input
-                placeholder="Block 1 3D Pen Toy Character material fee"
-                value={newItem.name}
-                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="font-medium">Price *</label>
-              <Input
-                type="number"
-                placeholder="50000"
-                value={newItem.amount}
-                onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
-              />
-              {newItem.amount && !isNaN(parseFloat(newItem.amount)) && (
-                <p className="text-sm text-muted-foreground">
-                  {t("item.amountLabel")}: {formatCurrency(parseFloat(newItem.amount))}
-                </p>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_200px] gap-3">
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">Description *</label>
+                <Input
+                  placeholder="Block 1 3D Pen Toy Character material fee"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">Price *</label>
+                <Input
+                  type="number"
+                  placeholder="50000"
+                  value={newItem.amount}
+                  onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
+                />
+                {newItem.amount && !isNaN(parseFloat(newItem.amount)) && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(parseFloat(newItem.amount))}
+                  </p>
+                )}
+              </div>
             </div>
 
             {editingItem && (
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-2.5">
                 <div>
                   <label className="font-medium text-sm">{t("table.status")}</label>
                   <p className="text-xs text-muted-foreground">
@@ -3320,7 +3321,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
             )}
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-2">
               <Button onClick={handleSaveItem} className="flex-1">
                 {editingItem ? t("item.updateItem") : t("item.createItem")}
               </Button>
@@ -3334,26 +3335,26 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Create/Edit Template Modal */}
       <Dialog open={isCreateTemplateModalOpen} onOpenChange={closeTemplateModal}>
-        <DialogContent className="max-w-[750px] w-[95vw] p-6">
-          <DialogHeader>
+        <DialogContent className="max-w-[750px] w-[95vw] p-4 gap-2">
+          <DialogHeader className="space-y-1">
             <DialogTitle>{editingTemplate ? t("item.editTemplate") : t("item.createNewTemplate")}</DialogTitle>
             <DialogDescription>
               {editingTemplate ? t("item.editTemplateDesc") : t("item.createNewTemplateDesc")}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="font-medium">{t("item.templateNameRequired")}</label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">{t("item.templateNameRequired")}</label>
                 <Input
                   placeholder="Year 1 Essential"
                   value={newTemplate.name}
                   onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="font-medium">{t("item.description")}</label>
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">{t("item.description")}</label>
                 <Input
                   placeholder="Essential items for Year 1 students"
                   value={newTemplate.description}
@@ -3364,8 +3365,8 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
             {/* Hide Applicable Grades for External and Exam templates (not grade-specific) */}
             {invoiceType !== "external" && invoiceType !== "exam" && (
-              <div className="space-y-2">
-                <label className="font-medium">{t("item.applicableGrades") || "Applicable Grades"}</label>
+              <div className="space-y-1.5">
+                <label className="font-medium text-sm">{t("item.applicableGrades") || "Applicable Grades"}</label>
                 <div className="flex flex-wrap gap-2">
                   {grades.map((grade) => (
                     <Badge
@@ -3386,11 +3387,11 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="font-medium">{t("item.selectItemsRequired")}</label>
+            <div className="space-y-1.5">
+              <label className="font-medium text-sm">{t("item.selectItemsRequired")}</label>
 
               {/* Search Items Input */}
-              <div className="relative mb-2">
+              <div className="relative mb-1.5">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t("item.searchItems")}
@@ -3400,7 +3401,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                 />
               </div>
 
-              <div className="border rounded-lg max-h-64 overflow-y-auto">
+              <div className="border rounded-lg max-h-44 overflow-y-auto">
                 {items
                   .filter(item =>
                     item.name.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
@@ -3410,7 +3411,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
                   .map(item => (
                     <div
                       key={item.id}
-                      className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${selectedItemsForTemplate.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
+                      className={`p-2 border-b last:border-b-0 cursor-pointer transition-colors ${selectedItemsForTemplate.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
                         }`}
                       onClick={() => handleToggleItemForTemplate(item.id)}
                     >
@@ -3453,7 +3454,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
               )}
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-2">
               <Button onClick={handleSaveTemplate} className="flex-1">
                 {editingTemplate ? t("item.updateTemplate") : t("item.createTemplate")}
               </Button>
@@ -3655,14 +3656,14 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
       {/* Usage Detail Popup */}
       <Dialog open={!!usageDialogItem} onOpenChange={(open) => { if (!open) setUsageDialogItem(null) }}>
-        <DialogContent style={{ maxWidth: "540px" }} className="p-6">
-          <DialogHeader>
+        <DialogContent style={{ maxWidth: "540px", maxHeight: "75vh" }} className="p-4 gap-2 flex flex-col overflow-hidden">
+          <DialogHeader className="space-y-1">
             <DialogTitle>{t("item.itemUsageDetail")}</DialogTitle>
           </DialogHeader>
 
           {/* Item info summary */}
           {usageDialogItem && (
-            <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1 text-sm">
+            <div className="rounded-lg border bg-muted/30 px-3 py-2 space-y-0.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("item.codeLabel")}</span>
                 <span className="font-mono font-medium">{usageDialogItem.itemCode}</span>
@@ -3688,7 +3689,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
 
 
           {/* Filter tabs */}
-          <div className="flex gap-2 border-b pb-2">
+          <div className="flex gap-2 border-b pb-1.5">
             <button
               onClick={() => setUsageDialogFilter("all")}
               className={`text-sm px-3 py-1 rounded-md font-medium transition-colors ${usageDialogFilter === "all" ? "bg-blue-100 text-blue-700" : "text-muted-foreground hover:text-foreground"}`}
@@ -3703,7 +3704,7 @@ export function ItemManagement({ onNavigateToSubPage, onNavigateToView, invoiceT
             </button>
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {usageDialogItem && (() => {
               const invoices = getItemUsageData(usageDialogItem)
               const filtered = usageDialogFilter === "paid" ? invoices.filter(inv => inv.status === "paid") : invoices

@@ -65,6 +65,7 @@ interface Receipt {
   amount: number // received amount
   appliedCNAmount?: number
   appliedCNNumbers?: string[]
+  appliedCNDates?: Date[]
   overpaymentAmount?: number
   outstandingAmount: number
   paymentMethod: string
@@ -156,6 +157,10 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
     const invoicesStored = localStorage.getItem("createdInvoices")
     const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
 
+    // Load credit notes for date fallback (old receipts without issueDate)
+    const cnStored = localStorage.getItem("creditNotesRecords") || localStorage.getItem("creditNotes")
+    const allCreditNotes: any[] = cnStored ? JSON.parse(cnStored) : []
+
     const records = JSON.parse(stored)
     return records.map((r: any) => {
       // Read direct fields first, then fallback to parsing schoolYear
@@ -196,10 +201,70 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         contactName: parentName,
         address: address,
         invoiceDate: r.invoices?.[0]?.invoiceDate ? new Date(r.invoices[0].invoiceDate) : new Date(r.createdAt),
-        invoiceAmount: r.invoices?.[0]?.invoiceAmount || r.amount || r.totalAmount,
-        amount: r.netPayable !== undefined ? r.netPayable : (r.totalAmount !== undefined ? r.totalAmount : r.amount),
+        invoiceAmount: r.invoices?.[0]?.invoiceAmount ?? r.amount ?? r.totalAmount ?? 0,
+        amount: r.receivedAmount ?? r.invoices?.[0]?.receivedAmount ?? r.totalAmount ?? r.netPayableAmount ?? r.amount ?? 0,
         appliedCNAmount: r.creditNoteTotal || r.invoices?.[0]?.appliedCNAmount || 0,
-        appliedCNNumbers: r.appliedCreditNotes?.map((cn: any) => cn.creditNoteNumber) || r.invoices?.[0]?.appliedCreditNotes || [],
+        appliedCNNumbers: (() => {
+          // Try stored appliedCreditNotes first
+          const fromStored = r.appliedCreditNotes?.map((cn: any) => cn.creditNoteNumber).filter(Boolean)
+          if (fromStored?.length) return fromStored
+          const fromInvoice = r.invoices?.[0]?.appliedCreditNotes
+          if (Array.isArray(fromInvoice) && fromInvoice.length) return fromInvoice
+          // Fallback: look up CN from localStorage by invoiceNumber or studentId
+          if (r.creditNoteTotal > 0 && allCreditNotes.length > 0) {
+            const invNo = (r.invoices?.[0]?.invoiceNo || "").trim()
+            const studentId = matchingInvoice?.studentId || r.clientNo || ""
+            const matched = allCreditNotes.find((c: any) =>
+              (invNo && c.invoiceNumber === invNo) ||
+              (studentId && c.studentId === studentId)
+            )
+            if (matched?.creditNoteNumber) return [matched.creditNoteNumber]
+          }
+          return []
+        })(),
+        appliedCNDates: (() => {
+          // Try to get dates from stored appliedCreditNotes
+          const dates: Date[] = (r.appliedCreditNotes?.map((cn: any) => {
+            if (cn.issueDate) {
+              const d = new Date(cn.issueDate)
+              if (!isNaN(d.getTime())) return d
+            }
+            const found = allCreditNotes.find((c: any) => c.creditNoteNumber === cn.creditNoteNumber)
+            if (found?.issueDate) {
+              const d = new Date(found.issueDate)
+              if (!isNaN(d.getTime())) return d
+            }
+            return null
+          }).filter(Boolean) || []) as Date[]
+          // Fallback: look up CN from localStorage by creditNoteNumber, invoiceNumber, or studentId
+          if (dates.length === 0 && r.creditNoteTotal > 0 && allCreditNotes.length > 0) {
+            // Try by CN numbers first (most reliable)
+            const cnNums = r.appliedCreditNotes?.map((cn: any) => cn.creditNoteNumber).filter(Boolean) || []
+            const fromInvoice = r.invoices?.[0]?.appliedCreditNotes
+            if (Array.isArray(fromInvoice)) cnNums.push(...fromInvoice)
+            for (const cnNum of cnNums) {
+              const matched = allCreditNotes.find((c: any) => c.creditNoteNumber === cnNum)
+              if (matched?.issueDate) {
+                const d = new Date(matched.issueDate)
+                if (!isNaN(d.getTime())) { dates.push(d); break }
+              }
+            }
+            // Then by invoiceNumber or studentId
+            if (dates.length === 0) {
+              const invNo = (r.invoices?.[0]?.invoiceNo || "").trim()
+              const studentId = matchingInvoice?.studentId || r.clientNo || ""
+              const matched = allCreditNotes.find((c: any) =>
+                (invNo && c.invoiceNumber === invNo) ||
+                (studentId && c.studentId === studentId)
+              )
+              if (matched?.issueDate) {
+                const d = new Date(matched.issueDate)
+                if (!isNaN(d.getTime())) dates.push(d)
+              }
+            }
+          }
+          return dates
+        })(),
         outstandingAmount: r.invoices?.[0]?.outstandingAmount || 0,
         overpaymentAmount: r.overpaymentAmount || 0,
         paymentMethod: normalizePaymentMethod(r.paymentMethod || "N/A"),
@@ -683,24 +748,46 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
   }
 
-  const buildReceiptHtml = (receipt: Receipt): string => {
+  const buildReceiptHtml = (receipt: Receipt, allCreditNotes?: CreditNote[]): string => {
     const fmtNum = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     const fmtDate = (d: Date) => format(d, "dd MMMM yyyy")
     const receivedAmount = receipt.amount
+    const invoiceAmount = receipt.invoiceAmount || receivedAmount
     const cnAmount = receipt.appliedCNAmount || 0
     const hasCN = cnAmount > 0
-    const netAmount = receivedAmount - cnAmount
-    const overpayment = (receipt as any).overpaymentAmount || (hasCN ? Math.max(0, netAmount - (receipt.invoiceAmount || receivedAmount)) : 0)
-    const totalDisplay = overpayment > 0 ? receivedAmount : netAmount
+    const overpayment = receipt.overpaymentAmount || (invoiceAmount > 0 ? Math.max(0, receivedAmount - Math.max(0, invoiceAmount - cnAmount)) : 0)
+    const totalDisplay = invoiceAmount - cnAmount + overpayment
+
+    // Look up matching CN from state when receipt doesn't store CN details
+    const matchedCN = hasCN && allCreditNotes ? (() => {
+      // Try by CN number first
+      const cnNum = receipt.appliedCNNumbers?.[0]
+      if (cnNum) {
+        const found = allCreditNotes.find(c => c.creditNoteNumber === cnNum)
+        if (found) return found
+      }
+      // Fallback: match by invoiceNumber or studentId
+      return allCreditNotes.find(c =>
+        (receipt.invoiceNumber && c.invoiceNumber === receipt.invoiceNumber) ||
+        (receipt.studentId && c.studentId === receipt.studentId && c.amount === cnAmount)
+      ) || null
+    })() : null
+
+    const cnDisplayNumber = receipt.appliedCNNumbers?.length ? receipt.appliedCNNumbers.join(', ') : (matchedCN?.creditNoteNumber || 'Credit Note')
+    const cnDisplayDate = (() => {
+      if (receipt.appliedCNDates?.[0]) return fmtDate(receipt.appliedCNDates[0])
+      if (matchedCN?.issueDate) return fmtDate(matchedCN.issueDate)
+      return '-'
+    })()
 
     const cnRow = hasCN ? `<tr>
       <td style="border-right:1px solid black;padding:8px 10px;text-align:center">2</td>
-      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.appliedCNNumbers?.join(', ') || 'Credit Note'}</td>
-      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">-</td>
+      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${cnDisplayNumber}</td>
+      <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${cnDisplayDate}</td>
       <td style="padding:8px 10px;text-align:right">(${fmtNum(cnAmount)})</td>
     </tr>` : ''
 
-    const emptyRows = Array.from({ length: hasCN ? 4 : 5 }).map(() =>
+    const emptyRows = Array.from({ length: hasCN ? 5 : 6 }).map(() =>
       `<tr style="height:28px"><td style="border-right:1px solid black;padding:8px 10px"></td><td style="border-right:1px solid black;padding:8px 10px"></td><td style="border-right:1px solid black;padding:8px 10px"></td><td style="padding:8px 10px"></td></tr>`
     ).join('')
 
@@ -715,8 +802,6 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         <img src="${schoolSettings?.logoUrl || SchoolLogo}" style="height:110px;margin-bottom:-12px;display:block;margin-left:auto;margin-right:auto" crossorigin="anonymous" onerror="this.onerror=null;this.src='${SchoolLogo}';" />
         <div style="font-size:16px;font-weight:bold;letter-spacing:3px;margin-bottom:2px">KING'S COLLEGE INTERNATIONAL SCHOOL</div>
         <div style="font-size:11px;letter-spacing:4px;margin-bottom:6px">BANGKOK</div>
-        <div style="font-size:10px">${SCHOOL_INFO.address}</div>
-        <div style="font-size:10px">${SCHOOL_INFO.phone}, ${SCHOOL_INFO.email}, ${SCHOOL_INFO.website}</div>
       </div>
 
       <!-- RECEIPT Title -->
@@ -769,7 +854,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             <td style="border-right:1px solid black;padding:8px 10px;text-align:center">1</td>
             <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${receipt.invoiceNumber}</td>
             <td style="border-right:1px solid black;padding:8px 10px;text-align:center">${fmtDate(receipt.invoiceDate)}</td>
-            <td style="padding:8px 10px;text-align:right">${fmtNum(receivedAmount)}</td>
+            <td style="padding:8px 10px;text-align:right">${fmtNum(invoiceAmount)}</td>
           </tr>
           ${cnRow}
           ${emptyRows}
@@ -851,7 +936,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
       if (!iframeDoc) throw new Error("Cannot access iframe document")
       iframeDoc.open()
-      iframeDoc.write(`<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{background:white}</style></head><body>${buildReceiptHtml(receipt)}</body></html>`)
+      iframeDoc.write(`<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{background:white}</style></head><body>${buildReceiptHtml(receipt, creditNotes)}</body></html>`)
       iframeDoc.close()
 
       const container = iframeDoc.body
@@ -1198,7 +1283,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   // ===== Credit Note Functions =====
   // Reactive filtering for credit notes - runs whenever filter state changes
   useEffect(() => {
-    if (activeTab !== "creditNotes") return
+    if (activeTab !== "credit-notes") return
 
     let filtered = creditNotes
 
@@ -1696,11 +1781,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         )}
 
         {/* Receipts Tab */}
-        <TabsContent value="receipts" className="space-y-6 mt-6">
+        <TabsContent value="receipts" className="space-y-6 mt-0">
           {/* Filters */}
           <Card>
             <CardContent className="pt-6 pb-4 space-y-4">
-              {/* Search bar + Filters toggle - always visible */}
+              {/* Filters toggle - always visible */}
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -2076,245 +2161,265 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
             </CardContent>
           </Card>
 
-          {/* View Receipt Dialog - Official Receipt Template */}
+          {/* View Receipt Dialog - Invoice Style */}
           <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent className="max-h-[95vh] overflow-y-auto p-0" style={{ width: "700px", maxWidth: "90vw", padding: 0, gap: 0, maxHeight: "95vh" }}>
+            <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] p-0 flex flex-col">
               <DialogHeader className="sr-only">
                 <DialogTitle>Receipt Details</DialogTitle>
               </DialogHeader>
               {viewingReceipt && (
-                <div className="bg-white">
-                  {/* Receipt Document - A4 style */}
-                  <div id="receipt-print-area" style={{ fontFamily: "'Times New Roman', serif", fontSize: '13px', lineHeight: '1.5', padding: '13px 36px', background: 'white', color: 'black' }}>
-                    {/* School Header */}
-                    <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                      <img src={schoolSettings?.logoUrl || SchoolLogo} alt="King's College International School" crossorigin="anonymous" style={{ height: '110px', marginBottom: '-12px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = SchoolLogo; }} />
-                      <div style={{ fontSize: '16px', fontWeight: 'bold', letterSpacing: '3px', marginBottom: '2px' }}>KING'S COLLEGE INTERNATIONAL SCHOOL</div>
-                      <div style={{ fontSize: '11px', letterSpacing: '4px', marginBottom: '6px' }}>BANGKOK</div>
-                      <div style={{ fontSize: '10px' }}>{SCHOOL_INFO.address}</div>
-                      <div style={{ fontSize: '10px' }}>{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</div>
-                    </div>
+                <div className="flex flex-col h-full">
+                  {/* Scrollable Content */}
+                  <div className="flex-1 overflow-y-auto p-6 bg-white">
+                    <div id="receipt-modal-content" className="bg-white mx-auto" style={{ fontFamily: 'Arial, sans-serif', maxWidth: '794px' }}>
+                      {/* School Header */}
+                      <div className="text-center pt-6 pb-4 border-b">
+                        <img
+                          src={schoolSettings?.logoUrl || SchoolLogo}
+                          alt="King's College International School"
+                          style={{ height: '120px', margin: '0 auto 12px auto', display: 'block' }}
+                          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = SchoolLogo; }}
+                        />
+                        <h2 className="text-sm font-semibold tracking-wide text-gray-800">{(schoolSettings?.schoolName || SCHOOL_INFO.name || "King's College International School Bangkok").toUpperCase()}</h2>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {SCHOOL_INFO.address}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}
+                        </p>
+                      </div>
 
-                    {/* RECEIPT Title */}
-                    <h1 style={{ textAlign: 'center', fontSize: '32px', fontWeight: 'bold', margin: '28px 0', letterSpacing: '3px' }}>RECEIPT</h1>
+                      {/* Receipt Title */}
+                      <div className="text-center py-4">
+                        <h1 className="text-7xl font-bold tracking-wider">RECEIPT</h1>
+                        <Badge variant="outline" className="mt-2">
+                          <Eye className="w-3 h-3 mr-1" />
+                          View Only
+                        </Badge>
+                      </div>
 
-                    {/* Client/Student & Receipt Info */}
-                    <table style={{ width: '100%', border: '1px solid black', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '13px' }}>
-                      <tbody>
-                        <tr>
-                          <td style={{ padding: '6px 12px', width: '110px', verticalAlign: 'top' }}>{category === "external" ? "Client ID no." : "Student ID no."}</td>
-                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.studentId}</td>
-                          <td style={{ padding: '6px 12px', width: '90px', textAlign: 'left', verticalAlign: 'top' }}>Receipt no.</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'right', width: '140px', verticalAlign: 'top' }}>{viewingReceipt.receiptNumber}</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: '6px 12px', verticalAlign: 'top' }}>{category === "external" ? "Client name" : "Student name"}</td>
-                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.studentName}</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'left', verticalAlign: 'top' }}>Receipt date</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'right', verticalAlign: 'top' }}>{format(viewingReceipt.transactionDate, "dd MMMM yyyy")}</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: '6px 12px', verticalAlign: 'top' }}>Contact name</td>
-                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.contactName}</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'left', verticalAlign: 'top' }}>{category === "external" ? "" : "Year group"}</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'right', verticalAlign: 'top' }}>{category === "external" ? "" : viewingReceipt.studentGrade}</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: '6px 12px', verticalAlign: 'top' }}>Address</td>
-                          <td style={{ padding: '6px 4px', verticalAlign: 'top' }}>{viewingReceipt.address}</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'left', verticalAlign: 'top' }}>{category === "external" ? "" : "School year"}</td>
-                          <td style={{ padding: '6px 12px', textAlign: 'right', verticalAlign: 'top' }}>{category === "external" ? "" : formatAcademicYear(viewingReceipt.academicYear)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    {/* Document Table */}
-                    {(() => {
-                      const receivedAmount = viewingReceipt.amount
-                      const cnAmount = viewingReceipt.appliedCNAmount || 0
-                      const hasCN = cnAmount > 0
-                      const netAmount = receivedAmount - cnAmount
-                      const overpayment = viewingReceipt.overpaymentAmount || (hasCN ? Math.max(0, netAmount - (viewingReceipt.invoiceAmount || receivedAmount)) : 0)
-                      const totalDisplay = overpayment > 0 ? receivedAmount : netAmount
-                      const fmtNum = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      return (
-                        <>
-                          {/* Combined Document + Overpayment + Total Table for aligned column dividers */}
-                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '13px', tableLayout: 'fixed', marginBottom: '24px' }}>
-                            <colgroup>
-                              <col style={{ width: '50px' }} />
-                              <col style={{ width: '180px' }} />
-                              <col style={{ width: '180px' }} />
-                              <col />
-                            </colgroup>
-                            <thead>
-                              <tr style={{ borderBottom: '1px solid black' }}>
-                                <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>No.</th>
-                                <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Document no.</th>
-                                <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Issue date</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Received amount (THB)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>1</td>
-                                <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.invoiceNumber}</td>
-                                <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{format(viewingReceipt.invoiceDate, "dd MMMM yyyy")}</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmtNum(receivedAmount)}</td>
-                              </tr>
-                              {hasCN && (
-                                <tr>
-                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>2</td>
-                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.appliedCNNumbers && viewingReceipt.appliedCNNumbers.length > 0 ? viewingReceipt.appliedCNNumbers.join(', ') : 'Credit Note'}</td>
-                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>-</td>
-                                  <td style={{ padding: '8px 10px', textAlign: 'right' }}>({fmtNum(cnAmount)})</td>
-                                </tr>
-                              )}
-                              {Array.from({ length: hasCN ? 4 : 5 }).map((_, i) => (
-                                <tr key={i} style={{ height: '28px' }}>
-                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px' }}></td>
-                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px' }}></td>
-                                  <td style={{ borderRight: '1px solid black', padding: '8px 10px' }}></td>
-                                  <td style={{ padding: '8px 10px' }}></td>
-                                </tr>
-                              ))}
-                              {overpayment > 0 && (
-                                <tr>
-                                  <td colSpan={3} style={{ borderRight: '1px solid black', borderTop: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Overpayment amount</td>
-                                  <td style={{ borderTop: '1px solid black', padding: '8px 10px', textAlign: 'right' }}>{fmtNum(overpayment)}</td>
-                                </tr>
-                              )}
-                              <tr>
-                                <td colSpan={2} style={{ borderTop: '1px solid black', padding: '8px 10px', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '12px' }}>{numberToWords(totalDisplay)}</td>
-                                <td style={{ borderRight: '1px solid black', borderTop: '1px solid black', padding: '8px 12px', fontWeight: 'bold', textAlign: 'center' }}>TOTAL</td>
-                                <td style={{ borderTop: '1px solid black', padding: '8px 10px', fontWeight: 'bold', textAlign: 'right' }}>{fmtNum(totalDisplay)}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </>
-                      )
-                    })()}
-
-                    {/* Payment Method Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '13px', marginBottom: '20px' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid black' }}>
-                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Payment method</th>
-                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Bank name</th>
-                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Bank branch</th>
-                          <th style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>Cheque no.</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'center' }}>Cheque date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.paymentMethod}</td>
-                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.bankName || '-'}</td>
-                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.bankBranch || '-'}</td>
-                          <td style={{ borderRight: '1px solid black', padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.chequeNo || '-'}</td>
-                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>{viewingReceipt.chequeDate ? format(viewingReceipt.chequeDate, "dd/MM/yyyy") : '-'}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    {/* Notes */}
-                    <div style={{ fontSize: '11px', marginBottom: '20px' }}>
-                      <p style={{ marginBottom: '4px' }}>In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.</p>
-                      <p>Please note that any overpayment amount is non-refundable and will be credited against future school fee invoices.</p>
-                    </div>
-
-                    {/* Signature Section */}
-                    <table style={{ width: '100%', marginTop: '24px', fontSize: '13px' }}>
-                      <tbody><tr>
-                        <td style={{ textAlign: 'center', width: '50%', verticalAlign: 'bottom', padding: '0 24px' }}>
-                          <div style={{ marginBottom: '40px' }}>{viewingReceipt.collectorName || 'System'}</div>
-                          <div style={{ borderTop: '1px solid black', paddingTop: '8px' }}>
-                            <div style={{ fontWeight: 'bold' }}>Collector</div>
+                      {/* Student & Receipt Info */}
+                      <div className="px-8 py-6">
+                        <div className="grid grid-cols-2 divide-x divide-gray-300">
+                          {/* Left Column - Student Info */}
+                          <div className="p-6 pr-8">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                              {category === "external" ? "Client Information" : "Student Information"}
+                            </h3>
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">{category === "external" ? "Client ID" : "Student ID"}</span>
+                                <span className="text-sm font-medium text-gray-800">{viewingReceipt.studentId}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">{category === "external" ? "Client Name" : "Student Name"}</span>
+                                <span className="text-sm font-medium text-gray-800">{viewingReceipt.studentName}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Contact Name</span>
+                                <span className="text-sm font-medium text-gray-800">{viewingReceipt.contactName}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Address</span>
+                                <span className="text-sm font-medium text-gray-800">{viewingReceipt.address}</span>
+                              </div>
+                            </div>
                           </div>
-                        </td>
-                        <td style={{ textAlign: 'center', width: '50%', verticalAlign: 'bottom', padding: '0 24px' }}>
-                          <div style={{ marginBottom: '40px' }}></div>
-                          <div style={{ borderTop: '1px solid black', paddingTop: '8px' }}>
-                            <div style={{ fontWeight: 'bold' }}>Authorised signature</div>
-                            <div style={{ fontSize: '11px' }}>Head of Finance and Accounting</div>
+                          {/* Right Column - Receipt Info */}
+                          <div className="p-6 pl-8">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Receipt Details</h3>
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Receipt No.</span>
+                                <span className="text-sm font-medium text-gray-800">{viewingReceipt.receiptNumber}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Receipt Date</span>
+                                <span className="text-sm font-medium text-gray-800">{format(viewingReceipt.transactionDate, "dd MMMM yyyy")}</span>
+                              </div>
+                              {category !== "external" && (
+                                <>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-500">Year Group</span>
+                                    <span className="text-sm font-medium text-gray-800">{viewingReceipt.studentGrade}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-500">School Year</span>
+                                    <span className="text-sm font-medium text-gray-800">{formatAcademicYear(viewingReceipt.academicYear)}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </td>
-                      </tr></tbody>
-                    </table>
+                        </div>
+                      </div>
 
-                    {/* Footer */}
-                    <div style={{ textAlign: 'center', fontSize: '9px', marginTop: '32px', borderTop: '1px solid #999', paddingTop: '8px' }}>
-                      <p>{SCHOOL_INFO.address}</p>
-                      <p>{SCHOOL_INFO.phone}, {SCHOOL_INFO.email}, {SCHOOL_INFO.website}</p>
+                      {/* Document Table */}
+                      {(() => {
+                        const receivedAmount = viewingReceipt.amount
+                        const invoiceAmount = viewingReceipt.invoiceAmount || receivedAmount
+                        const cnAmount = viewingReceipt.appliedCNAmount || 0
+                        const hasCN = cnAmount > 0
+                        const overpayment = viewingReceipt.overpaymentAmount || (invoiceAmount > 0 ? Math.max(0, receivedAmount - Math.max(0, invoiceAmount - cnAmount)) : 0)
+                        const totalDisplay = invoiceAmount - cnAmount + overpayment
+
+                        const matchedCN = hasCN ? (() => {
+                          const cnNum = viewingReceipt.appliedCNNumbers?.[0]
+                          if (cnNum) {
+                            const found = creditNotes.find(c => c.creditNoteNumber === cnNum)
+                            if (found) return found
+                          }
+                          return creditNotes.find(c =>
+                            (viewingReceipt.invoiceNumber && c.invoiceNumber === viewingReceipt.invoiceNumber) ||
+                            (viewingReceipt.studentId && c.studentId === viewingReceipt.studentId && c.amount === cnAmount)
+                          ) || null
+                        })() : null
+                        const fmtNum = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        return (
+                          <div className="px-8 pb-6">
+                            <div className="border rounded-lg overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="bg-gray-50 border-b">
+                                    <th className="py-3 px-4 text-left font-semibold w-12">No.</th>
+                                    <th className="py-3 px-4 text-left font-semibold">Document no.</th>
+                                    <th className="py-3 px-4 text-left font-semibold">Issue date</th>
+                                    <th className="py-3 px-4 text-right font-semibold w-40">Received amount (THB)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-b last:border-b-0">
+                                    <td className="py-3 px-4">1</td>
+                                    <td className="py-3 px-4">{viewingReceipt.invoiceNumber}</td>
+                                    <td className="py-3 px-4">{format(viewingReceipt.invoiceDate, "dd MMMM yyyy")}</td>
+                                    <td className="py-3 px-4 text-right">{fmtNum(invoiceAmount)}</td>
+                                  </tr>
+                                  {hasCN && (
+                                    <tr className="border-b last:border-b-0">
+                                      <td className="py-3 px-4 text-red-500">2</td>
+                                      <td className="py-3 px-4 text-red-500">{viewingReceipt.appliedCNNumbers && viewingReceipt.appliedCNNumbers.length > 0 ? viewingReceipt.appliedCNNumbers.join(', ') : (matchedCN?.creditNoteNumber || 'Credit Note')}</td>
+                                      <td className="py-3 px-4 text-red-500">{(() => {
+                                        if (viewingReceipt.appliedCNDates?.[0]) {
+                                          const d = new Date(viewingReceipt.appliedCNDates[0])
+                                          if (!isNaN(d.getTime())) return format(d, "dd MMMM yyyy")
+                                        }
+                                        if (matchedCN?.issueDate) {
+                                          const d = new Date(matchedCN.issueDate)
+                                          if (!isNaN(d.getTime())) return format(d, "dd MMMM yyyy")
+                                        }
+                                        // Fallback: use receipt transaction date
+                                        if (viewingReceipt.transactionDate) {
+                                          const d = new Date(viewingReceipt.transactionDate)
+                                          if (!isNaN(d.getTime())) return format(d, "dd MMMM yyyy")
+                                        }
+                                        return '-'
+                                      })()}</td>
+                                      <td className="py-3 px-4 text-right text-red-500">({fmtNum(cnAmount)})</td>
+                                    </tr>
+                                  )}
+                                  {overpayment > 0 && (
+                                    <tr className="border-b last:border-b-0">
+                                      <td colSpan={3} className="py-3 px-4 text-gray-600">Overpayment amount</td>
+                                      <td className="py-3 px-4 text-right">{fmtNum(overpayment)}</td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                              {/* Total Row */}
+                              <div className="border-t bg-gray-50 p-4">
+                                <div className="text-xs text-gray-500 mb-2">{numberToWords(totalDisplay)}</div>
+                                <div className="flex justify-between items-center font-bold text-base">
+                                  <span>TOTAL</span>
+                                  <span>{fmtNum(totalDisplay)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Payment Method */}
+                      <div className="px-8 pb-6">
+                        <p className="text-sm">
+                          <span className="font-medium text-gray-700">Payment method: </span>
+                          <span className="text-gray-500">
+                            {viewingReceipt.paymentMethod}
+                            {viewingReceipt.bankName && ` — ${viewingReceipt.bankName}`}
+                            {viewingReceipt.bankBranch && `, ${viewingReceipt.bankBranch}`}
+                            {viewingReceipt.chequeNo && ` — Cheque no. ${viewingReceipt.chequeNo}`}
+                            {viewingReceipt.chequeDate && ` (${format(viewingReceipt.chequeDate, "dd/MM/yyyy")})`}
+                          </span>
+                        </p>
+                      </div>
+
+                      {/* Notes */}
+                      <div className="px-8 pb-4" style={{ fontSize: '10px' }}>
+                        <p className="mb-1">In case of payment made by cheque, this receipt will not be valid until the cheque has been honoured by the bank.</p>
+                        <p>Please note that any overpayment amount is non-refundable and will be credited against future school fee invoices.</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Action Buttons - Outside print area */}
-                  <div className="flex gap-2 p-4 border-t bg-gray-50">
-                    <Button
-                      onClick={() => {
-                        // Print functionality
-                        const printContent = document.getElementById('receipt-print-area')
-                        if (printContent) {
-                          const printWindow = window.open('', '_blank')
-                          if (printWindow) {
-                            printWindow.document.write(`
-                          <html>
-                            <head>
-                              <title>Receipt - ${viewingReceipt.receiptNumber}</title>
-                              <style>
-                                body { font-family: 'Times New Roman', serif; font-size: 12px; line-height: 1.4; margin: 20px; }
-                                table { border-collapse: collapse; width: 100%; }
-                                th, td { border: 1px solid black; padding: 8px; }
-                                .text-center { text-align: center; }
-                                .text-right { text-align: right; }
-                                .text-left { text-align: left; }
-                                .font-bold { font-weight: bold; }
-                                .uppercase { text-transform: uppercase; }
-                                @media print { body { margin: 0; } }
-                              </style>
-                            </head>
-                            <body>${printContent.innerHTML}</body>
-                          </html>
-                        `)
-                            printWindow.document.close()
-                            printWindow.print()
+                  {/* Action Buttons - Sticky Footer */}
+                  <div className="flex items-center justify-end px-8 py-4 border-t bg-gray-50 shrink-0">
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                        {t("common.close")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          resendReceipt(viewingReceipt.id)
+                          setIsViewDialogOpen(false)
+                        }}
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        {t("receipt.resendEmail")}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const printContent = document.getElementById('receipt-modal-content')
+                          if (printContent) {
+                            const printWindow = window.open('', '_blank')
+                            if (printWindow) {
+                              printWindow.document.write(`
+                                <html>
+                                  <head>
+                                    <title>Receipt - ${viewingReceipt.receiptNumber}</title>
+                                    <style>
+                                      body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; margin: 20px; }
+                                      table { border-collapse: collapse; width: 100%; }
+                                      th, td { padding: 6px 8px; }
+                                      .text-center { text-align: center; }
+                                      .text-right { text-align: right; }
+                                      .font-bold { font-weight: bold; }
+                                      @media print { body { margin: 0; } }
+                                    </style>
+                                  </head>
+                                  <body>${printContent.innerHTML}</body>
+                                </html>
+                              `)
+                              printWindow.document.close()
+                              printWindow.print()
+                            }
                           }
-                        }
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <Printer className="w-4 h-4" />
-                      {t("receipt.print")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        await downloadReceipt(viewingReceipt.id)
-                        setIsViewDialogOpen(false)
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      {t("receipt.downloadPDF")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        resendReceipt(viewingReceipt.id)
-                        setIsViewDialogOpen(false)
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <Mail className="w-4 h-4" />
-                      {t("receipt.resendEmail")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsViewDialogOpen(false)}
-                    >
-                      {t("common.close")}
-                    </Button>
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Printer className="w-4 h-4 mr-2" />
+                        {t("receipt.print")}
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          await downloadReceipt(viewingReceipt.id)
+                          setIsViewDialogOpen(false)
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        {t("receipt.downloadPDF")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

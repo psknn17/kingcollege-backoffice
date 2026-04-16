@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { PaginationBar } from "./ui/pagination-bar"
-import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy, Search, Filter, ArrowUpDown } from "lucide-react"
+import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy, Search, Filter, ArrowUpDown, Users } from "lucide-react"
 import { format } from "date-fns"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -1691,19 +1691,17 @@ export function DebtReminderSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-blue-300 bg-blue-50">
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-blue-900">Recipient Count</h3>
-                        <p className="text-sm text-blue-700">This reminder will be sent to approximately</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-6 h-6 text-white" />
                       </div>
-                      <div className="text-2xl font-bold">
-                        {previewReminder.recipientCount || 0}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs uppercase tracking-wide text-blue-600 font-medium">Recipients</p>
+                        <p className="text-2xl font-bold text-blue-900 leading-tight">
+                          {(previewReminder.recipientCount || 0).toLocaleString()}
+                          <span className="text-xs font-normal text-blue-600 ml-1">parents</span>
+                        </p>
                       </div>
-                    </div>
-                    <div className="mt-3 text-xs text-blue-600 space-y-1">
-                      <p>- Academic Year: {formatAcademicYear(previewReminder.academicYear)}</p>
-                      <p>- Term: {academicYears.find(y => y.id === previewReminder.academicYear)?.terms.find(t => t.id === previewReminder.term)?.name || previewReminder.term}</p>
-                      <p>- Invoice Status Filter: {previewReminder.invoiceStatuses?.join(", ") || "All"}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1711,12 +1709,23 @@ export function DebtReminderSettings() {
                 <Card className={previewReminder.sendDate ? "border-green-300 bg-green-50" : "border-gray-200 bg-gray-50"}>
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-center gap-3">
-                      <CalendarIcon className={cn("w-5 h-5", previewReminder.sendDate ? "text-green-700" : "text-gray-400")} />
-                      <div>
-                        <h3 className={cn("font-semibold", previewReminder.sendDate ? "text-green-900" : "text-gray-500")}>Scheduled Send Time</h3>
-                        <p className={cn("text-sm", previewReminder.sendDate ? "text-green-700" : "text-gray-400")}>
+                      <div className={cn(
+                        "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
+                        previewReminder.sendDate ? "bg-green-600" : "bg-gray-400"
+                      )}>
+                        <CalendarIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-xs uppercase tracking-wide font-medium",
+                          previewReminder.sendDate ? "text-green-600" : "text-gray-400"
+                        )}>Scheduled</p>
+                        <p className={cn(
+                          "text-base font-bold leading-tight",
+                          previewReminder.sendDate ? "text-green-900" : "text-gray-400 italic font-normal"
+                        )}>
                           {previewReminder.sendDate
-                            ? `${formatDisplayDate(previewReminder.sendDate)} at ${previewReminder.sendTime || "Not set"}`
+                            ? `${formatDisplayDate(previewReminder.sendDate)} · ${previewReminder.sendTime || "—"}`
                             : "Not scheduled yet"}
                         </p>
                       </div>
@@ -1729,23 +1738,22 @@ export function DebtReminderSettings() {
               <div className="rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
                 {/* Email header */}
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                  <div className="flex items-start gap-3">
+                  {/* Subject line (prominent) */}
+                  <div className="text-lg font-semibold text-gray-900 mb-3">
+                    {previewReminder.subject || <span className="text-gray-300 italic font-normal">(No subject)</span>}
+                  </div>
+                  {/* Sender row */}
+                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">KC</div>
                     <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-sm text-gray-900">King's College International School</span>
-                      <span className="text-xs text-gray-400 ml-2">&lt;finance@kingscollege.ac.th&gt;</span>
-                      <div className="text-xs text-gray-400 mt-0.5">to: Mr. John Smith &lt;parent@example.com&gt;</div>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-gray-900">King's College International School</span>
+                        <span className="text-xs text-gray-400">&lt;finance@kingscollege.ac.th&gt;</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        to <span className="text-gray-700">Mr. John Smith</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="font-semibold text-base text-gray-900 mt-3 pl-[52px]">
-                    {previewReminder.emailTitle
-                      ? previewReminder.emailTitle
-                          .replace(/\{parent_name\}/g, "Mr. John Smith")
-                          .replace(/\{student_name\}/g, "James Smith")
-                          .replace(/\{amount\}/g, "฿45,000")
-                          .replace(/\{due_date\}/g, "31 Mar 2026")
-                          .replace(/\{days_remaining\}/g, "15")
-                      : <span className="text-gray-300 italic font-normal">(No email title)</span>}
                   </div>
                 </div>
 

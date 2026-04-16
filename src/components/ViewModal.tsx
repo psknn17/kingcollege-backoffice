@@ -206,7 +206,7 @@ export function ViewModal({
   const renderInvoiceView = () => {
     const itemsSubtotal = data.items?.reduce((sum: number, item: any) => sum + (item.discountedAmount || item.amount || 0), 0) || 0
     const discounts: Array<{ name: string; amount: number; percentage?: number }> = data.discounts || []
-    const totalDiscountAmount = discounts.reduce((sum: number, d: any) => sum + (d.amount || 0), 0)
+    const totalDiscountAmount = discounts.reduce((sum: number, d: any) => sum + (d.amount || 0), 0) || data.discountAmount || 0
     const total = totalDiscountAmount > 0
       ? (data.total || data.amount || itemsSubtotal - totalDiscountAmount)
       : (data.total || data.amount || itemsSubtotal)
@@ -367,6 +367,15 @@ export function ViewModal({
                   <td className="py-1.5 px-2 text-right align-top">-{formatCurrencyUtil(discount.amount || 0)}</td>
                 </tr>
               ))}
+
+              {/* Discount Amount (when no individual discount rows but discountAmount exists) */}
+              {discounts.length === 0 && data.discountAmount > 0 && (
+                <tr className="border-b border-gray-200 text-red-500">
+                  <td className="py-1.5 px-2 align-top">{(data.items?.length || 0) + 1}</td>
+                  <td className="py-1.5 px-2">Discount</td>
+                  <td className="py-1.5 px-2 text-right align-top">-{formatCurrencyUtil(data.discountAmount)}</td>
+                </tr>
+              )}
 
               {/* Total Summary Row */}
               <tr className="border-t border-black bg-gray-100">

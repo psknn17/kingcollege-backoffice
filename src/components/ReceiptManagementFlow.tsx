@@ -67,6 +67,7 @@ interface AppliedCreditNote {
   studentName: string
   reason: string
   appliedAmount: number
+  issueDate?: string
 }
 
 interface InvoiceRow {
@@ -631,7 +632,8 @@ export function ReceiptManagementFlow({
                  creditNoteNumber: cn.creditNoteNumber,
                  studentName: cn.studentName,
                  reason: cn.reason,
-                 appliedAmount: portion
+                 appliedAmount: portion,
+                 issueDate: cn.issueDate
                })
                remainingToDistribute -= portion
              }
@@ -650,9 +652,22 @@ export function ReceiptManagementFlow({
         yearGroup: formData.clientType === "internal" ? formData.yearGroup : "",
         schoolYear: formData.schoolYear,
         totalAmount: inv.receivedAmount,
+        receivedAmount: inv.receivedAmount,
         creditNoteTotal: cnForThisReceipt,
         netPayableAmount: Math.max(0, inv.receivedAmount - cnForThisReceipt),
-        appliedCreditNotes: receiptAppliedCNs.length > 0 ? receiptAppliedCNs : undefined,
+        appliedCreditNotes: receiptAppliedCNs.length > 0
+          ? receiptAppliedCNs
+          : cnForThisReceipt > 0
+            ? availableCreditNotes.filter(cn => selectedCNIds.has(cn.id)).map(cn => ({
+                id: cn.id,
+                creditNoteNumber: cn.creditNoteNumber,
+                studentName: cn.studentName,
+                reason: cn.reason,
+                appliedAmount: cnForThisReceipt,
+                issueDate: cn.issueDate
+              }))
+            : undefined,
+        overpaymentAmount: Math.max(0, inv.receivedAmount - Math.max(0, inv.invoiceAmount - cnForThisReceipt)),
         paymentMethod: formData.paymentMethod,
         status: "generated",
         createdAt: new Date(),
@@ -896,7 +911,7 @@ export function ReceiptManagementFlow({
       allDocRows.push({
         no: filledInvoices.length + i + 1,
         docNo: cn.creditNoteNumber,
-        issueDate: "",
+        issueDate: cn.issueDate ? format(new Date(cn.issueDate), "dd MMMM yyyy") : "-",
         amount: -cn.appliedAmount,
         isCredit: true
       })
@@ -909,6 +924,8 @@ export function ReceiptManagementFlow({
           <img
             src={schoolSettings.logoUrl || SchoolLogo}
             alt="School Logo"
+            crossOrigin="anonymous"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = SchoolLogo; }}
             style={{ height: forPrint ? '65px' : '80px', display: 'block', margin: '0 auto 8px auto' }}
           />
           <div style={{ fontSize: headerFontSize, fontWeight: 600, letterSpacing: '3px', marginBottom: '2px' }}>
@@ -1025,13 +1042,13 @@ export function ReceiptManagementFlow({
             {/* Amount in words + TOTAL row */}
             <tr style={{ borderTop: '1px solid #999', borderBottom: '1px solid #999' }}>
               <td colSpan={2} style={{ borderLeft: '1px solid #999', borderRight: '1px solid #999', padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', fontSize: bodyFontSize }}>
-                {numberToWords(netReceivedAmount).toUpperCase()}
+                {numberToWords(netReceivedAmount + overpaymentAmount).toUpperCase()}
               </td>
               <td style={{ borderRight: '1px solid #999', padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>
                 TOTAL
               </td>
               <td style={{ borderRight: '1px solid #999', padding: '10px 12px', textAlign: 'right', fontWeight: 'bold' }}>
-                {formatCurrency(netReceivedAmount)}
+                {formatCurrency(netReceivedAmount + overpaymentAmount)}
               </td>
             </tr>
           </tbody>
@@ -2046,6 +2063,7 @@ export function ReceiptManagementFlow({
               transactionFeePercent: selectedReceipt.transactionFeePercent,
               transactionFeeAmount: selectedReceipt.transactionFeeAmount,
               overpaymentAmount: selectedReceipt.overpaymentAmount,
+              appliedCreditNotes: selectedReceipt.appliedCreditNotes,
               collectorName: "",
               authorizedSignature: ""
             })}
