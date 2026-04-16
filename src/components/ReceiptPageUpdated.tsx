@@ -35,6 +35,7 @@ import { EditTemplateDialog } from "./InvoiceReceiptTemplate"
 import { migrateTemplates, saveTemplates, type EmailTemplate } from "@/utils/emailTemplateUtils"
 import { logActivity } from "@/lib/activityLog"
 import { useStudents } from "@/contexts/StudentContext"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 // Student data matching StudentContext
 const studentData = [
@@ -64,6 +65,7 @@ interface Receipt {
   amount: number // received amount
   appliedCNAmount?: number
   appliedCNNumbers?: string[]
+  overpaymentAmount?: number
   outstandingAmount: number
   paymentMethod: string
   paymentChannel: "credit_card" | "wechat_pay" | "alipay" | "qr_payment" | "counter_bank"
@@ -196,9 +198,10 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
         invoiceDate: r.invoices?.[0]?.invoiceDate ? new Date(r.invoices[0].invoiceDate) : new Date(r.createdAt),
         invoiceAmount: r.invoices?.[0]?.invoiceAmount || r.amount || r.totalAmount,
         amount: r.netPayable !== undefined ? r.netPayable : (r.totalAmount !== undefined ? r.totalAmount : r.amount),
-        appliedCNAmount: r.invoices?.[0]?.appliedCNAmount || 0,
-        appliedCNNumbers: r.invoices?.[0]?.appliedCreditNotes || [],
+        appliedCNAmount: r.creditNoteTotal || r.invoices?.[0]?.appliedCNAmount || 0,
+        appliedCNNumbers: r.appliedCreditNotes?.map((cn: any) => cn.creditNoteNumber) || r.invoices?.[0]?.appliedCreditNotes || [],
         outstandingAmount: r.invoices?.[0]?.outstandingAmount || 0,
+        overpaymentAmount: r.overpaymentAmount || 0,
         paymentMethod: normalizePaymentMethod(r.paymentMethod || "N/A"),
         paymentChannel: "counter_bank" as const,
         transactionDate: new Date(r.receiptDate || r.createdAt),
@@ -227,7 +230,7 @@ const mockCreditNotes: CreditNote[] = [
     studentGrade: studentData[0].grade,
     familyCode: "006471",
     amount: 15000,
-    amountIncludingVat: 16050,
+    amountIncludingVat: 15000,
     remainingAmount: 0,
     description: "Credit note for ECA cancellation",
     reason: "Credit note for ECA cancellation",
@@ -249,7 +252,7 @@ const mockCreditNotes: CreditNote[] = [
     studentGrade: studentData[1].grade,
     familyCode: "006472",
     amount: 8500,
-    amountIncludingVat: 9095,
+    amountIncludingVat: 8500,
     remainingAmount: 8500,
     description: "Tuition fee adjustment Term 2",
     reason: "Tuition fee adjustment Term 2",
@@ -271,7 +274,7 @@ const mockCreditNotes: CreditNote[] = [
     studentGrade: studentData[2].grade,
     familyCode: "006473",
     amount: 25000,
-    amountIncludingVat: 26750,
+    amountIncludingVat: 25000,
     remainingAmount: 0,
     description: "Withdrawal refund",
     reason: "Withdrawal refund",
@@ -323,7 +326,7 @@ for (let i = 4; i <= 40; i++) {
     studentGrade: student.grade,
     familyCode: `00${6470 + (i % 30)}`,
     amount: amt,
-    amountIncludingVat: Math.round(amt * 1.07),
+    amountIncludingVat: amt,
     remainingAmount: isPaid ? 0 : amt,
     description: desc,
     reason: desc,
@@ -340,7 +343,7 @@ for (let i = 4; i <= 40; i++) {
 
 const CREDIT_NOTES_STORAGE_KEY = "creditNotesRecords"
 const CREDIT_NOTES_VERSION_KEY = "creditNotesVersion"
-const CREDIT_NOTES_CURRENT_VERSION = "4"
+const CREDIT_NOTES_CURRENT_VERSION = "6"
 
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
@@ -414,7 +417,7 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
       studentGrade: s.grade,
       familyCode: s.familyCode,
       amount: amt,
-      amountIncludingVat: Math.round(amt * 1.07),
+      amountIncludingVat: amt,
       remainingAmount: isPaid ? 0 : amt,
       description: desc,
       reason: desc,
@@ -453,6 +456,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const { students: allStudents } = useStudents()
+  const schoolSettings = useSchoolSettings()
 
   // Student ID search state for credit note form
   const [cnStudentSearch, setCnStudentSearch] = useState("")
@@ -686,7 +690,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const cnAmount = receipt.appliedCNAmount || 0
     const hasCN = cnAmount > 0
     const netAmount = receivedAmount - cnAmount
-    const overpayment = hasCN ? netAmount - (receipt.invoiceAmount || receivedAmount) : 0
+    const overpayment = (receipt as any).overpaymentAmount || (hasCN ? Math.max(0, netAmount - (receipt.invoiceAmount || receivedAmount)) : 0)
     const totalDisplay = overpayment > 0 ? receivedAmount : netAmount
 
     const cnRow = hasCN ? `<tr>
@@ -708,7 +712,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     return `<div style="font-family:'Times New Roman',serif;font-size:14px;line-height:1.5;padding:48px 56px;width:794px;background:white;color:black">
       <!-- School Header -->
       <div style="text-align:center;margin-bottom:8px">
-        <img src="${SchoolLogo}" style="height:110px;margin-bottom:-12px;display:block;margin-left:auto;margin-right:auto" crossorigin="anonymous" />
+        <img src="${schoolSettings?.logoUrl || SchoolLogo}" style="height:110px;margin-bottom:-12px;display:block;margin-left:auto;margin-right:auto" crossorigin="anonymous" onerror="this.onerror=null;this.src='${SchoolLogo}';" />
         <div style="font-size:16px;font-weight:bold;letter-spacing:3px;margin-bottom:2px">KING'S COLLEGE INTERNATIONAL SCHOOL</div>
         <div style="font-size:11px;letter-spacing:4px;margin-bottom:6px">BANGKOK</div>
         <div style="font-size:10px">${SCHOOL_INFO.address}</div>
@@ -2084,7 +2088,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                   <div id="receipt-print-area" style={{ fontFamily: "'Times New Roman', serif", fontSize: '13px', lineHeight: '1.5', padding: '13px 36px', background: 'white', color: 'black' }}>
                     {/* School Header */}
                     <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                      <img src={SchoolLogo} alt="King's College International School" style={{ height: '110px', marginBottom: '-12px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                      <img src={schoolSettings?.logoUrl || SchoolLogo} alt="King's College International School" crossorigin="anonymous" style={{ height: '110px', marginBottom: '-12px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = SchoolLogo; }} />
                       <div style={{ fontSize: '16px', fontWeight: 'bold', letterSpacing: '3px', marginBottom: '2px' }}>KING'S COLLEGE INTERNATIONAL SCHOOL</div>
                       <div style={{ fontSize: '11px', letterSpacing: '4px', marginBottom: '6px' }}>BANGKOK</div>
                       <div style={{ fontSize: '10px' }}>{SCHOOL_INFO.address}</div>
@@ -2130,7 +2134,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                       const cnAmount = viewingReceipt.appliedCNAmount || 0
                       const hasCN = cnAmount > 0
                       const netAmount = receivedAmount - cnAmount
-                      const overpayment = hasCN ? netAmount - (viewingReceipt.invoiceAmount || receivedAmount) : 0
+                      const overpayment = viewingReceipt.overpaymentAmount || (hasCN ? Math.max(0, netAmount - (viewingReceipt.invoiceAmount || receivedAmount)) : 0)
                       const totalDisplay = overpayment > 0 ? receivedAmount : netAmount
                       const fmtNum = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       return (
