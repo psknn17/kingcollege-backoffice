@@ -120,6 +120,8 @@ import { ClientList } from "./components/ClientList"
 import { InvoiceReceiptTemplate } from "./components/InvoiceReceiptTemplate"
 import { Login } from "./components/Login"
 
+import { CombinedInvoicePage } from "./components/CombinedInvoicePage"
+import { CombinedReceiptPage } from "./components/CombinedReceiptPage"
 import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
 import { canAccessSection, getAccessibleMenuItems, canAccessMenuItem } from "./utils/rolePermissions"
@@ -133,6 +135,8 @@ const menuItems = {
     { id: "discount-reports", labelKey: "menu.reports", icon: FileBarChart },
 { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
     { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
+    { id: "all-invoices", labelKey: "menu.allInvoices", icon: FileInvoice },
+    { id: "all-receipts", labelKey: "menu.allReceipts", icon: Receipt },
   ],
   tuition: [
     { id: "tuition-by-year", labelKey: "menu.tuitionByYear", icon: DollarSign },
@@ -841,6 +845,11 @@ export default function App() {
                     <Route path="/external-discount-groups" element={
                       <DiscountManagement activeTab="student-groups" category="external" onNavigateToSubPage={navigateToSubPage} onTabChange={handleMenuItemClick} />
                     } />
+
+                    <Route path="/all-invoices" element={
+                      <CombinedInvoicePage onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} />
+                    } />
+                    <Route path="/all-receipts" element={<CombinedReceiptPage onNavigateToSubPage={navigateToSubPage} />} />
 
                     {/* Sub-pages with params from location.state */}
                     <Route path="/invoice-creation" element={

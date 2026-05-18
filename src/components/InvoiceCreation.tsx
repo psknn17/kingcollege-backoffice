@@ -3400,8 +3400,26 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
               )
             )}
 
-            {/* Step 4: Select Room - Skip for Trip & Activity and School Bus */}
-            {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "summer" && selectedAcademicYear && selectedGrade && selectedTerm && (
+            {/* Step 4: Select Room - for Trip & Activity and School Bus */}
+            {!isSimplifiedView && (invoiceType === "trip" || invoiceType === "bus") && selectedGrades.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-medium">4. {t("invoiceCreate.selectRoom")} ({t("common.optional")})</h3>
+                <Select disabled={!userCanEdit} value={selectedRoom === "" ? "all" : selectedRoom} onValueChange={handleRoomChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("invoiceCreate.selectRoom")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("invoiceCreate.allRooms")}</SelectItem>
+                    {Array.from(new Set(selectedGrades.flatMap(grade => rooms[grade as keyof typeof rooms] ?? []))).map(room => (
+                      <SelectItem key={room} value={room}>{room}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Step 4: Select Room - for Tuition / ECA / Exam only */}
+            {!isSimplifiedView && invoiceType !== "afterschool" && invoiceType !== "summer" && invoiceType !== "trip" && invoiceType !== "bus" && selectedAcademicYear && selectedGrade && selectedTerm && (
               <div className="space-y-3">
                 <h3 className="font-medium">4. {t("invoiceCreate.selectRoom")} ({t("common.optional")})</h3>
                 <Select disabled={!userCanEdit} value={selectedRoom === "" ? "all" : selectedRoom} onValueChange={handleRoomChange}>
@@ -3615,7 +3633,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Step 4 (or Step 2 for simplified views): Select Items */}
             {(isSimplifiedView || (selectedAcademicYear && selectedTerm && ((invoiceType === "afterschool" || invoiceType === "trip" || invoiceType === "bus") ? selectedGrades.length > 0 : invoiceType === "summer" ? selectedGrade : selectedGrade))) && (
               <div className="space-y-4">
-                <h3 className="font-medium">{isSimplifiedView ? "2" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "4" : "5")}. {t("invoiceCreate.selectItems")}</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "2" : ((invoiceType === "trip" || invoiceType === "bus") ? "5" : (invoiceType === "afterschool" || invoiceType === "summer") ? "4" : "5")}. {t("invoiceCreate.selectItems")}</h3>
 
                 {/* Template Selection */}
                 {availableTemplates.length > 0 && (
@@ -3867,7 +3885,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Step 5 (or Step 3 for simplified views): Set Payment Deadline */}
             {selectedItems.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-medium">{isSimplifiedView ? "3" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "5" : "6")}. Set Payment Deadline</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "3" : ((invoiceType === "trip" || invoiceType === "bus") ? "6" : (invoiceType === "afterschool" || invoiceType === "summer") ? "5" : "6")}. Set Payment Deadline</h3>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -3899,7 +3917,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
             {/* Step 6 (or Step 4 for simplified views): Select Students/Payer */}
             {selectedItems.length > 0 && paymentDeadline && (
               <div className="space-y-2">
-                <h3 className="font-medium">{isSimplifiedView ? "4" : ((invoiceType === "afterschool" || invoiceType === "summer" || invoiceType === "trip" || invoiceType === "bus") ? "6" : "7")}. {isSimplifiedView ? "Select Payer" : "Select Students"}</h3>
+                <h3 className="font-medium">{isSimplifiedView ? "4" : ((invoiceType === "trip" || invoiceType === "bus") ? "7" : (invoiceType === "afterschool" || invoiceType === "summer") ? "6" : "7")}. {isSimplifiedView ? "Select Payer" : "Select Students"}</h3>
 
                 {/* Payer Selection Type for Simplified Views */}
                 {isSimplifiedView && (
