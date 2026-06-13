@@ -2448,7 +2448,7 @@ export function DebtReminderSettings() {
           <DialogHeader>
             <DialogTitle>{t("debtReminder.confirmSend") || "Send Now"}</DialogTitle>
             <DialogDescription>
-              {t("debtReminder.finalConfirm") || "Confirm sending reminder email to all recipients?"}
+              {t("debtReminder.finalConfirm") || `Send reminder email to ${sendSelectedIds.size} recipient(s)?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
