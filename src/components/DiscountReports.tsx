@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect } from "react"
-
-const DISCOUNT_EXPORT_MODULES = ["Tuition", "ECA", "Trip & Activity", "Exam", "School Bus"]
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
@@ -565,13 +563,7 @@ export function DiscountReports() {
   }, [students])
 
   // Collect all unique discount names from real data for the filter
-  const discountNameOptions = useMemo(() => {
-    const names = new Set<string>()
-    studentDiscounts.forEach(sd => {
-      sd.discounts.forEach(d => names.add(d.name))
-    })
-    return [...names].sort()
-  }, [studentDiscounts])
+  const DISCOUNT_MODULES = ["Tuition", "ECA", "Trip & Activity", "Exam", "School Bus"]
 
   // Clear all filters
   const clearFilters = () => {
@@ -598,7 +590,7 @@ export function DiscountReports() {
       student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesType = filterType === "all" || student.discounts.some(d => d.name === filterType)
+    const matchesType = filterType === "all" || student.invoiceCategory === filterType
     const matchesYearGroup = filterYearGroup === "all" || student.yearGroup === filterYearGroup
     const matchesAcademicYear = filterAcademicYear === "all" || student.academicYear === filterAcademicYear
     const matchesTerm = filterTerm === "all" || student.term === filterTerm
@@ -698,25 +690,26 @@ export function DiscountReports() {
   const resetPage = () => setCurrentPage(1)
 
   const handleExport = () => {
-    // Wide format: one row per student, one column per invoice module (except External)
-    const headers = ["Student ID", "Student Name", "Year Group", "Academic Year", "Term", ...DISCOUNT_EXPORT_MODULES, "Total Discount"]
-    const rows: (string | number)[][] = filteredStudents.map(s => {
-      const moduleMap: Record<string, number> = {}
-      s.discounts.forEach(d => {
-        const mod = d.invoiceCategory || s.invoiceCategory || "Tuition"
-        if (DISCOUNT_EXPORT_MODULES.includes(mod)) {
-          moduleMap[mod] = (moduleMap[mod] || 0) + d.amount
-        }
+    const headers = ["Student ID", "Student Name", "Year Group", "Academic Year", "Term", "Discount Type", "Discount Name", "Mode", "Value", "Discount Amount", "Total Discount", "Status"]
+    const rows: (string | number)[][] = []
+
+    filteredStudents.forEach(s => {
+      s.discounts.forEach((d, idx) => {
+        rows.push([
+          s.studentId,
+          s.studentName,
+          s.yearGroup,
+          formatAcademicYear(s.academicYear),
+          s.term,
+          getDiscountTypeLabel(d.type),
+          d.name,
+          d.mode,
+          d.mode === "percentage" ? `${d.value}%` : d.value,
+          d.amount,
+          idx === 0 ? s.totalDiscountAmount : "",
+          s.status
+        ])
       })
-      return [
-        s.studentId,
-        s.studentName,
-        s.yearGroup,
-        formatAcademicYear(s.academicYear),
-        s.term,
-        ...DISCOUNT_EXPORT_MODULES.map(mod => moduleMap[mod] || 0),
-        s.totalDiscountAmount
-      ]
     })
 
     downloadAsXlsx(headers, rows, `discount-report-${new Date().toISOString().split('T')[0]}`)
@@ -853,16 +846,16 @@ export function DiscountReports() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-muted-foreground">{t("discountReports.discountType")}</label>
+                  <label className="text-sm font-medium text-muted-foreground">Module</label>
                   <Select value={filterType} onValueChange={setFilterType}>
                     <SelectTrigger className="h-9">
                       <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder={t("discountReports.allTypes")} />
+                      <SelectValue placeholder="All Modules" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{t("discountReports.allTypes")}</SelectItem>
-                      {discountNameOptions.map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      <SelectItem value="all">All Modules</SelectItem>
+                      {DISCOUNT_MODULES.map(mod => (
+                        <SelectItem key={mod} value={mod}>{mod}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
