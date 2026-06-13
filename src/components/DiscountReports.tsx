@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
+
+const DISCOUNT_EXPORT_MODULES = ["Tuition", "ECA", "Trip & Activity", "Exam", "School Bus"]
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { downloadAsXlsx, formatAcademicYear } from "@/utils/xlsxUtils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
@@ -696,27 +698,25 @@ export function DiscountReports() {
   const resetPage = () => setCurrentPage(1)
 
   const handleExport = () => {
-    // Create CSV content - each discount gets its own row
-    const headers = ["Student ID", "Student Name", "Year Group", "Academic Year", "Term", "Discount Type", "Discount Name", "Mode", "Value", "Discount Amount", "Total Discount", "Status"]
-    const rows: (string | number)[][] = []
-
-    filteredStudents.forEach(s => {
-      s.discounts.forEach((d, idx) => {
-        rows.push([
-          s.studentId,
-          s.studentName,
-          s.yearGroup,
-          formatAcademicYear(s.academicYear),
-          s.term,
-          getDiscountTypeLabel(d.type),
-          d.name,
-          d.mode,
-          d.mode === "percentage" ? `${d.value}%` : d.value,
-          d.amount,
-          idx === 0 ? s.totalDiscountAmount : "",
-          s.status
-        ])
+    // Wide format: one row per student, one column per invoice module (except External)
+    const headers = ["Student ID", "Student Name", "Year Group", "Academic Year", "Term", ...DISCOUNT_EXPORT_MODULES, "Total Discount"]
+    const rows: (string | number)[][] = filteredStudents.map(s => {
+      const moduleMap: Record<string, number> = {}
+      s.discounts.forEach(d => {
+        const mod = d.invoiceCategory || s.invoiceCategory || "Tuition"
+        if (DISCOUNT_EXPORT_MODULES.includes(mod)) {
+          moduleMap[mod] = (moduleMap[mod] || 0) + d.amount
+        }
       })
+      return [
+        s.studentId,
+        s.studentName,
+        s.yearGroup,
+        formatAcademicYear(s.academicYear),
+        s.term,
+        ...DISCOUNT_EXPORT_MODULES.map(mod => moduleMap[mod] || 0),
+        s.totalDiscountAmount
+      ]
     })
 
     downloadAsXlsx(headers, rows, `discount-report-${new Date().toISOString().split('T')[0]}`)
