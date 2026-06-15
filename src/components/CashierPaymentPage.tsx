@@ -118,6 +118,79 @@ export function CashierPaymentPage() {
     return `PAY-${date}-${rand}`
   }
 
+  function generateReceiptNo(): string {
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    const acYearStart = month >= 8 ? year : year - 1
+    const runningKey = `receipt_running_no_${acYearStart}`
+    const current = parseInt(localStorage.getItem(runningKey) || "0", 10)
+    const next = current + 1
+    localStorage.setItem(runningKey, next.toString())
+    return `R-CC-${acYearStart}-${String(next).padStart(5, "0")}`
+  }
+
+  function saveReceiptsToBackoffice(
+    stdData: { sid: string; student: any; invoices: any[]; guardian: string; subtotal: number }[],
+    totalFee: number,
+    total: number,
+    bank: string,
+    cardType: string,
+  ): Record<string, string> {
+    const receiptNos: Record<string, string> = {}
+    const now = new Date().getFullYear()
+    const month = new Date().getMonth() + 1
+    const acYearStart = month >= 8 ? now : now - 1
+    const schoolYear = `${acYearStart}/${acYearStart + 1}`
+
+    const newRecords = stdData.map(({ sid, student, invoices, guardian, subtotal }) => {
+      const receiptNo = generateReceiptNo()
+      receiptNos[sid] = receiptNo
+      const studentFee = total > 0 ? Number((totalFee * (subtotal / total)).toFixed(2)) : 0
+      const received = subtotal + studentFee
+
+      return {
+        id: crypto.randomUUID(),
+        receiptNo,
+        receiptDate: new Date().toISOString(),
+        clientType: "internal",
+        clientNo: sid,
+        clientName: student ? `${student.firstName} ${student.lastName}` : sid,
+        contactName: guardian,
+        yearGroup: student?.gradeLevel ?? "",
+        schoolYear,
+        totalAmount: received,
+        receivedAmount: received,
+        creditNoteTotal: 0,
+        netPayableAmount: received,
+        overpaymentAmount: 0,
+        paymentMethod: "Credit Card",
+        bankName: bank,
+        cardType,
+        transactionFeeAmount: studentFee,
+        status: "generated",
+        createdAt: new Date().toISOString(),
+        invoices: invoices.map((inv: any) => {
+          const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+          const proportion = subtotal > 0 ? invAmt / subtotal : 0
+          const fee = Number((studentFee * proportion).toFixed(2))
+          return {
+            id: inv.id,
+            invoiceNo: inv.invoiceNumber || inv.id,
+            invoiceDate: inv.issueDate ?? new Date().toISOString(),
+            invoiceAmount: invAmt,
+            receivedAmount: invAmt + fee,
+            outstandingAmount: 0,
+          }
+        }),
+      }
+    })
+
+    const existing = JSON.parse(localStorage.getItem("receiptRecords_tuition") || "[]")
+    localStorage.setItem("receiptRecords_tuition", JSON.stringify([...newRecords, ...existing]))
+    return receiptNos
+  }
+
   function handleConfirmPayment() {
     if (!selectedBank) {
       toast.error(t("cashier.bankRequired"))
@@ -130,8 +203,13 @@ export function CashierPaymentPage() {
     setIsProcessing(true)
     setTimeout(() => {
       const paymentId = generatePaymentId()
+      const totalFee = Math.max(0, edcAmount - chargeAmount)
+      const receiptNos = saveReceiptsToBackoffice(
+        studentData, totalFee, grandTotal, selectedBank, selectedCardType
+      )
       navigateToSubPage("cashier-receipt", {
         paymentId,
+        receiptNos,
         studentData: studentData.map(({ sid, student, invoices, guardian, subtotal }) => ({
           sid,
           name: student ? `${student.firstName} ${student.lastName}` : sid,

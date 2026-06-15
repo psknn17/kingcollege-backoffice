@@ -225,17 +225,8 @@ export function CashierReceiptPage() {
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewBlobUrls, setPreviewBlobUrls] = useState<Record<string, string>>({})
-  const [receiptNumbers] = useState<Record<string, string>>(() => {
-    // Generate stable receipt numbers per student on mount
-    const map: Record<string, string> = {}
-    const base = subPageParams?.studentData ?? []
-    const year = new Date().getFullYear()
-    base.forEach((_: any, i: number) => {
-      const rand = String(10000 + Math.floor(Math.random() * 89999))
-      map[base[i]?.sid ?? i] = `R-CC-${year}-${rand.slice(0, 5)}`
-    })
-    return map
-  })
+  // Receipt numbers come from backoffice (saved on confirm payment)
+  const receiptNumbers: Record<string, string> = subPageParams?.receiptNos ?? {}
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
 
   const paymentId: string = subPageParams?.paymentId ?? "PAY-UNKNOWN"
