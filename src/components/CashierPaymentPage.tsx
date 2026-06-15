@@ -138,6 +138,7 @@ export function CashierPaymentPage() {
           guardian,
           subtotal,
           invoices,
+          grade: student?.gradeLevel ?? "-",
         })),
         paymentInfo: {
           bank: selectedBank,

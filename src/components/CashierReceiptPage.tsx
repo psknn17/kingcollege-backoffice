@@ -1,10 +1,15 @@
 import { useState } from "react"
+import html2canvas from "html2canvas"
 import { jsPDF } from "jspdf"
-import { CheckCircle2 } from "lucide-react"
+import { format } from "date-fns"
+import { CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card, CardContent } from "./ui/card"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAppNavigation } from "@/hooks/useAppNavigation"
+import { useAuth } from "@/contexts/AuthContext"
+import { SCHOOL_INFO, numberToWords } from "@/lib/invoiceUtils"
+import SchoolLogo from "@/assets/Logo.png"
 
 interface StudentReceiptData {
   sid: string
@@ -12,6 +17,7 @@ interface StudentReceiptData {
   guardian: string
   subtotal: number
   invoices: any[]
+  grade?: string
 }
 
 interface PaymentInfo {
@@ -23,126 +29,286 @@ interface PaymentInfo {
   remark: string
 }
 
-function buildReceiptPdf(
-  student: StudentReceiptData,
-  paymentId: string,
+// ── Receipt HTML builder — matches "Acknowledgement of School Fee Payment" template ──
+function buildCashierReceiptHtml(params: {
+  student: StudentReceiptData
+  receiptNumber: string
+  cashierName: string
+  studentFee: number
   paymentInfo: PaymentInfo
-): jsPDF {
-  const doc = new jsPDF({ unit: "mm", format: "a4" })
-  const today = new Date().toLocaleDateString("en-GB", {
-    day: "2-digit", month: "long", year: "numeric",
-  })
+}): string {
+  const { student, receiptNumber, cashierName, studentFee, paymentInfo } = params
+  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const today = format(new Date(), "dd MMMM yyyy")
+  const currentYear = new Date().getFullYear()
+  const academicYear = `${currentYear - 1}/${currentYear}`
+  const grade = student.grade ?? "-"
 
-  doc.setFontSize(16)
-  doc.setFont("helvetica", "bold")
-  doc.text("King's College International School Bangkok", 20, 20)
+  const invoiceRows = student.invoices.map((inv: any, i: number) => {
+    const invNo = inv.invoiceNumber || inv.id || "-"
+    const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+    const proportion = student.subtotal > 0 ? invAmt / student.subtotal : 0
+    const fee = Number((studentFee * proportion).toFixed(2))
+    const received = invAmt + fee
+    return `<tr>
+      <td style="border:1px solid black;padding:5px 8px;text-align:center">${i + 1}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:center">${invNo}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(invAmt)}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(fee)}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(received)}</td>
+    </tr>`
+  }).join("")
 
-  doc.setFontSize(12)
-  doc.setFont("helvetica", "normal")
-  doc.text("RECEIPT", 20, 30)
-  doc.text(`Payment Ref: ${paymentId}`, 20, 38)
-  doc.text(`Date: ${today}`, 20, 46)
+  const grandReceived = student.subtotal + studentFee
+  const cardLabel = [paymentInfo.bank.toUpperCase(), paymentInfo.cardType].filter(Boolean).join(" ")
 
-  doc.line(20, 50, 190, 50)
+  return `<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.5;padding:40px 52px;width:794px;background:white;color:black">
 
-  doc.setFont("helvetica", "bold")
-  doc.text("Student Information", 20, 58)
-  doc.setFont("helvetica", "normal")
-  doc.text(`Student: ${student.name}`, 20, 66)
-  doc.text(`Student ID: ${student.sid}`, 20, 74)
-  doc.text(`Guardian: ${student.guardian}`, 20, 82)
+    <!-- Header -->
+    <div style="position:relative;text-align:center;margin-bottom:6px">
+      <div style="position:absolute;top:0;right:0;font-size:11px">Customer</div>
+      <img src="${SchoolLogo}" style="height:100px;display:block;margin:0 auto 6px" crossorigin="anonymous"
+        onerror="this.onerror=null;this.style.display='none'" />
+      <div style="font-size:14px;font-weight:bold;letter-spacing:2px">KING'S COLLEGE INTERNATIONAL SCHOOL</div>
+      <div style="font-size:10px;letter-spacing:3px;margin-bottom:2px">BANGKOK</div>
+    </div>
 
-  doc.line(20, 88, 190, 88)
+    <!-- Title -->
+    <h2 style="text-align:center;font-size:19px;font-weight:bold;margin:18px 0 14px;letter-spacing:0.5px">
+      Acknowledgement of School Fee Payment
+    </h2>
 
-  doc.setFont("helvetica", "bold")
-  doc.text("Payment Details", 20, 96)
-  doc.setFont("helvetica", "normal")
-  doc.text(`Bank: ${paymentInfo.bank.toUpperCase()}`, 20, 104)
-  doc.text(`Card Type: ${paymentInfo.cardType}`, 20, 112)
-  doc.text(`Payment Method: ${paymentInfo.paymentMethod === "full" ? "Full Payment" : "Installment"}`, 20, 120)
+    <!-- Info table -->
+    <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:12px;margin-bottom:14px">
+      <tr>
+        <td style="border:1px solid black;padding:5px 10px;width:130px">Student ID no.</td>
+        <td style="border:1px solid black;padding:5px 8px">${student.sid}</td>
+        <td style="border:1px solid black;padding:5px 10px;width:100px">Receipt no.</td>
+        <td style="border:1px solid black;padding:5px 10px;text-align:right;width:150px">${receiptNumber}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid black;padding:5px 10px">Student name</td>
+        <td style="border:1px solid black;padding:5px 8px">${student.name}</td>
+        <td style="border:1px solid black;padding:5px 10px">Receipt date</td>
+        <td style="border:1px solid black;padding:5px 10px;text-align:right">${today}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid black;padding:5px 10px">Contact name</td>
+        <td style="border:1px solid black;padding:5px 8px">${student.guardian}</td>
+        <td style="border:1px solid black;padding:5px 10px">Year group</td>
+        <td style="border:1px solid black;padding:5px 10px;text-align:right">${grade}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid black;padding:5px 10px"></td>
+        <td style="border:1px solid black;padding:5px 8px"></td>
+        <td style="border:1px solid black;padding:5px 10px">School year</td>
+        <td style="border:1px solid black;padding:5px 10px;text-align:right">${academicYear}</td>
+      </tr>
+    </table>
 
-  doc.line(20, 126, 190, 126)
+    <!-- Invoice table -->
+    <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:12px;margin-bottom:10px">
+      <thead>
+        <tr>
+          <th style="border:1px solid black;padding:6px 8px;text-align:center;width:36px">No.</th>
+          <th style="border:1px solid black;padding:6px 8px;text-align:center">Invoice no.</th>
+          <th style="border:1px solid black;padding:6px 8px;text-align:center">Invoice amount<br/>(THB)</th>
+          <th style="border:1px solid black;padding:6px 8px;text-align:center">Credit card fee*<br/>(THB)</th>
+          <th style="border:1px solid black;padding:6px 8px;text-align:center">Received amount<br/>(THB)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${invoiceRows}
+        <tr>
+          <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
+        </tr>
+        <tr style="font-weight:bold">
+          <td colspan="2" style="border:1px solid black;padding:5px 8px">GRAND TOTAL</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(student.subtotal)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(studentFee)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(grandReceived)}</td>
+        </tr>
+        <tr>
+          <td colspan="5" style="border:1px solid black;padding:5px 8px;font-style:italic;text-transform:uppercase;font-size:11px">
+            ${numberToWords(grandReceived)}
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
-  doc.setFont("helvetica", "bold")
-  doc.text("Invoice Summary", 20, 134)
-  doc.setFont("helvetica", "normal")
+    <!-- Notes -->
+    <div style="font-size:10px;margin-bottom:10px;line-height:1.9">
+      <p>* Credit card processing fee payable to Bank</p>
+      <p>** Please note that any overpayments amount is non-refundable and will be credited against future school fee invoices.</p>
+    </div>
 
-  let y = 142
-  for (const inv of student.invoices) {
-    const invNo = inv.invoiceNumber || inv.id
-    const amt = (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0).toLocaleString()
-    doc.text(`${invNo}`, 20, y)
-    doc.text(`${amt} THB`, 150, y, { align: "right" })
-    y += 8
-  }
+    <!-- Credit card info -->
+    <div style="font-size:12px;margin-bottom:18px">
+      <strong>Credit card:</strong> ${cardLabel}
+    </div>
 
-  doc.line(20, y, 190, y)
-  y += 8
-  doc.setFont("helvetica", "bold")
-  doc.text("Total Amount", 20, y)
-  doc.text(`${student.subtotal.toLocaleString()} THB`, 150, y, { align: "right" })
+    <!-- Signature -->
+    <table style="width:100%;margin-top:12px;font-size:12px">
+      <tr>
+        <td style="text-align:center;width:50%;padding:0 20px;vertical-align:bottom">
+          <div style="margin-bottom:34px">${cashierName}</div>
+          <div style="border-top:1px solid black;padding-top:6px;font-weight:bold">Cashier</div>
+        </td>
+        <td style="text-align:center;width:50%;padding:0 20px;vertical-align:bottom">
+          <div style="margin-bottom:34px"></div>
+          <div style="border-top:1px solid black;padding-top:6px;font-weight:bold">Authorised signature</div>
+          <div style="font-size:10px">Head of Finance and Accounting</div>
+        </td>
+      </tr>
+    </table>
 
-  if (paymentInfo.remark) {
-    doc.setFont("helvetica", "normal")
-    doc.setFontSize(10)
-    doc.text(`Remark: ${paymentInfo.remark}`, 20, y + 12)
-  }
-
-  return doc
+    <!-- Footer -->
+    <div style="text-align:center;font-size:9px;margin-top:22px;border-top:1px solid #999;padding-top:6px">
+      <p>${SCHOOL_INFO.name}, ${SCHOOL_INFO.address}</p>
+      <p>${SCHOOL_INFO.phone}, ${SCHOOL_INFO.email}, ${SCHOOL_INFO.website}</p>
+    </div>
+  </div>`
 }
 
+// ── Convert HTML template → jsPDF blob ──
+async function generatePdfBlob(
+  student: StudentReceiptData,
+  receiptNumber: string,
+  cashierName: string,
+  studentFee: number,
+  paymentInfo: PaymentInfo
+): Promise<Blob> {
+  const html = buildCashierReceiptHtml({ student, receiptNumber, cashierName, studentFee, paymentInfo })
+
+  const iframe = document.createElement("iframe")
+  iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:none"
+  document.body.appendChild(iframe)
+
+  try {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!iframeDoc) throw new Error("Cannot access iframe")
+
+    iframeDoc.open()
+    iframeDoc.write(`<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{background:white}</style></head><body>${html}</body></html>`)
+    iframeDoc.close()
+
+    // Wait for images
+    await Promise.all(
+      Array.from(iframeDoc.body.querySelectorAll("img")).map(img =>
+        img.complete ? Promise.resolve() : new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
+      )
+    )
+
+    const canvas = await html2canvas(iframeDoc.body, {
+      scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false,
+    })
+
+    const imgData = canvas.toDataURL("image/png")
+    const pdf = new jsPDF("p", "mm", "a4")
+    const pw = pdf.internal.pageSize.getWidth()
+    const ph = (canvas.height * pw) / canvas.width
+    pdf.addImage(imgData, "PNG", 0, 0, pw, ph)
+    return pdf.output("blob")
+  } finally {
+    document.body.removeChild(iframe)
+  }
+}
+
+// ── Main component ──
 export function CashierReceiptPage() {
   const { t } = useLanguage()
   const { subPageParams, navigateToSubPage } = useAppNavigation()
+  const { user } = useAuth()
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewBlobUrls, setPreviewBlobUrls] = useState<Record<string, string>>({})
+  const [receiptNumbers] = useState<Record<string, string>>(() => {
+    // Generate stable receipt numbers per student on mount
+    const map: Record<string, string> = {}
+    const base = subPageParams?.studentData ?? []
+    const year = new Date().getFullYear()
+    base.forEach((_: any, i: number) => {
+      const rand = String(10000 + Math.floor(Math.random() * 89999))
+      map[base[i]?.sid ?? i] = `R-CC-${year}-${rand.slice(0, 5)}`
+    })
+    return map
+  })
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
 
   const paymentId: string = subPageParams?.paymentId ?? "PAY-UNKNOWN"
   const studentData: StudentReceiptData[] = subPageParams?.studentData ?? []
   const paymentInfo: PaymentInfo = subPageParams?.paymentInfo ?? {
-    bank: "", cardType: "", paymentMethod: "full",
-    chargeAmount: 0, edcAmount: 0, remark: "",
+    bank: "", cardType: "", paymentMethod: "full", chargeAmount: 0, edcAmount: 0, remark: "",
   }
 
-  function handleViewReceipt(student: StudentReceiptData) {
+  const grandTotal = studentData.reduce((s, st) => s + st.subtotal, 0)
+  const totalFee = Math.max(0, paymentInfo.edcAmount - paymentInfo.chargeAmount)
+  const cashierName = user?.name ?? "Cashier"
+
+  function getStudentFee(student: StudentReceiptData): number {
+    if (grandTotal <= 0) return 0
+    return Number((totalFee * (student.subtotal / grandTotal)).toFixed(2))
+  }
+
+  async function handleViewReceipt(student: StudentReceiptData) {
     if (previewBlobUrls[student.sid]) {
       setPreviewUrl(previewBlobUrls[student.sid])
       return
     }
-    const doc = buildReceiptPdf(student, paymentId, paymentInfo)
-    const blob = doc.output("blob")
-    const url = URL.createObjectURL(blob)
-    setPreviewBlobUrls(prev => ({ ...prev, [student.sid]: url }))
-    setPreviewUrl(url)
+    setLoadingStates(prev => ({ ...prev, [student.sid]: true }))
+    try {
+      const blob = await generatePdfBlob(
+        student,
+        receiptNumbers[student.sid] ?? `R-CC-${new Date().getFullYear()}-00001`,
+        cashierName,
+        getStudentFee(student),
+        paymentInfo
+      )
+      const url = URL.createObjectURL(blob)
+      setPreviewBlobUrls(prev => ({ ...prev, [student.sid]: url }))
+      setPreviewUrl(url)
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [student.sid]: false }))
+    }
   }
 
-  function handleDownloadReceipt(student: StudentReceiptData) {
-    const doc = buildReceiptPdf(student, paymentId, paymentInfo)
-    doc.save(`receipt-${student.sid}-${paymentId}.pdf`)
+  async function handleDownloadReceipt(student: StudentReceiptData) {
+    setLoadingStates(prev => ({ ...prev, [`dl-${student.sid}`]: true }))
+    try {
+      const blob = await generatePdfBlob(
+        student,
+        receiptNumbers[student.sid] ?? `R-CC-${new Date().getFullYear()}-00001`,
+        cashierName,
+        getStudentFee(student),
+        paymentInfo
+      )
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `receipt-${student.sid}-${receiptNumbers[student.sid]}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`dl-${student.sid}`]: false }))
+    }
   }
 
   return (
     <div className="space-y-4">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <button
-          onClick={() => navigateToSubPage("cashier-dashboard")}
-          className="hover:text-foreground transition-colors"
-        >
+        <button onClick={() => navigateToSubPage("cashier-dashboard")} className="hover:text-foreground transition-colors">
           {t("menu.cashierDashboard")}
         </button>
         <span>/</span>
-        <button
-          onClick={() => navigateToSubPage("cashier-student-search")}
-          className="hover:text-foreground transition-colors"
-        >
+        <button onClick={() => navigateToSubPage("cashier-student-search")} className="hover:text-foreground transition-colors">
           {t("cashier.breadcrumbSearch")}
         </button>
         <span>/</span>
-        <button
-          onClick={() => navigateToSubPage("cashier-payment")}
-          className="hover:text-foreground transition-colors"
-        >
+        <button onClick={() => navigateToSubPage("cashier-payment")} className="hover:text-foreground transition-colors">
           {t("cashier.breadcrumbPayment")}
         </button>
         <span>/</span>
@@ -156,19 +322,14 @@ export function CashierReceiptPage() {
         <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
         <span className="text-sm">
           <span className="font-medium">{t("cashier.receiptSuccess")}</span>
-          {" "}
-          {t("cashier.paymentRef")}: <span className="font-mono font-semibold">{paymentId}</span>
-          {" "}
-          {t("cashier.multiPersonCount")}: {studentData.length} {t("cashier.personUnit")}
+          {" "}{t("cashier.paymentRef")}: <span className="font-mono font-semibold">{paymentId}</span>
+          {" "}{t("cashier.multiPersonCount")}: {studentData.length} {t("cashier.personUnit")}
         </span>
       </div>
 
       {/* Create new receipt button */}
       <div className="flex justify-center">
-        <Button
-          variant="outline"
-          onClick={() => navigateToSubPage("cashier-student-search")}
-        >
+        <Button variant="outline" onClick={() => navigateToSubPage("cashier-student-search")}>
           {t("cashier.createNewReceipt")}
         </Button>
       </div>
@@ -181,7 +342,6 @@ export function CashierReceiptPage() {
           {studentData.map((student, idx) => (
             <Card key={student.sid}>
               <CardContent className="p-0">
-                {/* Card header row — gray bg matching design */}
                 <div className="flex items-center justify-between bg-slate-100 rounded-t-lg px-4 py-2">
                   <span className="text-sm font-semibold text-slate-600">#{idx + 1}</span>
                   <span className="text-sm font-mono text-slate-500">{student.sid}</span>
@@ -194,16 +354,22 @@ export function CashierReceiptPage() {
                   <Button
                     variant="outline"
                     className="w-full"
+                    disabled={!!loadingStates[student.sid]}
                     onClick={() => handleViewReceipt(student)}
                   >
-                    {t("cashier.viewReceipt")}
+                    {loadingStates[student.sid]
+                      ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังสร้าง PDF...</>
+                      : t("cashier.viewReceipt")}
                   </Button>
                   <Button
                     variant="default"
                     className="w-full"
+                    disabled={!!loadingStates[`dl-${student.sid}`]}
                     onClick={() => handleDownloadReceipt(student)}
                   >
-                    {t("cashier.downloadReceipt")}
+                    {loadingStates[`dl-${student.sid}`]
+                      ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังดาวน์โหลด...</>
+                      : t("cashier.downloadReceipt")}
                   </Button>
                 </div>
               </CardContent>
