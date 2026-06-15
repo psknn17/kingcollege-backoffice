@@ -18,14 +18,14 @@ const INVOICE_KEYS = [
 ]
 
 const BANKS = [
-  { id: "kbank", name: "กสิกรไทย (KBank)" },
-  { id: "scb",   name: "ไทยพาณิชย์ (SCB)" },
-  { id: "bbl",   name: "กรุงเทพ (BBL)" },
-  { id: "ktb",   name: "กรุงไทย (KTB)" },
-  { id: "bay",   name: "กรุงศรี (BAY)" },
-  { id: "ttb",   name: "ทหารไทยธนชาต (TTB)" },
-  { id: "uob",   name: "ยูโอบี (UOB)" },
-  { id: "cimb",  name: "ซีไอเอ็มบี (CIMB)" },
+  { id: "kbank", name: "Kasikorn Bank (KBank)" },
+  { id: "scb",   name: "Siam Commercial Bank (SCB)" },
+  { id: "bbl",   name: "Bangkok Bank (BBL)" },
+  { id: "ktb",   name: "Krungthai Bank (KTB)" },
+  { id: "bay",   name: "Bank of Ayudhya (BAY)" },
+  { id: "ttb",   name: "TTB Bank (TTB)" },
+  { id: "uob",   name: "UOB Bank (UOB)" },
+  { id: "cimb",  name: "CIMB Bank (CIMB)" },
 ]
 
 const CARD_TYPES: Record<string, string[]> = {
@@ -255,7 +255,9 @@ export function CashierPaymentPage() {
               {/* Bank + Card type */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "28px" }}>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.bank")}</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
+                    {t("cashier.bank")} <span className="text-destructive">*</span>
+                  </label>
                   <Select value={selectedBank} onValueChange={val => { setSelectedBank(val); setSelectedCardType("") }}>
                     <SelectTrigger>
                       <SelectValue placeholder={`-- ${t("cashier.bank")} --`} />
