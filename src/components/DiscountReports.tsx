@@ -126,6 +126,7 @@ interface DiscountItem {
   mode: "percentage" | "fixed"
   value: number  // percentage value or fixed amount
   amount: number // calculated discount amount
+  invoiceAmount?: number // full invoice amount before discounts
   appliedTo: string[]
   invoiceCategory?: string // e.g. "Tuition", "ECA", "Trip & Activity"
 }
@@ -223,8 +224,12 @@ export function DiscountReports() {
           if (seenInvoiceIds.has(inv.id)) return
           seenInvoiceIds.add(inv.id)
 
+          if (inv.status !== "paid") return
+
           const discountsArr: any[] = inv.discounts || []
           if (discountsArr.length === 0 || discountsArr.every((d: any) => !d.amount || d.amount <= 0)) return
+
+          const invFullAmount = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
 
           const discountItems: DiscountItem[] = discountsArr
             .filter((d: any) => d.amount > 0)
@@ -244,6 +249,7 @@ export function DiscountReports() {
                 mode: (d.percentage ? "percentage" : "fixed") as DiscountItem["mode"],
                 value: d.percentage || d.amount,
                 amount: d.amount,
+                invoiceAmount: invFullAmount,
                 appliedTo: ["Tuition"]
               }
             })
@@ -690,27 +696,58 @@ export function DiscountReports() {
   const resetPage = () => setCurrentPage(1)
 
   const handleExport = () => {
-    const headers = ["Student ID", "Student Name", "Year Group", "Academic Year", "Term", "Discount Type", "Discount Name", "Mode", "Value", "Discount Amount", "Total Discount", "Status"]
-    const rows: (string | number)[][] = []
+    // Collect unique discount names across all filtered students (preserve insertion order)
+    const discountNameSet = new Set<string>()
+    filteredStudents.forEach(s => s.discounts.forEach(d => discountNameSet.add(d.name)))
+    const discountCols = Array.from(discountNameSet)
+
+    const showTerm = filterTerm !== "all"
+
+    const headers = [
+      "Student ID",
+      "Student Name",
+      "Year Group",
+      "Academic Year",
+      ...(showTerm ? ["Term"] : []),
+      ...discountCols
+    ]
+
+    // 1 row per student — sum invoice amounts across all matching invoices
+    type StudentRow = {
+      studentId: string
+      studentName: string
+      yearGroup: string
+      academicYear: string
+      term: string
+      discountMap: Record<string, number>
+    }
+    const studentMap = new Map<string, StudentRow>()
 
     filteredStudents.forEach(s => {
-      s.discounts.forEach((d, idx) => {
-        rows.push([
-          s.studentId,
-          s.studentName,
-          s.yearGroup,
-          formatAcademicYear(s.academicYear),
-          s.term,
-          getDiscountTypeLabel(d.type),
-          d.name,
-          d.mode,
-          d.mode === "percentage" ? `${d.value}%` : d.value,
-          d.amount,
-          idx === 0 ? s.totalDiscountAmount : "",
-          s.status
-        ])
+      if (!studentMap.has(s.studentId)) {
+        studentMap.set(s.studentId, {
+          studentId: s.studentId,
+          studentName: s.studentName,
+          yearGroup: s.yearGroup,
+          academicYear: s.academicYear,
+          term: s.term,
+          discountMap: {}
+        })
+      }
+      const entry = studentMap.get(s.studentId)!
+      s.discounts.forEach(d => {
+        entry.discountMap[d.name] = (entry.discountMap[d.name] ?? 0) + d.amount
       })
     })
+
+    const rows: (string | number)[][] = Array.from(studentMap.values()).map(s => [
+      s.studentId,
+      s.studentName,
+      s.yearGroup,
+      formatAcademicYear(s.academicYear),
+      ...(showTerm ? [s.term] : []),
+      ...discountCols.map(col => s.discountMap[col] ?? "")
+    ])
 
     downloadAsXlsx(headers, rows, `discount-report-${new Date().toISOString().split('T')[0]}`)
   }

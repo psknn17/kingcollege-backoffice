@@ -260,7 +260,7 @@ export function ApprovalQueue() {
 
   const creditNotes = useMemo(() => {
     try {
-      const stored = localStorage.getItem("creditNotesRecords")
+      const stored = localStorage.getItem("creditNotesRecords") || localStorage.getItem("creditNotes")
       if (stored) {
         const parsed = JSON.parse(stored)
         return parsed.map((cn: any) => ({
@@ -488,7 +488,8 @@ export function ApprovalQueue() {
   )
 
   const isSelectable = (invoice: Invoice) =>
-    invoice.status !== "paid" && invoice.status !== "cancelled"
+    invoice.status !== "paid" &&
+    invoice.status !== "cancelled"
 
   const selectableInvoices = useMemo(
     () => filteredInvoices.filter(isSelectable),
@@ -734,6 +735,47 @@ export function ApprovalQueue() {
     const totalAmount = selectedInvoices.reduce((sum, inv) => sum + (inv.finalAmount || 0), 0)
     setBulkMarkPaidData({ total: totalAmount, count: selectedInvoices.length })
     setIsBulkMarkPaidOpen(true)
+  }
+
+  const handleBulkChangeDueDate = () => {
+    setBulkDueDateValue(new Date())
+    setIsBulkDueDateOpen(true)
+  }
+
+  const confirmBulkChangeDueDate = () => {
+    if (!bulkDueDateValue) return
+    const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
+
+    try {
+      const stored = localStorage.getItem("createdInvoices")
+      if (stored) {
+        const allStored: any[] = JSON.parse(stored)
+        const idSet = new Set(selectedInvoices.map(inv => inv.id))
+        const updatedStored = allStored.map((inv: any) =>
+          idSet.has(inv.id)
+            ? { ...inv, dueDate: bulkDueDateValue.toISOString().split("T")[0] }
+            : inv
+        )
+        localStorage.setItem("createdInvoices", JSON.stringify(updatedStored))
+        window.dispatchEvent(new Event("invoicesUpdated"))
+      }
+    } catch {}
+
+    setInvoices(prev =>
+      prev.map(inv =>
+        selectedInvoiceIds.has(inv.id) ? { ...inv, dueDate: bulkDueDateValue } : inv
+      )
+    )
+
+    const count = selectedInvoices.length
+    setIsBulkDueDateOpen(false)
+    setSelectedInvoiceIds(new Set())
+    toast.success(`Updated due date for ${count} invoice${count > 1 ? "s" : ""}`)
+    logActivity({
+      action: "Bulk Change Due Date",
+      module: "Approval Queue",
+      detail: `Changed due date to ${format(bulkDueDateValue, "dd MMM yyyy")} for ${count} invoice(s)`
+    })
   }
 
   const confirmMarkPaid = () => {
@@ -1246,49 +1288,55 @@ export function ApprovalQueue() {
                   const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
                   const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
 
-                  if (allApprovedAndSent) {
-                    return (
+                  return (
+                    <>
                       <Button
                         size="sm"
-                        onClick={handleBulkMarkPaid}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md px-4"
-                        style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
+                        onClick={handleBulkChangeDueDate}
+                        className="font-bold shadow-md px-4"
+                        style={{ backgroundColor: '#2563eb', color: '#ffffff', opacity: 1, border: 'none' }}
                       >
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        Mark Paid
+                        <CalendarIcon className="w-4 h-4 mr-1" />
+                        Change Due Date
                       </Button>
-                    )
-                  }
 
-                  if (allDraft) {
-                    return (
-                      <div className="flex gap-2">
+                      {allApprovedAndSent && (
+                        <Button
+                          size="sm"
+                          onClick={handleBulkMarkPaid}
+                          className="font-bold shadow-md px-4"
+                          style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
+                        >
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          Mark Paid
+                        </Button>
+                      )}
+
+                      {allDraft && canApproveInvoices && (
                         <Button
                           size="sm"
                           onClick={approveSelectedInvoices}
-                          className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md px-4 transition-colors"
+                          className="font-bold shadow-md px-4 transition-colors"
                           style={{ backgroundColor: '#000000', color: '#ffffff', opacity: 1, border: 'none' }}
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Approve Selected
                         </Button>
-                        {user?.role !== "approver" && (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md px-4 transition-colors"
-                            style={{ backgroundColor: '#dc2626', color: '#ffffff', opacity: 1, border: 'none' }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Delete Selected
-                          </Button>
-                        )}
-                      </div>
-                    )
-                  }
+                      )}
 
-                  return null
+                      {allDraft && user?.role !== "approver" && (
+                        <Button
+                          size="sm"
+                          onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
+                          className="font-bold shadow-md px-4"
+                          style={{ backgroundColor: '#dc2626', color: '#ffffff', opacity: 1, border: 'none' }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete Selected
+                        </Button>
+                      )}
+                    </>
+                  )
                 })()}
 
                 <Button
@@ -1588,6 +1636,81 @@ export function ApprovalQueue() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsBulkMarkPaidOpen(false)}>Cancel</Button>
             <Button className="bg-green-600 hover:bg-green-700" onClick={confirmMarkPaid}>Confirm Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Change Due Date Dialog */}
+      <Dialog open={isBulkDueDateOpen} onOpenChange={setIsBulkDueDateOpen}>
+        <DialogContent style={{ maxWidth: "400px" }}>
+          <DialogHeader>
+            <DialogTitle>Change Due Date</DialogTitle>
+            <DialogDescription>
+              Set a new due date for {selectedInvoiceIds.size} selected invoice{selectedInvoiceIds.size > 1 ? "s" : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <label className="text-sm font-medium text-gray-700">New Due Date</label>
+            <div className="flex gap-2">
+              <Select
+                value={bulkDueDateValue ? String(bulkDueDateValue.getDate()) : ""}
+                onValueChange={val => {
+                  const base = bulkDueDateValue ?? new Date()
+                  setBulkDueDateValue(new Date(base.getFullYear(), base.getMonth(), Number(val)))
+                }}
+              >
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue placeholder="Day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={bulkDueDateValue ? String(bulkDueDateValue.getMonth() + 1) : ""}
+                onValueChange={val => {
+                  const base = bulkDueDateValue ?? new Date()
+                  setBulkDueDateValue(new Date(base.getFullYear(), Number(val) - 1, base.getDate()))
+                }}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => (
+                    <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={bulkDueDateValue ? String(bulkDueDateValue.getFullYear()) : ""}
+                onValueChange={val => {
+                  const base = bulkDueDateValue ?? new Date()
+                  setBulkDueDateValue(new Date(Number(val), base.getMonth(), base.getDate()))
+                }}
+              >
+                <SelectTrigger className="w-[90px]">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2024, 2025, 2026, 2027, 2028].map(y => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkDueDateOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!bulkDueDateValue}
+              onClick={confirmBulkChangeDueDate}
+              style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+            >
+              Confirm
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

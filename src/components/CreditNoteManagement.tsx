@@ -201,6 +201,24 @@ const getMockCreditNotes = (): CreditNote[] => {
 
 // Load Credit Notes from localStorage
 const CREDIT_NOTES_MOCK_VERSION = "v5"
+const mergeOVQueue = (base: CreditNote[]): CreditNote[] => {
+  try {
+    const raw = localStorage.getItem("overpaymentCNQueue")
+    if (!raw) return base
+    const pending: any[] = JSON.parse(raw)
+    if (!pending.length) return base
+    const mapped = pending.map((cn: any) => ({
+      ...cn,
+      noteType: "OP" as const,
+      issueDate: new Date(cn.issueDate),
+    }))
+    localStorage.removeItem("overpaymentCNQueue")
+    const merged = [...mapped, ...base]
+    localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(merged))
+    return merged
+  } catch { return base }
+}
+
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
     const mockVersion = localStorage.getItem("creditNotes_mockVersion")
@@ -210,7 +228,7 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
       localStorage.setItem("creditNotes_mockVersion", CREDIT_NOTES_MOCK_VERSION)
       const mock = getMockCreditNotes()
       localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(mock))
-      return mock
+      return mergeOVQueue(mock)
     }
 
     const stored = localStorage.getItem(CREDIT_NOTES_STORAGE_KEY)
@@ -231,12 +249,12 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
         postingDate: cn.postingDate ? new Date(cn.postingDate) : undefined,
         appliedDate: cn.appliedDate ? new Date(cn.appliedDate) : undefined
       }))
-      if (loaded.length > 0) return loaded
+      if (loaded.length > 0) return mergeOVQueue(loaded)
     }
   } catch (error) {
     console.error("Failed to load credit notes:", error)
   }
-  return getMockCreditNotes()
+  return mergeOVQueue(getMockCreditNotes())
 }
 
 // Save Credit Notes to localStorage
@@ -352,6 +370,12 @@ export function CreditNoteManagement() {
   useEffect(() => {
     setInvoices(loadInvoicesFromStorage())
     setFilteredCreditNotes(creditNotes)
+  }, [])
+
+  useEffect(() => {
+    const handleExternalUpdate = () => setCreditNotes(loadCreditNotesFromStorage())
+    window.addEventListener("creditNotesUpdated", handleExternalUpdate)
+    return () => window.removeEventListener("creditNotesUpdated", handleExternalUpdate)
   }, [])
 
   // Auto-save to localStorage whenever creditNotes changes

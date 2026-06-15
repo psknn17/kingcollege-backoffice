@@ -100,61 +100,63 @@ const initialAcademicYears: AcademicYear[] = [
     id: "2025/2026",
     name: "2025/2026",
     terms: [
-      {
-        id: "1",
-        name: "Term 1",
-        startDate: new Date("2025-08-15"),
-        endDate: new Date("2025-12-20"),
-        paymentDeadline: new Date("2025-08-01")
-      },
-      {
-        id: "2",
-        name: "Term 2",
-        startDate: new Date("2026-01-08"),
-        endDate: new Date("2026-03-20"),
-        paymentDeadline: new Date("2025-12-15")
-      },
-      {
-        id: "3",
-        name: "Term 3",
-        startDate: new Date("2026-04-01"),
-        endDate: new Date("2026-06-15"),
-        paymentDeadline: new Date("2026-03-15")
-      }
+      { id: "1", name: "Term 1", startDate: new Date("2025-08-15"), endDate: new Date("2025-12-20"), paymentDeadline: new Date("2025-08-01") },
+      { id: "2", name: "Term 2", startDate: new Date("2026-01-08"), endDate: new Date("2026-03-20"), paymentDeadline: new Date("2025-12-15") },
+      { id: "3", name: "Term 3", startDate: new Date("2026-04-01"), endDate: new Date("2026-06-15"), paymentDeadline: new Date("2026-03-15") }
     ]
   },
   {
     id: "2024/2025",
     name: "2024/2025",
     terms: [
-      {
-        id: "1",
-        name: "Term 1",
-        startDate: new Date("2024-08-15"),
-        endDate: new Date("2024-12-20"),
-        paymentDeadline: new Date("2024-08-01")
-      },
-      {
-        id: "2",
-        name: "Term 2",
-        startDate: new Date("2025-01-08"),
-        endDate: new Date("2025-03-20"),
-        paymentDeadline: new Date("2024-12-15")
-      },
-      {
-        id: "3",
-        name: "Term 3",
-        startDate: new Date("2025-04-01"),
-        endDate: new Date("2025-06-15"),
-        paymentDeadline: new Date("2025-03-15")
-      }
+      { id: "1", name: "Term 1", startDate: new Date("2024-08-15"), endDate: new Date("2024-12-20"), paymentDeadline: new Date("2024-08-01") },
+      { id: "2", name: "Term 2", startDate: new Date("2025-01-08"), endDate: new Date("2025-03-20"), paymentDeadline: new Date("2024-12-15") },
+      { id: "3", name: "Term 3", startDate: new Date("2025-04-01"), endDate: new Date("2025-06-15"), paymentDeadline: new Date("2025-03-15") }
     ]
-  }
+  },
+  {
+    id: "2023/2024",
+    name: "2023/2024",
+    terms: [
+      { id: "1", name: "Term 1", startDate: new Date("2023-08-15"), endDate: new Date("2023-12-20"), paymentDeadline: new Date("2023-08-01") },
+      { id: "2", name: "Term 2", startDate: new Date("2024-01-08"), endDate: new Date("2024-03-20"), paymentDeadline: new Date("2023-12-15") },
+      { id: "3", name: "Term 3", startDate: new Date("2024-04-01"), endDate: new Date("2024-06-15"), paymentDeadline: new Date("2024-03-15") }
+    ]
+  },
+  {
+    id: "2022/2023",
+    name: "2022/2023",
+    terms: [
+      { id: "1", name: "Term 1", startDate: new Date("2022-08-15"), endDate: new Date("2022-12-20"), paymentDeadline: new Date("2022-08-01") },
+      { id: "2", name: "Term 2", startDate: new Date("2023-01-08"), endDate: new Date("2023-03-20"), paymentDeadline: new Date("2022-12-15") },
+      { id: "3", name: "Term 3", startDate: new Date("2023-04-01"), endDate: new Date("2023-06-15"), paymentDeadline: new Date("2023-03-15") }
+    ]
+  },
+  {
+    id: "2021/2022",
+    name: "2021/2022",
+    terms: [
+      { id: "1", name: "Term 1", startDate: new Date("2021-08-15"), endDate: new Date("2021-12-20"), paymentDeadline: new Date("2021-08-01") },
+      { id: "2", name: "Term 2", startDate: new Date("2022-01-08"), endDate: new Date("2022-03-20"), paymentDeadline: new Date("2021-12-15") },
+      { id: "3", name: "Term 3", startDate: new Date("2022-04-01"), endDate: new Date("2022-06-15"), paymentDeadline: new Date("2022-03-15") }
+    ]
+  },
 ]
 
 export function AcademicYearProvider({ children }: { children: ReactNode }) {
   const [academicYears, setAcademicYearsState] = useState<AcademicYear[]>(() => {
-    return loadFromStorage() || initialAcademicYears
+    const stored = loadFromStorage()
+    if (!stored) return initialAcademicYears
+    // Remove stored years older than the earliest year in initialAcademicYears
+    const oldestInitial = [...initialAcademicYears].sort((a, b) => a.id.localeCompare(b.id))[0].id
+    const filtered = stored.filter(y => y.id >= oldestInitial)
+    // Merge any years from initialAcademicYears that are missing
+    const filteredIds = new Set(filtered.map(y => y.id))
+    const missing = initialAcademicYears.filter(y => !filteredIds.has(y.id))
+    if (missing.length === 0 && filtered.length === stored.length) return stored
+    const merged = [...filtered, ...missing].sort((a, b) => b.id.localeCompare(a.id))
+    saveToStorage(merged)
+    return merged
   })
 
   // Manual save function - accepts explicit years to avoid stale closure

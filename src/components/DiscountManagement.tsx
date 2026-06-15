@@ -1043,7 +1043,7 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
-                <p className="text-sm text-muted-foreground">{t("discount.studentGroupsCard")}</p>
+                <p className="text-sm text-muted-foreground">{category === "external" ? "Client Groups" : t("discount.studentGroupsCard")}</p>
                 <p className="text-2xl font-bold">{studentGroups.length}</p>
               </CardContent>
             </Card>
@@ -1552,13 +1552,17 @@ export function DiscountManagement({ activeTab, category = "tuition", onNavigate
               <Card>
                 <CardContent className="p-12 text-center">
                   <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="font-medium mb-2">{t("discount.noStudentGroups")}</h3>
+                  <h3 className="font-medium mb-2">
+                    {category === "external" ? "No Client Groups" : t("discount.noStudentGroups")}
+                  </h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {t("discount.noStudentGroupsDesc")}
+                    {category === "external"
+                      ? "Create your first client group to manage discount whitelist"
+                      : t("discount.noStudentGroupsDesc")}
                   </p>
                   <Button onClick={() => setIsGroupDialogOpen(true)} disabled={!userCanEdit}>
                     <Plus className="w-4 h-4 mr-2" />
-                    {t("discount.createStudentGroup")}
+                    {category === "external" ? "Create Client Group" : t("discount.createStudentGroup")}
                   </Button>
                 </CardContent>
               </Card>

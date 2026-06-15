@@ -1,5 +1,6 @@
 // Mock data seeder — realistic, interconnected data across ALL menus
 // Only seeds keys that don't already exist (seedIfEmpty)
+import { seedMockData } from "@/services/analyticsService"
 
 const CURRENT_YEAR = "2025/2026"
 const PREV_YEAR = "2024/2025"
@@ -349,6 +350,52 @@ function generateInvoices(students: any[], families: any[]) {
       invSeq++
     }
   }
+
+  // ── Historical invoices for 2021/2022 – 2024/2025 (compact, 30/year) ──
+  const historicalAYs = [
+    { ay: "2021/2022", y: "2021", termStart: ["2021-08","2022-01","2022-04"] },
+    { ay: "2022/2023", y: "2022", termStart: ["2022-08","2023-01","2023-04"] },
+    { ay: "2023/2024", y: "2023", termStart: ["2023-08","2024-01","2024-04"] },
+    { ay: "2024/2025", y: "2024", termStart: ["2024-08","2025-01","2025-04"] },
+  ]
+  const historicalCats = ["tuition","eca","bus","trip","exam"]
+  const historicalDist = ["paid","paid","paid","paid","paid","paid","sent","overdue","cancelled"]
+  for (const { ay, y, termStart } of historicalAYs) {
+    for (let i = 0; i < 30; i++) {
+      const s = active[i % active.length]
+      const termNum = (i % 3) + 1
+      const termLabel = `Term ${termNum}`
+      const cat = historicalCats[i % historicalCats.length]
+      const status = historicalDist[i % historicalDist.length]
+      const netAmount = cat === "tuition"
+        ? (TUITION[s.gradeLevel]?.[termNum - 1] || 125000)
+        : cat === "eca" ? 7000 + (i % 3) * 2000
+        : cat === "bus" ? 20000
+        : cat === "trip" ? 15000
+        : 25000
+      invoices.push({
+        id: `inv-hist-${y}-${pad(i + 1)}`,
+        invoiceNumber: `${y}-${pad(invSeq, 5)}`,
+        studentId: s.studentId, studentName: `${s.firstName} ${s.lastName}`,
+        studentGrade: GRADE_LABELS[s.gradeLevel] || s.gradeLevel,
+        parentName: s.parents?.[0]?.name || "",
+        category: cat, invoiceType: "student",
+        academicYear: ay,
+        term: `${termLabel} ${ay}`, termName: termLabel,
+        status, approvalStatus: ["paid","sent","overdue"].includes(status) ? "approved" : status === "cancelled" ? "cancelled" : "wait",
+        netAmount, finalAmount: netAmount, subtotal: netAmount,
+        issueDate: `${termStart[termNum - 1]}-15`,
+        dueDate: `${termStart[termNum - 1]}-01`,
+        familyCode: s.familyCode || "",
+        items: [{ name: cat === "tuition" ? "Tuition Fee" : cat, amount: netAmount }],
+        discounts: [], totalDiscount: 0,
+        paymentType: "termly", documentType: "SI",
+        paidDate: status === "paid" ? `${termStart[termNum - 1]}-20` : undefined,
+      })
+      invSeq++
+    }
+  }
+
   return invoices
 }
 
@@ -536,6 +583,48 @@ function generateCreditNotes(invoices: any[]) {
       usageHistory: [{ appliedAmount: usedAmt, appliedAt: randomDate(new Date("2025-11-01"), new Date("2026-02-28")), appliedBy: "staff" as const }],
     })
     seq++
+  }
+
+  // 6) Historical credit notes — 2021/2022 through 2024/2025 (4 per year)
+  const historicalYears = [
+    { ay: "2021/2022", start: "2021-08-15", end: "2022-06-15" },
+    { ay: "2022/2023", start: "2022-08-15", end: "2023-06-15" },
+    { ay: "2023/2024", start: "2023-08-15", end: "2024-06-15" },
+    { ay: "2024/2025", start: "2024-08-15", end: "2025-06-15" },
+  ]
+  const sampleStudents = [...paid, ...unpaid].filter(inv => inv.studentId && inv.studentName)
+  if (sampleStudents.length > 0) {
+    const yearNum = (ay: string) => ay.split("/")[0]
+    for (const { ay, start, end } of historicalYears) {
+      for (let i = 0; i < 4; i++) {
+        const inv = sampleStudents[(seq * 7 + i) % sampleStudents.length]
+        const creditAmt = Math.round((50000 + Math.random() * 150000) / 100) * 100
+        const isApplied = i < 3
+        const termNum = (i % 3) + 1
+        cnList.push({
+          id: `cn-${pad(seq)}`,
+          creditNoteNumber: `CN-${yearNum(ay)}-${pad(seq)}`,
+          invoiceNumber: "",
+          studentName: inv.studentName, studentId: inv.studentId, studentGrade: inv.studentGrade,
+          parentName: inv.parentName,
+          originalAmount: creditAmt * 10, creditAmount: creditAmt,
+          remainingBalance: 0,
+          reason: reasons[(seq - 1) % reasons.length],
+          type: types[(seq - 1) % types.length],
+          status: isApplied ? "applied" : "cancelled",
+          issueDate: randomDate(new Date(start), new Date(end)),
+          issuedBy: pick(["System Administrator", "finance admin"]),
+          approvedBy: "finance admin",
+          notes: isApplied ? `Applied — ${ay} Term ${termNum}` : `Cancelled — ${ay}`,
+          familyCode: inv.familyCode, adultIdNo: inv.familyCode,
+          academicYear: ay,
+          term: `Term ${termNum} ${ay}`,
+          yearGroup: inv.studentGrade,
+          ...(isApplied ? { appliedDate: randomDate(new Date(start), new Date(end)) } : {}),
+        })
+        seq++
+      }
+    }
   }
 
   return cnList
@@ -957,7 +1046,8 @@ export function seedAllData() {
     const SEED_VER = "3.9"
     if (localStorage.getItem(RESEED_KEY) !== SEED_VER) {
       const keysToRemove = [
-        "students_v1600","families_v1600","student_data_version_v3","academicYears","tuitionByYearData",
+        // NOTE: students_v1600 and families_v1600 intentionally excluded — preserve real backoffice student data
+        "student_data_version_v3","academicYears","tuitionByYearData",
         "createdInvoices","paymentRecords","creditNotes","creditNotesRecords","invoiceEmailLogs","emailReminderHistory",
         "receiptRecords_tuition","receiptRecords_eca","receiptRecords_trip","receiptRecords_event","receiptRecords_summer","receiptRecords_external",
         "studentGroups","studentGroups_afterschool","studentGroups_event","studentGroups_eca","studentGroups_trip","studentGroups_exam","studentGroups_bus","studentGroups_external","summerDiscountGroups",
@@ -967,6 +1057,8 @@ export function seedAllData() {
         "invoiceItems","afterschoolItems","ecaItems","eventItems","tripItems","examItems","summerItems","busItems","externalItems",
         "bankAccounts","onlineBankAccounts","kingscollege_backoffice_bankAccounts",
         "kingscollege_backoffice_debt-reminder:reminders-v2","kingscollege_backoffice_debt-reminder:globalSettings",
+        "analyticsService_mockVersion", // force analytics to re-seed after full clear
+        "analyticsService_studentLinked", // force student-linked re-seed
       ]
       keysToRemove.forEach(k => localStorage.removeItem(k))
       localStorage.setItem(RESEED_KEY, SEED_VER)
@@ -1028,26 +1120,30 @@ export function seedAllData() {
 
     // ── Invoices (all categories) ────────────────────────────
     // Version check: re-seed invoices when seed data structure changes
-    const INVOICE_SEED_VERSION = "3.0" // Bump when invoice seed data changes
+    const INVOICE_SEED_VERSION = "3.2" // Bump when invoice seed data changes
     const currentSeedVersion = localStorage.getItem("invoice_seed_version")
-    if (currentSeedVersion !== INVOICE_SEED_VERSION) {
-      localStorage.removeItem("createdInvoices")
-      // Also clear receipts & payment records so they match new invoices
-      for (const key of Object.keys(RECEIPT_STORAGE_MAP).map(k => RECEIPT_STORAGE_MAP[k])) {
-        localStorage.removeItem(key)
+    // If analytics service has already seeded createdInvoices (5-year mock), skip seedData invoices
+    const analyticsHasSeeded = !!localStorage.getItem("analyticsService_mockVersion")
+    if (!analyticsHasSeeded) {
+      if (currentSeedVersion !== INVOICE_SEED_VERSION) {
+        localStorage.removeItem("createdInvoices")
+        // Also clear receipts & payment records so they match new invoices
+        for (const key of Object.keys(RECEIPT_STORAGE_MAP).map(k => RECEIPT_STORAGE_MAP[k])) {
+          localStorage.removeItem(key)
+        }
+        localStorage.removeItem("paymentRecords")
+        localStorage.removeItem("creditNotes")
+        localStorage.removeItem("creditNotesRecords")
+        localStorage.removeItem("invoiceEmailLogs")
+        // Clear discount groups too so they stay in sync with invoice discounts
+        localStorage.removeItem("studentGroups")
+        localStorage.removeItem("scholarshipRecords")
+        localStorage.removeItem("staffChildRecords")
+        localStorage.removeItem("earlyBirdRecords")
       }
-      localStorage.removeItem("paymentRecords")
-      localStorage.removeItem("creditNotes")
-      localStorage.removeItem("creditNotesRecords")
-      localStorage.removeItem("invoiceEmailLogs")
-      // Clear discount groups too so they stay in sync with invoice discounts
-      localStorage.removeItem("studentGroups")
-      localStorage.removeItem("scholarshipRecords")
-      localStorage.removeItem("staffChildRecords")
-      localStorage.removeItem("earlyBirdRecords")
-      localStorage.setItem("invoice_seed_version", INVOICE_SEED_VERSION)
+      seedIfEmpty("createdInvoices", invoices)
     }
-    seedIfEmpty("createdInvoices", invoices)
+    localStorage.setItem("invoice_seed_version", INVOICE_SEED_VERSION)
 
     // ── Receipts (per category storage key) ──────────────────
     for (const [key, records] of Object.entries(receipts)) {
@@ -1057,9 +1153,15 @@ export function seedAllData() {
     // ── Payment Records ──────────────────────────────────────
     seedIfEmpty("paymentRecords", paymentRecords)
 
-    // ── Credit Notes ─────────────────────────────────────────
+    // ── Credit Notes — versioned independently so historical notes always seed ──
+    const CN_SEED_VERSION = "1.2"
+    if (localStorage.getItem("creditNotes_seed_version") !== CN_SEED_VERSION) {
+      localStorage.removeItem("creditNotes")
+      localStorage.removeItem("creditNotesRecords")
+    }
     seedIfEmpty("creditNotes", creditNotes)
-    seedIfEmpty("creditNotesRecords", creditNotes)
+    // creditNotesRecords is NOT pre-seeded — components fallback to creditNotes
+    localStorage.setItem("creditNotes_seed_version", CN_SEED_VERSION)
 
     // ── Email Logs ───────────────────────────────────────────
     seedIfEmpty("invoiceEmailLogs", emailLogs)

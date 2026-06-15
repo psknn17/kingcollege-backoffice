@@ -410,6 +410,34 @@ const CREDIT_NOTES_STORAGE_KEY = "creditNotesRecords"
 const CREDIT_NOTES_VERSION_KEY = "creditNotesVersion"
 const CREDIT_NOTES_CURRENT_VERSION = "6"
 
+const flushOVQueue = (): any[] => {
+  try {
+    const raw = localStorage.getItem("overpaymentCNQueue")
+    if (!raw) return []
+    const items: any[] = JSON.parse(raw)
+    if (!items.length) return []
+    localStorage.removeItem("overpaymentCNQueue")
+    return items
+  } catch { return [] }
+}
+
+const mapCN = (cn: any, invoices: any[]): CreditNote => {
+  const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
+  return {
+    ...cn,
+    amount: cn.amount ?? cn.creditAmount ?? 0,
+    amountIncludingVat: cn.amountIncludingVat ?? 0,
+    remainingAmount: cn.remainingAmount ?? 0,
+    issueDate: new Date(cn.issueDate),
+    dueDate: cn.dueDate ? new Date(cn.dueDate) : null,
+    familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || cn.parentName || "",
+    paid: cn.paid ?? false,
+    cancelled: cn.cancelled ?? false,
+    corrective: cn.corrective ?? false,
+    description: cn.description || cn.reason || ""
+  }
+}
+
 const loadCreditNotesFromStorage = (): CreditNote[] => {
   try {
     const ver = localStorage.getItem(CREDIT_NOTES_VERSION_KEY)
@@ -424,23 +452,13 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
     const invoices = invoicesStored ? JSON.parse(invoicesStored) : []
 
     if (stored) {
-      const parsed = JSON.parse(stored)
-      return parsed.map((cn: any) => {
-        const matchingInvoice = invoices.find((inv: any) => inv.invoiceNumber === cn.invoiceNumber)
-        return {
-          ...cn,
-          amount: cn.amount ?? cn.creditAmount ?? 0,
-          amountIncludingVat: cn.amountIncludingVat ?? 0,
-          remainingAmount: cn.remainingAmount ?? 0,
-          issueDate: new Date(cn.issueDate),
-          dueDate: cn.dueDate ? new Date(cn.dueDate) : null,
-          familyCode: matchingInvoice?.familyCode || matchingInvoice?.adultIdNo || cn.familyCode || cn.parentName || "",
-          paid: cn.paid ?? false,
-          cancelled: cn.cancelled ?? false,
-          corrective: cn.corrective ?? false,
-          description: cn.description || cn.reason || ""
-        }
-      })
+      const pending = flushOVQueue()
+      const parsed: any[] = JSON.parse(stored)
+      const allRaw = pending.length > 0 ? [...pending, ...parsed] : parsed
+      if (pending.length > 0) {
+        try { localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(allRaw)) } catch { }
+      }
+      return allRaw.map((cn: any) => mapCN(cn, invoices))
     }
   } catch { }
   // Build mock data using REAL invoice students so credit notes match invoices
@@ -497,9 +515,14 @@ const loadCreditNotesFromStorage = (): CreditNote[] => {
     }
   })
 
+  const pending = flushOVQueue()
+  const invoicesStored2 = localStorage.getItem("createdInvoices")
+  const invoices2 = invoicesStored2 ? JSON.parse(invoicesStored2) : []
+  const mappedPending: CreditNote[] = pending.map((cn: any) => mapCN(cn, invoices2))
+  const allCNs = pending.length > 0 ? [...mappedPending, ...generatedCNs] : generatedCNs
   // Save to localStorage so other components (InvoiceManagement) can read them
-  try { localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify(generatedCNs)) } catch { }
-  return generatedCNs
+  try { localStorage.setItem(CREDIT_NOTES_STORAGE_KEY, JSON.stringify([...pending, ...generatedCNs])) } catch { }
+  return allCNs
 }
 
 const saveCreditNotesToStorage = (notes: CreditNote[]) => {
@@ -557,6 +580,13 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
   const [filteredCreditNotes, setFilteredCreditNotes] = useState<CreditNote[]>(() => loadCreditNotesFromStorage())
 
+  // Reload when an OV credit note is created from InvoiceManagement
+  useEffect(() => {
+    const handler = () => setCreditNotes(loadCreditNotesFromStorage())
+    window.addEventListener("creditNotesUpdated", handler)
+    return () => window.removeEventListener("creditNotesUpdated", handler)
+  }, [])
+
   // Persist credit notes to localStorage whenever state changes
   useEffect(() => {
     if (creditNotes.length > 0) {
@@ -593,6 +623,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [dueDateFrom, setDueDateFrom] = useState<Date | null>(null)
   const [dueDateTo, setDueDateTo] = useState<Date | null>(null)
+  const [cnCancelTarget, setCnCancelTarget] = useState<string | null>(null) // CN id or "bulk"
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -1129,7 +1160,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     const headerRow = [
       "Receipt no.", "Customer no.", "Type", "RV no. series",
       "Receive date", "Payment method", "Sell-to-customer No.",
-      "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount"
+      "Receive Account no.", "Year group", "School year", "Invoice no.", "Amount", "Overpayment"
     ]
 
     const dataRows = sorted.map(r => [
@@ -1144,7 +1175,8 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       (r.studentGrade || "").toUpperCase(),
       (r.academicYear || "").replace(/-/g, "/"),
       r.invoiceNumber,
-      r.amount
+      r.amount,
+      r.overpaymentAmount && r.overpaymentAmount > 0 ? r.overpaymentAmount : ""
     ])
 
     const ws = XLSX.utils.aoa_to_sheet([titleRow, [], headerRow, ...dataRows])
@@ -1153,7 +1185,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     ws["!cols"] = [
       { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
       { wch: 12 }, { wch: 16 }, { wch: 20 },
-      { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }
+      { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 14 }
     ]
 
     XLSX.utils.book_append_sheet(wb, ws, "Receipts")
@@ -1367,10 +1399,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         return
       }
       const updatedCreditNotes = creditNotes.map(cn =>
-        cn.id === creditNoteId ? { ...cn, status: "cancelled" as const } : cn
+        cn.id === creditNoteId ? { ...cn, status: "cancelled" as const, cancelled: true } : cn
       )
       setCreditNotes(updatedCreditNotes)
       setFilteredCreditNotes(updatedCreditNotes)
+      saveCreditNotesToStorage(updatedCreditNotes)
       toast.success(t("receipt.creditNoteCancelled").replace("{number}", creditNote.creditNoteNumber))
       logActivity({ action: "Cancel Credit Note", module: "Credit Notes", detail: `CN: ${creditNote.creditNoteNumber}, Student: ${creditNote.studentName} (${creditNote.studentId}), Amount: ฿${creditNote.amount.toLocaleString()}, Status: ${creditNote.status} → cancelled` })
     }
@@ -1393,11 +1426,12 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
     }
     const updatedCreditNotes = creditNotes.map(cn =>
       selectedCreditNotes.has(cn.id) && cn.status !== "cancelled"
-        ? { ...cn, status: "cancelled" as const }
+        ? { ...cn, status: "cancelled" as const, cancelled: true }
         : cn
     )
     setCreditNotes(updatedCreditNotes)
     setFilteredCreditNotes(updatedCreditNotes)
+    saveCreditNotesToStorage(updatedCreditNotes)
     toast.success(t("receipt.cancelledCreditNotes").replace("{count}", String(selectedCreditNotes.size)))
     logActivity({ action: "Bulk Cancel Credit Notes", module: "Credit Notes", detail: `Cancelled ${selectedCreditNotes.size} credit notes: ${creditNotes.filter(cn => selectedCreditNotes.has(cn.id)).map(cn => cn.creditNoteNumber).slice(0, 5).join(", ")}${selectedCreditNotes.size > 5 ? "..." : ""}` })
     setSelectedCreditNotes(new Set())
@@ -2580,7 +2614,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         variant="outline"
                         size="sm"
                         disabled={!userCanEdit}
-                        onClick={bulkCancelCreditNotes}
+                        onClick={() => setCnCancelTarget("bulk")}
                         className="bg-white hover:bg-blue-100 border-blue-300"
                       >
                         <X className="w-4 h-4 mr-2" />
@@ -2758,7 +2792,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                                       size="sm"
                                       variant="ghost"
                                       disabled={!userCanEdit}
-                                      onClick={() => cancelCreditNote(creditNote.id)}
+                                      onClick={() => setCnCancelTarget(creditNote.id)}
                                     >
                                       <X className="w-4 h-4 text-red-500" />
                                     </Button>
@@ -3359,6 +3393,48 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
           setIsTemplateDialogOpen(false)
         }}
       />
+
+      {/* ── Cancel Credit Note Confirmation Dialog ── */}
+      <Dialog open={cnCancelTarget !== null} onOpenChange={open => { if (!open) setCnCancelTarget(null) }}>
+        <DialogContent style={{ maxWidth: "400px" }}>
+          <DialogHeader>
+            <DialogTitle>Cancel Credit Note</DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-sm text-muted-foreground space-y-1 pt-1">
+                {cnCancelTarget === "bulk" ? (
+                  <p>{selectedCreditNotes.size} credit note(s) selected will be cancelled.</p>
+                ) : (() => {
+                  const cn = creditNotes.find(c => c.id === cnCancelTarget)
+                  return cn ? (
+                    <>
+                      <p><span className="font-medium text-foreground">{cn.creditNoteNumber}</span></p>
+                      <p>{cn.studentName} · ฿{cn.amount.toLocaleString()}</p>
+                    </>
+                  ) : null
+                })()}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setCnCancelTarget(null)}>
+              Keep
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (cnCancelTarget === "bulk") {
+                  bulkCancelCreditNotes()
+                } else if (cnCancelTarget) {
+                  cancelCreditNote(cnCancelTarget)
+                }
+                setCnCancelTarget(null)
+              }}
+            >
+              Cancel Credit Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div >
   )

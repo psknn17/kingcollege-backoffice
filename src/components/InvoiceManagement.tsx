@@ -686,6 +686,7 @@ export function InvoiceManagement({
   const [edcAmount, setEdcAmount] = useState<string>("")
   const [ccFeePercent, setCcFeePercent] = useState<string>("")
   const [paymentAmountInput, setPaymentAmountInput] = useState<string>("")
+  const [receiptDate, setReceiptDate] = useState<Date>(new Date())
 
   // Auto-deselect CNs when EDC amount covers the full invoice
   useEffect(() => {
@@ -1477,6 +1478,7 @@ export function InvoiceManagement({
     let cns: CreditNoteRecord[] = []
     if (isExternalInvoice) {
       setAvailableCNsForPaid([])
+      setReceiptDate(new Date())
       setIsMarkPaidOpen(true)
       return
     }
@@ -1484,6 +1486,13 @@ export function InvoiceManagement({
       const stored = localStorage.getItem("creditNotesRecords")
       if (stored) {
         const raw: any[] = JSON.parse(stored)
+        try {
+          const qRaw = localStorage.getItem("overpaymentCNQueue")
+          if (qRaw) {
+            const qItems: any[] = JSON.parse(qRaw)
+            qItems.forEach(q => { if (!raw.find(r => r.id === q.id)) raw.push(q) })
+          }
+        } catch {}
         // Collect all family codes and student identifiers from selected invoices
         const allFamilyCodes = new Set<string>()
         const allStudentIds = new Set<string>()
@@ -1530,6 +1539,7 @@ export function InvoiceManagement({
       ) as CreditNoteRecord[]
     }
     setAvailableCNsForPaid(cns)
+    setReceiptDate(new Date())
     setIsMarkPaidOpen(true)
   }
 
@@ -3357,6 +3367,7 @@ export function InvoiceManagement({
     let cns: CreditNoteRecord[] = []
     if (isExternalInvoice) {
       setAvailableCNsForPaid([])
+      setReceiptDate(new Date())
       setIsMarkPaidOpen(true)
       return
     }
@@ -3364,6 +3375,13 @@ export function InvoiceManagement({
       const stored = localStorage.getItem("creditNotesRecords")
       if (stored) {
         const raw: any[] = JSON.parse(stored)
+        try {
+          const qRaw = localStorage.getItem("overpaymentCNQueue")
+          if (qRaw) {
+            const qItems: any[] = JSON.parse(qRaw)
+            qItems.forEach(q => { if (!raw.find(r => r.id === q.id)) raw.push(q) })
+          }
+        } catch {}
         const fCode = (invoice.adultIdNo || "").trim().toLowerCase()
         const sId = (invoice.studentId || "").trim().toLowerCase()
         const sName = (invoice.studentName || "").trim().toLowerCase()
@@ -3405,6 +3423,7 @@ export function InvoiceManagement({
       ) as CreditNoteRecord[]
     }
     setAvailableCNsForPaid(cns)
+    setReceiptDate(new Date())
     setIsMarkPaidOpen(true)
   }, [])
 
@@ -3415,6 +3434,25 @@ export function InvoiceManagement({
       reader.onerror = () => reject(reader.error)
       reader.readAsDataURL(file)
     })
+  }
+
+  const generateOVNumber = (): string => {
+    const year = new Date().getFullYear()
+    const prefix = `OV${year}-`
+    const stored = localStorage.getItem("creditNotes")
+    const queued = localStorage.getItem("overpaymentCNQueue")
+    const all: any[] = [
+      ...(stored ? JSON.parse(stored) : []),
+      ...(queued ? JSON.parse(queued) : []),
+    ]
+    const nums = all
+      .filter(cn => cn.creditNoteNumber?.startsWith(prefix))
+      .map(cn => {
+        const m = cn.creditNoteNumber.match(/OV\d{4}-(\d+)/)
+        return m ? parseInt(m[1]) : 0
+      })
+    const next = (nums.length > 0 ? Math.max(...nums) : 0) + 1
+    return `${prefix}${String(next).padStart(5, "0")}`
   }
 
   const confirmMarkPaid = async () => {
@@ -3460,8 +3498,8 @@ export function InvoiceManagement({
     setIsSavingPayment(true)
     try {
       const proofs = await Promise.all(paymentFiles.map(readFileAsDataUrl))
-      const paidAt = new Date()
-      const onlineMethods = ["Thai QR", "Credit Card"]
+      const onlineMethods = ["Online - Thai QR", "Online - credit card"]
+      const paidAt = !onlineMethods.includes(paymentMethod) ? receiptDate : new Date()
       const enteredPayAmt = onlineMethods.includes(paymentMethod) ? 0 : (parseFloat(paymentAmountInput) || 0)
       const isPartialByAmount = !["EDC", ...onlineMethods].includes(paymentMethod) && enteredPayAmt > 0 && enteredPayAmt < netPayableTotal
       const isPartial = paymentMethod === "Partial" || isPartialByAmount
@@ -3565,6 +3603,14 @@ export function InvoiceManagement({
             localStorage.setItem(runningKey, nextRunning.toString())
             const receiptNo = `R${acYearStart}-${String(nextRunning).padStart(5, "0")}`
 
+            const _isLastInv = inv.id === sortedInvoices[sortedInvoices.length - 1].id
+            const _noOvpMthds = ["Bill payment", "Online - Thai QR", "Online - credit card", "EDC"]
+            const _rcptOvpAmt = _isLastInv
+              ? (paymentMethod === "EDC"
+                  ? _overpayment
+                  : (!_noOvpMthds.includes(paymentMethod) ? Math.max(0, enteredPayAmt - netPayableTotal) : 0))
+              : 0
+
             const receiptRecord = {
               id: `receipt-${inv.id}`,
               receiptNo: receiptNo,
@@ -3579,6 +3625,7 @@ export function InvoiceManagement({
               term: inv.term || "",
               totalAmount: netForThis, // Total received cash
               creditNoteTotal: cnForThis,
+              overpaymentAmount: _rcptOvpAmt > 0 ? _rcptOvpAmt : undefined,
               paymentMethod: paymentMethodDetail,
               status: "generated",
               createdAt: paidAt.toISOString(),
@@ -3626,32 +3673,84 @@ export function InvoiceManagement({
         // For simplicity, we handle it once if it's the last invoice in the sorted list.
         if (inv.id === sortedInvoices[sortedInvoices.length - 1].id && _overpayment > 0) {
           try {
-            const cnNumber = `CN-OVP-${Date.now()}`
+            const ovNumber = generateOVNumber()
             const newCN = {
               id: `cn-${Date.now()}`,
-              creditNoteNumber: cnNumber,
+              creditNoteNumber: ovNumber,
+              noteType: "OP",
+              invoiceNumber: inv.invoiceNumber,
               studentName: inv.studentName,
               studentId: inv.studentId,
               studentGrade: inv.studentGrade || "",
-              academicYear: inv.academicYear || "",
-              term: inv.term || "",
-              invoiceNumber: inv.invoiceNumber,
               parentName: inv.adultIdNo || "",
               familyCode: inv.adultIdNo || "",
+              originalAmount: _overpayment,
               creditAmount: _overpayment,
-              amount: _overpayment,
-              remainingBalance: _overpayment,
-              reason: `EDC Overpayment`,
+              amountIncludingVat: _overpayment,
+              remainingAmount: _overpayment,
+              reason: `EDC Overpayment on invoice ${inv.invoiceNumber}`,
+              description: `EDC Overpayment on invoice ${inv.invoiceNumber}`,
+              type: "overpayment",
               status: "issued",
               issueDate: new Date().toISOString(),
+              issuedBy: "Finance Team",
+              notes: "",
+              paid: false,
+              cancelled: false,
+              corrective: false,
             }
-            const storedCNs = localStorage.getItem("creditNotesRecords")
-            const existingCNs = storedCNs ? JSON.parse(storedCNs) : []
-            existingCNs.unshift(newCN)
-            localStorage.setItem("creditNotesRecords", JSON.stringify(existingCNs))
-            toast.info(`Credit Note ${cnNumber} (฿${_overpayment.toLocaleString()}) created for EDC overpayment`)
+            const queue = localStorage.getItem("overpaymentCNQueue")
+            const pending = queue ? JSON.parse(queue) : []
+            pending.unshift(newCN)
+            localStorage.setItem("overpaymentCNQueue", JSON.stringify(pending))
+            window.dispatchEvent(new CustomEvent("creditNotesUpdated"))
+            toast.info(`Credit Note ${ovNumber} (฿${_overpayment.toLocaleString()}) created for EDC overpayment`)
           } catch (e) { console.error("Failed to create overpayment credit note:", e) }
         }
+      }
+
+      // Non-EDC overpayment Credit Note
+      const noOvpMethods = ["Bill payment", "Online - Thai QR", "Online - credit card", "EDC"]
+      const _nonEdcOverpayAmt = !noOvpMethods.includes(paymentMethod)
+        ? Math.max(0, enteredPayAmt - netPayableTotal)
+        : 0
+      if (_nonEdcOverpayAmt > 0) {
+        try {
+          const refInv = invoicesToPay[0]
+          const ovNumber = generateOVNumber()
+          const invoiceRefs = invoicesToPay.map(i => i.invoiceNumber).join(", ")
+          const newCN = {
+            id: `cn-${Date.now()}`,
+            creditNoteNumber: ovNumber,
+            noteType: "OP",
+            invoiceNumber: invoiceRefs,
+            studentName: refInv.studentName,
+            studentId: refInv.studentId,
+            studentGrade: refInv.studentGrade || "",
+            parentName: refInv.adultIdNo || "",
+            familyCode: refInv.adultIdNo || "",
+            originalAmount: _nonEdcOverpayAmt,
+            creditAmount: _nonEdcOverpayAmt,
+            amountIncludingVat: _nonEdcOverpayAmt,
+            remainingAmount: _nonEdcOverpayAmt,
+            reason: `Overpayment on invoice ${invoiceRefs}`,
+            description: `Overpayment on invoice ${invoiceRefs}`,
+            type: "overpayment",
+            status: "issued",
+            issueDate: new Date().toISOString(),
+            issuedBy: "Finance Team",
+            notes: "",
+            paid: false,
+            cancelled: false,
+            corrective: false,
+          }
+          const queue = localStorage.getItem("overpaymentCNQueue")
+          const pending = queue ? JSON.parse(queue) : []
+          pending.unshift(newCN)
+          localStorage.setItem("overpaymentCNQueue", JSON.stringify(pending))
+          window.dispatchEvent(new CustomEvent("creditNotesUpdated"))
+          toast.info(`Credit Note ${ovNumber} (฿${_nonEdcOverpayAmt.toLocaleString()}) created for overpayment`)
+        } catch (e) { console.error("Failed to create overpayment credit note:", e) }
       }
 
       window.dispatchEvent(new CustomEvent("invoicesUpdated"))
@@ -6163,10 +6262,14 @@ export function InvoiceManagement({
             const _netAfterCN = Math.max(0, _invoiceAmt - _totalCN)
             const _netPayable = _netAfterCN  // used for payment proof visibility
             const _fullyByCN = selectedCNIdsForPaid.size > 0 && _netAfterCN === 0
-            const _onlineMethods = ["Thai QR", "Credit Card"]
+            const _onlineMethods = ["Online - Thai QR", "Online - credit card"]
             const _isOnline = _onlineMethods.includes(paymentMethod)
             const _enteredAmount = _isOnline ? 0 : (parseFloat(paymentAmountInput) || 0)
             const _isPartialPay = !_fullyByCN && !_isOnline && _enteredAmount > 0 && _enteredAmount < _netAfterCN
+            const _isOverpay = !_fullyByCN && !!paymentMethod &&
+              !["Bill payment", "EDC", "Online - Thai QR", "Online - credit card"].includes(paymentMethod) &&
+              _enteredAmount > 0 && _enteredAmount > _netAfterCN
+            const _overpayAmt = _isOverpay ? (_enteredAmount - _netAfterCN) : 0
             const _edcAmt = paymentMethod === "EDC" ? (parseFloat(edcAmount) || 0) : 0
             const _edcCoversInvoice = paymentMethod === "EDC" && _edcAmt >= _invoiceAmt
             const _ccFeePct = paymentMethod === "EDC" ? (parseFloat(ccFeePercent) || 0) : 0
@@ -6244,7 +6347,7 @@ export function InvoiceManagement({
                     <SelectValue placeholder="Select method" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENT_SOURCES.map(source => (
+                    {PAYMENT_SOURCES.filter(s => !s.value.startsWith("Online")).map(source => (
                       <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -6285,6 +6388,28 @@ export function InvoiceManagement({
                     )}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {!_fullyByCN && paymentMethod && !_onlineMethods.includes(paymentMethod) && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Receipt Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start h-9 font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(receiptDate, "dd MMM yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={receiptDate}
+                      onSelect={(date) => setReceiptDate(date || new Date())}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
 
@@ -6338,6 +6463,12 @@ export function InvoiceManagement({
                     <span>−฿{_enteredAmount.toLocaleString()}</span>
                   </div>
                 )}
+                {_isOverpay && (
+                  <div className="flex justify-between text-amber-700 font-medium">
+                    <span>Overpayment</span>
+                    <span>฿{_overpayAmt.toLocaleString()}</span>
+                  </div>
+                )}
                 {paymentMethod === "EDC" && _ccFeePct > 0 && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Transaction Fee ({_ccFeePct}%)</span>
@@ -6358,7 +6489,7 @@ export function InvoiceManagement({
                     </div>
                     {_overpay > 0 && (
                       <div className="flex justify-between text-amber-700 font-medium">
-                        <span>Overpayment → Credit Note</span>
+                        <span>Overpayment</span>
                         <span>฿{_overpay.toLocaleString()}</span>
                       </div>
                     )}
@@ -6395,6 +6526,11 @@ export function InvoiceManagement({
                 />
                 {_isPartialPay && (
                   <p className="text-xs text-amber-600">Partial payment — remaining ฿{(_netAfterCN - _enteredAmount).toLocaleString()} will be outstanding.</p>
+                )}
+                {_isOverpay && (
+                  <p className="text-xs text-blue-600">
+                    Overpayment ฿{_overpayAmt.toLocaleString()} — a Credit Note will be created automatically.
+                  </p>
                 )}
               </div>
             )}

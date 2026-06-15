@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { RotateCcw, GraduationCap, BookOpen, Bus, FileText, Globe, ClipboardCheck, DollarSign, CheckCircle, AlertTriangle, Users, Filter } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { useStudents } from "@/contexts/StudentContext"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { AnalyticsDashboard } from "./AnalyticsDashboard"
@@ -112,10 +113,12 @@ const matchTerm = (inv: StoredInvoice, filterTermName: string): boolean => {
 export function ReportOverview() {
   const { t } = useLanguage()
   const { academicYears } = useAcademicYears()
+  const { students } = useStudents()
 
   const [selectedYear, setSelectedYear] = usePersistedState<string>("report-overview:selectedYear", "all")
   const [selectedTerm, setSelectedTerm] = usePersistedState<string>("report-overview:selectedTerm", "all")
   const [invoices, setInvoices] = useState<StoredInvoice[]>([])
+  const [creditNoteTotal, setCreditNoteTotal] = useState(0)
 
   // Get available terms based on selected academic year (same pattern as InvoiceManagement)
   const availableTerms = selectedYear !== "all"
@@ -136,11 +139,27 @@ export function ReportOverview() {
     }
   }, [])
 
+  const loadCreditNotes = useCallback((yearFilter: string) => {
+    try {
+      const raw = localStorage.getItem("creditNotes")
+      if (!raw) { setCreditNoteTotal(0); return }
+      const cns: any[] = JSON.parse(raw)
+      let total = 0
+      cns.forEach(cn => {
+        if (yearFilter && yearFilter !== "all" && cn.academicYear !== yearFilter) return
+        total += cn.creditAmount ?? cn.amount ?? 0
+      })
+      setCreditNoteTotal(total)
+    } catch { setCreditNoteTotal(0) }
+  }, [])
+
   useEffect(() => {
     loadInvoices()
-    const handleFocus = () => loadInvoices()
+    loadCreditNotes(selectedYear)
+    const handleFocus = () => { loadInvoices(); loadCreditNotes(selectedYear) }
     const handleStorage = (e: StorageEvent) => {
       if (e.key === CREATED_INVOICES_STORAGE_KEY) loadInvoices()
+      if (e.key === "creditNotes") loadCreditNotes(selectedYear)
     }
     window.addEventListener("focus", handleFocus)
     window.addEventListener("storage", handleStorage)
@@ -148,7 +167,7 @@ export function ReportOverview() {
       window.removeEventListener("focus", handleFocus)
       window.removeEventListener("storage", handleStorage)
     }
-  }, [loadInvoices])
+  }, [loadInvoices, loadCreditNotes, selectedYear])
 
   const resetFilters = () => {
     setSelectedYear("all")
@@ -179,6 +198,8 @@ export function ReportOverview() {
       stats[mod] = { totalAmount: 0, collected: 0, outstanding: 0, students: new Set(), invoiceCount: 0, statusCounts: {} }
     })
 
+    const CONFIRMED_STATUSES = ["paid", "sent", "overdue", "approved"]
+
     filteredInvoices.forEach(inv => {
       const cat = inv.category || "tuition"
       if (!stats[cat]) return
@@ -186,43 +207,56 @@ export function ReportOverview() {
       const amount = getInvoiceAmount(inv)
       const status = normalizeStatus(inv.status)
 
-      stats[cat].totalAmount += amount
-      stats[cat].invoiceCount += 1
       stats[cat].statusCounts[status] = (stats[cat].statusCounts[status] || 0) + 1
+
+      // Count student for any non-cancelled invoice (includes draft/wait/rejected)
+      if (status !== "cancelled") {
+        const clientKey = cat === "external" ? (inv.clientId || inv.parentEmail) : inv.studentId
+        if (clientKey) {
+          stats[cat].students.add(clientKey)
+        }
+      }
+
+      if (CONFIRMED_STATUSES.includes(status)) {
+        stats[cat].totalAmount += amount
+        stats[cat].invoiceCount += 1
+      }
 
       if (status === "paid") {
         stats[cat].collected += amount
       } else if (["sent", "overdue", "approved"].includes(status)) {
         stats[cat].outstanding += amount
       }
-
-      if (inv.studentId) {
-        stats[cat].students.add(inv.studentId)
-      }
     })
 
     return stats
   }, [filteredInvoices])
 
+  // Count all non-cancelled invoices (for Total Invoices card)
+  const totalInvoiceCount = useMemo(() => {
+    return filteredInvoices.filter(inv => normalizeStatus(inv.status) !== "cancelled").length
+  }, [filteredInvoices])
+
+  // Total students from the student registry — same source as Student List page
+  const totalStudentCount = students.length
+
   // Summary totals
   const totals = useMemo(() => {
-    let totalRevenue = 0
     let totalCollected = 0
     let totalOutstanding = 0
-    const allStudents = new Set<string>()
-    let totalInvoices = 0
 
     ALL_MODULES.forEach(mod => {
       const s = moduleStats[mod]
-      totalRevenue += s.totalAmount
       totalCollected += s.collected
       totalOutstanding += s.outstanding
-      totalInvoices += s.invoiceCount
-      s.students.forEach(id => allStudents.add(id))
     })
 
-    return { totalRevenue, totalCollected, totalOutstanding, totalStudents: allStudents.size, totalInvoices }
-  }, [moduleStats])
+    return {
+      totalCollected,
+      totalOutstanding,
+      totalRevenue: totalCollected + totalOutstanding - creditNoteTotal,
+    }
+  }, [moduleStats, creditNoteTotal])
 
   // Chart data
   const barChartData = useMemo(() => {
@@ -245,23 +279,15 @@ export function ReportOverview() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="w-full h-auto bg-muted/50 rounded-xl p-1 gap-1">
-          <TabsTrigger value="dashboard" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Dashboard</TabsTrigger>
-          <TabsTrigger value="analytics" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Analytics</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="mt-6 space-y-6">
-      {/* Filter Bar */}
+      {/* Shared Filter Bar — applies to both Dashboard and Analytics */}
       <Card className="shadow-sm">
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Academic Year - from useAcademicYears() context */}
+          <div className="flex items-center gap-4 flex-wrap justify-end">
             <div className="space-y-1 min-w-[180px]">
               <label className="text-sm font-medium">{t("common.academicYear")}</label>
               <Select value={selectedYear} onValueChange={(value) => {
                 setSelectedYear(value)
-                setSelectedTerm("all") // Reset term when year changes
+                setSelectedTerm("all")
               }}>
                 <SelectTrigger className="h-10">
                   <Filter className="w-4 h-4 mr-2" />
@@ -276,7 +302,6 @@ export function ReportOverview() {
               </Select>
             </div>
 
-            {/* Term - from selected academic year's terms */}
             <div className="space-y-1 min-w-[200px]">
               <label className="text-sm font-medium">{t("payment.term")}</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
@@ -299,13 +324,20 @@ export function ReportOverview() {
                 {t("common.reset")}
               </Button>
             </div>
-
           </div>
         </CardContent>
       </Card>
 
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="w-full h-auto bg-muted/50 rounded-xl p-1 gap-1">
+          <TabsTrigger value="dashboard" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Dashboard</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="mt-6 space-y-6">
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
@@ -339,10 +371,30 @@ export function ReportOverview() {
         <Card className="rounded-xl gap-0">
           <CardContent className="p-4 pb-4">
             <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Invoices</p>
+            </div>
+            <p className="text-2xl font-bold">{totalInvoiceCount.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
               <Users className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("report.totalStudents")}</p>
             </div>
-            <p className="text-2xl font-bold">{totals.totalStudents.toLocaleString()}</p>
+            <p className="text-2xl font-bold">{totalStudentCount.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl gap-0">
+          <CardContent className="p-4 pb-4">
+            <div className="flex items-center gap-1.5">
+              <ClipboardCheck className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Total Credit Notes</p>
+            </div>
+            <p className="text-2xl font-bold">{formatFullCurrency(creditNoteTotal)}</p>
           </CardContent>
         </Card>
       </div>
@@ -455,7 +507,7 @@ export function ReportOverview() {
                       <p className="font-semibold text-orange-500">{formatCurrency(s.outstanding)}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">{t("report.students")}</p>
+                      <p className="text-muted-foreground text-xs">{mod === "external" ? "Clients" : t("report.students")}</p>
                       <p className="font-semibold">{s.students.size.toLocaleString()}</p>
                     </div>
                   </div>
@@ -483,7 +535,7 @@ export function ReportOverview() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
-          <AnalyticsDashboard />
+          <AnalyticsDashboard filterYear={selectedYear} filterTerm={selectedTerm} />
         </TabsContent>
       </Tabs>
     </div>

@@ -172,11 +172,12 @@ function getMockInvoices(): any[] {
 // Payment methods as defined in src/constants/paymentConstants.ts → PAYMENT_SOURCES
 function getMockPaymentRecords(): any[] {
   const methods = [
-    { name: "Bank Transfer",     weight: 0.40 },
-    { name: "EDC",               weight: 0.23 },
-    { name: "Thai QR",           weight: 0.15 },
-    { name: "Credit Card",       weight: 0.14 },
-    { name: "Cashier's cheque",  weight: 0.08 },
+    { name: "Bank Transfer",      weight: 0.38 },
+    { name: "Onsite Credit Card", weight: 0.22 },
+    { name: "Thai QR",            weight: 0.15 },
+    { name: "Online Credit Card", weight: 0.13 },
+    { name: "Cheque",             weight: 0.07 },
+    { name: "Bill Payment",       weight: 0.05 },
   ]
 
   const records: any[] = []
@@ -197,14 +198,15 @@ function getMockPaymentRecords(): any[] {
 
 function getMockTransactionAttempts(): { successful: number; declined: number; byMethod: Record<string, { success: number; declined: number }> } {
   return {
-    successful: 408,
-    declined: 12,
+    successful: 420,
+    declined: 0,
     byMethod: {
-      "Bank Transfer":    { success: 165, declined: 2 },
-      "EDC":              { success: 94,  declined: 3 },
-      "Thai QR":          { success: 62,  declined: 0 },
-      "Credit Card":      { success: 57,  declined: 0 },
-      "Cashier's cheque": { success: 30,  declined: 7 },
+      "Bank Transfer":      { success: 160, declined: 0 },
+      "Onsite Credit Card": { success: 92,  declined: 0 },
+      "Thai QR":            { success: 63,  declined: 0 },
+      "Online Credit Card": { success: 55,  declined: 0 },
+      "Cheque":             { success: 29,  declined: 0 },
+      "Bill Payment":       { success: 21,  declined: 0 },
     }
   }
 }
@@ -271,20 +273,49 @@ function getMockBankFees(filter: AnalyticsFilter): BankFeeRow[] {
     })
   })
 
+  const ONLINE_SOURCES = ["thai qr", "online", "qr payment", "internet banking"]
+
   return allRows.filter(r => {
     if (filter.academicYear && filter.academicYear !== "all" && r.academicYear !== filter.academicYear) return false
     if (filter.term && filter.term !== "all" && r.term !== filter.term) return false
+    // Online only — whitelist Thai QR and Online gateway sources
+    const src = (r.paymentSource || "").toLowerCase()
+    if (!ONLINE_SOURCES.some(s => src.includes(s))) return false
     return true
   })
 }
 
-// Pre-compute mock data once at module load
+// Pre-compute static fallback mock data (used only when localStorage is empty)
 let _mockInvoices: any[] | null = null
 let _mockPayments: any[] | null = null
 // eslint-disable-next-line prefer-const
 let _mockWaterfall: any[] | null = null
 
+function normalizeStoredInvoice(inv: any) {
+  return {
+    ...inv,
+    // Normalize term: "Term 1 2025/2026" → "Term 1"
+    term: inv.termName || (typeof inv.term === "string" ? inv.term.split(" ").slice(0, 2).join(" ") : "Term 1"),
+    studentGrade: inv.studentGrade || inv.yearGroup || "Unknown",
+    netAmount: inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0,
+  }
+}
+
 function cachedMockInvoices() {
+  // Primary: read from localStorage (same source as Dashboard) for consistent totals
+  try {
+    const stored = localStorage.getItem("createdInvoices")
+    if (stored) {
+      const real: any[] = JSON.parse(stored)
+      if (real.length > 0) {
+        return real
+          .filter(inv => inv.status && inv.status !== "draft")
+          .map(normalizeStoredInvoice)
+      }
+    }
+  } catch { /* ignore storage errors */ }
+
+  // Fallback: static mock data when localStorage is empty
   if (!_mockInvoices) _mockInvoices = getMockInvoices()
   return _mockInvoices
 }
@@ -296,6 +327,9 @@ function cachedMockWaterfall() {
   if (!_mockWaterfall) _mockWaterfall = getMockWaterfallRows()
   return _mockWaterfall
 }
+
+// Matches Dashboard's CONFIRMED_STATUSES — invoices that count as revenue
+const CONFIRMED_STATUSES = new Set(["paid", "sent", "overdue", "approved"])
 
 export const YEAR_GROUP_ORDER = [
   "Pre-Nursery", "Nursery", "Reception",
@@ -354,25 +388,29 @@ export interface AvgRevenueByYearGroup {
 export interface RevenueTermMatrixRow {
   yearGroup: string
   termCols: Record<string, number>   // key = "2024/2025 Term 1", value = netRevenue
+  _type?: "module"
 }
 
 /** Matrix row: Year Group × Academic Year columns (for Tab 1 right table) */
 export interface RevenueYearMatrixRow {
   yearGroup: string
   yearCols: Record<string, number>   // key = "2024/2025", value = netRevenue
+  _type?: "module"
 }
 
 /** Row for Avg Revenue Tab — one row per year group */
 export interface AvgTermMatrixRow {
   yearGroup: string
   studentCount: number
-  termCols: Record<string, number>   // key = "2024/2025 Term 1", value = avg net per student
+  termCols: Record<string, number>          // key = "2024/2025 Term 1", value = avg net per student
+  termStudentCounts: Record<string, number> // key = "2024/2025 Term 1", value = unique student count in that term
 }
 
 export interface AvgYearMatrixRow {
   yearGroup: string
   studentCount: number
-  yearCols: Record<string, number>   // key = "2024/2025", value = avg net per student
+  yearCols: Record<string, number>          // key = "2024/2025", value = avg net per student
+  yearStudentCounts: Record<string, number> // key = "2024/2025", value = unique student count in that year
 }
 
 /** Report 3: Transaction count by payment method */
@@ -442,7 +480,7 @@ function loadInvoices(filter: AnalyticsFilter): any[] {
       const cat = inv.category || "tuition"
       if (cat !== filter.category) return false
     }
-    if (inv.status === "cancelled") return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 }
@@ -463,8 +501,10 @@ export async function getRevenueByYearGroup(filter: AnalyticsFilter): Promise<Re
   const invoices = loadInvoices(filter)
   const map = new Map<string, RevenueByYearGroup>()
 
+  const ygSet = new Set(YEAR_GROUP_ORDER)
   invoices.forEach(inv => {
-    const yg = inv.studentGrade || "Unknown"
+    const yg = inv.studentGrade || ""
+    if (!ygSet.has(yg)) return
     const ay = inv.academicYear || "-"
     const tm = inv.term || "-"
     const key = `${yg}|${ay}|${tm}`
@@ -504,7 +544,13 @@ export async function getRevenueByYearGroup(filter: AnalyticsFilter): Promise<Re
  * Response: AvgRevenueByYearGroup[]
  */
 export async function getAvgRevenueByYearGroup(filter: AnalyticsFilter): Promise<AvgRevenueByYearGroup[]> {
-  const invoices = loadInvoices(filter)
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+    if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
+    return true
+  })
   const map = new Map<string, { total: number; students: Set<string>; breakdown: AvgRevenueByYearGroup["breakdown"] }>()
 
   invoices.forEach(inv => {
@@ -542,6 +588,12 @@ export async function getAvgRevenueByYearGroup(filter: AnalyticsFilter): Promise
 
 // ── REPORT 1b: Revenue Term Matrix (dual-table left) ──────────────────────────
 
+const MODULE_LABELS: Record<string, string> = {
+  tuition: "Tuition", eca: "ECA", trip: "Trip", sport: "ECA-Sport",
+  exam: "Exam", bus: "Bus", others: "Other", external: "External",
+}
+const MODULE_ORDER = ["tuition", "eca", "trip", "sport", "exam", "bus", "others", "external"]
+
 /**
  * Returns rows of [ yearGroup, { "2024/2025 Term 1": netRev, ... } ]
  * Used for "Compare by Term" left table in Tab 1.
@@ -554,20 +606,24 @@ export async function getRevenueTermMatrix(filter: AnalyticsFilter): Promise<{
   const invoices = cachedMockInvoices().filter(inv => {
     if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
-    if (inv.status === "cancelled") return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
   const termKeySet = new Set<string>()
   const map = new Map<string, Record<string, number>>()
 
+  const ygSet = new Set(YEAR_GROUP_ORDER)
+
   invoices.forEach(inv => {
-    const yg = inv.studentGrade || "Unknown"
+    const yg = inv.studentGrade || ""
+    if (!ygSet.has(yg)) return
     const key = `${inv.academicYear} ${inv.term}`
     termKeySet.add(key)
+    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+
     if (!map.has(yg)) map.set(yg, {})
     const row = map.get(yg)!
-    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
     row[key] = (row[key] ?? 0) + net
   })
 
@@ -590,20 +646,24 @@ export async function getRevenueYearMatrix(filter: AnalyticsFilter): Promise<{
 }> {
   const invoices = cachedMockInvoices().filter(inv => {
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
-    if (inv.status === "cancelled") return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
   const yearKeySet = new Set<string>()
   const map = new Map<string, Record<string, number>>()
 
+  const ygSet = new Set(YEAR_GROUP_ORDER)
+
   invoices.forEach(inv => {
-    const yg = inv.studentGrade || "Unknown"
+    const yg = inv.studentGrade || ""
+    if (!ygSet.has(yg)) return
     const ay = inv.academicYear || "-"
     yearKeySet.add(ay)
+    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+
     if (!map.has(yg)) map.set(yg, {})
     const row = map.get(yg)!
-    const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
     row[ay] = (row[ay] ?? 0) + net
   })
 
@@ -625,7 +685,7 @@ export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
   const invoices = cachedMockInvoices().filter(inv => {
     if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
-    if (inv.status === "cancelled") return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
@@ -633,8 +693,10 @@ export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
   // Map: yearGroup → termKey → { total, students }
   const map = new Map<string, { termTotals: Record<string, number>; termStudents: Record<string, Set<string>>; allStudents: Set<string> }>()
 
+  const ygSet2 = new Set(YEAR_GROUP_ORDER)
   invoices.forEach(inv => {
-    const yg = inv.studentGrade || "Unknown"
+    const yg = inv.studentGrade || ""
+    if (!ygSet2.has(yg)) return
     const key = `${inv.academicYear} ${inv.term}`
     termKeySet.add(key)
     if (!map.has(yg)) map.set(yg, { termTotals: {}, termStudents: {}, allStudents: new Set() })
@@ -652,11 +714,13 @@ export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
   const rows: AvgTermMatrixRow[] = []
   map.forEach((v, yearGroup) => {
     const termCols: Record<string, number> = {}
+    const termStudentCounts: Record<string, number> = {}
     termKeys.forEach(k => {
       const cnt = v.termStudents[k]?.size || 1
       termCols[k] = Math.round((v.termTotals[k] ?? 0) / cnt)
+      termStudentCounts[k] = v.termStudents[k]?.size ?? 0
     })
-    rows.push({ yearGroup, studentCount: v.allStudents.size, termCols })
+    rows.push({ yearGroup, studentCount: v.allStudents.size, termCols, termStudentCounts })
   })
 
   return { rows: sortByYearGroup(rows), termKeys }
@@ -668,15 +732,17 @@ export async function getAvgYearMatrix(filter: AnalyticsFilter): Promise<{
 }> {
   const invoices = cachedMockInvoices().filter(inv => {
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
-    if (inv.status === "cancelled") return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
   const yearKeySet = new Set<string>()
   const map = new Map<string, { yearTotals: Record<string, number>; yearStudents: Record<string, Set<string>>; allStudents: Set<string> }>()
 
+  const ygSet3 = new Set(YEAR_GROUP_ORDER)
   invoices.forEach(inv => {
-    const yg = inv.studentGrade || "Unknown"
+    const yg = inv.studentGrade || ""
+    if (!ygSet3.has(yg)) return
     const ay = inv.academicYear || "-"
     yearKeySet.add(ay)
     if (!map.has(yg)) map.set(yg, { yearTotals: {}, yearStudents: {}, allStudents: new Set() })
@@ -694,11 +760,13 @@ export async function getAvgYearMatrix(filter: AnalyticsFilter): Promise<{
   const rows: AvgYearMatrixRow[] = []
   map.forEach((v, yearGroup) => {
     const yearCols: Record<string, number> = {}
+    const yearStudentCounts: Record<string, number> = {}
     yearKeys.forEach(k => {
       const cnt = v.yearStudents[k]?.size || 1
       yearCols[k] = Math.round((v.yearTotals[k] ?? 0) / cnt)
+      yearStudentCounts[k] = v.yearStudents[k]?.size ?? 0
     })
-    rows.push({ yearGroup, studentCount: v.allStudents.size, yearCols })
+    rows.push({ yearGroup, studentCount: v.allStudents.size, yearCols, yearStudentCounts })
   })
 
   return { rows: sortByYearGroup(rows), yearKeys }
@@ -761,7 +829,7 @@ export async function getTransactionsByYearGroupAndMethod(filter: AnalyticsFilte
   const allInvoices = cachedMockInvoices().filter(inv => {
     if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
     if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
-    if (inv.status === "cancelled") return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
@@ -996,12 +1064,195 @@ function getMockWaterfallRows(): RevenueWaterfall[] {
  * Query: { academicYear?: string, term?: string }
  * Response: RevenueWaterfall[]
  */
-export async function getRevenueWaterfall(_filter: AnalyticsFilter): Promise<RevenueWaterfall[]> {
-  // Not cached — reads discount groups from localStorage each time
-  return getMockWaterfallRows()
+export async function getRevenueWaterfall(filter: AnalyticsFilter): Promise<RevenueWaterfall[]> {
+  const rows = getMockWaterfallRows()
+
+  // Override studentCount with real unique students from createdInvoices (confirmed only)
+  const ygSet = new Set(YEAR_GROUP_ORDER)
+  const studentMap = new Map<string, Set<string>>()
+  cachedMockInvoices()
+    .filter(inv => {
+      if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
+      if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+      if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+      const yg = inv.studentGrade || ""
+      return ygSet.has(yg)
+    })
+    .forEach(inv => {
+      const yg = inv.studentGrade!
+      if (!studentMap.has(yg)) studentMap.set(yg, new Set())
+      if (inv.studentId) studentMap.get(yg)!.add(inv.studentId)
+    })
+
+  return rows.map(r => ({
+    ...r,
+    studentCount: studentMap.get(r.yearGroup)?.size ?? 0,
+  }))
+}
+
+// ── YOY MATRIX — Tab 3 & 4: Payment Method × Academic Year ───────────────────
+
+/** Method × Academic Year transaction count matrix (Tab 3 & Tab 4) */
+export interface TxnMethodYearRow {
+  method: string
+  yearCols: Record<string, number>   // key = "2024/2025", value = txn count
+}
+
+/**
+ * Returns payment method × academic year transaction count matrix.
+ * Since mock payment records lack academicYear, counts are distributed
+ * proportionally based on confirmed invoice distribution per year.
+ */
+export async function getTxnMethodYearMatrix(filter: AnalyticsFilter): Promise<{
+  rows: TxnMethodYearRow[]
+  yearKeys: string[]
+}> {
+  // Step 1: Get year distribution ratios from confirmed invoices
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
+    return true
+  })
+  const yearCount = new Map<string, number>()
+  invoices.forEach(inv => {
+    const ay = inv.academicYear || "-"
+    yearCount.set(ay, (yearCount.get(ay) ?? 0) + 1)
+  })
+  const totalInvoices = invoices.length || 1
+  const yearKeys = Array.from(yearCount.keys()).sort()
+
+  // Step 2: Distribute method counts proportionally per year
+  const payments = cachedMockPayments()
+  const methodMap = new Map<string, Record<string, number>>()
+
+  payments.forEach(p => {
+    const method = p.paymentMethod || "Unknown"
+    if (!methodMap.has(method)) methodMap.set(method, {})
+    const row = methodMap.get(method)!
+    yearKeys.forEach(ay => {
+      const ratio = (yearCount.get(ay) ?? 0) / totalInvoices
+      row[ay] = (row[ay] ?? 0) + ratio
+    })
+  })
+
+  const rows: TxnMethodYearRow[] = []
+  methodMap.forEach((yearCols, method) => {
+    const rounded: Record<string, number> = {}
+    yearKeys.forEach(ay => { rounded[ay] = Math.round(yearCols[ay] ?? 0) })
+    rows.push({ method, yearCols: rounded })
+  })
+
+  return { rows: rows.sort((a, b) => a.method.localeCompare(b.method)), yearKeys }
+}
+
+// ── YOY MATRIX — Tab 6: Year Group × Academic Year (Gross + Net) ─────────────
+
+/** Year Group × Academic Year matrix row with gross + net per cell (Tab 6) */
+export interface WaterfallYearMatrixRow {
+  yearGroup: string
+  yearCols: Record<string, { gross: number; net: number }>
+}
+
+/**
+ * Returns year group × academic year matrix with gross and net revenue per cell.
+ * Ignores academicYear filter so all years appear as columns.
+ */
+export async function getWaterfallYearMatrix(filter: AnalyticsFilter): Promise<{
+  rows: WaterfallYearMatrixRow[]
+  yearKeys: string[]
+}> {
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
+    return true
+  })
+
+  const yearKeySet = new Set<string>()
+  const ygSet = new Set(YEAR_GROUP_ORDER)
+  const map = new Map<string, Record<string, { gross: number; net: number }>>()
+
+  invoices.forEach(inv => {
+    const yg = inv.studentGrade || ""
+    if (!ygSet.has(yg)) return
+    const ay = inv.academicYear || "-"
+    yearKeySet.add(ay)
+    if (!map.has(yg)) map.set(yg, {})
+    const row = map.get(yg)!
+    if (!row[ay]) row[ay] = { gross: 0, net: 0 }
+    row[ay].gross += inv.subtotal ?? inv.totalAmount ?? 0
+    const discount = inv.totalDiscount ?? inv.discountAmount ?? 0
+    const gross = inv.subtotal ?? inv.totalAmount ?? 0
+    row[ay].net += inv.netAmount ?? inv.finalAmount ?? (gross - discount)
+  })
+
+  const yearKeys = Array.from(yearKeySet).sort()
+  const rows: WaterfallYearMatrixRow[] = []
+  map.forEach((yearCols, yearGroup) => {
+    rows.push({ yearGroup, yearCols })
+  })
+
+  return { rows: sortByYearGroup(rows), yearKeys }
 }
 
 // ── ACADEMIC YEAR / TERM OPTIONS ──────────────────────────────────────────────
+
+export interface SummaryTotals {
+  collected: number
+  outstanding: number
+  creditNoteTotal: number
+  totalRevenue: number
+  invoiceCount: number
+  studentCount: number
+}
+
+export async function getSummaryTotals(filter: AnalyticsFilter): Promise<SummaryTotals> {
+  const invoices = cachedMockInvoices().filter(inv => {
+    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+    if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    if (filter.category && filter.category !== "all") {
+      if ((inv.category || "tuition") !== filter.category) return false
+    }
+    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
+    return true
+  })
+
+  let collected = 0
+  let outstanding = 0
+  const studentIds = new Set<string>()
+
+  invoices.forEach(inv => {
+    const amt = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
+    if (inv.status === "paid") {
+      collected += amt
+    } else if (inv.status === "overdue" || inv.status === "unpaid" || inv.status === "sent" || inv.status === "pending") {
+      outstanding += amt
+    }
+    if (inv.studentId) studentIds.add(inv.studentId)
+  })
+
+  let creditNoteTotal = 0
+  try {
+    const raw = localStorage.getItem("creditNotes")
+    if (raw) {
+      const cns: any[] = JSON.parse(raw)
+      cns.forEach(cn => {
+        if (cn.status === "cancelled" || cn.status === "draft") return
+        if (filter.academicYear && filter.academicYear !== "all" && cn.academicYear !== filter.academicYear) return
+        creditNoteTotal += cn.creditAmount ?? cn.amount ?? 0
+      })
+    }
+  } catch {}
+
+  return {
+    collected,
+    outstanding,
+    creditNoteTotal,
+    totalRevenue: collected + outstanding - creditNoteTotal,
+    invoiceCount: invoices.length,
+    studentCount: studentIds.size,
+  }
+}
 
 export async function getFilterOptions(): Promise<{ academicYears: string[]; terms: string[] }> {
   const years = new Set<string>()

@@ -382,12 +382,12 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
   const [students, setStudentsState] = useState<Student[]>(() => {
     const stored = loadStudentsFromStorage()
-    return stored !== null ? stored : sampleData.students
+    return stored !== null ? stored : []
   })
 
   const [families, setFamiliesState] = useState<Family[]>(() => {
     const stored = loadFamiliesFromStorage()
-    return stored !== null ? stored : sampleData.families
+    return stored !== null ? stored : []
   })
 
   // อัปเดต version marker เท่านั้น ไม่ reset ข้อมูล

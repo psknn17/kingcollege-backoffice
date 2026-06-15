@@ -6,21 +6,23 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts"
-import { BarChart3, FileDown, Loader2, DollarSign, TrendingUp, Landmark, Users, ArrowRightLeft, CheckCircle2, Filter } from "lucide-react"
+import { BarChart3, FileDown, Loader2, Users, CheckCircle2, Filter } from "lucide-react"
 import {
   getRevenueTermMatrix, getRevenueYearMatrix,
   getAvgTermMatrix, getAvgYearMatrix,
   getTransactionsByMethod, getTransactionsByYearGroupAndMethod,
   getTransactionStatus,
   getBankFees, getBankFeeTermMatrix, getBankFeeYearMatrix,
-  getRevenueWaterfall, getFilterOptions,
+  getRevenueWaterfall,
+  getTxnMethodYearMatrix, getWaterfallYearMatrix,
   exportToExcel, type ExportPayload,
   type RevenueTermMatrixRow, type RevenueYearMatrixRow,
   type AvgTermMatrixRow, type AvgYearMatrixRow,
   type TransactionByMethod, type TransactionYearGroupMethodRow,
   type TransactionStatus, type BankFeeRow,
   type BankFeeTermMatrixRow, type BankFeeYearMatrixRow,
-  type RevenueWaterfall
+  type RevenueWaterfall,
+  type TxnMethodYearRow, type WaterfallYearMatrixRow
 } from "@/services/analyticsService"
 import { toast } from "sonner"
 import { logActivity } from "@/lib/activityLog"
@@ -36,11 +38,9 @@ const FEE_TYPE_OPTIONS = [
   { value: "all",     label: "All Fee Types" },
   { value: "tuition", label: "Tuition" },
   { value: "eca",     label: "ECA" },
-  { value: "sport",   label: "ECA-Sport" },
   { value: "trip",    label: "Trip" },
   { value: "exam",    label: "Exam" },
   { value: "bus",     label: "Bus" },
-  { value: "others",  label: "Other" },
 ]
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -50,22 +50,6 @@ const fmtK = (n: number) => `฿${(n / 1000).toFixed(0)}k`
 const fmtM = (n: number) => `฿${(n / 1000000).toFixed(1)}M`
 
 // ── SUMMARY CARD ──────────────────────────────────────────────────────────────
-function SummaryCard({ label, value, accent = "#6366f1", icon: Icon }: {
-  label: string; value: string; accent?: string; icon?: React.ElementType
-}) {
-  return (
-    <Card className="rounded-xl gap-0">
-      <CardContent className="p-4 pb-4">
-        <div className="flex items-center gap-2 mb-1">
-          {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
-          <p className="text-sm text-muted-foreground">{label}</p>
-        </div>
-        <p className="text-2xl font-bold">{value}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
 // ── SECTION HEADER ────────────────────────────────────────────────────────────
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -116,11 +100,15 @@ function DualTableWrapper({ leftTitle, rightTitle, left, right }: {
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <Card className="shadow-none border">
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{leftTitle}</CardTitle></CardHeader>
-        <CardContent className="pt-0 overflow-x-auto">{left}</CardContent>
+        <CardContent className="pt-0 px-0 pb-0">
+          <div className="overflow-x-auto pb-4">{left}</div>
+        </CardContent>
       </Card>
       <Card className="shadow-none border">
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{rightTitle}</CardTitle></CardHeader>
-        <CardContent className="pt-0 overflow-x-auto">{right}</CardContent>
+        <CardContent className="pt-0 px-0 pb-0">
+          <div className="overflow-x-auto pb-4">{right}</div>
+        </CardContent>
       </Card>
     </div>
   )
@@ -141,24 +129,24 @@ function MatrixTable({
     return <p className="text-center text-muted-foreground py-6 text-sm">No data</p>
   }
   return (
-    <table className="w-full text-sm border-collapse">
+    <table className="w-full text-sm border-separate border-spacing-0">
       <thead>
         <tr className="bg-muted/60">
-          <th className={`${thBase} text-left whitespace-nowrap`}>{yearGroupLabel}</th>
+          <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10 border-b border-border/40`}>{yearGroupLabel}</th>
           {colKeys.map(k => (
-            <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
+            <th key={k} className={`${thBase} text-right whitespace-nowrap border-b border-border/40`}>{k}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {rows.map((row, i) => (
-          <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-            <td className={`${tdBase} font-medium whitespace-nowrap`}>{row.yearGroup}</td>
+          <tr key={i} className="hover:bg-muted/30">
+            <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10 border-b border-border/40`}>{row.yearGroup}</td>
             {colKeys.map(k => {
               const v = getCell(row, k)
               return (
-                <td key={k} className={`${tdBase} text-right`}>
-                  {v === 0 ? <span className="text-muted-foreground/40">—</span> : fmtB(v)}
+                <td key={k} className={`${tdBase} text-right border-b border-border/40`}>
+                  {fmtB(v)}
                 </td>
               )
             })}
@@ -166,10 +154,10 @@ function MatrixTable({
         ))}
         {totalRow && (
           <tr className="bg-slate-100 font-bold border-t-2 border-border">
-            <td className={`${tdBase} font-bold`}>Total</td>
+            <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10 border-t-2 border-border`}>Total</td>
             {colKeys.map(k => {
               const v = totalRow(k)
-              return <td key={k} className={`${tdBase} text-right`}>{fmtB(v)}</td>
+              return <td key={k} className={`${tdBase} text-right border-t-2 border-border`}>{fmtB(v)}</td>
             })}
           </tr>
         )}
@@ -179,13 +167,14 @@ function MatrixTable({
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
-export function AnalyticsDashboard() {
+interface AnalyticsDashboardProps {
+  filterYear: string
+  filterTerm: string
+}
+
+export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboardProps) {
   const [activeTab, setActiveTab] = useState("revenue")
-  const [filterYear, setFilterYear] = useState("all")
-  const [filterTerm, setFilterTerm] = useState("all")
   const [filterCategory, setFilterCategory] = useState("all")
-  const [yearOptions, setYearOptions] = useState<string[]>([])
-  const [termOptions, setTermOptions] = useState<string[]>([])
   const [isExporting, setIsExporting] = useState(false)
   const [avgToggle, setAvgToggle] = useState<"person" | "group">("person")
   const [wfPage, setWfPage] = useState(1)
@@ -220,18 +209,17 @@ export function AnalyticsDashboard() {
   // Tab 6 state
   const [waterfallData, setWaterfallData] = useState<RevenueWaterfall[]>([])
 
+  // YoY matrix state (Tabs 3, 4, 6)
+  const [txnMethodYearRows, setTxnMethodYearRows] = useState<TxnMethodYearRow[]>([])
+  const [txnMethodYearKeys, setTxnMethodYearKeys] = useState<string[]>([])
+  const [wfYearRows, setWfYearRows] = useState<WaterfallYearMatrixRow[]>([])
+  const [wfYearKeys, setWfYearKeys] = useState<string[]>([])
+
   const filter = useMemo(() => ({
     academicYear: filterYear,
     term: filterTerm,
     category: filterCategory
   }), [filterYear, filterTerm, filterCategory])
-
-  useEffect(() => {
-    getFilterOptions().then(opts => {
-      setYearOptions(opts.academicYears)
-      setTermOptions(opts.terms)
-    })
-  }, [])
 
   useEffect(() => {
     setWfPage(1)
@@ -261,6 +249,10 @@ export function AnalyticsDashboard() {
 
     // Tab 6
     getRevenueWaterfall(filter).then(setWaterfallData)
+
+    // YoY matrix (Tabs 3, 4, 6)
+    getTxnMethodYearMatrix(filter).then(r => { setTxnMethodYearRows(r.rows); setTxnMethodYearKeys(r.yearKeys) })
+    getWaterfallYearMatrix(filter).then(r => { setWfYearRows(r.rows); setWfYearKeys(r.yearKeys) })
   }, [filter])
 
   // ── Derived totals ────────────────────────────────────────────────────────
@@ -292,8 +284,7 @@ export function AnalyticsDashboard() {
       name: w.yearGroup,
       Gross: w.grossRevenue,
       Net: w.netRevenue,
-      Discounts: Math.abs(Object.values(w.discounts).reduce((s, v) => s + v, 0)),
-      "Bank Fees": Math.abs(w.bankFees)
+      Discounts: Math.abs(Object.values(w.discounts).reduce((s, v) => s + v, 0))
     }))
   , [waterfallData])
 
@@ -387,27 +378,7 @@ export function AnalyticsDashboard() {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-background rounded-xl border px-3 py-2 shadow-sm">
-            <span className="text-sm text-muted-foreground font-medium mr-1">Filter:</span>
-            <Select value={filterYear} onValueChange={v => { setFilterYear(v) }}>
-              <SelectTrigger className="h-8 w-36 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Academic Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                {yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterTerm} onValueChange={v => { setFilterTerm(v) }}>
-              <SelectTrigger className="h-8 w-28 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Term" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Terms</SelectItem>
-                {termOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <span className="text-sm text-muted-foreground font-medium mr-1">Category:</span>
             <Select value={filterCategory} onValueChange={v => { setFilterCategory(v) }}>
               <SelectTrigger className="h-8 w-36 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
                 <Filter className="w-4 h-4 mr-2" />
@@ -430,16 +401,6 @@ export function AnalyticsDashboard() {
         </div>
       </div>
 
-      {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-        <SummaryCard label="Gross Revenue"  value={fmtB(totalGross)}     accent="#6366f1" icon={DollarSign} />
-        <SummaryCard label="Net Revenue"    value={fmtB(totalNet)}        accent="#22c55e" icon={TrendingUp} />
-        <SummaryCard label="Bank Fees"      value={fmtB(totalBankFees)}  accent="#ef4444" icon={Landmark} />
-        <SummaryCard label="Students"       value={fmt(totalStudents)}    accent="#06b6d4" icon={Users} />
-        <SummaryCard label="Transactions"   value={fmt(totalTxn)}         accent="#a855f7" icon={ArrowRightLeft} />
-        <SummaryCard label="Success Rate"   value={`${successRate}%`}     accent={successRate >= 80 ? "#22c55e" : "#f59e0b"} icon={CheckCircle2} />
-      </div>
-
       {/* ── Tabs ── */}
       <div className="bg-background rounded-2xl border shadow-sm overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -460,10 +421,18 @@ export function AnalyticsDashboard() {
                 TAB 1 — Revenue Comparison YoY / ToT
             ════════════════════════════════════════════════════════════════ */}
             <TabsContent value="revenue" className="space-y-5 mt-0">
-              <SectionHeader
-                title="Revenue Comparison (YoY / ToT)"
-                subtitle="Net revenue by Year Group — excluding cancelled invoices"
-              />
+              <div className="mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-foreground">Revenue Comparison (YoY / ToT)</h3>
+                  {filterCategory !== "all" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1">
+                      <Filter className="w-3 h-3" />
+                      {FEE_TYPE_OPTIONS.find(o => o.value === filterCategory)?.label}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">Net revenue by Year Group & Module — excluding cancelled invoices</p>
+              </div>
 
               {/* Bar Chart */}
               <Card className="shadow-none border">
@@ -512,11 +481,7 @@ export function AnalyticsDashboard() {
                 TAB 2 — AVG Amount
             ════════════════════════════════════════════════════════════════ */}
             <TabsContent value="avg" className="space-y-5 mt-0">
-              <div className="flex items-center justify-between">
-                <SectionHeader
-                  title="Average Revenue per Student"
-                  subtitle="Average net revenue by Year Group and period"
-                />
+              <div className="flex items-center justify-end">
                 <div className="flex items-center gap-2 border rounded-lg p-1">
                   <button
                     onClick={() => setAvgToggle("person")}
@@ -534,83 +499,97 @@ export function AnalyticsDashboard() {
                 leftTitle="Avg Revenue by Term"
                 rightTitle="Avg Revenue by Academic Year"
                 left={
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full text-sm border-separate border-spacing-0">
                     <thead>
                       <tr className="bg-muted/60">
-                        <th className={`${thBase} text-left whitespace-nowrap`}>Year Group</th>
-                        <th className={`${thBase} text-right whitespace-nowrap`}>Students</th>
+                        <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Year Group</th>
                         {avgTermKeys.map(k => (
-                          <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
+                          <>
+                            <th key={`${k}-students`} className={`${thBase} text-right whitespace-nowrap text-muted-foreground`}>Students</th>
+                            <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
+                          </>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {avgTermRows.map((row, i) => (
                         <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-                          <td className={`${tdBase} font-medium whitespace-nowrap`}>{row.yearGroup}</td>
-                          <td className={`${tdBase} text-right`}>{row.studentCount}</td>
+                          <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.yearGroup}</td>
                           {avgTermKeys.map(k => {
-                            const v = avgToggle === "person" ? (row.termCols[k] ?? 0) : Math.round((row.termCols[k] ?? 0) * row.studentCount)
+                            const v = avgToggle === "person" ? (row.termCols[k] ?? 0) : Math.round((row.termCols[k] ?? 0) * (row.termStudentCounts?.[k] ?? row.studentCount))
                             return (
-                              <td key={k} className={`${tdBase} text-right`}>
-                                {v === 0 ? <span className="text-muted-foreground/40">—</span> : fmtB(v)}
-                              </td>
+                              <>
+                                <td key={`${k}-sc`} className={`${tdBase} text-right text-muted-foreground`}>{row.termStudentCounts?.[k] ?? 0}</td>
+                                <td key={k} className={`${tdBase} text-right`}>{fmtB(v)}</td>
+                              </>
                             )
                           })}
                         </tr>
                       ))}
                       {avgTermRows.length > 0 && (
                         <tr className="bg-slate-100 font-bold border-t-2 border-border">
-                          <td className={`${tdBase} font-bold`}>{avgToggle === "person" ? "ต่อคน" : "Total"}</td>
-                          <td className={`${tdBase} text-right`}>{avgTermRows.reduce((s, r) => s + r.studentCount, 0)}</td>
-                          {avgTermKeys.map(k => (
-                            <td key={k} className={`${tdBase} text-right`}>{fmtB(avgTermColTotal(k))}</td>
-                          ))}
+                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>{avgToggle === "person" ? "ต่อคน" : "Total"}</td>
+                          {avgTermKeys.map(k => {
+                            const totalStudentsInTerm = avgTermRows.reduce((s, r) => s + (r.termStudentCounts?.[k] ?? 0), 0)
+                            return (
+                              <>
+                                <td key={`${k}-sc`} className={`${tdBase} text-right`}>{totalStudentsInTerm}</td>
+                                <td key={k} className={`${tdBase} text-right`}>{fmtB(avgTermColTotal(k))}</td>
+                              </>
+                            )
+                          })}
                         </tr>
                       )}
                       {avgTermRows.length === 0 && (
-                        <tr><td colSpan={2 + avgTermKeys.length} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
+                        <tr><td colSpan={1 + avgTermKeys.length * 2} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
                       )}
                     </tbody>
                   </table>
                 }
                 right={
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full text-sm border-separate border-spacing-0">
                     <thead>
                       <tr className="bg-muted/60">
-                        <th className={`${thBase} text-left whitespace-nowrap`}>Year Group</th>
-                        <th className={`${thBase} text-right whitespace-nowrap`}>Students</th>
+                        <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Year Group</th>
                         {avgYearKeys.map(k => (
-                          <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
+                          <>
+                            <th key={`${k}-students`} className={`${thBase} text-right whitespace-nowrap text-muted-foreground`}>Students</th>
+                            <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
+                          </>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {avgYearRows.map((row, i) => (
                         <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-                          <td className={`${tdBase} font-medium whitespace-nowrap`}>{row.yearGroup}</td>
-                          <td className={`${tdBase} text-right`}>{row.studentCount}</td>
+                          <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.yearGroup}</td>
                           {avgYearKeys.map(k => {
-                            const v = avgToggle === "person" ? (row.yearCols[k] ?? 0) : Math.round((row.yearCols[k] ?? 0) * row.studentCount)
+                            const v = avgToggle === "person" ? (row.yearCols[k] ?? 0) : Math.round((row.yearCols[k] ?? 0) * (row.yearStudentCounts?.[k] ?? row.studentCount))
                             return (
-                              <td key={k} className={`${tdBase} text-right`}>
-                                {v === 0 ? <span className="text-muted-foreground/40">—</span> : fmtB(v)}
-                              </td>
+                              <>
+                                <td key={`${k}-sc`} className={`${tdBase} text-right text-muted-foreground`}>{row.yearStudentCounts?.[k] ?? 0}</td>
+                                <td key={k} className={`${tdBase} text-right`}>{fmtB(v)}</td>
+                              </>
                             )
                           })}
                         </tr>
                       ))}
                       {avgYearRows.length > 0 && (
                         <tr className="bg-slate-100 font-bold border-t-2 border-border">
-                          <td className={`${tdBase} font-bold`}>{avgToggle === "person" ? "ต่อคน" : "Total"}</td>
-                          <td className={`${tdBase} text-right`}>{avgYearRows.reduce((s, r) => s + r.studentCount, 0)}</td>
-                          {avgYearKeys.map(k => (
-                            <td key={k} className={`${tdBase} text-right`}>{fmtB(avgYearColTotal(k))}</td>
-                          ))}
+                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>{avgToggle === "person" ? "ต่อคน" : "Total"}</td>
+                          {avgYearKeys.map(k => {
+                            const totalStudentsInYear = avgYearRows.reduce((s, r) => s + (r.yearStudentCounts?.[k] ?? 0), 0)
+                            return (
+                              <>
+                                <td key={`${k}-sc`} className={`${tdBase} text-right`}>{totalStudentsInYear}</td>
+                                <td key={k} className={`${tdBase} text-right`}>{fmtB(avgYearColTotal(k))}</td>
+                              </>
+                            )
+                          })}
                         </tr>
                       )}
                       {avgYearRows.length === 0 && (
-                        <tr><td colSpan={2 + avgYearKeys.length} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
+                        <tr><td colSpan={1 + avgYearKeys.length * 2} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -710,94 +689,207 @@ export function AnalyticsDashboard() {
                   )}
                 </CardContent>
               </Card>
+              {/* YoY: Method × Academic Year */}
+              <Card className="shadow-none border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Transactions by Method × Academic Year</CardTitle>
+                  <p className="text-xs text-muted-foreground">Year-over-year comparison by payment method</p>
+                </CardHeader>
+                <CardContent className="pt-0 overflow-x-auto">
+                  {txnMethodYearRows.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
+                  ) : (
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted/60">
+                          <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Payment Method</th>
+                          {txnMethodYearKeys.map(ay => (
+                            <th key={ay} className={`${thBase} text-right whitespace-nowrap`}>{ay}</th>
+                          ))}
+                          <th className={`${thBase} text-right whitespace-nowrap`}>Total</th>
+                          <th className={`${thBase} text-right whitespace-nowrap`}>YoY Change</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {txnMethodYearRows.map((row, i) => {
+                          const total = txnMethodYearKeys.reduce((s, k) => s + (row.yearCols[k] ?? 0), 0)
+                          const first = row.yearCols[txnMethodYearKeys[0]] ?? 0
+                          const last = row.yearCols[txnMethodYearKeys[txnMethodYearKeys.length - 1]] ?? 0
+                          const change = txnMethodYearKeys.length > 1 && first > 0 ? ((last - first) / first) * 100 : null
+                          return (
+                            <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
+                              <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.method}</td>
+                              {txnMethodYearKeys.map(ay => (
+                                <td key={ay} className={`${tdBase} text-right`}>
+                                  {(row.yearCols[ay] ?? 0) === 0 ? <span className="text-muted-foreground/40">—</span> : (row.yearCols[ay] ?? 0).toLocaleString()}
+                                </td>
+                              ))}
+                              <td className={`${tdBase} text-right font-semibold`}>{total.toLocaleString()}</td>
+                              <td className={`${tdBase} text-right`}>
+                                {change === null ? <span className="text-muted-foreground/40">—</span> : (
+                                  <span className={change >= 0 ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                                    {change >= 0 ? "+" : ""}{change.toFixed(1)}%
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
+                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>Total</td>
+                          {txnMethodYearKeys.map(ay => (
+                            <td key={ay} className={`${tdBase} text-right`}>
+                              {txnMethodYearRows.reduce((s, r) => s + (r.yearCols[ay] ?? 0), 0).toLocaleString()}
+                            </td>
+                          ))}
+                          <td className={`${tdBase} text-right`}>
+                            {txnMethodYearRows.reduce((s, r) => s + txnMethodYearKeys.reduce((ss, k) => ss + (r.yearCols[k] ?? 0), 0), 0).toLocaleString()}
+                          </td>
+                          <td className={`${tdBase}`} />
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ════════════════════════════════════════════════════════════════
                 TAB 4 — Declined vs Successful
             ════════════════════════════════════════════════════════════════ */}
             <TabsContent value="status" className="space-y-5 mt-0">
-              <SectionHeader title="Declined vs Successful Transactions" />
+              <SectionHeader title="Transaction Status" subtitle="All payments are processed offline — no gateway declines" />
 
+              {/* Summary card */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {statusData.map((s, i) => (
-                  <Card key={i} className="rounded-xl">
+                  s.status === "declined" && s.count === 0 ? null : (
+                    <Card key={i} className="rounded-xl">
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">{s.label}</p>
+                        <p className="text-2xl font-bold" style={{ color: STATUS_COLORS[s.status] }}>
+                          {s.count.toLocaleString()}
+                          <span className="text-sm font-medium ml-1">({s.percentage}%)</span>
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )
+                ))}
+                {statusData.every(s => s.status === "declined" ? s.count === 0 : false) || statusData.find(s => s.status === "declined" && s.count === 0) ? (
+                  <Card className="rounded-xl bg-green-50 border-green-200">
                     <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground">{s.label}</p>
-                      <p className="text-2xl font-bold" style={{ color: STATUS_COLORS[s.status] }}>
-                        {s.count.toLocaleString()}
-                        <span className="text-sm font-medium ml-1">({s.percentage}%)</span>
-                      </p>
+                      <p className="text-sm text-green-700 font-medium">Declined</p>
+                      <p className="text-2xl font-bold text-green-600">0 <span className="text-sm font-medium">(0%)</span></p>
+                      <p className="text-xs text-green-600 mt-1">Offline payments — no declines</p>
                     </CardContent>
                   </Card>
-                ))}
+                ) : null}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="shadow-none border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold">Successful vs Declined</CardTitle>
-                    <p className="text-xs text-muted-foreground">Overall transaction outcome</p>
-                  </CardHeader>
-                  <CardContent>
-                    {statusData.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={240}>
-                        <PieChart>
-                          <Pie
-                            data={statusData} dataKey="count" nameKey="label"
-                            cx="50%" cy="50%" outerRadius={90} innerRadius={45}
-                            label={({ label, percentage }) => `${label} ${percentage}%`}
-                            labelLine={{ stroke: "#9ca3af", strokeWidth: 1 }}
-                          >
-                            {statusData.map((s, i) => <Cell key={i} fill={STATUS_COLORS[s.status] ?? "#6b7280"} />)}
-                          </Pie>
-                          <Tooltip formatter={(v: number) => `${v} transactions`} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                          <Legend wrapperStyle={{ fontSize: 12 }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Breakdown by Payment Method — Successful only */}
+              <Card className="shadow-none border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Transactions by Payment Method</CardTitle>
+                  <p className="text-xs text-muted-foreground">All transactions are successful (offline payments)</p>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {statusData[0]?.byMethod && (
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted/60">
+                          <th className={`${thBase} text-left`}>Method</th>
+                          <th className={`${thBase} text-right text-green-600`}>Successful</th>
+                          <th className={`${thBase} text-right`}>%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(statusData[0].byMethod!).map(([method, v], i) => {
+                          const totalSuccessful = statusData.find(s => s.status === "successful")?.count || 1
+                          const pct = Math.round((v.success / totalSuccessful) * 100)
+                          return (
+                            <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
+                              <td className={`${tdBase} font-medium`}>{method}</td>
+                              <td className={`${tdBase} text-right text-green-600 font-medium`}>{v.success.toLocaleString()}</td>
+                              <td className={`${tdBase} text-right text-muted-foreground`}>{pct}%</td>
+                            </tr>
+                          )
+                        })}
+                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
+                          <td className={`${tdBase} font-bold`}>Total</td>
+                          <td className={`${tdBase} text-right text-green-700`}>
+                            {statusData.find(s => s.status === "successful")?.count.toLocaleString() ?? 0}
+                          </td>
+                          <td className={`${tdBase} text-right`}>100%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+                </CardContent>
+              </Card>
 
-                <Card className="shadow-none border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold">Breakdown by Payment Method</CardTitle>
-                    <p className="text-xs text-muted-foreground">Success and declined per channel</p>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    {statusData[0]?.byMethod && (
-                      <table className="w-full text-sm border-collapse">
-                        <thead>
-                          <tr className="bg-muted/60">
-                            <th className={`${thBase} text-left`}>Method</th>
-                            <th className={`${thBase} text-right text-green-600`}>Successful</th>
-                            <th className={`${thBase} text-right text-red-500`}>Declined</th>
-                            <th className={`${thBase} text-right`}>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.entries(statusData[0].byMethod!).map(([method, v], i) => {
-                            const total = v.success + v.declined
-                            const pct = total > 0 ? Math.round((v.success / total) * 100) : 0
-                            return (
-                              <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-                                <td className={`${tdBase} font-medium`}>{method}</td>
-                                <td className={`${tdBase} text-right text-green-600 font-medium`}>{v.success}</td>
-                                <td className={`${tdBase} text-right text-red-500 font-medium`}>{v.declined}</td>
-                                <td className={`${tdBase} text-right`}>
-                                  <span className="text-muted-foreground">{total} </span>
-                                  <span className="font-medium text-green-600">({pct}%✓)</span>
+              {/* YoY: Method × Academic Year (same data as Tab 3 — all successful offline) */}
+              <Card className="shadow-none border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Successful Transactions by Method × Academic Year</CardTitle>
+                  <p className="text-xs text-muted-foreground">Year-over-year comparison by payment method (all transactions successful — offline payments)</p>
+                </CardHeader>
+                <CardContent className="pt-0 overflow-x-auto">
+                  {txnMethodYearRows.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
+                  ) : (
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted/60">
+                          <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Payment Method</th>
+                          {txnMethodYearKeys.map(ay => (
+                            <th key={ay} className={`${thBase} text-right whitespace-nowrap text-green-700`}>{ay}</th>
+                          ))}
+                          <th className={`${thBase} text-right whitespace-nowrap`}>Total</th>
+                          <th className={`${thBase} text-right whitespace-nowrap`}>YoY Change</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {txnMethodYearRows.map((row, i) => {
+                          const total = txnMethodYearKeys.reduce((s, k) => s + (row.yearCols[k] ?? 0), 0)
+                          const first = row.yearCols[txnMethodYearKeys[0]] ?? 0
+                          const last = row.yearCols[txnMethodYearKeys[txnMethodYearKeys.length - 1]] ?? 0
+                          const change = txnMethodYearKeys.length > 1 && first > 0 ? ((last - first) / first) * 100 : null
+                          return (
+                            <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
+                              <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.method}</td>
+                              {txnMethodYearKeys.map(ay => (
+                                <td key={ay} className={`${tdBase} text-right text-green-600`}>
+                                  {(row.yearCols[ay] ?? 0) === 0 ? <span className="text-muted-foreground/40">—</span> : (row.yearCols[ay] ?? 0).toLocaleString()}
                                 </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                              ))}
+                              <td className={`${tdBase} text-right font-semibold`}>{total.toLocaleString()}</td>
+                              <td className={`${tdBase} text-right`}>
+                                {change === null ? <span className="text-muted-foreground/40">—</span> : (
+                                  <span className={change >= 0 ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                                    {change >= 0 ? "+" : ""}{change.toFixed(1)}%
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
+                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>Total</td>
+                          {txnMethodYearKeys.map(ay => (
+                            <td key={ay} className={`${tdBase} text-right text-green-700`}>
+                              {txnMethodYearRows.reduce((s, r) => s + (r.yearCols[ay] ?? 0), 0).toLocaleString()}
+                            </td>
+                          ))}
+                          <td className={`${tdBase} text-right`}>
+                            {txnMethodYearRows.reduce((s, r) => s + txnMethodYearKeys.reduce((ss, k) => ss + (r.yearCols[k] ?? 0), 0), 0).toLocaleString()}
+                          </td>
+                          <td className={`${tdBase}`} />
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ════════════════════════════════════════════════════════════════
@@ -806,8 +898,34 @@ export function AnalyticsDashboard() {
             <TabsContent value="fees" className="space-y-5 mt-0">
               <SectionHeader
                 title="Bank Fees Breakdown"
-                subtitle="Online and Offline-EDC fees by bank"
+                subtitle="Online payment fees by bank (Thai QR & Online Credit Card only)"
               />
+
+              {/* Bar Chart */}
+              {bankFeeData.length > 0 && (() => {
+                const chartMap = new Map<string, number>()
+                bankFeeData.forEach(r => chartMap.set(r.bankName, (chartMap.get(r.bankName) ?? 0) + r.feeAmount))
+                const chartData = Array.from(chartMap.entries()).map(([bankName, feeAmount]) => ({ bankName, feeAmount }))
+                const PALETTE = ["#00a651","#e60012","#0066b2","#7b2d8b","#f59e0b","#06b6d4"]
+                return (
+                  <Card className="shadow-none border">
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Bank Fees by Bank (Online Only)</CardTitle></CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={chartData} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="bankName" tick={{ fontSize: 12 }} />
+                          <YAxis tickFormatter={v => `฿${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                          <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, "Fee"]} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                          <Bar dataKey="feeAmount" name="Bank Fee" radius={[4, 4, 0, 0]} label={{ position: "top", fontSize: 11, formatter: (v: number) => `฿${(v/1000).toFixed(0)}k` }}>
+                            {chartData.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )
+              })()}
 
               {/* Bank summary cards */}
               {(() => {
@@ -945,7 +1063,7 @@ export function AnalyticsDashboard() {
             <TabsContent value="waterfall" className="space-y-5 mt-0">
               <SectionHeader
                 title="Net vs Gross Revenue"
-                subtitle="Gross → Discounts → Bank Fees → Net Revenue by Year Group"
+                subtitle="Gross Revenue (before discount) → Deductions → Net Revenue (after discount)"
               />
 
               <Card className="shadow-none border">
@@ -963,10 +1081,86 @@ export function AnalyticsDashboard() {
                         <Legend verticalAlign="top" wrapperStyle={{ fontSize: 12 }} />
                         <Bar dataKey="Gross"     fill="#6366f1" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="Discounts" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Bank Fees" fill="#ef4444" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="Net"       fill="#22c55e" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* YoY: Year Group × Academic Year (Gross + Net) */}
+              <Card className="shadow-none border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Gross vs Net Revenue by Year Group × Academic Year</CardTitle>
+                  <p className="text-xs text-muted-foreground">Year-over-year comparison — Gross (before discount) and Net (after discount) per year group</p>
+                </CardHeader>
+                <CardContent className="pt-0 overflow-x-auto">
+                  {wfYearRows.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
+                  ) : (
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted/60">
+                          <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Year Group</th>
+                          {wfYearKeys.map(ay => (
+                            <th key={ay} colSpan={2} className={`${thBase} text-center whitespace-nowrap border-l border-border/40`}>{ay}</th>
+                          ))}
+                          <th className={`${thBase} text-right whitespace-nowrap`}>YoY Net Growth</th>
+                        </tr>
+                        <tr className="bg-muted/30">
+                          <th className={`${thBase} sticky left-0 bg-muted/30 z-10`} />
+                          {wfYearKeys.map(ay => (
+                            [
+                              <th key={`${ay}-g`} className={`${thBase} text-right whitespace-nowrap text-indigo-700 text-xs font-medium border-l border-border/40`}>Gross</th>,
+                              <th key={`${ay}-n`} className={`${thBase} text-right whitespace-nowrap text-green-700 text-xs font-medium`}>Net</th>
+                            ]
+                          ))}
+                          <th className={`${thBase}`} />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {wfYearRows.map((row, i) => {
+                          const firstNet = row.yearCols[wfYearKeys[0]]?.net ?? 0
+                          const lastNet = row.yearCols[wfYearKeys[wfYearKeys.length - 1]]?.net ?? 0
+                          const change = wfYearKeys.length > 1 && firstNet > 0 ? ((lastNet - firstNet) / firstNet) * 100 : null
+                          return (
+                            <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
+                              <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.yearGroup}</td>
+                              {wfYearKeys.map((ay, j) => {
+                                const cell = row.yearCols[ay]
+                                return [
+                                  <td key={`${ay}-g`} className={`${tdBase} text-right text-indigo-700 border-l border-border/40${j === 0 ? "" : ""}`}>
+                                    {cell ? fmtB(cell.gross) : <span className="text-muted-foreground/40">—</span>}
+                                  </td>,
+                                  <td key={`${ay}-n`} className={`${tdBase} text-right text-green-700 font-medium`}>
+                                    {cell ? fmtB(cell.net) : <span className="text-muted-foreground/40">—</span>}
+                                  </td>
+                                ]
+                              })}
+                              <td className={`${tdBase} text-right`}>
+                                {change === null ? <span className="text-muted-foreground/40">—</span> : (
+                                  <span className={change >= 0 ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                                    {change >= 0 ? "+" : ""}{change.toFixed(1)}%
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
+                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>Total</td>
+                          {wfYearKeys.map(ay => [
+                            <td key={`${ay}-g`} className={`${tdBase} text-right text-indigo-700 border-l border-border/40`}>
+                              {fmtB(wfYearRows.reduce((s, r) => s + (r.yearCols[ay]?.gross ?? 0), 0))}
+                            </td>,
+                            <td key={`${ay}-n`} className={`${tdBase} text-right text-green-700`}>
+                              {fmtB(wfYearRows.reduce((s, r) => s + (r.yearCols[ay]?.net ?? 0), 0))}
+                            </td>
+                          ])}
+                          <td className={`${tdBase}`} />
+                        </tr>
+                      </tbody>
+                    </table>
                   )}
                 </CardContent>
               </Card>
@@ -976,118 +1170,57 @@ export function AnalyticsDashboard() {
                   <CardTitle className="text-sm font-semibold">Revenue Breakdown by Year Group</CardTitle>
                   <p className="text-xs text-muted-foreground">Discount columns from Discount Management · scroll horizontally</p>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex text-sm border border-border rounded-sm overflow-hidden">
-
-                    {/* Fixed left: Year Group / Students / Gross */}
-                    <div className="shrink-0">
-                      <table className="border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100 text-slate-700">
-                            <th rowSpan={2} className="text-left px-3 py-2 font-semibold align-bottom border-b border-r border-border whitespace-nowrap text-sm">Year Group</th>
-                            <th rowSpan={2} className="text-right px-3 py-2 font-semibold align-bottom border-b border-r border-border whitespace-nowrap text-sm">Students</th>
-                            <th rowSpan={2} className="text-right px-3 py-2 font-semibold align-bottom border-b border-r border-border whitespace-nowrap text-sm">Gross Revenue</th>
-                          </tr>
-                          <tr className="bg-slate-50"><td className="hidden" /></tr>
-                        </thead>
-                        <tbody>
-                          {waterfallData.slice((wfPage - 1) * PAGE_SIZE, wfPage * PAGE_SIZE).map((r, i) => (
-                            <tr key={i} className={`${i % 2 === 1 ? "bg-muted/10" : ""}`}>
-                              <td className="px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm">{r.yearGroup}</td>
-                              <td className="px-3 py-2 text-right border-b border-r border-border text-sm">{r.studentCount.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right font-medium text-indigo-700 border-b border-r border-border text-sm">{fmt(r.grossRevenue)}</td>
-                            </tr>
-                          ))}
-                          {waterfallData.length === 0 && (
-                            <tr><td colSpan={3} className="px-3 py-8 text-center text-muted-foreground text-sm">No data</td></tr>
-                          )}
-                          {waterfallData.length > 0 && (
-                            <tr className="bg-slate-100 font-bold">
-                              <td className="px-3 py-2 border-t-2 border-r border-border text-sm">Grand Total</td>
-                              <td className="px-3 py-2 text-right border-t-2 border-r border-border text-sm">{waterfallData.reduce((s, r) => s + r.studentCount, 0).toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right border-t-2 border-r border-border text-sm">{fmt(waterfallData.reduce((s, r) => s + r.grossRevenue, 0))}</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Scrollable middle: Discount Deductions */}
-                    <div className="overflow-x-auto flex-1">
-                      <table className="border-collapse h-full">
-                        <thead>
-                          <tr className="bg-slate-100 text-slate-700">
-                            <th colSpan={discountKeys.length} className="text-center px-3 py-2 font-semibold text-orange-600 border-b border-r border-border whitespace-nowrap text-sm">
-                              Discount Deductions
-                            </th>
-                          </tr>
-                          <tr className="bg-slate-50 text-slate-600">
-                            {discountKeys.map(k => (
-                              <th key={k} className="text-right px-3 py-1.5 font-medium border-b border-r border-border whitespace-nowrap text-xs">{k}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {waterfallData.slice((wfPage - 1) * PAGE_SIZE, wfPage * PAGE_SIZE).map((r, i) => (
-                            <tr key={i} className={`${i % 2 === 1 ? "bg-muted/10" : ""}`}>
-                              {discountKeys.map(k => {
-                                const v = r.discounts[k] ?? 0
-                                return (
-                                  <td key={k} className="px-3 py-2 text-right border-b border-r border-border text-sm">
-                                    {v === 0 ? <span className="text-muted-foreground/40">—</span> : <span className="text-orange-600 font-medium">{fmt(v)}</span>}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          ))}
-                          {waterfallData.length === 0 && <tr><td colSpan={discountKeys.length} /></tr>}
-                          {waterfallData.length > 0 && (
-                            <tr className="bg-slate-100 font-bold">
-                              {discountKeys.map(k => {
-                                const total = waterfallData.reduce((s, r) => s + (r.discounts[k] ?? 0), 0)
-                                return (
-                                  <td key={k} className="px-3 py-2 text-right text-orange-600 border-t-2 border-r border-border text-sm">
-                                    {total === 0 ? "—" : fmt(total)}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Fixed right: Bank Fees / Net Revenue */}
-                    <div className="shrink-0">
-                      <table className="border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100 text-slate-700">
-                            <th rowSpan={2} className="text-right px-3 py-2 font-semibold align-bottom border-b border-l border-border whitespace-nowrap text-red-600 text-sm">Bank Fees</th>
-                            <th rowSpan={2} className="text-right px-3 py-2 font-semibold align-bottom border-b border-l border-border whitespace-nowrap text-green-700 text-sm">Net Revenue</th>
-                          </tr>
-                          <tr className="bg-slate-50"><td className="hidden" /></tr>
-                        </thead>
-                        <tbody>
-                          {waterfallData.slice((wfPage - 1) * PAGE_SIZE, wfPage * PAGE_SIZE).map((r, i) => (
-                            <tr key={i} className={`${i % 2 === 1 ? "bg-muted/10" : ""}`}>
-                              <td className="px-3 py-2 text-right border-b border-l border-border text-sm">
-                                {r.bankFees === 0 ? <span className="text-muted-foreground/40">—</span> : <span className="text-red-600 font-medium">{fmt(r.bankFees)}</span>}
+                <CardContent className="pt-0 overflow-x-auto">
+                  <table className="w-full text-sm border-separate border-spacing-0">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700">
+                        <th className="text-left px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm sticky left-0 bg-slate-100 z-10">Year Group</th>
+                        <th className="text-right px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm">Students</th>
+                        <th className="text-right px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm">Gross Revenue</th>
+                        {discountKeys.map(k => (
+                          <th key={k} className="text-right px-3 py-2 font-medium border-b border-r border-border whitespace-nowrap text-xs text-orange-600">{k}</th>
+                        ))}
+                        <th className="text-right px-3 py-2 font-semibold border-b border-border whitespace-nowrap text-sm text-green-700">Net Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {waterfallData.slice((wfPage - 1) * PAGE_SIZE, wfPage * PAGE_SIZE).map((r, i) => (
+                        <tr key={i} className={i % 2 === 1 ? "bg-muted/10" : ""}>
+                          <td className="px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm sticky left-0 z-10" style={{ backgroundColor: i % 2 === 1 ? "hsl(var(--muted) / 0.1)" : "white" }}>{r.yearGroup}</td>
+                          <td className="px-3 py-2 text-right border-b border-r border-border text-sm">{r.studentCount.toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right font-medium text-indigo-700 border-b border-r border-border text-sm">{fmt(r.grossRevenue)}</td>
+                          {discountKeys.map(k => {
+                            const v = r.discounts[k] ?? 0
+                            return (
+                              <td key={k} className="px-3 py-2 text-right border-b border-r border-border text-sm">
+                                {v === 0 ? <span className="text-muted-foreground/40">—</span> : <span className="text-orange-600 font-medium">{fmt(v)}</span>}
                               </td>
-                              <td className="px-3 py-2 text-right font-bold text-green-600 border-b border-l border-border text-sm">{fmt(r.netRevenue)}</td>
-                            </tr>
-                          ))}
-                          {waterfallData.length === 0 && <tr><td colSpan={2} /></tr>}
-                          {waterfallData.length > 0 && (
-                            <tr className="bg-slate-100 font-bold">
-                              <td className="px-3 py-2 text-right text-red-600 border-t-2 border-l border-border text-sm">{fmt(waterfallData.reduce((s, r) => s + r.bankFees, 0))}</td>
-                              <td className="px-3 py-2 text-right text-green-700 border-t-2 border-l border-border text-sm">{fmt(waterfallData.reduce((s, r) => s + r.netRevenue, 0))}</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                  </div>
+                            )
+                          })}
+                          <td className="px-3 py-2 text-right font-bold text-green-600 border-b border-border text-sm">{fmt(r.netRevenue)}</td>
+                        </tr>
+                      ))}
+                      {waterfallData.length === 0 && (
+                        <tr><td colSpan={3 + discountKeys.length + 1} className="px-3 py-8 text-center text-muted-foreground text-sm">No data</td></tr>
+                      )}
+                      {waterfallData.length > 0 && (
+                        <tr className="bg-slate-100 font-bold">
+                          <td className="px-3 py-2 border-t-2 border-r border-border text-sm sticky left-0 bg-slate-100 z-10">Grand Total</td>
+                          <td className="px-3 py-2 text-right border-t-2 border-r border-border text-sm">{waterfallData.reduce((s, r) => s + r.studentCount, 0).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right border-t-2 border-r border-border text-sm">{fmt(waterfallData.reduce((s, r) => s + r.grossRevenue, 0))}</td>
+                          {discountKeys.map(k => {
+                            const total = waterfallData.reduce((s, r) => s + (r.discounts[k] ?? 0), 0)
+                            return (
+                              <td key={k} className="px-3 py-2 text-right text-orange-600 border-t-2 border-r border-border text-sm">
+                                {total === 0 ? "—" : fmt(total)}
+                              </td>
+                            )
+                          })}
+                          <td className="px-3 py-2 text-right text-green-700 border-t-2 border-border text-sm">{fmt(waterfallData.reduce((s, r) => s + r.netRevenue, 0))}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                   <TablePagination page={wfPage} total={waterfallData.length} onChange={setWfPage} />
                 </CardContent>
               </Card>

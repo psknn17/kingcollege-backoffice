@@ -29,6 +29,8 @@ const mockHistory = [
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 145,
+    delivered: 138,
+    failed: 7,
     status: "sent"
   },
   {
@@ -38,6 +40,8 @@ const mockHistory = [
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 89,
+    delivered: 89,
+    failed: 0,
     status: "sent"
   },
   {
@@ -47,6 +51,8 @@ const mockHistory = [
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 67,
+    delivered: 64,
+    failed: 3,
     status: "sent"
   },
   {
@@ -56,6 +62,8 @@ const mockHistory = [
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 152,
+    delivered: 145,
+    failed: 7,
     status: "sent"
   },
   {
@@ -65,9 +73,17 @@ const mockHistory = [
     academicYear: "2025/2026",
     term: "Term 1",
     recipients: 98,
+    delivered: 93,
+    failed: 5,
     status: "sent"
   }
 ]
+
+const getDelivered = (item: any): number =>
+  item.delivered ?? Math.round((item.recipients ?? 0) * 0.95)
+
+const getFailed = (item: any): number =>
+  item.failed ?? ((item.recipients ?? 0) - getDelivered(item))
 
 const loadEmailHistoryFromStorage = () => {
   try {
@@ -228,49 +244,39 @@ export function EmailHistory() {
   }
 
   const handleResendReminder = (historyItem: any) => {
-    const recipients = generateMockRecipients(historyItem.recipients, historyItem.subject)
-    const failedCount = recipients.filter(r => r.status === "failed").length
-
     setResendDialog({
       ...historyItem,
-      failedCount,
+      failedCount: getFailed(historyItem),
       totalCount: historyItem.recipients
     })
   }
 
-  const executeResend = (historyItem: any, resendType: 'failed' | 'all') => {
-    const recipientCount = resendType === 'failed' ? historyItem.failedCount : historyItem.totalCount
+  const executeResend = (historyItem: any) => {
+    const failedCount = getFailed(historyItem)
+    const prevDelivered = getDelivered(historyItem)
 
-    const newEntry = {
-      id: `resend-${Date.now()}`,
-      sentDate: new Date().toISOString().split('T')[0],
-      subject: historyItem.subject,
-      academicYear: historyItem.academicYear,
-      term: historyItem.term,
-      recipients: recipientCount,
-      status: "sent",
-      message: historyItem.message
-    }
+    // Update the original entry: merge failed → delivered
+    const updatedHistory = allHistory.map(item =>
+      item.id === historyItem.id
+        ? { ...item, delivered: prevDelivered + failedCount, failed: 0 }
+        : item
+    )
 
     try {
-      const existingHistory = localStorage.getItem("emailReminderHistory")
-      const history = existingHistory ? JSON.parse(existingHistory) : []
-      history.unshift(newEntry)
-      localStorage.setItem("emailReminderHistory", JSON.stringify(history))
+      // Persist updated list to localStorage (only the non-mock entries)
+      const storedIds = new Set(mockHistory.map(m => m.id))
+      const persistEntries = updatedHistory.filter(item => !storedIds.has(item.id))
+      localStorage.setItem("emailReminderHistory", JSON.stringify(persistEntries))
 
-      setAllHistory([newEntry, ...allHistory])
+      setAllHistory(updatedHistory)
     } catch (error) {
       console.error("Failed to save resend history:", error)
     }
 
     setResendDialog(null)
 
-    const message = resendType === 'failed'
-      ? `Resent to ${recipientCount} failed recipients`
-      : `Resent to all ${recipientCount} recipients`
-
-    toast.success(message, {
-      description: `Subject: ${historyItem.subject}`
+    toast.success(`Resent to ${failedCount} failed recipients`, {
+      description: `Delivered total is now ${prevDelivered + failedCount} / ${historyItem.recipients}`
     })
   }
 
@@ -329,40 +335,6 @@ export function EmailHistory() {
             View all emails sent to parents and students
           </p>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="rounded-xl gap-0">
-          <CardContent className="p-4 pb-4">
-            <div className="flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Total Email Jobs</p>
-            </div>
-            <p className="text-2xl font-bold">{allHistory.length}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl gap-0">
-          <CardContent className="p-4 pb-4">
-            <div className="flex items-center gap-1.5">
-              <Send className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Total Emails Dispatched</p>
-            </div>
-            <p className="text-2xl font-bold">
-              {allHistory.reduce((sum, item) => sum + item.recipients, 0)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl gap-0">
-          <CardContent className="p-4 pb-4">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Delivery Success Rate</p>
-            </div>
-            <p className="text-2xl font-bold">98.5%</p>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
@@ -492,11 +464,18 @@ export function EmailHistory() {
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
+                  <TableHead align="center">Status</TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("recipients")} align="right">
                     <div className="flex items-center justify-end gap-1">
-                      Recipients
+                      Total
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
+                  </TableHead>
+                  <TableHead align="right">
+                    <span className="text-green-600">Delivered</span>
+                  </TableHead>
+                  <TableHead align="right">
+                    <span className="text-red-500">Failed</span>
                   </TableHead>
                   <TableHead align="center">{t("common.actions")}</TableHead>
                 </TableRow>
@@ -504,7 +483,7 @@ export function EmailHistory() {
               <TableBody>
                 {paginatedHistory.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       <History className="w-10 h-10 mx-auto mb-3 opacity-20" />
                       <p className="text-sm font-medium">No emails found</p>
                       <p className="text-xs mt-1">Try adjusting your search or filters</p>
@@ -517,7 +496,27 @@ export function EmailHistory() {
                       <TableCell align="left">{item.subject}</TableCell>
                       <TableCell align="left">{formatAcademicYear(item.academicYear)}</TableCell>
                       <TableCell align="left">{item.term}</TableCell>
+                      <TableCell align="center">
+                        <Badge
+                          variant="outline"
+                          className={item.status === "sent"
+                            ? "border-green-200 bg-green-50 text-green-700 text-xs"
+                            : "border-red-200 bg-red-50 text-red-700 text-xs"
+                          }
+                        >
+                          {item.status === "sent" ? "Sent" : "Failed"}
+                        </Badge>
+                      </TableCell>
                       <TableCell align="right" className="font-semibold">{item.recipients}</TableCell>
+                      <TableCell align="right">
+                        <span className="font-semibold text-green-600">{getDelivered(item)}</span>
+                      </TableCell>
+                      <TableCell align="right">
+                        {getFailed(item) > 0
+                          ? <span className="font-semibold text-red-500">{getFailed(item)}</span>
+                          : <span className="text-muted-foreground">—</span>
+                        }
+                      </TableCell>
                       <TableCell align="center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -708,10 +707,10 @@ export function EmailHistory() {
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Send className="w-6 h-6" />
-              Resend Email
+              Resend to Failed Recipients
             </DialogTitle>
             <DialogDescription className="text-base mt-2">
-              Choose who should receive this email
+              Only recipients who did not receive the original email will be targeted.
             </DialogDescription>
           </DialogHeader>
           {resendDialog && (
@@ -723,45 +722,38 @@ export function EmailHistory() {
                 </p>
               </div>
 
-              {resendDialog.failedCount > 0 && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-900">
-                      {resendDialog.failedCount} recipients did not receive this email
+              {resendDialog.failedCount > 0 ? (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-900">
+                      {resendDialog.failedCount} failed {resendDialog.failedCount === 1 ? "recipient" : "recipients"}
                     </p>
-                    <p className="text-xs text-amber-700 mt-1">
-                      You can resend to failed recipients only or to everyone
+                    <p className="text-xs text-red-700 mt-0.5">
+                      Email will be resent to these {resendDialog.failedCount} {resendDialog.failedCount === 1 ? "person" : "people"} only.
                     </p>
                   </div>
                 </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                  <p className="text-sm font-medium text-green-900">
+                    All recipients received this email successfully. Nothing to resend.
+                  </p>
+                </div>
               )}
-
-              <div className="space-y-2">
-                {resendDialog.failedCount > 0 && (
-                  <Button
-                    onClick={() => executeResend(resendDialog, 'failed')}
-                    className="w-full justify-start"
-                    variant="default"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Resend to Failed Only ({resendDialog.failedCount} recipients)
-                  </Button>
-                )}
-                <Button
-                  onClick={() => executeResend(resendDialog, 'all')}
-                  className="w-full justify-start"
-                  variant={resendDialog.failedCount > 0 ? "outline" : "default"}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Resend to All Recipients ({resendDialog.totalCount} recipients)
-                </Button>
-              </div>
             </div>
           )}
-          <DialogFooter className="px-6 pb-6">
-            <Button onClick={() => setResendDialog(null)} variant="ghost">
+          <DialogFooter className="px-6 pb-6 gap-2">
+            <Button onClick={() => setResendDialog(null)} variant="outline">
               Cancel
+            </Button>
+            <Button
+              onClick={() => executeResend(resendDialog)}
+              disabled={!resendDialog || resendDialog.failedCount === 0}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Resend ({resendDialog?.failedCount ?? 0})
             </Button>
           </DialogFooter>
         </DialogContent>

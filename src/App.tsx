@@ -71,7 +71,8 @@ import {
   LogOut,
   ChevronsUpDown,
   Sparkles,
-  Landmark
+  Landmark,
+  Search
 } from "lucide-react"
 import { TuitionDashboard } from "./components/TuitionDashboard"
 import { TuitionTermSettings } from "./components/TuitionTermSettings"
@@ -120,6 +121,9 @@ import { ClientList } from "./components/ClientList"
 import { InvoiceReceiptTemplate } from "./components/InvoiceReceiptTemplate"
 import { Login } from "./components/Login"
 
+import { CashierDashboard } from "./components/CashierDashboard"
+import { CashierStudentSearch } from "./components/CashierStudentSearch"
+import { CashierPaymentPage } from "./components/CashierPaymentPage"
 import { CombinedInvoicePage } from "./components/CombinedInvoicePage"
 import { CombinedReceiptPage } from "./components/CombinedReceiptPage"
 import { ViewModal } from "./components/ViewModal"
@@ -185,7 +189,11 @@ const menuItems = {
     { id: "student-list", labelKey: "menu.studentList", icon: GraduationCap },
     { id: "family-groups", labelKey: "menu.familyGroups", icon: Users },
     { id: "credit-notes", labelKey: "invoice.creditNotes", icon: FileCheck },
-  ]
+  ],
+  cashier: [
+    { id: "cashier-dashboard", labelKey: "menu.cashierDashboard", icon: BarChart3 },
+    { id: "cashier-student-search", labelKey: "menu.cashierStudentSearch", icon: Search },
+  ],
 }
 
 export default function App() {
@@ -238,6 +246,7 @@ export default function App() {
         report: false,
         studentManagement: false,
         userManagement: true,
+        cashier: true,
       }
     }
     return {
@@ -251,6 +260,7 @@ export default function App() {
       report: false,
       studentManagement: false,
       userManagement: false,
+      cashier: true,
     }
   }
 
@@ -312,7 +322,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<PrivateRoute>
           <SidebarProvider>
-            <div className="flex h-screen w-full">
+            <div className="flex h-screen w-full overflow-x-clip">
               <Sidebar className="border-r">
                 <SidebarHeader className="p-4">
                   <div className="flex items-center gap-2">
@@ -606,6 +616,37 @@ export default function App() {
                     </Collapsible>
                   )}
 
+                  {/* Cashier */}
+                  {canAccessMenuSection("cashier") && (
+                    <Collapsible open={openGroups["cashier"]} onOpenChange={() => toggleGroup("cashier")}>
+                      <SidebarGroup>
+                        <CollapsibleTrigger className="w-full">
+                          <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 text-sm font-semibold">
+                            {t("menu.cashier")}
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openGroups["cashier"] ? "rotate-180" : ""}`} />
+                          </SidebarGroupLabel>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarGroupContent>
+                            <SidebarMenu>
+                              {getFilteredMenuItems("cashier").map((item) => (
+                                <SidebarMenuItem key={item.id}>
+                                  <SidebarMenuButton
+                                    onClick={() => handleMenuItemClick(item.id)}
+                                    isActive={activeSection === item.id}
+                                  >
+                                    <item.icon className="w-4 h-4" />
+                                    <span>{t(item.labelKey)}</span>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              ))}
+                            </SidebarMenu>
+                          </SidebarGroupContent>
+                        </CollapsibleContent>
+                      </SidebarGroup>
+                    </Collapsible>
+                  )}
+
                 </SidebarContent>
 
                 <SidebarFooter className="p-3">
@@ -657,7 +698,7 @@ export default function App() {
 
               </Sidebar>
 
-              <main className="flex-1 flex flex-col">
+              <main className="flex-1 min-w-0 overflow-x-clip flex flex-col">
                 <header className="border-b p-2 md:p-4 flex items-center gap-2 md:gap-4">
                   <SidebarTrigger />
                   {isSubPage && (
@@ -706,6 +747,8 @@ export default function App() {
                         if (menuItem) return t(menuItem.labelKey);
 
                         // 3. Check standalone items
+                        if (activeSection === "cashier-dashboard") return "แดชบอร์ด";
+                        if (activeSection === "cashier-student-search") return "ค้นหานักเรียน";
                         if (activeSection === "tuition-dashboard") return t("menu.dashboard");
                         if (activeSection === "tuition-term-settings") return t("menu.termSettings");
                         if (activeSection === "payment-history") return t("menu.paymentHistory");
@@ -753,7 +796,7 @@ export default function App() {
 
                 </header>
 
-                <div className="flex-1 min-h-0 p-3 md:p-6 flex flex-col" data-content-area>
+                <div className="flex-1 min-h-0 min-w-0 p-3 md:p-6 flex flex-col" data-content-area>
                   <Routes>
                     {/* Dashboard */}
                     <Route path="/" element={<ReportOverview />} />
@@ -898,6 +941,11 @@ export default function App() {
                     <Route path="/user-management" element={<UserManagement />} />
                     <Route path="/activity-log" element={<ActivityLog />} />
                     <Route path="/approval-queue" element={<ApprovalQueue />} />
+
+                    {/* Cashier */}
+                    <Route path="/cashier-dashboard" element={<CashierDashboard />} />
+                    <Route path="/cashier-student-search" element={<CashierStudentSearch />} />
+                    <Route path="/cashier-payment" element={<CashierPaymentPage />} />
 
                     {/* Settings */}
                     <Route path="/bank-settings" element={<BankSettings />} />

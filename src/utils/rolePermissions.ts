@@ -23,6 +23,12 @@ export const rolePermissions = {
     sections: ["general"],
     menuItems: ["approval-queue"]
   },
+  cashier: {
+    name: "Cashier",
+    sections: ["cashier"],
+    menuItems: [] as string[],
+    excludedMenuItems: [] as string[]
+  },
 }
 
 export function canAccessSection(userRole: string, section: string): boolean {
@@ -86,6 +92,7 @@ function normalizeRoleName(role: string): string {
     "Viewver": "viewer",
     "Approvalver": "approver",
     "Approver": "approver",
+    "Cashier": "cashier",
   }
 
   return roleMap[role] || role.toLowerCase().replace(/[\/\s]/g, '_')

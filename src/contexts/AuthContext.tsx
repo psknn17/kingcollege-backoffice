@@ -72,6 +72,7 @@ const SEED_USERS = [
   { id: "seed-002", email: "adminfinance@gmail.com", firstName: "finance", lastName: "admin", role: "admin_accountant", roles: ["admin_accountant"], password: "1", status: "active", createdAt: new Date().toISOString() },
   { id: "seed-003", email: "approver@gmaill.com", firstName: "test", lastName: "approver", role: "approver", roles: ["approver"], password: "1", status: "active", createdAt: new Date().toISOString() },
   { id: "seed-004", email: "viewver@gmail.com", firstName: "test", lastName: "viewver", role: "viewer", roles: ["viewer"], password: "1", status: "active", createdAt: new Date().toISOString() },
+  { id: "seed-005", email: "cashier@school.com", firstName: "test", lastName: "cashier", role: "cashier", roles: ["cashier"], password: "1", status: "active", createdAt: new Date().toISOString() },
 ]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
