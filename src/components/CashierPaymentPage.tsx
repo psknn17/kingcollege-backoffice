@@ -69,6 +69,7 @@ export function CashierPaymentPage() {
   const [chargeAmount, setChargeAmount] = useState<number>(0)
   const [edcAmount, setEdcAmount] = useState<number>(0)
   const [remark, setRemark] = useState<string>("")
+  const [isProcessing, setIsProcessing] = useState<boolean>(false)
 
   // Parse payload from navigation params
   const studentIds: string[] = subPageParams?.studentIds ?? []
@@ -109,6 +110,47 @@ export function CashierPaymentPage() {
   const overInvoice = Math.max(0, chargeAmount - grandTotal)
 
   const cardOptions = selectedBank ? (CARD_TYPES[selectedBank] ?? [`${BANKS.find(b => b.id === selectedBank)?.name ?? selectedBank} Card`]) : []
+
+  function generatePaymentId(): string {
+    const now = new Date()
+    const date = now.toISOString().slice(0, 10).replace(/-/g, "")
+    const rand = Math.floor(1000 + Math.random() * 9000)
+    return `PAY-${date}-${rand}`
+  }
+
+  function handleConfirmPayment() {
+    if (!selectedBank) {
+      toast.error(t("cashier.bankRequired"))
+      return
+    }
+    if (!selectedCardType) {
+      toast.error(t("cashier.cardTypeRequired"))
+      return
+    }
+    setIsProcessing(true)
+    setTimeout(() => {
+      const paymentId = generatePaymentId()
+      navigateToSubPage("cashier-receipt", {
+        paymentId,
+        studentData: studentData.map(({ sid, student, invoices, guardian, subtotal }) => ({
+          sid,
+          name: student ? `${student.firstName} ${student.lastName}` : sid,
+          guardian,
+          subtotal,
+          invoices,
+        })),
+        paymentInfo: {
+          bank: selectedBank,
+          cardType: selectedCardType,
+          paymentMethod,
+          chargeAmount,
+          edcAmount,
+          remark,
+        },
+      })
+      setIsProcessing(false)
+    }, 1500)
+  }
 
   // If no valid params, navigate back
   if (studentIds.length === 0) {
@@ -342,8 +384,16 @@ export function CashierPaymentPage() {
                 <Button variant="outline" onClick={navigateBack}>
                   {t("cashier.cancelBtn")}
                 </Button>
-                <Button onClick={() => toast.info(t("cashier.underDevelopment"))}>
-                  {t("cashier.confirmPayment")}
+                <Button onClick={handleConfirmPayment} disabled={isProcessing}>
+                  {isProcessing ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      {t("cashier.processingEdc")}
+                    </span>
+                  ) : t("cashier.confirmPayment")}
                 </Button>
               </div>
             </CardContent>
