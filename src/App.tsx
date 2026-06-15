@@ -125,6 +125,7 @@ import { CashierDashboard } from "./components/CashierDashboard"
 import { CashierStudentSearch } from "./components/CashierStudentSearch"
 import { CashierPaymentPage } from "./components/CashierPaymentPage"
 import { CashierReceiptPage } from "./components/CashierReceiptPage"
+import { CashierPaymentReport } from "./components/CashierPaymentReport"
 import { CombinedInvoicePage } from "./components/CombinedInvoicePage"
 import { CombinedReceiptPage } from "./components/CombinedReceiptPage"
 import { ViewModal } from "./components/ViewModal"
@@ -194,6 +195,7 @@ const menuItems = {
   cashier: [
     { id: "cashier-dashboard", labelKey: "menu.cashierDashboard", icon: BarChart3 },
     { id: "cashier-student-search", labelKey: "menu.cashierStudentSearch", icon: Search },
+    { id: "cashier-payment-report", labelKey: "menu.cashierPaymentReport", icon: FileBarChart },
   ],
 }
 
@@ -750,6 +752,7 @@ export default function App() {
                         // 3. Check standalone items
                         if (activeSection === "cashier-dashboard") return "แดชบอร์ด";
                         if (activeSection === "cashier-student-search") return "ค้นหานักเรียน";
+                        if (activeSection === "cashier-payment-report") return "รายการการชำระ";
                         if (activeSection === "tuition-dashboard") return t("menu.dashboard");
                         if (activeSection === "tuition-term-settings") return t("menu.termSettings");
                         if (activeSection === "payment-history") return t("menu.paymentHistory");
@@ -948,6 +951,7 @@ export default function App() {
                     <Route path="/cashier-student-search" element={<CashierStudentSearch />} />
                     <Route path="/cashier-payment" element={<CashierPaymentPage />} />
                     <Route path="/cashier-receipt" element={<CashierReceiptPage />} />
+                    <Route path="/cashier-payment-report" element={<CashierPaymentReport />} />
 
                     {/* Settings */}
                     <Route path="/bank-settings" element={<BankSettings />} />
