@@ -124,6 +124,7 @@ import { Login } from "./components/Login"
 import { CashierDashboard } from "./components/CashierDashboard"
 import { CashierStudentSearch } from "./components/CashierStudentSearch"
 import { CashierPaymentPage } from "./components/CashierPaymentPage"
+import { CashierReceiptPage } from "./components/CashierReceiptPage"
 import { CombinedInvoicePage } from "./components/CombinedInvoicePage"
 import { CombinedReceiptPage } from "./components/CombinedReceiptPage"
 import { ViewModal } from "./components/ViewModal"
@@ -946,6 +947,7 @@ export default function App() {
                     <Route path="/cashier-dashboard" element={<CashierDashboard />} />
                     <Route path="/cashier-student-search" element={<CashierStudentSearch />} />
                     <Route path="/cashier-payment" element={<CashierPaymentPage />} />
+                    <Route path="/cashier-receipt" element={<CashierReceiptPage />} />
 
                     {/* Settings */}
                     <Route path="/bank-settings" element={<BankSettings />} />
