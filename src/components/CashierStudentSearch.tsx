@@ -184,7 +184,7 @@ export function CashierStudentSearch() {
             <TableHead align="left">{t("cashier.invoiceNumberCol")}</TableHead>
             <TableHead align="left">{t("cashier.typeCol")}</TableHead>
             <TableHead align="right">{t("cashier.amountCol")}</TableHead>
-            <TableHead align="left">{t("cashier.dueDateCol")}</TableHead>
+            <TableHead align="left" className="pl-12">{t("cashier.dueDateCol")}</TableHead>
             <TableHead align="center">{t("cashier.statusCol")}</TableHead>
           </TableRow>
         </TableHeader>
@@ -200,7 +200,7 @@ export function CashierStudentSearch() {
                 <TableCell align="left" className="font-mono text-sm">{inv.invoiceNumber || inv.id}</TableCell>
                 <TableCell align="left">{inv.category ? (categoryLabel[inv.category] || inv.category) : t("cashier.categoryTuition")}</TableCell>
                 <TableCell align="right" className="font-medium">{getAmount(inv).toLocaleString()} บาท</TableCell>
-                <TableCell align="left">{formatDate(inv.dueDate)}</TableCell>
+                <TableCell align="left" className="pl-12">{formatDate(inv.dueDate)}</TableCell>
                 <TableCell align="center">
                   {(() => {
                     const ps = getPaymentStatus(inv)
@@ -209,7 +209,7 @@ export function CashierStudentSearch() {
                       ps === "partial"   ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" :
                       ps === "paid"      ? "bg-green-100 text-green-800 hover:bg-green-100" :
                       ps === "cancelled" ? "bg-gray-100 text-gray-500 hover:bg-gray-100" :
-                                          "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                                           "bg-gray-100 text-gray-600 hover:bg-gray-100"
                     const label = ps.charAt(0).toUpperCase() + ps.slice(1)
                     return <Badge className={cls}>{label}</Badge>
                   })()}
@@ -221,7 +221,8 @@ export function CashierStudentSearch() {
             <TableCell />
             <TableCell colSpan={2} className="font-medium">{totalLabel ?? t("cashier.totalRow")}</TableCell>
             <TableCell align="right" className="font-bold">{subtotal.toLocaleString()} บาท</TableCell>
-            <TableCell colSpan={2} />
+            <TableCell />
+            <TableCell />
           </TableRow>
         </TableBody>
       </Table>
