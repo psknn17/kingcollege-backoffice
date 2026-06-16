@@ -963,7 +963,7 @@ function generateDebtReminders() {
       dueDateFilter: "all",
       status: i < 2 ? "reminded" : "new",
       sentAt: i < 2 ? randomDate(new Date("2025-10-01"), new Date("2026-02-28")) : undefined,
-      recipientCount: i < 2 ? 180 + Math.floor(Math.random() * 200) : undefined,
+      recipientCount: i < 2 ? [267, 365][i] : undefined,
     })
   }
   return reminders
@@ -1039,11 +1039,166 @@ function generateClients() {
 // ══════════════════════════════════════════════════════════════
 // MAIN SEEDER
 // ══════════════════════════════════════════════════════════════
+function injectDebtReminderMockInvoices() {
+  const VERSION_KEY = "debt_reminder_mock_v6"
+  if (localStorage.getItem(VERSION_KEY)) return
+
+  const families = [
+    { email: "unpaid.test@email.com",  parentName: "Unpaid Test",  familyCode: "DR-UNPAID01",  count: 10, statuses: ["sent","sent","sent","sent","sent","approved","approved","approved","approved","approved"] },
+    { email: "overdue.test@email.com", parentName: "Overdue Test", familyCode: "DR-OVERDUE01", count: 10, statuses: ["overdue","overdue","overdue","overdue","overdue","overdue","overdue","overdue","overdue","overdue"] },
+    { email: "anderson.family@email.com", parentName: "David Anderson",   familyCode: "DR-F001", count: 12, statuses: ["overdue","overdue","overdue","overdue","sent","sent","sent","sent","approved","approved","approved","approved"] },
+    { email: "thompson.family@email.com", parentName: "Sarah Thompson",   familyCode: "DR-F002", count: 6,  statuses: ["overdue","overdue","sent","sent","approved","approved"] },
+    { email: "martinez.family@email.com", parentName: "Carlos Martinez",  familyCode: "DR-F003", count: 6,  statuses: ["overdue","sent","sent","sent","approved","approved"] },
+    { email: "wilson.family@email.com",   parentName: "Emma Wilson",      familyCode: "DR-F004", count: 5,  statuses: ["overdue","overdue","sent","sent","approved"] },
+    { email: "taylor.family@email.com",   parentName: "James Taylor",     familyCode: "DR-F005", count: 5,  statuses: ["sent","sent","sent","approved","approved"] },
+    { email: "brown.family@email.com",    parentName: "Lisa Brown",       familyCode: "DR-F006", count: 3,  statuses: ["overdue","sent","approved"] },
+    { email: "davis.family@email.com",    parentName: "Michael Davis",    familyCode: "DR-F007", count: 3,  statuses: ["overdue","sent","sent"] },
+    { email: "garcia.family@email.com",   parentName: "Sofia Garcia",     familyCode: "DR-F008", count: 3,  statuses: ["sent","sent","approved"] },
+    { email: "miller.family@email.com",   parentName: "Robert Miller",    familyCode: "DR-F009", count: 2,  statuses: ["overdue","sent"] },
+    { email: "jackson.family@email.com",  parentName: "Linda Jackson",    familyCode: "DR-F010", count: 2,  statuses: ["sent","approved"] },
+    { email: "white.family@email.com",    parentName: "Thomas White",     familyCode: "DR-F011", count: 2,  statuses: ["overdue","approved"] },
+    { email: "harris.family@email.com",   parentName: "Patricia Harris",  familyCode: "DR-F012", count: 1,  statuses: ["overdue"] },
+    { email: "clark.family@email.com",    parentName: "Charles Clark",    familyCode: "DR-F013", count: 1,  statuses: ["sent"] },
+    { email: "lewis.family@email.com",    parentName: "Barbara Lewis",    familyCode: "DR-F014", count: 1,  statuses: ["approved"] },
+    { email: "robinson.family@email.com", parentName: "Joseph Robinson",  familyCode: "DR-F015", count: 1,  statuses: ["overdue"] },
+    { email: "walker.family@email.com",   parentName: "Margaret Walker",  familyCode: "DR-F016", count: 2,  statuses: ["sent","overdue"] },
+    { email: "hall.family@email.com",     parentName: "Daniel Hall",      familyCode: "DR-F017", count: 2,  statuses: ["approved","sent"] },
+    { email: "allen.family@email.com",    parentName: "Dorothy Allen",    familyCode: "DR-F018", count: 1,  statuses: ["overdue"] },
+    { email: "young.family@email.com",    parentName: "Kenneth Young",    familyCode: "DR-F019", count: 1,  statuses: ["sent"] },
+    { email: "king.family@email.com",     parentName: "Nancy King",       familyCode: "DR-F020", count: 1,  statuses: ["overdue"] },
+  ]
+
+  const students = [
+    ["Oliver Anderson","KC2026DR001"], ["Emma Anderson","KC2026DR002"], ["Liam Anderson","KC2026DR003"],
+    ["Sophia Thompson","KC2026DR004"], ["Noah Thompson","KC2026DR005"], ["Ava Thompson","KC2026DR006"],
+    ["Lucas Martinez","KC2026DR007"], ["Mia Martinez","KC2026DR008"], ["Ethan Martinez","KC2026DR009"],
+    ["Isabella Wilson","KC2026DR010"], ["Mason Wilson","KC2026DR011"],
+    ["Charlotte Taylor","KC2026DR012"], ["Logan Taylor","KC2026DR013"],
+    ["Amelia Brown","KC2026DR014"], ["Elijah Brown","KC2026DR015"],
+    ["Harper Davis","KC2026DR016"], ["Oliver Davis","KC2026DR017"],
+    ["Evelyn Garcia","KC2026DR018"], ["James Garcia","KC2026DR019"],
+    ["Abigail Miller","KC2026DR020"], ["Benjamin Miller","KC2026DR021"],
+    ["Emily Jackson","KC2026DR022"], ["Lucas Jackson","KC2026DR023"],
+    ["Elizabeth White","KC2026DR024"],
+    ["Sofia Harris","KC2026DR025"],
+    ["Avery Clark","KC2026DR026"],
+    ["Scarlett Lewis","KC2026DR027"],
+    ["Grace Robinson","KC2026DR028"],
+    ["Chloe Walker","KC2026DR029"], ["Sebastian Walker","KC2026DR030"],
+    ["Riley Hall","KC2026DR031"], ["Zoey Hall","KC2026DR032"],
+    ["Lily Allen","KC2026DR033"],
+    ["Hannah Young","KC2026DR034"],
+    ["Addison King","KC2026DR035"],
+  ]
+
+  const termData = [
+    { term: "Term 1 2025/2026", termName: "Term 1", dueDate: "2025-08-01" },
+    { term: "Term 2 2025/2026", termName: "Term 2", dueDate: "2025-12-15" },
+    { term: "Term 3 2025/2026", termName: "Term 3", dueDate: "2026-03-15" },
+  ]
+
+  let invoiceSeq = 9000 // starts at 9001 after first ++ — well above seed range (~475)
+  let studentIdx = 0
+  const mockInvoices: any[] = []
+
+  for (const family of families) {
+    for (let i = 0; i < family.count; i++) {
+      const [studentName, studentId] = students[studentIdx % students.length]
+      studentIdx++
+      const status = family.statuses[i]
+      const td = (family.familyCode === "DR-UNPAID01" || family.familyCode === "DR-OVERDUE01")
+        ? termData[0]
+        : termData[i % termData.length]
+      const amount = [45000, 50000, 55000, 60000, 65000, 70000][i % 6]
+      invoiceSeq++
+
+      mockInvoices.push({
+        id: `inv-dr-${invoiceSeq}`,
+        invoiceNumber: `2025-${String(invoiceSeq).padStart(4, "0")}`,
+        studentName,
+        studentId,
+        studentGrade: `Year ${(i % 13) + 1}`,
+        parentName: family.parentName,
+        parentEmail: family.email,
+        familyCode: family.familyCode,
+        academicYear: "2025/2026",
+        term: td.term,
+        termName: td.termName,
+        category: "tuition",
+        invoiceType: "student",
+        items: [{ id: `ii-dr-${invoiceSeq}-1`, name: "Tuition Fee", amount, category: "tuition" }],
+        subtotal: amount,
+        totalDiscount: 0,
+        netAmount: amount,
+        finalAmount: amount,
+        dueDate: td.dueDate,
+        issueDate: "2025-07-15",
+        status,
+        approvalStatus: "approved",
+        paymentType: "termly",
+        documentType: "SI",
+        createdAt: "2025-07-15T10:00:00.000Z",
+        isNewStudent: false,
+      })
+    }
+  }
+
+  // Generate 80 extra bulk families to simulate large recipient list (~1000 invoices)
+  const FIRST_NAMES = ["James","John","Robert","Michael","William","David","Richard","Joseph","Thomas","Charles","Mary","Patricia","Jennifer","Linda","Barbara","Elizabeth","Susan","Jessica","Sarah","Karen","Emma","Olivia","Sophia","Isabella","Mia","Charlotte","Amelia","Harper","Evelyn","Abigail"]
+  const LAST_NAMES = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Wilson","Taylor","Moore","Anderson","Thomas","Jackson","White","Harris","Martin","Thompson","Young","Allen","King","Wright","Scott","Green","Baker","Adams","Nelson","Hill","Roberts","Carter"]
+  const BULK_STATUSES = [["overdue"],["sent"],["approved"],["overdue","sent"],["sent","approved"]]
+  for (let b = 0; b < 80; b++) {
+    const first = FIRST_NAMES[b % FIRST_NAMES.length]
+    const last = LAST_NAMES[Math.floor(b / FIRST_NAMES.length) % LAST_NAMES.length]
+    const email = `${first.toLowerCase()}.${last.toLowerCase()}${b}@email.com`
+    const familyCode = `DR-BULK-${String(b + 1).padStart(3, "0")}`
+    const statuses = BULK_STATUSES[b % BULK_STATUSES.length]
+    for (let j = 0; j < statuses.length; j++) {
+      invoiceSeq++
+      const td = termData[j % termData.length]
+      mockInvoices.push({
+        id: `inv-dr-bulk-${invoiceSeq}`,
+        invoiceNumber: `2025-${String(invoiceSeq).padStart(4, "0")}`,
+        studentName: `${first} ${last} Jr.`,
+        studentId: `KC2026BLK${String(b + 1).padStart(3, "0")}`,
+        studentGrade: `Year ${(b % 13) + 1}`,
+        parentName: `${first} ${last}`,
+        parentEmail: email,
+        familyCode,
+        academicYear: "2025/2026",
+        term: td.term,
+        termName: td.termName,
+        category: "tuition",
+        invoiceType: "student",
+        items: [{ id: `ii-bulk-${invoiceSeq}-1`, name: "Tuition Fee", amount: 45000, category: "tuition" }],
+        subtotal: 45000, totalDiscount: 0, netAmount: 45000, finalAmount: 45000,
+        dueDate: td.dueDate,
+        issueDate: "2025-07-15",
+        status: statuses[j],
+        approvalStatus: "approved",
+        paymentType: "termly",
+        documentType: "SI",
+        createdAt: "2025-07-15T10:00:00.000Z",
+        isNewStudent: false,
+      })
+    }
+  }
+
+  try {
+    const existing: any[] = JSON.parse(localStorage.getItem("createdInvoices") || "[]")
+    localStorage.setItem("createdInvoices", JSON.stringify([...existing, ...mockInvoices]))
+    localStorage.setItem(VERSION_KEY, "1")
+    console.log(`[SeedData] Injected ${mockInvoices.length} debt reminder mock invoices across ${families.length + 80} families`)
+  } catch (e) {
+    console.error("[SeedData] Failed to inject debt reminder mock invoices:", e)
+  }
+}
+
 export function seedAllData() {
   try {
     // ── Force reseed v2: clear old mock data ─────────────────
     const RESEED_KEY = "seed_version"
-    const SEED_VER = "3.9"
+    const SEED_VER = "4.0"
     if (localStorage.getItem(RESEED_KEY) !== SEED_VER) {
       const keysToRemove = [
         // NOTE: students_v1600 and families_v1600 intentionally excluded — preserve real backoffice student data
@@ -1059,6 +1214,8 @@ export function seedAllData() {
         "kingscollege_backoffice_debt-reminder:reminders-v2","kingscollege_backoffice_debt-reminder:globalSettings",
         "analyticsService_mockVersion", // force analytics to re-seed after full clear
         "analyticsService_studentLinked", // force student-linked re-seed
+        // Clear all DR mock version keys so fresh injection always runs after full reseed
+        "debt_reminder_mock_v2","debt_reminder_mock_v3","debt_reminder_mock_v4","debt_reminder_mock_v5","debt_reminder_mock_v6",
       ]
       keysToRemove.forEach(k => localStorage.removeItem(k))
       localStorage.setItem(RESEED_KEY, SEED_VER)
@@ -1211,6 +1368,9 @@ export function seedAllData() {
     // ── Debt Reminder Config (usePersistedState prefixed) ────
     seedIfEmpty("kingscollege_backoffice_debt-reminder:reminders-v2", generateDebtReminders())
     seedIfEmpty("kingscollege_backoffice_debt-reminder:globalSettings", JSON.stringify({ enableReminders: true, fromEmail: "finance@kingscollege.ac.th" }))
+
+    // ── Debt Reminder Mock Invoices (supplemental, version-gated) ──
+    injectDebtReminderMockInvoices()
 
     console.log(`[SeedData] Seeded: ${students.length} students, ${families.length} families, ${invoices.length} invoices (${[...new Set(invoices.map(i=>i.category))].join(",")}), ${Object.values(receipts).flat().length} receipts, ${paymentRecords.length} payments, ${creditNotes.length} credit notes`)
   } catch (e) {

@@ -164,44 +164,46 @@ export function CashierPaymentReport() {
   const canExport = !!startDate && !!endDate
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-3xl w-full mx-auto pt-8">
       <h1 className="text-2xl font-semibold">รายงานการชำระ</h1>
 
       <Card>
-        <CardContent className="pt-6 space-y-5">
+        <CardContent className="pt-8 pb-8 px-8 space-y-6">
           {/* Quick filters */}
           <div>
-            <p className="text-base font-medium mb-3">เลือกระยะเวลา</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setQuickFilter("today")}>วันนี้</Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickFilter("week")}>สัปดาห์นี้</Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickFilter("month")}>เดือนนี้</Button>
+            <p className="text-base font-medium mb-4">เลือกระยะเวลา</p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setQuickFilter("today")}>วันนี้</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("week")}>สัปดาห์นี้</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("month")}>เดือนนี้</Button>
             </div>
           </div>
 
           {/* Date range */}
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label>วันที่เริ่มต้น</Label>
             <Input
               type="date"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
+              className="w-full"
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label>วันที่สิ้นสุด</Label>
             <Input
               type="date"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
+              className="w-full"
             />
           </div>
 
           {/* Report type */}
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label>ประเภทรายงาน</Label>
             <Select value={reportType} onValueChange={setReportType}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -211,35 +213,31 @@ export function CashierPaymentReport() {
           </div>
 
           {/* Export button */}
-          <div className="flex justify-end pt-1">
-            <Button onClick={exportExcel} disabled={!canExport} className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              ส่งออกรายงาน Excel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Button onClick={exportExcel} disabled={!canExport} className="w-full flex items-center justify-center gap-2 mt-2">
+            <Download className="w-4 h-4" />
+            ส่งออกรายงาน Excel
+          </Button>
 
-      {/* Report field list */}
-      <Card>
-        <CardContent className="pt-6">
-          <p className="font-medium mb-3">ข้อมูลในรายงาน</p>
-          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-            <li>วันที่รับชำระ</li>
-            <li>เลขที่ Invoice</li>
-            <li>ประเภท Invoice</li>
-            <li>วันครบกำหนด</li>
-            <li>ชื่อนักเรียน</li>
-            <li>Student ID</li>
-            <li>ยอด Invoice</li>
-            <li>ยอดรับชำระ (รวมค่าธรรมเนียมบัตร)</li>
-            <li>อัตราค่าธรรมเนียมบัตรเครดิต</li>
-            <li>ค่าธรรมเนียมบัตรเครดิต</li>
-            <li>จำนวนเงินสุทธิ</li>
-            <li>ธนาคาร</li>
-            <li>ประเภทบัตร</li>
-            <li>หมายเหตุ</li>
-          </ul>
+          {/* Report field list */}
+          <div className="pt-4">
+            <p className="font-medium mb-4">ข้อมูลในรายงาน</p>
+            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+              <li>วันที่รับชำระ</li>
+              <li>เลขที่ Invoice</li>
+              <li>ประเภท Invoice</li>
+              <li>วันครบกำหนด</li>
+              <li>ชื่อนักเรียน</li>
+              <li>Student ID</li>
+              <li>ยอด Invoice</li>
+              <li>ยอดรับชำระ (รวมค่าธรรมเนียมบัตร)</li>
+              <li>อัตราค่าธรรมเนียมบัตรเครดิต</li>
+              <li>ค่าธรรมเนียมบัตรเครดิต</li>
+              <li>จำนวนเงินสุทธิ</li>
+              <li>ธนาคาร</li>
+              <li>ประเภทบัตร</li>
+              <li>หมายเหตุ</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </div>

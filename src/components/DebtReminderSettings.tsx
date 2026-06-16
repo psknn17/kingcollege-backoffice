@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { PaginationBar } from "./ui/pagination-bar"
-import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy, Search, Filter, ArrowUpDown, Users } from "lucide-react"
+import { Save, Bell, Plus, Trash2, Mail, CalendarIcon, Settings, Send, ChevronDown, ChevronLeft, ChevronRight, Eye, XCircle, CheckCircle2, FileText, Clock as ClockIcon, Edit, Copy, Search, Filter, ArrowUpDown, Users } from "lucide-react"
 import { format } from "date-fns"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -210,6 +210,7 @@ interface ReminderConfig {
   scheduledAt?: string // ISO timestamp when scheduled
   sentAt?: string // ISO timestamp when sent
   recipientCount?: number // Number of recipients
+  selectedInvoiceIds?: string[] // Snapshot of ticked invoice IDs at Save & Schedule time
 }
 
 // Helper function to format date for display
@@ -331,6 +332,7 @@ export function DebtReminderSettings() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const cancelConfirm = useConfirmDialog()
+  const scheduleConfirm = useConfirmDialog()
   const [reminders, setReminders] = usePersistedState<ReminderConfig[]>("debt-reminder:reminders-v2", initialReminders)
   const [globalSettings, setGlobalSettings] = usePersistedState("debt-reminder:globalSettings", {
     enableReminders: true,
@@ -354,8 +356,13 @@ export function DebtReminderSettings() {
   const [sendModalTab, setSendModalTab] = useState<string>("confirm")
   const [testEmailAddress, setTestEmailAddress] = useState("")
   const [sendInvoiceSearch, setSendInvoiceSearch] = useState("")
+  const [recipientPage, setRecipientPage] = useState(1)
+  const RECIPIENT_PAGE_SIZE = 20
   const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false)
+  const [isConfirmSendMode, setIsConfirmSendMode] = useState(false)
+  const [confirmSendReminder, setConfirmSendReminder] = useState<ReminderConfig | null>(null)
   const [isTestConfirmOpen, setIsTestConfirmOpen] = useState(false)
+  const [expandedConfirmGroups, setExpandedConfirmGroups] = useState<Set<string>>(new Set())
   const [sendMatchingInvoices, setSendMatchingInvoices] = useState<any[]>([])
   const [sendSelectedIds, setSendSelectedIds] = useState<Set<string>>(new Set())
 
@@ -374,7 +381,9 @@ export function DebtReminderSettings() {
   useEffect(() => {
     if (!isEditDialogOpen || !editingReminder) return
     const matching = getMatchingInvoices(editingReminder)
-    setSendMatchingInvoices(matching)
+    setSendMatchingInvoices(sortMatchingInvoices(matching))
+    // When filter changes (not initial open), reset to select all new matches
+    // openEditReminder handles the initial snapshot restore
     setSendSelectedIds(new Set(matching.map((inv: any) => inv.id)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editReminderFilterKey])
@@ -575,13 +584,19 @@ export function DebtReminderSettings() {
   const openEditReminder = (reminder: ReminderConfig) => {
     setEditingReminder({ ...reminder })
     const matching = getMatchingInvoices(reminder)
-    setSendMatchingInvoices(matching)
-    setSendSelectedIds(new Set(matching.map((inv: any) => inv.id)))
+    setSendMatchingInvoices(sortMatchingInvoices(matching))
+    if (reminder.selectedInvoiceIds && reminder.selectedInvoiceIds.length > 0) {
+      const matchingIdSet = new Set(matching.map((inv: any) => inv.id))
+      setSendSelectedIds(new Set(reminder.selectedInvoiceIds.filter(id => matchingIdSet.has(id))))
+    } else {
+      setSendSelectedIds(new Set(matching.map((inv: any) => inv.id)))
+    }
     setSendInvoiceSearch("")
+    setRecipientPage(1)
     setIsEditDialogOpen(true)
   }
 
-  const saveEditingReminder = () => {
+  const saveEditingReminder = (extraFields?: Partial<ReminderConfig>, keepOpen?: boolean) => {
     if (!editingReminder) return
 
     // Validate required fields
@@ -590,23 +605,24 @@ export function DebtReminderSettings() {
       return
     }
 
-    const exists = (reminders || []).find(r => r.id === editingReminder.id)
+    const reminderToSave = extraFields ? { ...editingReminder, ...extraFields } : editingReminder
+    const exists = (reminders || []).find(r => r.id === reminderToSave.id)
     if (exists) {
-      // Update existing
       setReminders((current) =>
-        (current || []).map(r => r.id === editingReminder.id ? editingReminder : r)
+        (current || []).map(r => r.id === reminderToSave.id ? reminderToSave : r)
       )
       toast.success("Reminder updated")
-      logActivity({ action: "Update Reminder", module: "Debt Reminders", detail: `Updated reminder: "${editingReminder.name}"` })
+      logActivity({ action: "Update Reminder", module: "Debt Reminders", detail: `Updated reminder: "${reminderToSave.name}"` })
     } else {
-      // Add new
-      setReminders((current) => [...(current || []), editingReminder])
+      setReminders((current) => [...(current || []), reminderToSave])
       toast.success("Reminder created")
-      logActivity({ action: "Create Reminder", module: "Debt Reminders", detail: `Created reminder: "${editingReminder.name}"` })
+      logActivity({ action: "Create Reminder", module: "Debt Reminders", detail: `Created reminder: "${reminderToSave.name}"` })
     }
-    setIsEditDialogOpen(false)
-    setEditingReminder(null)
-    return editingReminder
+    if (!keepOpen) {
+      setIsEditDialogOpen(false)
+      setEditingReminder(null)
+    }
+    return reminderToSave
   }
 
   const openNewTemplate = () => {
@@ -803,6 +819,12 @@ export function DebtReminderSettings() {
     return scheduledTime > new Date()
   }
 
+  const sortMatchingInvoices = (invoices: any[]): any[] =>
+    [...invoices].sort((a, b) => {
+      const rank = (s: string) => s === "overdue" ? 1 : 0
+      return rank(a.status) - rank(b.status)
+    })
+
   // Load invoices matching a reminder's criteria
   const getMatchingInvoices = (reminder: ReminderConfig): any[] => {
     try {
@@ -820,6 +842,8 @@ export function DebtReminderSettings() {
       }
 
       return invoices.filter(inv => {
+        // Only include invoices that have been formally issued (have an invoice number)
+        if (!inv.invoiceNumber) return false
         if (reminder.academicYear) {
           const ry = normalizeYear(reminder.academicYear)
           const iy = normalizeYear(inv.academicYear || "")
@@ -830,12 +854,13 @@ export function DebtReminderSettings() {
           const it = extractTermNum(inv.term || inv.termName || "")
           if (rt && it && rt !== it) return false
         }
-        const statuses = reminder.invoiceStatuses || []
-        if (statuses.length > 0) {
-          const s = inv.status
-          const invStatus: InvoiceStatus | null = s === "overdue" ? "overdue" : s === "paid" ? "paid" : s === "unpaid" ? "unpaid" : null
-          if (!invStatus || !statuses.includes(invStatus)) return false
-        }
+        // Empty statuses = target all outstanding (unpaid + overdue, exclude paid)
+        const statuses = (reminder.invoiceStatuses && reminder.invoiceStatuses.length > 0)
+          ? reminder.invoiceStatuses
+          : ["unpaid", "overdue"] as InvoiceStatus[]
+        const s = inv.status
+        const invStatus = s === "overdue" ? "overdue" : s === "paid" ? "paid" : "unpaid"
+        if (!statuses.includes(invStatus as InvoiceStatus)) return false
         return true
       })
     } catch { return [] }
@@ -843,12 +868,13 @@ export function DebtReminderSettings() {
 
   const openSendModal = (reminder: ReminderConfig) => {
     const matching = getMatchingInvoices(reminder)
-    setSendMatchingInvoices(matching)
+    setSendMatchingInvoices(sortMatchingInvoices(matching))
     setSendSelectedIds(new Set(matching.map((inv: any) => inv.id)))
     setSendModalReminder(reminder)
     setSendModalTab("confirm")
     setTestEmailAddress("")
     setSendInvoiceSearch("")
+    setRecipientPage(1)
     setIsSendModalOpen(true)
   }
 
@@ -1371,11 +1397,14 @@ export function DebtReminderSettings() {
       {/* Create/Edit Reminder Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
         if (!open) {
+          if (isConfirmSendMode) return
           setIsEditDialogOpen(false)
           setEditingReminder(null)
         }
       }}>
-        <DialogContent className="max-w-3xl p-6 max-h-[90vh] flex flex-col">
+        <DialogContent className={isConfirmSendMode ? "max-w-[520px] max-h-[85vh] flex flex-col overflow-hidden p-6" : "max-w-3xl p-6 max-h-[90vh] flex flex-col"}>
+          {!isConfirmSendMode && (
+          <>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
@@ -1463,22 +1492,36 @@ export function DebtReminderSettings() {
 
                 <div className="space-y-2">
                   <Label>{t("debtReminder.invoiceStatusFilter")}</Label>
-                  <div className="flex items-center gap-3">
-                    {INVOICE_STATUS_OPTIONS.map(option => (
-                      <label key={option.value} className="flex items-center gap-2 cursor-pointer">
-                        <Checkbox
-                          checked={editingReminder.invoiceStatuses?.includes(option.value) ?? false}
-                          onCheckedChange={(checked) => {
+                  <div className="flex items-center gap-2">
+                    {INVOICE_STATUS_OPTIONS.map(option => {
+                      const isSelected = editingReminder.invoiceStatuses?.includes(option.value) ?? false
+                      const isOverdue = option.value === "overdue"
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
                             const current = editingReminder.invoiceStatuses || []
-                            const updated = checked
-                              ? [...current, option.value]
-                              : current.filter(s => s !== option.value)
+                            const isCurrentlySelected = current.includes(option.value)
+                            // Radio-style: click selected-only pill → deselect all; else → select only this one
+                            const updated: InvoiceStatus[] = isCurrentlySelected && current.length === 1
+                              ? []
+                              : [option.value]
                             setEditingReminder(prev => prev ? { ...prev, invoiceStatuses: updated } : prev)
                           }}
-                        />
-                        <span className="text-sm">{option.label}</span>
-                      </label>
-                    ))}
+                          className={cn(
+                            "cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border-2 transition-all",
+                            isSelected
+                              ? isOverdue
+                                ? "bg-red-100 border-red-400 text-red-700"
+                                : "bg-amber-100 border-amber-400 text-amber-700"
+                              : "bg-background border-muted text-muted-foreground hover:border-muted-foreground"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -1661,8 +1704,7 @@ export function DebtReminderSettings() {
               {(() => {
                 const hasRequiredFields = !!(
                   editingReminder?.academicYear &&
-                  editingReminder?.term &&
-                  (editingReminder?.invoiceStatuses?.length ?? 0) > 0
+                  editingReminder?.term
                 )
 
                 if (!hasRequiredFields) {
@@ -1673,7 +1715,7 @@ export function DebtReminderSettings() {
                         {t("debtReminder.recipients") || "Recipients"}
                       </Label>
                       <p className="text-sm text-muted-foreground text-center py-6 border rounded-lg bg-muted/30">
-                        Select Academic Year, Term, and at least one Status to view recipients
+                        Select Academic Year and Term to view recipients
                       </p>
                     </div>
                   )
@@ -1737,7 +1779,7 @@ export function DebtReminderSettings() {
                           <Input
                             placeholder="Search by name, email or invoice..."
                             value={sendInvoiceSearch}
-                            onChange={(e) => setSendInvoiceSearch(e.target.value)}
+                            onChange={(e) => { setSendInvoiceSearch(e.target.value); setRecipientPage(1) }}
                             className="pl-8 h-8 text-sm"
                           />
                         </div>
@@ -1753,35 +1795,70 @@ export function DebtReminderSettings() {
                           <span className="text-sm font-medium">{t("common.selectAll") || "Select All"}</span>
                         </div>
                         {/* Email Group List */}
-                        <div className="overflow-y-auto space-y-1" style={{ maxHeight: "220px" }}>
-                          {filteredGroups.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-6">
-                              {q ? "No matching results" : (t("debtReminder.noMatchingInvoices") || "No matching invoices found")}
-                            </p>
-                          ) : filteredGroups.map((group) => {
-                            const groupSelected = group.invoices.every(inv => sendSelectedIds.has(inv.id))
-                            return (
-                              <div key={group.email} className={cn("rounded-lg border transition-colors", groupSelected ? "bg-muted/50 border-primary/30" : "")}>
-                                <div className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50 rounded-lg" onClick={() => toggleGroup(group)}>
-                                  <Checkbox checked={groupSelected} onCheckedChange={() => toggleGroup(group)} onClick={e => e.stopPropagation()} />
-                                  <span className="text-sm font-medium flex-1 truncate">{group.email || "—"}</span>
-                                  <span className="text-xs text-muted-foreground shrink-0">{group.invoices.length} invoice{group.invoices.length > 1 ? "s" : ""}</span>
-                                </div>
-                                <div className="ml-6 pb-1 space-y-0.5">
-                                  {group.invoices.map(inv => (
-                                    <div key={inv.id} className="flex items-center gap-2 px-2 py-1">
-                                      <span className="flex-1 truncate text-sm">{inv.studentName || inv.studentId || "—"}</span>
-                                      <span className="text-xs text-muted-foreground shrink-0">{inv.invoiceNumber || inv.id}</span>
-                                      <Badge variant="outline" className={cn("text-xs shrink-0", inv.status === "overdue" ? "border-red-200 text-red-700" : "border-amber-200 text-amber-700")}>
-                                        {inv.status || "unpaid"}
-                                      </Badge>
+                        {(() => {
+                          const totalPages = Math.max(1, Math.ceil(filteredGroups.length / RECIPIENT_PAGE_SIZE))
+                          const safePage = Math.min(recipientPage, totalPages)
+                          const pageGroups = filteredGroups.slice((safePage - 1) * RECIPIENT_PAGE_SIZE, safePage * RECIPIENT_PAGE_SIZE)
+                          return (
+                            <>
+                              <div className="overflow-y-auto space-y-1" style={{ maxHeight: "220px" }}>
+                                {filteredGroups.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground text-center py-6">
+                                    {q ? "No matching results" : (t("debtReminder.noMatchingInvoices") || "No matching invoices found")}
+                                  </p>
+                                ) : pageGroups.map((group) => {
+                                  const groupSelected = group.invoices.every(inv => sendSelectedIds.has(inv.id))
+                                  return (
+                                    <div key={group.email} className={cn("rounded-lg border transition-colors", groupSelected ? "bg-muted/50 border-primary/30" : "")}>
+                                      <div className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50 rounded-lg" onClick={() => toggleGroup(group)}>
+                                        <Checkbox checked={groupSelected} onCheckedChange={() => toggleGroup(group)} onClick={e => e.stopPropagation()} />
+                                        <span className="text-sm font-medium flex-1 truncate">{group.email || "—"}</span>
+                                        <span className="text-xs text-muted-foreground shrink-0">{group.invoices.length} invoice{group.invoices.length > 1 ? "s" : ""}</span>
+                                      </div>
+                                      <div className="ml-6 pb-1 space-y-0.5">
+                                        {group.invoices.map(inv => (
+                                          <div key={inv.id} className="flex items-center gap-2 px-2 py-1">
+                                            <span className="flex-1 truncate text-sm">{inv.studentName || inv.studentId || "—"}</span>
+                                            <span className="text-xs text-muted-foreground shrink-0">{inv.invoiceNumber || inv.id}</span>
+                                            <Badge variant="outline" className={cn("text-xs shrink-0", inv.status === "overdue" ? "border-red-200 text-red-700" : "border-amber-200 text-amber-700")}>
+                                              {inv.status === "overdue" ? "Overdue" : "Unpaid"}
+                                            </Badge>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  ))}
-                                </div>
+                                  )
+                                })}
                               </div>
-                            )
-                          })}
-                        </div>
+                              {totalPages > 1 && (
+                                <div className="flex items-center justify-between pt-1">
+                                  <span className="text-xs text-muted-foreground">
+                                    {(safePage - 1) * RECIPIENT_PAGE_SIZE + 1}–{Math.min(safePage * RECIPIENT_PAGE_SIZE, filteredGroups.length)} of {filteredGroups.length}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={safePage <= 1}
+                                      onClick={() => setRecipientPage(p => p - 1)}
+                                      className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                      <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-xs text-muted-foreground w-16 text-center">Page {safePage}/{totalPages}</span>
+                                    <button
+                                      type="button"
+                                      disabled={safePage >= totalPages}
+                                      onClick={() => setRecipientPage(p => p + 1)}
+                                      className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                      <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )
+                        })()}
                       </TabsContent>
 
                       {/* Tab: Test Send */}
@@ -1829,21 +1906,24 @@ export function DebtReminderSettings() {
                   toast.error("Send Date and Send Time are required for scheduling")
                   return
                 }
-                saveEditingReminder()
+                scheduleConfirm.confirm(() => {
+                  saveEditingReminder({ selectedInvoiceIds: [...sendSelectedIds] })
+                })
               }} disabled={!userCanEdit}>
                 <Save className="w-4 h-4 mr-2" />
                 Save & Schedule
               </Button>
               <Button
                 onClick={() => {
-                  const saved = saveEditingReminder()
+                  if (!editingReminder) return
+                  if (!editingReminder.academicYear || !editingReminder.term || !editingReminder.subject || !editingReminder.message) {
+                    toast.error("Please fill in all required fields before sending")
+                    return
+                  }
+                  const saved = saveEditingReminder(undefined, true)
                   if (saved) {
-                    if (!saved.academicYear || !saved.term || !saved.subject || !saved.message) {
-                      toast.error("Please fill in all required fields before sending")
-                      return
-                    }
-                    setSendModalReminder(saved)
-                    setIsFinalConfirmOpen(true)
+                    setConfirmSendReminder(saved)
+                    setIsConfirmSendMode(true)
                   }
                 }}
                 disabled={!userCanEdit}
@@ -1853,6 +1933,160 @@ export function DebtReminderSettings() {
               </Button>
             </div>
           </DialogFooter>
+          </>
+          )}
+
+          {/* Confirm Send Mode — shown inside the same dialog to avoid Radix focus-trap conflicts */}
+          {isConfirmSendMode && (() => {
+            const OVERFLOW_THRESHOLD = 5
+            const selectedInvoices = sendMatchingInvoices.filter(inv => sendSelectedIds.has(inv.id))
+            const groupMap = selectedInvoices.reduce<Record<string, any[]>>((acc, inv) => {
+              const key = inv.parentEmail || inv.familyCode || inv.id
+              if (!acc[key]) acc[key] = []
+              acc[key].push(inv)
+              return acc
+            }, {})
+            const groups = Object.entries(groupMap).map(([email, invoices]) => ({ email, invoices }))
+            const totalEmails = groups.length
+            const totalInvoices = selectedInvoices.length
+            const totalAmount = selectedInvoices.reduce((s, inv) => s + (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0), 0)
+            const overdueCount = selectedInvoices.filter(inv => inv.status === "overdue").length
+            return (
+              <>
+                <DialogHeader className="shrink-0">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Confirm Send
+                  </DialogTitle>
+                  <DialogDescription>
+                    Review before sending. This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-3 gap-3 p-4 rounded-lg bg-muted/40 border shrink-0">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{totalEmails}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Recipients</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{totalInvoices}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Invoices</p>
+                    {overdueCount > 0 && (
+                      <span className="text-xs text-red-600 font-medium">{overdueCount} overdue</span>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">฿{totalAmount.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Total Due</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Recipients ({totalEmails})</span>
+                </div>
+
+                <div className="overflow-y-auto space-y-2 pr-1 flex-1" style={{ maxHeight: "340px" }}>
+                  {groups.map(({ email, invoices }) => {
+                    const OVERDUE_ORDER: Record<string, number> = { overdue: 0, unpaid: 1 }
+                    const sorted = [...invoices].sort((a, b) => {
+                      const diff = (OVERDUE_ORDER[a.status] ?? 1) - (OVERDUE_ORDER[b.status] ?? 1)
+                      if (diff !== 0) return diff
+                      return new Date(a.dueDate ?? a.due_date ?? 0).getTime() - new Date(b.dueDate ?? b.due_date ?? 0).getTime()
+                    })
+                    const isExpanded = expandedConfirmGroups.has(email)
+                    const visible = isExpanded ? sorted : sorted.slice(0, OVERFLOW_THRESHOLD)
+                    const hiddenCount = sorted.length - OVERFLOW_THRESHOLD
+                    const hasOverdue = invoices.some(inv => inv.status === "overdue")
+                    return (
+                      <div key={email} className={cn("rounded-lg border overflow-hidden", hasOverdue && "border-l-2 border-l-red-400")}>
+                        <div className="flex items-center gap-3 px-3 py-2.5 bg-muted/30">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{email}</p>
+                            {invoices[0]?.parentName && (
+                              <p className="text-xs text-muted-foreground truncate">{invoices[0].parentName}</p>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        {visible.map(inv => (
+                          <div key={inv.id} className="flex items-center gap-2 px-3 py-2 border-t">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm truncate">{inv.studentName || inv.studentId || "—"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{inv.invoiceNumber || inv.invoiceNo || inv.id}</p>
+                            </div>
+                            <div className="text-right shrink-0 hidden sm:block">
+                              <p className="text-xs text-muted-foreground">
+                                {(inv.dueDate || inv.due_date) ? format(new Date(inv.dueDate ?? inv.due_date), "dd MMM yyyy") : "—"}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0 w-24">
+                              <p className="text-sm font-medium">
+                                ฿{(inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0).toLocaleString()}
+                              </p>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs shrink-0 w-16 justify-center",
+                                inv.status === "overdue"
+                                  ? "border-red-200 bg-red-50 text-red-700"
+                                  : "border-gray-200 bg-gray-50 text-gray-600"
+                              )}
+                            >
+                              {inv.status === "overdue" ? "Overdue" : "Unpaid"}
+                            </Badge>
+                          </div>
+                        ))}
+                        {sorted.length > OVERFLOW_THRESHOLD && (
+                          <button
+                            className="w-full flex items-center justify-center gap-1 py-2 border-t text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                            onClick={() => setExpandedConfirmGroups(prev => {
+                              const next = new Set(prev)
+                              if (next.has(email)) next.delete(email)
+                              else next.add(email)
+                              return next
+                            })}
+                          >
+                            <ChevronDown className={cn("w-3 h-3 transition-transform", isExpanded && "rotate-180")} />
+                            {isExpanded ? "Show less" : `Show ${hiddenCount} more invoice${hiddenCount !== 1 ? "s" : ""}`}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <DialogFooter className="border-t pt-4 shrink-0">
+                  {totalEmails === 0 && (
+                    <p className="text-xs text-destructive mr-auto self-center">No recipients — adjust filters to continue.</p>
+                  )}
+                  <Button variant="outline" onClick={() => {
+                    setIsConfirmSendMode(false)
+                    setExpandedConfirmGroups(new Set())
+                  }}>
+                    Back
+                  </Button>
+                  <Button
+                    disabled={totalEmails === 0}
+                    onClick={() => {
+                      if (confirmSendReminder) handleSendNow(confirmSendReminder)
+                      setExpandedConfirmGroups(new Set())
+                      setIsConfirmSendMode(false)
+                      setConfirmSendReminder(null)
+                      setIsEditDialogOpen(false)
+                      setEditingReminder(null)
+                    }}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send {totalEmails} email{totalEmails !== 1 ? "s" : ""}
+                  </Button>
+                </DialogFooter>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -2334,6 +2568,14 @@ export function DebtReminderSettings() {
         confirmTextKey="common.confirm"
         variant="destructive"
       />
+      <ConfirmDialog
+        open={scheduleConfirm.isOpen}
+        onOpenChange={scheduleConfirm.setIsOpen}
+        onConfirm={scheduleConfirm.handleConfirm}
+        titleKey="Schedule Reminder"
+        descriptionKey="Are you sure you want to save and schedule this reminder?"
+        confirmTextKey="common.confirm"
+      />
 
       {/* Send Email Modal */}
       <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
@@ -2422,7 +2664,7 @@ export function DebtReminderSettings() {
                         <Input
                           placeholder="Search by name, email or invoice..."
                           value={sendInvoiceSearch}
-                          onChange={(e) => setSendInvoiceSearch(e.target.value)}
+                          onChange={(e) => { setSendInvoiceSearch(e.target.value); setRecipientPage(1) }}
                           className="pl-8 h-8 text-sm"
                         />
                       </div>
@@ -2443,62 +2685,70 @@ export function DebtReminderSettings() {
                       </div>
 
                       {/* Email Group List */}
-                      <div className="overflow-y-auto space-y-1" style={{ maxHeight: "240px" }}>
-                        {(() => {
-                          const q = sendInvoiceSearch.toLowerCase().trim()
-                          const filtered = q
-                            ? groups.filter(g =>
-                                g.email.toLowerCase().includes(q) ||
-                                g.invoices.some(inv =>
-                                  (inv.studentName || "").toLowerCase().includes(q) ||
-                                  (inv.invoiceNumber || inv.id || "").toLowerCase().includes(q)
-                                )
+                      {(() => {
+                        const q = sendInvoiceSearch.toLowerCase().trim()
+                        const filtered = q
+                          ? groups.filter(g =>
+                              g.email.toLowerCase().includes(q) ||
+                              g.invoices.some(inv =>
+                                (inv.studentName || "").toLowerCase().includes(q) ||
+                                (inv.invoiceNumber || inv.id || "").toLowerCase().includes(q)
                               )
-                            : groups
-                          if (filtered.length === 0) return (
-                            <p className="text-sm text-muted-foreground text-center py-6">
-                              {q ? "No matching results" : (t("debtReminder.noMatchingInvoices") || "No matching invoices found")}
-                            </p>
-                          )
-                          return filtered.map((group) => {
-                            const groupSelected = group.invoices.every(inv => sendSelectedIds.has(inv.id))
-                            return (
-                              <div key={group.email} className={cn(
-                                "rounded-lg border transition-colors",
-                                groupSelected ? "bg-muted/50 border-primary/30" : ""
-                              )}>
-                                {/* Group header */}
-                                <div
-                                  className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50 rounded-lg"
-                                  onClick={() => toggleGroup(group)}
-                                >
-                                  <Checkbox
-                                    checked={groupSelected}
-                                    onCheckedChange={() => toggleGroup(group)}
-                                    onClick={e => e.stopPropagation()}
-                                  />
-                                  <span className="text-sm font-medium flex-1 truncate">{group.email || "—"}</span>
-                                  <span className="text-xs text-muted-foreground shrink-0">{group.invoices.length} invoice{group.invoices.length > 1 ? "s" : ""}</span>
-                                </div>
-                                {/* Child rows */}
-                                <div className="ml-6 pb-1 space-y-0.5">
-                                  {group.invoices.map(inv => (
-                                    <div key={inv.id} className="flex items-center gap-2 px-2 py-1">
-                                      <span className="flex-1 truncate text-sm">{inv.studentName || inv.studentId || "—"}</span>
-                                      <span className="text-xs text-muted-foreground shrink-0">{inv.invoiceNumber || inv.id}</span>
-                                      <Badge variant="outline" className={cn("text-xs shrink-0",
-                                        inv.status === "overdue" ? "border-red-200 text-red-700" : "border-amber-200 text-amber-700"
-                                      )}>
-                                        {inv.status || "unpaid"}
-                                      </Badge>
+                            )
+                          : groups
+                        const totalPages = Math.max(1, Math.ceil(filtered.length / RECIPIENT_PAGE_SIZE))
+                        const safePage = Math.min(recipientPage, totalPages)
+                        const pageGroups = filtered.slice((safePage - 1) * RECIPIENT_PAGE_SIZE, safePage * RECIPIENT_PAGE_SIZE)
+                        return (
+                          <>
+                            <div className="overflow-y-auto space-y-1" style={{ maxHeight: "240px" }}>
+                              {filtered.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-6">
+                                  {q ? "No matching results" : (t("debtReminder.noMatchingInvoices") || "No matching invoices found")}
+                                </p>
+                              ) : pageGroups.map((group) => {
+                                const groupSelected = group.invoices.every(inv => sendSelectedIds.has(inv.id))
+                                return (
+                                  <div key={group.email} className={cn("rounded-lg border transition-colors", groupSelected ? "bg-muted/50 border-primary/30" : "")}>
+                                    <div className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50 rounded-lg" onClick={() => toggleGroup(group)}>
+                                      <Checkbox checked={groupSelected} onCheckedChange={() => toggleGroup(group)} onClick={e => e.stopPropagation()} />
+                                      <span className="text-sm font-medium flex-1 truncate">{group.email || "—"}</span>
+                                      <span className="text-xs text-muted-foreground shrink-0">{group.invoices.length} invoice{group.invoices.length > 1 ? "s" : ""}</span>
                                     </div>
-                                  ))}
+                                    <div className="ml-6 pb-1 space-y-0.5">
+                                      {group.invoices.map(inv => (
+                                        <div key={inv.id} className="flex items-center gap-2 px-2 py-1">
+                                          <span className="flex-1 truncate text-sm">{inv.studentName || inv.studentId || "—"}</span>
+                                          <span className="text-xs text-muted-foreground shrink-0">{inv.invoiceNumber || inv.id}</span>
+                                          <Badge variant="outline" className={cn("text-xs shrink-0", inv.status === "overdue" ? "border-red-200 text-red-700" : "border-amber-200 text-amber-700")}>
+                                            {inv.status === "overdue" ? "Overdue" : "Unpaid"}
+                                          </Badge>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            {totalPages > 1 && (
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-xs text-muted-foreground">
+                                  {(safePage - 1) * RECIPIENT_PAGE_SIZE + 1}–{Math.min(safePage * RECIPIENT_PAGE_SIZE, filtered.length)} of {filtered.length}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <button type="button" disabled={safePage <= 1} onClick={() => setRecipientPage(p => p - 1)} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </button>
+                                  <span className="text-xs text-muted-foreground w-16 text-center">Page {safePage}/{totalPages}</span>
+                                  <button type="button" disabled={safePage >= totalPages} onClick={() => setRecipientPage(p => p + 1)} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <ChevronRight className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
-                            )
-                          })
-                        })()}
-                      </div>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
 
                     <DialogFooter>
@@ -2549,7 +2799,7 @@ export function DebtReminderSettings() {
                       <Input
                         placeholder="Search by name or invoice number..."
                         value={sendInvoiceSearch}
-                        onChange={(e) => setSendInvoiceSearch(e.target.value)}
+                        onChange={(e) => { setSendInvoiceSearch(e.target.value); setRecipientPage(1) }}
                         className="pl-8 h-8 text-sm"
                       />
                     </div>
@@ -2632,11 +2882,11 @@ export function DebtReminderSettings() {
                         {t("common.cancel") || "Cancel"}
                       </Button>
                       <Button
-                        disabled={sendSelectedIds.size === 0 || !testEmailAddress || !testEmailAddress.includes("@")}
+                        disabled={!testEmailAddress || !testEmailAddress.includes("@")}
                         onClick={() => setIsTestConfirmOpen(true)}
                       >
                         <Mail className="w-4 h-4 mr-2" />
-                        {t("debtReminder.sendTest") || "Send Test"} ({sendSelectedIds.size})
+                        {t("debtReminder.sendTest") || "Send Test"}
                       </Button>
                     </DialogFooter>
                   </div>
@@ -2648,31 +2898,176 @@ export function DebtReminderSettings() {
       </Dialog>
 
       {/* Final Confirm Modal */}
-      <Dialog open={isFinalConfirmOpen} onOpenChange={setIsFinalConfirmOpen}>
-        <DialogContent style={{ maxWidth: "400px" }}>
-          <DialogHeader>
-            <DialogTitle>{t("debtReminder.confirmSend") || "Send Now"}</DialogTitle>
-            <DialogDescription>
-              {t("debtReminder.finalConfirm") || `Send reminder email to ${sendSelectedIds.size} recipient(s)?`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFinalConfirmOpen(false)}>
-              {t("common.cancel") || "Cancel"}
-            </Button>
-            <Button onClick={() => {
-              if (sendModalReminder) {
-                handleSendNow(sendModalReminder)
-              }
-              setIsFinalConfirmOpen(false)
-              setIsSendModalOpen(false)
-              setIsEditDialogOpen(false)
-              setEditingReminder(null)
-            }}>
-              <Send className="w-4 h-4 mr-2" />
-              {t("common.confirm") || "Confirm"}
-            </Button>
-          </DialogFooter>
+      <Dialog open={isFinalConfirmOpen} onOpenChange={(open) => {
+        if (!open) setExpandedConfirmGroups(new Set())
+        setIsFinalConfirmOpen(open)
+      }}>
+        <DialogContent style={{ maxWidth: "520px", maxHeight: "85vh" }} className="flex flex-col overflow-hidden">
+          {(() => {
+            const OVERFLOW_THRESHOLD = 5
+            const selectedInvoices = sendMatchingInvoices.filter(inv => sendSelectedIds.has(inv.id))
+            const groupMap = selectedInvoices.reduce<Record<string, any[]>>((acc, inv) => {
+              const key = inv.parentEmail || inv.familyCode || inv.id
+              if (!acc[key]) acc[key] = []
+              acc[key].push(inv)
+              return acc
+            }, {})
+            const groups = Object.entries(groupMap).map(([email, invoices]) => ({ email, invoices }))
+            const totalEmails = groups.length
+            const totalInvoices = selectedInvoices.length
+            const totalAmount = selectedInvoices.reduce((s, inv) => s + (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0), 0)
+            const overdueCount = selectedInvoices.filter(inv => inv.status === "overdue").length
+
+            return (
+              <>
+                <DialogHeader className="shrink-0">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Confirm Send
+                  </DialogTitle>
+                  <DialogDescription>
+                    Review before sending. This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Summary banner */}
+                <div className="grid grid-cols-3 gap-3 p-4 rounded-lg bg-muted/40 border shrink-0">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{totalEmails}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Recipients</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{totalInvoices}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Invoices</p>
+                    {overdueCount > 0 && (
+                      <span className="text-xs text-red-600 font-medium">{overdueCount} overdue</span>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">฿{totalAmount.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Total Due</p>
+                  </div>
+                </div>
+
+                {/* Section label */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Recipients ({totalEmails})
+                  </span>
+                </div>
+
+                {/* Recipient list */}
+                <div className="overflow-y-auto space-y-2 pr-1 flex-1" style={{ maxHeight: "340px" }}>
+                  {groups.map(({ email, invoices }) => {
+                    const OVERDUE_ORDER: Record<string, number> = { overdue: 0, unpaid: 1 }
+                    const sorted = [...invoices].sort((a, b) => {
+                      const diff = (OVERDUE_ORDER[a.status] ?? 1) - (OVERDUE_ORDER[b.status] ?? 1)
+                      if (diff !== 0) return diff
+                      return new Date(a.dueDate ?? a.due_date ?? 0).getTime() - new Date(b.dueDate ?? b.due_date ?? 0).getTime()
+                    })
+                    const isExpanded = expandedConfirmGroups.has(email)
+                    const visible = isExpanded ? sorted : sorted.slice(0, OVERFLOW_THRESHOLD)
+                    const hiddenCount = sorted.length - OVERFLOW_THRESHOLD
+                    const hasOverdue = invoices.some(inv => inv.status === "overdue")
+
+                    return (
+                      <div key={email} className={cn("rounded-lg border overflow-hidden", hasOverdue && "border-l-2 border-l-red-400")}>
+                        {/* Group header */}
+                        <div className="flex items-center gap-3 px-3 py-2.5 bg-muted/30">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{email}</p>
+                            {invoices[0]?.parentName && (
+                              <p className="text-xs text-muted-foreground truncate">{invoices[0].parentName}</p>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+
+                        {/* Invoice rows */}
+                        {visible.map(inv => (
+                          <div key={inv.id} className="flex items-center gap-2 px-3 py-2 border-t">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm truncate">{inv.studentName || inv.studentId || "—"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{inv.invoiceNumber || inv.invoiceNo || inv.id}</p>
+                            </div>
+                            <div className="text-right shrink-0 hidden sm:block">
+                              <p className="text-xs text-muted-foreground">
+                                {(inv.dueDate || inv.due_date) ? format(new Date(inv.dueDate ?? inv.due_date), "dd MMM yyyy") : "—"}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0 w-24">
+                              <p className="text-sm font-medium">
+                                ฿{(inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0).toLocaleString()}
+                              </p>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs shrink-0 w-16 justify-center",
+                                inv.status === "overdue"
+                                  ? "border-red-200 bg-red-50 text-red-700"
+                                  : "border-gray-200 bg-gray-50 text-gray-600"
+                              )}
+                            >
+                              {inv.status === "overdue" ? "Overdue" : "Unpaid"}
+                            </Badge>
+                          </div>
+                        ))}
+
+                        {/* Show more / less toggle */}
+                        {sorted.length > OVERFLOW_THRESHOLD && (
+                          <button
+                            className="w-full flex items-center justify-center gap-1 py-2 border-t text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                            onClick={() => setExpandedConfirmGroups(prev => {
+                              const next = new Set(prev)
+                              if (next.has(email)) next.delete(email)
+                              else next.add(email)
+                              return next
+                            })}
+                          >
+                            <ChevronDown className={cn("w-3 h-3 transition-transform", isExpanded && "rotate-180")} />
+                            {isExpanded
+                              ? "Show less"
+                              : `Show ${hiddenCount} more invoice${hiddenCount !== 1 ? "s" : ""}`
+                            }
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <DialogFooter className="border-t pt-4 shrink-0">
+                  {totalEmails === 0 && (
+                    <p className="text-xs text-destructive mr-auto self-center">No recipients selected — tick at least one before sending.</p>
+                  )}
+                  <Button variant="outline" onClick={() => {
+                    setExpandedConfirmGroups(new Set())
+                    setIsFinalConfirmOpen(false)
+                  }}>
+                    {t("common.cancel") || "Cancel"}
+                  </Button>
+                  <Button
+                    disabled={totalEmails === 0}
+                    onClick={() => {
+                      if (sendModalReminder) handleSendNow(sendModalReminder)
+                      setExpandedConfirmGroups(new Set())
+                      setIsFinalConfirmOpen(false)
+                      setIsSendModalOpen(false)
+                      setIsEditDialogOpen(false)
+                      setEditingReminder(null)
+                    }}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send {totalEmails} email{totalEmails !== 1 ? "s" : ""}
+                  </Button>
+                </DialogFooter>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -2682,7 +3077,7 @@ export function DebtReminderSettings() {
           <DialogHeader>
             <DialogTitle>{t("debtReminder.sendTest") || "Send Test"}</DialogTitle>
             <DialogDescription>
-              Send test email to <span className="font-medium">{testEmailAddress}</span> with {sendSelectedIds.size} selected invoice(s)?
+              Send test email to <span className="font-medium">{testEmailAddress}</span>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2691,9 +3086,9 @@ export function DebtReminderSettings() {
             </Button>
             <Button onClick={() => {
               toast.success(t("debtReminder.testSent") || "Test email sent", {
-                description: `${t("debtReminder.sentTo") || "Sent to"}: ${testEmailAddress} (${sendSelectedIds.size} invoices)`
+                description: `${t("debtReminder.sentTo") || "Sent to"}: ${testEmailAddress}`
               })
-              logActivity({ action: "Send Test Email", module: "Debt Reminders", detail: `Test email sent to ${testEmailAddress}, ${sendSelectedIds.size} invoices selected` })
+              logActivity({ action: "Send Test Email", module: "Debt Reminders", detail: `Test email sent to ${testEmailAddress}` })
               setIsTestConfirmOpen(false)
             }}>
               <Send className="w-4 h-4 mr-2" />

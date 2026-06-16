@@ -3978,6 +3978,7 @@ const en: Record<string, string> = {
   "debtReminder.selectEmailSubject": "Select email subject",
   "debtReminder.selectInvoiceStatuses": "Select invoice statuses",
   "debtReminder.noReasonRecorded": "No reason provided",
+  "debtReminder.recipients": "Recipients",
 
   // User Management
   "userManagement.title": "User Management",
@@ -7931,6 +7932,7 @@ const th: Record<string, string> = {
   "debtReminder.selectEmailSubject": "เลือกหัวข้ออีเมล",
   "debtReminder.selectInvoiceStatuses": "เลือกสถานะใบแจ้งหนี้",
   "debtReminder.noReasonRecorded": "ไม่มีเหตุผลที่ระบุ",
+  "debtReminder.recipients": "ผู้รับ",
 
   // User Management
   "userManagement.title": "การจัดการผู้ใช้",
