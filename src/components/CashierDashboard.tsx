@@ -294,7 +294,7 @@ export function CashierDashboard() {
 
         <Card
           className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => handleMenuItemClick("discount-reports")}
+          onClick={() => handleMenuItemClick("cashier-payment-report")}
         >
           <CardContent className="p-6 flex items-center gap-4">
             <div className="text-3xl">📊</div>
