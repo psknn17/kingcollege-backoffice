@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { useDiscountOptions } from "@/contexts/DiscountOptionsContext"
-import { useStudents } from "@/contexts/StudentContext"
+import { useStudents, Family } from "@/contexts/StudentContext"
 import { useAcademicYears } from "@/contexts/AcademicYearContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
@@ -1368,6 +1368,76 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
   const effectiveAcademicYear = selectedAcademicYear || academicYear
   const effectiveTerm = selectedTerm || term
 
+  // Cache discount record Sets and student-group lookup once per category change.
+  // localStorage reads are not reactive; this matches existing semantics where
+  // availableStudents did not react to storage changes either.
+  const { staffChildSet, scholarshipSet, earlyBirdSet, studentGroupsCache } = useMemo(() => {
+    const buildSet = (key: string): Set<string> => {
+      try {
+        const stored = localStorage.getItem(key)
+        if (!stored) return new Set()
+        const records: unknown[] = JSON.parse(stored)
+        const s = new Set<string>()
+        records.forEach((record: any) => {
+          const id: string | undefined = record.studentId || (typeof record === "string" ? record : undefined)
+          if (id) s.add(id)
+        })
+        return s
+      } catch {
+        return new Set()
+      }
+    }
+
+    const staffChildSet = buildSet(STAFF_CHILD_RECORDS_KEY)
+    const scholarshipSet = buildSet(SCHOLARSHIP_RECORDS_KEY)
+    const earlyBirdSet = buildSet(EARLY_BIRD_RECORDS_KEY)
+
+    const studentGroupsCache: Array<{
+      name: string
+      discountType: string
+      discountPercentage: number
+      fixedAmount: number
+      studentIds: Set<string>
+    }> = []
+
+    if (category !== "eca" && category !== "trip" && category !== "exam" && category !== "external") {
+      try {
+        const storageKey = category === "tuition" ? "studentGroups" : `studentGroups_${category}`
+        const stored = localStorage.getItem(storageKey)
+        if (stored) {
+          const groups: any[] = JSON.parse(stored)
+          groups.forEach((group: any) => {
+            if (group.isActive === false) return
+            const ids = new Set<string>()
+            if (group.students) {
+              group.students.forEach((s: any) => {
+                if (s.isActive !== false && s.id) ids.add(s.id)
+              })
+            }
+            studentGroupsCache.push({
+              name: group.name,
+              discountType: group.discountType || "percentage",
+              discountPercentage: group.discountPercentage || 0,
+              fixedAmount: group.fixedAmount || 0,
+              studentIds: ids
+            })
+          })
+        }
+      } catch {
+        // safe default: empty cache already set
+      }
+    }
+
+    return { staffChildSet, scholarshipSet, earlyBirdSet, studentGroupsCache }
+  }, [category])
+
+  // Pre-build a Map for O(1) family lookup inside the hot per-student loop.
+  const familyById = useMemo(() => {
+    const map = new Map<string, Family>()
+    families.forEach(f => map.set(f.id, f))
+    return map
+  }, [families])
+
   const availableStudents = useMemo(() => {
     // ดึงนักเรียนตาม Academic Year ที่เลือก (เช็คทั้ง current + gradeHistory)
     const yearStudents = effectiveAcademicYear
@@ -1382,7 +1452,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       // For simplified views (Trip/Activity, Exam, School Bus), don't calculate discounts or fee waivers
       if (isSimplifiedView) {
         // Recipient Email Logic: Priority 1: Family Email, Priority 2: First Parent Email
-        const family = families.find(f => f.id === student.familyId)
+        const family = familyById.get(student.familyId)
         const recipientEmail = family?.email || student.parents?.[0]?.email || ""
 
         return {
@@ -1409,18 +1479,20 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
       // Automatic sibling discount disabled - use manual Discount Groups instead
       const siblingDiscount = 0
 
-      // Get student group discounts (only for tuition and bus categories)
-      const groupDiscounts = getStudentGroupDiscounts(student.studentId, category)
+      // Get student group discounts using pre-built cache (O(n) over groups, not O(n*m) with storage reads)
+      const groupDiscounts = studentGroupsCache
+        .filter(g => g.studentIds.has(student.studentId))
+        .map(g => ({ name: g.name, discountType: g.discountType, discountPercentage: g.discountPercentage, fixedAmount: g.fixedAmount }))
 
-      // Check for special discounts from localStorage records
+      // Check for special discounts from cached Sets
       // Fallback to notes-based detection for backward compatibility
       const notes = student.notes?.toLowerCase() || ""
-      const staffChild = isStaffChildStudent(student.studentId) || notes.includes('staff')
-      const scholarship = hasScholarshipDiscount(student.studentId) || notes.includes('scholarship')
-      const earlyBird = hasEarlyBirdDiscount(student.studentId) || notes.includes('early bird')
+      const staffChild = staffChildSet.has(student.studentId) || notes.includes('staff')
+      const scholarship = scholarshipSet.has(student.studentId) || notes.includes('scholarship')
+      const earlyBird = earlyBirdSet.has(student.studentId) || notes.includes('early bird')
 
         // Recipient Email Logic: Priority 1: Family Email, Priority 2: First Parent Email
-        const family = families.find(f => f.id === student.familyId)
+        const family = familyById.get(student.familyId)
         const recipientEmail = family?.email || student.parents?.[0]?.email || ""
 
         return {
@@ -1448,7 +1520,7 @@ export function InvoiceCreation({ defaultCategory, invoiceType = "student", cate
         },
       } as InvoiceStudent
     })
-  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, getSiblingDiscountPercentage, getStudentGroupDiscounts, category, getStudentsForAcademicYear])
+  }, [students, effectiveAcademicYear, effectiveTerm, isSimplifiedView, category, getStudentsForAcademicYear, staffChildSet, scholarshipSet, earlyBirdSet, studentGroupsCache, familyById])
 
   // Load all items from localStorage for template calculations
   const allStoredItems = useMemo(() => {
