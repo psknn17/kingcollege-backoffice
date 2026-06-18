@@ -154,40 +154,41 @@ export function CashierDashboard() {
     ? students.length
     : students.filter(s => s.gradeLevel === selectedYearGroup).length
 
+  // Summary stats will be recomputed from actual payments (receipts). Show 0 until then.
   const statCards = [
     {
       label: t("cashier.totalStudents"),
-      value: studentCount.toLocaleString(),
+      value: "0",
       icon: Users,
       border: "",
     },
     {
       label: t("cashier.totalInvoices"),
-      value: totalCount.toLocaleString(),
+      value: "0",
       icon: FileText,
       border: "",
     },
     {
       label: t("cashier.totalAmount"),
-      value: formatCurrency(totalAmount),
+      value: formatCurrency(0),
       icon: BahtIcon,
       border: "",
     },
     {
       label: t("cashier.paid"),
-      value: formatCurrency(paidAmount),
+      value: formatCurrency(0),
       icon: CheckCircle,
       border: "border-l-4 border-l-green-500",
     },
     {
       label: t("cashier.upcoming"),
-      value: formatCurrency(upcomingAmount),
+      value: formatCurrency(0),
       icon: Clock,
       border: "border-l-4 border-l-yellow-400",
     },
     {
       label: t("cashier.overdue"),
-      value: formatCurrency(overdueAmount),
+      value: formatCurrency(0),
       icon: AlertTriangle,
       border: "border-l-4 border-l-red-500",
     },
