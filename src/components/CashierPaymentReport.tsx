@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download } from "lucide-react"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ReceiptInvoice {
   id: string
@@ -46,6 +47,7 @@ export function CashierPaymentReport() {
   const [startDate, setStartDate] = useState(todayStr)
   const [endDate, setEndDate] = useState(todayStr)
   const [reportType, setReportType] = useState("daily")
+  const { t } = useLanguage()
 
   function setQuickFilter(type: "today" | "week" | "month") {
     const now = new Date()
@@ -103,23 +105,23 @@ export function CashierPaymentReport() {
     const rows = buildRows()
     const startLabel = startDate ? format(new Date(startDate), "dd/MM/yyyy") : "-"
     const endLabel = endDate ? format(new Date(endDate), "dd/MM/yyyy") : "-"
-    const title = `รายงานการชำระราย Invoice วันที่ ${startLabel} ถึง ${endLabel}`
+    const title = t("cashier.report.titleFormat", { start: startLabel, end: endLabel })
 
     const headers = [
-      "วันที่รับชำระ",
-      "เลขที่ Invoice",
-      "ประเภท Invoice",
-      "วันครบกำหนด",
-      "ชื่อนักเรียน",
-      "Student ID",
-      "ยอด Invoice",
-      "ยอดรับชำระราคาค่าธรรมเนียมบัตร",
-      "อัตราค่าธรรมเนียมบัตรเครดิต",
-      "ค่าธรรมเนียมบัตรเครดิต",
-      "จำนวนเงินสุทธิ",
-      "ธนาคาร",
-      "ประเภทบัตร",
-      "หมายเหตุ",
+      t("cashier.report.col.receiptDate"),
+      t("cashier.report.col.invoiceNo"),
+      t("cashier.report.col.invoiceType"),
+      t("cashier.report.col.dueDate"),
+      t("cashier.report.col.studentName"),
+      t("cashier.report.col.studentId"),
+      t("cashier.report.col.invoiceAmount"),
+      t("cashier.report.col.receivedAmount"),
+      t("cashier.report.col.cardFeeRate"),
+      t("cashier.report.col.cardFee"),
+      t("cashier.report.col.netAmount"),
+      t("cashier.report.col.bank"),
+      t("cashier.report.col.cardType"),
+      t("cashier.report.col.remark"),
     ]
 
     const numRows = rows as (string | number)[][]
@@ -129,7 +131,7 @@ export function CashierPaymentReport() {
     const totalNet = numRows.reduce((s, r) => s + (typeof r[10] === "number" ? r[10] : 0), 0)
 
     const totalRow: (string | number)[] = [
-      "รวมทั้งสิ้น", "", "", "", "", "",
+      t("cashier.report.total"), "", "", "", "", "",
       totalInvoice, totalReceived, "", totalFee, totalNet, "", "", "",
     ]
 
@@ -152,36 +154,36 @@ export function CashierPaymentReport() {
     }))
 
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "รายงานการชำระราย Invoice")
+    XLSX.utils.book_append_sheet(wb, ws, t("cashier.report.sheetName"))
 
     const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" })
     const blob = new Blob([buf], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     })
-    saveAs(blob, `รายงานการชำระ_${startLabel.replace(/\//g, "-")}_ถึง_${endLabel.replace(/\//g, "-")}.xlsx`)
+    saveAs(blob, `${t("cashier.report.fileNamePrefix")}_${startLabel.replace(/\//g, "-")}_${t("cashier.report.fileNameSeparator")}_${endLabel.replace(/\//g, "-")}.xlsx`)
   }
 
   const canExport = !!startDate && !!endDate
 
   return (
     <div className="space-y-6 max-w-3xl w-full mx-auto pt-8">
-      <h1 className="text-2xl font-semibold">รายงานการชำระ</h1>
+      <h1 className="text-2xl font-semibold">{t("cashier.report.title")}</h1>
 
       <Card>
         <CardContent className="pt-8 pb-8 px-8 space-y-6">
           {/* Quick filters */}
           <div>
-            <p className="text-base font-medium mb-4">เลือกระยะเวลา</p>
+            <p className="text-base font-medium mb-4">{t("cashier.report.selectPeriod")}</p>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setQuickFilter("today")}>วันนี้</Button>
-              <Button variant="outline" onClick={() => setQuickFilter("week")}>สัปดาห์นี้</Button>
-              <Button variant="outline" onClick={() => setQuickFilter("month")}>เดือนนี้</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("today")}>{t("cashier.report.today")}</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("week")}>{t("cashier.report.thisWeek")}</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("month")}>{t("cashier.report.thisMonth")}</Button>
             </div>
           </div>
 
           {/* Date range */}
           <div className="space-y-2">
-            <Label>วันที่เริ่มต้น</Label>
+            <Label>{t("cashier.report.startDate")}</Label>
             <Input
               type="date"
               value={startDate}
@@ -190,7 +192,7 @@ export function CashierPaymentReport() {
             />
           </div>
           <div className="space-y-2">
-            <Label>วันที่สิ้นสุด</Label>
+            <Label>{t("cashier.report.endDate")}</Label>
             <Input
               type="date"
               value={endDate}
@@ -201,13 +203,13 @@ export function CashierPaymentReport() {
 
           {/* Report type */}
           <div className="space-y-2">
-            <Label>ประเภทรายงาน</Label>
+            <Label>{t("cashier.report.reportType")}</Label>
             <Select value={reportType} onValueChange={setReportType}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">รายวัน</SelectItem>
+                <SelectItem value="daily">{t("cashier.report.daily")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -215,27 +217,27 @@ export function CashierPaymentReport() {
           {/* Export button */}
           <Button onClick={exportExcel} disabled={!canExport} className="w-full flex items-center justify-center gap-2 mt-2">
             <Download className="w-4 h-4" />
-            ส่งออกรายงาน Excel
+            {t("cashier.report.exportBtn")}
           </Button>
 
           {/* Report field list */}
           <div className="pt-4">
-            <p className="font-medium mb-4">ข้อมูลในรายงาน</p>
+            <p className="font-medium mb-4">{t("cashier.report.fieldsLabel")}</p>
             <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-              <li>วันที่รับชำระ</li>
-              <li>เลขที่ Invoice</li>
-              <li>ประเภท Invoice</li>
-              <li>วันครบกำหนด</li>
-              <li>ชื่อนักเรียน</li>
-              <li>Student ID</li>
-              <li>ยอด Invoice</li>
-              <li>ยอดรับชำระ (รวมค่าธรรมเนียมบัตร)</li>
-              <li>อัตราค่าธรรมเนียมบัตรเครดิต</li>
-              <li>ค่าธรรมเนียมบัตรเครดิต</li>
-              <li>จำนวนเงินสุทธิ</li>
-              <li>ธนาคาร</li>
-              <li>ประเภทบัตร</li>
-              <li>หมายเหตุ</li>
+              <li>{t("cashier.report.col.receiptDate")}</li>
+              <li>{t("cashier.report.col.invoiceNo")}</li>
+              <li>{t("cashier.report.col.invoiceType")}</li>
+              <li>{t("cashier.report.col.dueDate")}</li>
+              <li>{t("cashier.report.col.studentName")}</li>
+              <li>{t("cashier.report.col.studentId")}</li>
+              <li>{t("cashier.report.col.invoiceAmount")}</li>
+              <li>{t("cashier.report.col.receivedAmount")}</li>
+              <li>{t("cashier.report.col.cardFeeRate")}</li>
+              <li>{t("cashier.report.col.cardFee")}</li>
+              <li>{t("cashier.report.col.netAmount")}</li>
+              <li>{t("cashier.report.col.bank")}</li>
+              <li>{t("cashier.report.col.cardType")}</li>
+              <li>{t("cashier.report.col.remark")}</li>
             </ul>
           </div>
         </CardContent>
