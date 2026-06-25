@@ -10,6 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useStudents } from "@/contexts/StudentContext"
 import { useAppNavigation } from "@/hooks/useAppNavigation"
 import { toast } from "@/components/ui/sonner"
+import { ALL_BANKS } from "./CashierBankFeeSettings"
 
 // ── Constants ─────────────────────────────────────────────────
 const INVOICE_KEYS = [
@@ -17,30 +18,13 @@ const INVOICE_KEYS = [
   "createdInvoices_exam","createdInvoices_bus","createdInvoices_external",
 ]
 
-const BANKS = [
-  { id: "kbank", name: "Kasikorn Bank (KBank)" },
-  { id: "scb",   name: "Siam Commercial Bank (SCB)" },
-  { id: "bbl",   name: "Bangkok Bank (BBL)" },
-  { id: "ktb",   name: "Krungthai Bank (KTB)" },
-  { id: "bay",   name: "Bank of Ayudhya (BAY)" },
-  { id: "ttb",   name: "TTB Bank (TTB)" },
-  { id: "uob",   name: "UOB Bank (UOB)" },
-  { id: "cimb",  name: "CIMB Bank (CIMB)" },
-]
-
-const CARD_TYPES: Record<string, string[]> = {
-  kbank: ["KBank Mastercard", "KBank Visa"],
-  scb:   ["SCB Visa", "SCB Mastercard"],
-  uob:   ["UOB Card", "UOB Visa Platinum"],
-  bbl:   ["BBL Card", "BBL Visa"],
-  ktb:   ["KTB Card", "KTB Visa"],
-  bay:   ["BAY Card", "BAY Mastercard"],
-  ttb:   ["TTB Card", "TTB Visa"],
-  cimb:  ["CIMB Card", "CIMB Mastercard"],
-}
 
 function getAmount(inv: any): number {
   return inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+}
+
+function fmt(n: number): string {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function loadAllInvoices(): any[] {
@@ -64,10 +48,8 @@ export function CashierPaymentPage() {
   const { subPageParams, navigateBack, navigateToSubPage } = useAppNavigation()
 
   const [selectedBank, setSelectedBank] = useState<string>("")
-  const [selectedCardType, setSelectedCardType] = useState<string>("")
   const [paymentMethod, setPaymentMethod] = useState<"full" | "installment">("full")
   const [chargeAmount, setChargeAmount] = useState<number>(0)
-  const [edcAmount, setEdcAmount] = useState<number>(0)
   const [remark, setRemark] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState<boolean>(false)
 
@@ -100,16 +82,40 @@ export function CashierPaymentPage() {
 
   const grandTotal = useMemo(() => studentData.reduce((s, d) => s + d.subtotal, 0), [studentData])
 
+  const isSameFamily = useMemo(() => {
+    if (studentData.length <= 1) return true
+    const ids = studentData.map(d => d.student?.familyId ?? d.sid)
+    return new Set(ids).size === 1
+  }, [studentData])
+
+  type BankFeeEntry = { bankId: string; bankName: string; feeRate: number }
+
+  const configuredBanks: BankFeeEntry[] = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("cashier_bank_fees")
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) return []
+      return parsed
+    } catch { return [] }
+  }, [selectedBank])
+
+  const feeRate = configuredBanks.find(e => e.bankId === selectedBank)?.feeRate ?? 0
+  const cardFee = useMemo(() => Number((chargeAmount * feeRate / 100).toFixed(2)), [chargeAmount, feeRate])
+  const edcAmountCalc = Number((chargeAmount + cardFee).toFixed(2))
+
   useEffect(() => {
     if (grandTotal > 0) {
       setChargeAmount(grandTotal)
-      setEdcAmount(grandTotal)
     }
   }, [grandTotal])
 
+  useEffect(() => {
+    if (!isSameFamily) setChargeAmount(grandTotal)
+  }, [isSameFamily, grandTotal])
+
   const overInvoice = Math.max(0, chargeAmount - grandTotal)
 
-  const cardOptions = selectedBank ? (CARD_TYPES[selectedBank] ?? [`${BANKS.find(b => b.id === selectedBank)?.name ?? selectedBank} Card`]) : []
 
   function generatePaymentId(): string {
     const now = new Date()
@@ -119,76 +125,115 @@ export function CashierPaymentPage() {
   }
 
   function generateReceiptNo(): string {
-    const now = new Date()
-    const month = now.getMonth() + 1
-    const year = now.getFullYear()
-    const acYearStart = month >= 8 ? year : year - 1
-    const runningKey = `receipt_running_no_${acYearStart}`
+    const year = new Date().getFullYear()
+    const runningKey = `receipt_running_no_${year}`
     const current = parseInt(localStorage.getItem(runningKey) || "0", 10)
     const next = current + 1
     localStorage.setItem(runningKey, next.toString())
-    return `R-CC-${acYearStart}-${String(next).padStart(5, "0")}`
+    return `R-CC-${year}-${String(next).padStart(5, "0")}`
   }
 
-  function saveReceiptsToBackoffice(
+  function markInvoicesAsPaid(selectedIds: Set<string>, paymentId: string, bank: string) {
+    for (const key of INVOICE_KEYS) {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      const updated = JSON.parse(raw).map((inv: any) =>
+        selectedIds.has(inv.id)
+          ? { ...inv, status: "paid", paidDate: new Date().toISOString(),
+              paymentMethod: "Credit Card", paymentReference: paymentId, bankName: bank }
+          : inv
+      )
+      localStorage.setItem(key, JSON.stringify(updated))
+    }
+  }
+
+  function savePendingAcknowledgement(
     stdData: { sid: string; student: any; invoices: any[]; guardian: string; subtotal: number }[],
-    totalFee: number,
-    total: number,
+    paymentId: string,
     bank: string,
-    cardType: string,
+    paymentMethodVal: string,
+    chargeAmountVal: number,
+    edcAmountVal: number,
+    cardFeeVal: number,
+    remark: string
   ): Record<string, string> {
     const receiptNos: Record<string, string> = {}
-    const now = new Date().getFullYear()
-    const month = new Date().getMonth() + 1
-    const acYearStart = month >= 8 ? now : now - 1
-    const schoolYear = `${acYearStart}/${acYearStart + 1}`
+    stdData.forEach(({ sid }) => { receiptNos[sid] = generateReceiptNo() })
 
-    const newRecords = stdData.map(({ sid, student, invoices, guardian, subtotal }) => {
-      const receiptNo = generateReceiptNo()
-      receiptNos[sid] = receiptNo
-      const studentFee = total > 0 ? Number((totalFee * (subtotal / total)).toFixed(2)) : 0
-      const received = subtotal + studentFee
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const acYearStart = month >= 8 ? now.getFullYear() : now.getFullYear() - 1
 
-      return {
-        id: crypto.randomUUID(),
-        receiptNo,
-        receiptDate: new Date().toISOString(),
-        clientType: "internal",
-        clientNo: sid,
-        clientName: student ? `${student.firstName} ${student.lastName}` : sid,
-        contactName: guardian,
-        yearGroup: student?.gradeLevel ?? "",
-        schoolYear,
-        totalAmount: received,
-        receivedAmount: received,
-        creditNoteTotal: 0,
-        netPayableAmount: received,
-        overpaymentAmount: 0,
-        paymentMethod: "Credit Card",
-        bankName: bank,
-        cardType,
-        transactionFeeAmount: studentFee,
-        status: "generated",
-        createdAt: new Date().toISOString(),
-        invoices: invoices.map((inv: any) => {
-          const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
-          const proportion = subtotal > 0 ? invAmt / subtotal : 0
-          const fee = Number((studentFee * proportion).toFixed(2))
-          return {
-            id: inv.id,
-            invoiceNo: inv.invoiceNumber || inv.id,
-            invoiceDate: inv.issueDate ?? new Date().toISOString(),
-            invoiceAmount: invAmt,
-            receivedAmount: invAmt + fee,
-            outstandingAmount: 0,
-          }
-        }),
-      }
-    })
+    const record = {
+      id: crypto.randomUUID(),
+      status: "pending" as const,
+      receiptNos,
+      paymentDate: now.toISOString(),
+      paymentId,
+      studentData: stdData.map(({ sid, student, invoices, guardian, subtotal }) => ({
+        sid,
+        name: student ? `${student.firstName} ${student.lastName}` : sid,
+        guardian,
+        grade: student?.gradeLevel ?? "-",
+        subtotal,
+        invoices,
+      })),
+      paymentInfo: { bank, paymentMethod: paymentMethodVal, chargeAmount: chargeAmountVal, edcAmount: edcAmountVal, cardFee: cardFeeVal, remark },
+      schoolYear: `${acYearStart}/${acYearStart + 1}`,
+      createdAt: now.toISOString(),
+    }
 
-    const existing = JSON.parse(localStorage.getItem("receiptRecords_tuition") || "[]")
-    localStorage.setItem("receiptRecords_tuition", JSON.stringify([...newRecords, ...existing]))
+    const existing = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
+    localStorage.setItem("cashier_acknowledgements", JSON.stringify([record, ...existing]))
     return receiptNos
+  }
+
+  function saveOverpaymentCN(amount: number, paymentId: string) {
+    const first = studentData[0]
+    if (!first) return
+
+    const existing = (() => {
+      try {
+        const queue = JSON.parse(localStorage.getItem("overpaymentCNQueue") || "[]")
+        const main = JSON.parse(localStorage.getItem("creditNotesRecords") || "[]")
+        return queue.length + main.filter((cn: any) => cn.noteType === "OP").length
+      } catch { return 0 }
+    })()
+    const seq = existing + 1
+    const year = new Date().getFullYear()
+
+    const cn = {
+      id: crypto.randomUUID(),
+      creditNoteNumber: `OP-${year}-${String(seq).padStart(6, "0")}`,
+      noteType: "OP" as const,
+      type: "overpayment" as const,
+      invoiceNumber: first.invoices[0]?.invoiceNumber || first.invoices[0]?.id || "-",
+      studentName: first.student
+        ? `${first.student.firstName} ${first.student.lastName}`
+        : first.sid,
+      studentId: first.sid,
+      studentGrade: first.student?.gradeLevel || "-",
+      parentName: first.guardian,
+      familyCode: first.student?.familyCode || first.student?.familyId || "-",
+      originalAmount: amount,
+      creditAmount: amount,
+      amountIncludingVat: amount,
+      remainingBalance: amount,
+      remainingAmount: amount,
+      reason: "Overpayment from EDC card charge",
+      description: `Overpayment from payment ${paymentId}`,
+      status: "issued" as const,
+      issueDate: new Date().toISOString(),
+      issuedBy: "Cashier",
+      notes: "",
+      paid: false,
+      cancelled: false,
+      corrective: false,
+    }
+
+    const queue = JSON.parse(localStorage.getItem("overpaymentCNQueue") || "[]")
+    queue.unshift(cn)
+    localStorage.setItem("overpaymentCNQueue", JSON.stringify(queue))
   }
 
   function handleConfirmPayment() {
@@ -196,17 +241,24 @@ export function CashierPaymentPage() {
       toast.error(t("cashier.bankRequired"))
       return
     }
-    if (!selectedCardType) {
-      toast.error(t("cashier.cardTypeRequired"))
-      return
-    }
     setIsProcessing(true)
     setTimeout(() => {
       const paymentId = generatePaymentId()
-      const totalFee = Math.max(0, edcAmount - chargeAmount)
-      const receiptNos = saveReceiptsToBackoffice(
-        studentData, totalFee, grandTotal, selectedBank, selectedCardType
+
+      // Mark invoices as paid
+      const allInvoiceIds = new Set(studentData.flatMap(d => d.invoices.map((i: any) => i.id)))
+      markInvoicesAsPaid(allInvoiceIds, paymentId, selectedBank)
+
+      if (overInvoice > 0 && isSameFamily) {
+        saveOverpaymentCN(overInvoice, paymentId)
+      }
+
+      // Save acknowledgement (pending)
+      const receiptNos = savePendingAcknowledgement(
+        studentData, paymentId, selectedBank, paymentMethod,
+        chargeAmount, edcAmountCalc, cardFee, remark
       )
+
       navigateToSubPage("cashier-receipt", {
         paymentId,
         receiptNos,
@@ -220,10 +272,10 @@ export function CashierPaymentPage() {
         })),
         paymentInfo: {
           bank: selectedBank,
-          cardType: selectedCardType,
+          cardType: "",
           paymentMethod,
           chargeAmount,
-          edcAmount,
+          edcAmount: edcAmountCalc,
           remark,
         },
       })
@@ -308,7 +360,7 @@ export function CashierPaymentPage() {
                           )}
                           <TableCell align="left" className="text-sm">{inv.invoiceNumber || inv.id}</TableCell>
                           <TableCell align="left">{inv.category ? (categoryLabel[inv.category] || inv.category) : t("cashier.categoryTuition")}</TableCell>
-                          <TableCell align="right">{getAmount(inv).toLocaleString()} บาท</TableCell>
+                          <TableCell align="right">{fmt(getAmount(inv))} บาท</TableCell>
                         </TableRow>
                       ))}
                     </React.Fragment>
@@ -316,7 +368,7 @@ export function CashierPaymentPage() {
                   {/* Grand total footer row */}
                   <TableRow className="border-t-2">
                     <TableCell colSpan={3} className="font-semibold">{t("cashier.totalInvoiceAmt")}</TableCell>
-                    <TableCell align="right" className="font-bold">{grandTotal.toLocaleString()} บาท</TableCell>
+                    <TableCell align="right" className="font-bold">{fmt(grandTotal)} บาท</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -330,34 +382,19 @@ export function CashierPaymentPage() {
                 {t("cashier.paymentInfoSection")}
               </h3>
 
-              {/* Bank + Card type */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "28px" }}>
+              {/* Bank */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", marginBottom: "28px" }}>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
                     {t("cashier.bank")} <span className="text-destructive">*</span>
                   </label>
-                  <Select value={selectedBank} onValueChange={val => { setSelectedBank(val); setSelectedCardType("") }}>
+                  <Select value={selectedBank} onValueChange={setSelectedBank}>
                     <SelectTrigger>
                       <SelectValue placeholder={`-- ${t("cashier.bank")} --`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {BANKS.map(b => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
-                    {t("cashier.cardType")} <span className="text-destructive">*</span>
-                  </label>
-                  <Select value={selectedCardType} onValueChange={setSelectedCardType} disabled={!selectedBank}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={`-- ${t("cashier.cardType")} --`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cardOptions.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      {configuredBanks.map(e => (
+                        <SelectItem key={e.bankId} value={e.bankId}>{e.bankName}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -418,18 +455,31 @@ export function CashierPaymentPage() {
                     min={0}
                     value={chargeAmount}
                     onChange={e => setChargeAmount(parseFloat(e.target.value) || 0)}
-                    className="text-right"
+                    className={`text-right ${!isSameFamily && studentData.length > 1 ? "bg-muted/50" : ""}`}
+                    readOnly={!isSameFamily && studentData.length > 1}
                   />
+                  {!isSameFamily && studentData.length > 1 && (
+                    <p className="text-xs text-muted-foreground" style={{ marginTop: "6px" }}>
+                      {t("cashier.overpaymentLockedNote")}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.overInvoice")}</label>
                   <Input
                     type="number"
-                    value={overInvoice.toFixed(2)}
+                    value={overInvoice > 0 ? (-overInvoice).toFixed(2) : (0).toFixed(2)}
                     readOnly
                     className="text-right bg-muted/50"
                   />
                   <p className="text-xs text-muted-foreground" style={{ marginTop: "6px" }}>{t("cashier.overInvoiceNote")}</p>
+                  {isSameFamily && overInvoice > 0 && (
+                    <p className="text-xs text-amber-600" style={{ marginTop: "6px" }}>
+                      {t("cashier.overpaymentCNNote")}: {studentData[0]?.student
+                        ? `${studentData[0].student.firstName} ${studentData[0].student.lastName}`
+                        : (studentData[0]?.sid ?? "")}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
@@ -437,11 +487,9 @@ export function CashierPaymentPage() {
                   </label>
                   <Input
                     type="number"
-                    step="0.01"
-                    min={0}
-                    value={edcAmount}
-                    onChange={e => setEdcAmount(parseFloat(e.target.value) || 0)}
-                    className="text-right"
+                    value={edcAmountCalc.toFixed(2)}
+                    readOnly
+                    className="text-right bg-muted/50"
                   />
                   <p className="text-xs text-muted-foreground" style={{ marginTop: "6px" }}>{t("cashier.edcNote")}</p>
                 </div>
@@ -492,41 +540,57 @@ export function CashierPaymentPage() {
           <div style={{ backgroundColor: "#1e293b", color: "#ffffff", borderRadius: "14px", padding: "22px 24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <span style={{ color: "#94a3b8", fontSize: "13px" }}>{t("cashier.totalInvoiceAmt")}</span>
-              <span style={{ fontWeight: 600, fontSize: "14px" }}>{grandTotal.toLocaleString()} บาท</span>
+              <span style={{ fontWeight: 600, fontSize: "14px" }}>{fmt(grandTotal)} บาท</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: overInvoice > 0 ? "12px" : "20px" }}>
               <span style={{ color: "#94a3b8", fontSize: "13px" }}>{t("cashier.cardFee")}</span>
-              <span style={{ fontSize: "14px" }}>0 บาท</span>
+              <span style={{ fontSize: "14px" }}>{fmt(cardFee)} บาท</span>
             </div>
-            <div style={{ borderTop: "1px solid #334155", paddingTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {overInvoice > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <span style={{ fontSize: "13px", color: "#94a3b8" }}>{t("cashier.overInvoice")}</span>
+                <span style={{ fontSize: "14px" }}>-{fmt(overInvoice)} บาท</span>
+              </div>
+            )}
+            <div style={{ borderTop: "1px solid #334155", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontWeight: 700, fontSize: "15px" }}>{t("cashier.grandTotalFinal")}</span>
-              <span style={{ fontWeight: 700, fontSize: "20px" }}>{grandTotal.toLocaleString()} บาท</span>
+              <span style={{ fontWeight: 700, fontSize: "20px" }}>{fmt(grandTotal + cardFee + overInvoice)} บาท</span>
             </div>
           </div>
 
           {/* Per-student breakdown */}
-          {studentData.map(({ sid, student, subtotal }, idx) => (
-            <div key={sid} style={{ borderRadius: "12px", border: "1px solid #e2e8f0", padding: "18px 20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <p style={{ fontWeight: 600, fontSize: "14px" }}>
-                  {t("cashier.studentLabel")} {idx + 1}: {student ? `${student.firstName} ${student.lastName}` : sid}
-                </p>
-                <Badge variant="outline" className="text-xs shrink-0 ml-2">{sid}</Badge>
+          {studentData.map(({ sid, student, subtotal }, idx) => {
+            const pFee = grandTotal > 0 ? Number((cardFee * subtotal / grandTotal).toFixed(2)) : 0
+            const pOver = idx === 0 ? overInvoice : 0
+            return (
+              <div key={sid} style={{ borderRadius: "12px", border: "1px solid #e2e8f0", padding: "18px 20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <p style={{ fontWeight: 600, fontSize: "14px" }}>
+                    {t("cashier.studentLabel")} {idx + 1}: {student ? `${student.firstName} ${student.lastName}` : sid}
+                  </p>
+                  <Badge variant="outline" className="text-xs shrink-0 ml-2">{sid}</Badge>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.totalInvoiceAmt")}</span>
+                  <span style={{ fontSize: "13px", color: "#64748b" }}>{fmt(subtotal)} บาท</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: pOver > 0 ? "8px" : "16px" }}>
+                  <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.cardFee")}</span>
+                  <span style={{ fontSize: "13px", color: "#64748b" }}>{fmt(pFee)} บาท</span>
+                </div>
+                {pOver > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
+                    <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.overInvoice")}</span>
+                    <span style={{ fontSize: "13px", color: "#64748b" }}>-{fmt(pOver)} บาท</span>
+                  </div>
+                )}
+                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 700, fontSize: "14px" }}>{t("cashier.studentSubtotal")}</span>
+                  <span style={{ fontWeight: 700, fontSize: "14px" }}>{fmt(subtotal + pFee + pOver)} บาท</span>
+                </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.totalInvoiceAmt")}</span>
-                <span style={{ fontSize: "13px", color: "#64748b" }}>{subtotal.toLocaleString()} บาท</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-                <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.cardFee")}</span>
-                <span style={{ fontSize: "13px", color: "#64748b" }}>0 บาท</span>
-              </div>
-              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 700, fontSize: "14px" }}>{t("cashier.studentSubtotal")}</span>
-                <span style={{ fontWeight: 700, fontSize: "14px" }}>{subtotal.toLocaleString()} บาท</span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
 
         </CardContent>
         </Card>

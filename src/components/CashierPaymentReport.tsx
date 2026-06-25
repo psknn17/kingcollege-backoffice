@@ -28,18 +28,19 @@ interface ReceiptRecord {
   clientName: string
   yearGroup: string
   totalAmount: number
+  overpaymentAmount?: number
   transactionFeeAmount: number
   bankName: string
   cardType: string
   invoices: ReceiptInvoice[]
 }
 
-function fmtDateTime(iso: string): string {
-  try { return format(new Date(iso), "dd/MM/yyyy HH:mm:ss") } catch { return iso }
-}
-
 function fmtDate(iso: string): string {
   try { return format(new Date(iso), "dd/MM/yyyy") } catch { return iso }
+}
+
+function fmtTime(iso: string): string {
+  try { return format(new Date(iso), "HH:mm:ss") } catch { return "" }
 }
 
 export function CashierPaymentReport() {
@@ -64,38 +65,51 @@ export function CashierPaymentReport() {
   }
 
   function buildRows() {
-    const records: ReceiptRecord[] = JSON.parse(localStorage.getItem("receiptRecords_tuition") || "[]")
+    const ackRecords: any[] = (() => {
+      try { return JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]") } catch { return [] }
+    })()
     const start = startDate ? new Date(startDate + "T00:00:00") : null
     const end = endDate ? new Date(endDate + "T23:59:59") : null
 
     const rows: (string | number)[][] = []
-    for (const rec of records) {
-      const recDate = new Date(rec.receiptDate)
+    for (const rec of ackRecords) {
+      const recDate = new Date(rec.paymentDate)
       if (start && recDate < start) continue
       if (end && recDate > end) continue
 
-      for (const inv of rec.invoices ?? []) {
-        const invoiceAmt = inv.invoiceAmount ?? 0
-        const receivedAmt = inv.receivedAmount ?? 0
-        const fee = Number((receivedAmt - invoiceAmt).toFixed(2))
-        const rate = invoiceAmt > 0 ? Number(((fee / invoiceAmt) * 100).toFixed(2)) : 0
+      const totalSubtotal: number = (rec.studentData ?? []).reduce((s: number, st: any) => s + (st.subtotal ?? 0), 0)
 
-        rows.push([
-          fmtDateTime(rec.receiptDate),
-          inv.invoiceNo || "",
-          rec.clientType || "tuition",
-          fmtDate(inv.invoiceDate || rec.receiptDate),
-          rec.clientName || "",
-          rec.clientNo || "",
-          invoiceAmt,
-          receivedAmt,
-          `${rate.toFixed(2)}%`,
-          fee,
-          invoiceAmt,
-          rec.bankName || "",
-          rec.cardType || "",
-          "",
-        ])
+      for (const student of rec.studentData ?? []) {
+        const studentCardFee = totalSubtotal > 0
+          ? Number((rec.paymentInfo.cardFee * student.subtotal / totalSubtotal).toFixed(2))
+          : 0
+
+        for (const inv of student.invoices ?? []) {
+          const invoiceAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+          const invCardFee = student.subtotal > 0
+            ? Number((studentCardFee * invoiceAmt / student.subtotal).toFixed(2))
+            : 0
+          const netAmt = invoiceAmt
+          const rate = netAmt > 0 ? Number(((invCardFee / netAmt) * 100).toFixed(4)) : 0
+
+          rows.push([
+            fmtDate(rec.paymentDate),
+            fmtTime(rec.paymentDate),
+            inv.invoiceNumber || inv.id || "",
+            rec.receiptNos?.[student.sid] || "",
+            fmtDate(inv.dueDate || inv.issueDate || rec.paymentDate),
+            student.name || "",
+            student.sid || "",
+            invoiceAmt,
+            "",
+            netAmt,
+            invCardFee,
+            invCardFee !== 0 ? `${rate.toFixed(2)}%` : "",
+            Number((netAmt + invCardFee).toFixed(2)),
+            rec.paymentInfo?.bank || "",
+            rec.paymentInfo?.remark || "",
+          ])
+        }
       }
     }
     return rows
@@ -109,30 +123,32 @@ export function CashierPaymentReport() {
 
     const headers = [
       t("cashier.report.col.receiptDate"),
+      t("cashier.report.col.time"),
       t("cashier.report.col.invoiceNo"),
-      t("cashier.report.col.invoiceType"),
+      t("cashier.report.col.acknowledgementNo"),
       t("cashier.report.col.dueDate"),
       t("cashier.report.col.studentName"),
       t("cashier.report.col.studentId"),
       t("cashier.report.col.invoiceAmount"),
-      t("cashier.report.col.receivedAmount"),
-      t("cashier.report.col.cardFeeRate"),
-      t("cashier.report.col.cardFee"),
+      t("cashier.report.col.overpayment"),
       t("cashier.report.col.netAmount"),
+      t("cashier.report.col.cardFee"),
+      t("cashier.report.col.cardFeeRate"),
+      t("cashier.report.col.receivedAmount"),
       t("cashier.report.col.bank"),
-      t("cashier.report.col.cardType"),
       t("cashier.report.col.remark"),
     ]
 
     const numRows = rows as (string | number)[][]
-    const totalInvoice = numRows.reduce((s, r) => s + (typeof r[6] === "number" ? r[6] : 0), 0)
-    const totalReceived = numRows.reduce((s, r) => s + (typeof r[7] === "number" ? r[7] : 0), 0)
-    const totalFee = numRows.reduce((s, r) => s + (typeof r[9] === "number" ? r[9] : 0), 0)
-    const totalNet = numRows.reduce((s, r) => s + (typeof r[10] === "number" ? r[10] : 0), 0)
+    const totalInvoice = numRows.reduce((s, r) => s + (typeof r[7] === "number" ? r[7] : 0), 0)
+    const totalOverpayment = numRows.reduce((s, r) => s + (typeof r[8] === "number" ? r[8] : 0), 0)
+    const totalNet = numRows.reduce((s, r) => s + (typeof r[9] === "number" ? r[9] : 0), 0)
+    const totalFee = numRows.reduce((s, r) => s + (typeof r[10] === "number" ? r[10] : 0), 0)
+    const totalReceived = numRows.reduce((s, r) => s + (typeof r[12] === "number" ? r[12] : 0), 0)
 
     const totalRow: (string | number)[] = [
-      t("cashier.report.total"), "", "", "", "", "",
-      totalInvoice, totalReceived, "", totalFee, totalNet, "", "", "",
+      t("cashier.report.total"), "", "", "", "", "", "",
+      totalInvoice, totalOverpayment, totalNet, totalFee, "", totalReceived, "", "",
     ]
 
     const aoa: (string | number)[][] = [
@@ -145,7 +161,7 @@ export function CashierPaymentReport() {
     ]
 
     const ws = XLSX.utils.aoa_to_sheet(aoa)
-    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }]
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } }]
     ws["!cols"] = headers.map((h, i) => ({
       wch: Math.min(
         Math.max(h.length, ...rows.map(r => String(r[i] ?? "").length)) + 2,
@@ -225,18 +241,19 @@ export function CashierPaymentReport() {
             <p className="font-medium mb-4">{t("cashier.report.fieldsLabel")}</p>
             <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
               <li>{t("cashier.report.col.receiptDate")}</li>
+              <li>{t("cashier.report.col.time")}</li>
               <li>{t("cashier.report.col.invoiceNo")}</li>
-              <li>{t("cashier.report.col.invoiceType")}</li>
+              <li>{t("cashier.report.col.acknowledgementNo")}</li>
               <li>{t("cashier.report.col.dueDate")}</li>
               <li>{t("cashier.report.col.studentName")}</li>
               <li>{t("cashier.report.col.studentId")}</li>
               <li>{t("cashier.report.col.invoiceAmount")}</li>
-              <li>{t("cashier.report.col.receivedAmount")}</li>
-              <li>{t("cashier.report.col.cardFeeRate")}</li>
-              <li>{t("cashier.report.col.cardFee")}</li>
+              <li>{t("cashier.report.col.overpayment")}</li>
               <li>{t("cashier.report.col.netAmount")}</li>
+              <li>{t("cashier.report.col.cardFee")}</li>
+              <li>{t("cashier.report.col.cardFeeRate")}</li>
+              <li>{t("cashier.report.col.receivedAmount")}</li>
               <li>{t("cashier.report.col.bank")}</li>
-              <li>{t("cashier.report.col.cardType")}</li>
               <li>{t("cashier.report.col.remark")}</li>
             </ul>
           </div>

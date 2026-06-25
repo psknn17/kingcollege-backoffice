@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { SCHOOL_INFO, numberToWords } from "@/lib/invoiceUtils"
 import SchoolLogo from "@/assets/Logo.png"
 
+const AUTHORISED_NAME = "Porntip Jarusiritrangkul"
+
 interface StudentReceiptData {
   sid: string
   name: string
@@ -20,7 +22,7 @@ interface StudentReceiptData {
   grade?: string
 }
 
-interface PaymentInfo {
+export interface PaymentInfo {
   bank: string
   cardType: string
   paymentMethod: string
@@ -36,8 +38,9 @@ function buildCashierReceiptHtml(params: {
   cashierName: string
   studentFee: number
   paymentInfo: PaymentInfo
+  copyType: "Customer" | "Accounting"
 }): string {
-  const { student, receiptNumber, cashierName, studentFee, paymentInfo } = params
+  const { student, receiptNumber, cashierName, studentFee, paymentInfo, copyType } = params
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const today = format(new Date(), "dd MMMM yyyy")
   const currentYear = new Date().getFullYear()
@@ -66,7 +69,7 @@ function buildCashierReceiptHtml(params: {
 
     <!-- Header -->
     <div style="position:relative;text-align:center;margin-bottom:6px">
-      <div style="position:absolute;top:0;right:0;font-size:11px">Customer</div>
+      <div style="position:absolute;top:0;right:0;font-size:11px">${copyType}</div>
       <img src="${SchoolLogo}" style="height:100px;display:block;margin:0 auto 6px" crossorigin="anonymous"
         onerror="this.onerror=null;this.style.display='none'" />
       <div style="font-size:14px;font-weight:bold;letter-spacing:2px">KING'S COLLEGE INTERNATIONAL SCHOOL</div>
@@ -82,13 +85,13 @@ function buildCashierReceiptHtml(params: {
     <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:12px;margin-bottom:14px">
       <tr>
         <td style="border:1px solid black;padding:5px 10px;width:130px">Student ID no.</td>
-        <td style="border:1px solid black;padding:5px 8px">${student.sid}</td>
+        <td style="border:1px solid black;padding:5px 8px">${copyType === "Accounting" ? student.sid : ""}</td>
         <td style="border:1px solid black;padding:5px 10px;width:100px">Receipt no.</td>
         <td style="border:1px solid black;padding:5px 10px;text-align:right;width:150px">${receiptNumber}</td>
       </tr>
       <tr>
         <td style="border:1px solid black;padding:5px 10px">Student name</td>
-        <td style="border:1px solid black;padding:5px 8px">${student.name}</td>
+        <td style="border:1px solid black;padding:5px 8px">${copyType === "Accounting" ? student.name : ""}</td>
         <td style="border:1px solid black;padding:5px 10px">Receipt date</td>
         <td style="border:1px solid black;padding:5px 10px;text-align:right">${today}</td>
       </tr>
@@ -125,14 +128,15 @@ function buildCashierReceiptHtml(params: {
           <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
         </tr>
+        <tr>
+          <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(student.subtotal)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(studentFee)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(grandReceived)}</td>
+        </tr>
         <tr style="font-weight:bold">
           <td colspan="2" style="border:1px solid black;padding:5px 8px">GRAND TOTAL</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(student.subtotal)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(studentFee)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(grandReceived)}</td>
-        </tr>
-        <tr>
-          <td colspan="5" style="border:1px solid black;padding:5px 8px;font-style:italic;text-transform:uppercase;font-size:11px">
+          <td colspan="3" style="border:1px solid black;padding:5px 8px;text-align:center;font-style:italic;text-transform:uppercase;font-size:11px">
             ${numberToWords(grandReceived)}
           </td>
         </tr>
@@ -158,9 +162,8 @@ function buildCashierReceiptHtml(params: {
           <div style="border-top:1px solid black;padding-top:6px;font-weight:bold">Cashier</div>
         </td>
         <td style="text-align:center;width:50%;padding:0 20px;vertical-align:bottom">
-          <div style="margin-bottom:34px"></div>
+          <div style="margin-bottom:34px">${AUTHORISED_NAME}</div>
           <div style="border-top:1px solid black;padding-top:6px;font-weight:bold">Authorised signature</div>
-          <div style="font-size:10px">Head of Finance and Accounting</div>
         </td>
       </tr>
     </table>
@@ -173,48 +176,54 @@ function buildCashierReceiptHtml(params: {
   </div>`
 }
 
-// ── Convert HTML template → jsPDF blob ──
-async function generatePdfBlob(
+// ── Render HTML string → HTMLCanvasElement via hidden iframe ──
+async function renderHtmlToCanvas(html: string): Promise<HTMLCanvasElement> {
+  const iframe = document.createElement("iframe")
+  iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:none"
+  document.body.appendChild(iframe)
+  try {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!iframeDoc) throw new Error("Cannot access iframe")
+    iframeDoc.open()
+    iframeDoc.write(`<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{background:white}</style></head><body>${html}</body></html>`)
+    iframeDoc.close()
+    await Promise.all(
+      Array.from(iframeDoc.body.querySelectorAll("img")).map(img =>
+        img.complete ? Promise.resolve() : new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
+      )
+    )
+    return await html2canvas(iframeDoc.body, {
+      scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false,
+    })
+  } finally {
+    document.body.removeChild(iframe)
+  }
+}
+
+// ── Convert HTML template → 2-page jsPDF blob (Customer + Accounting) ──
+export async function generatePdfBlob(
   student: StudentReceiptData,
   receiptNumber: string,
   cashierName: string,
   studentFee: number,
   paymentInfo: PaymentInfo
 ): Promise<Blob> {
-  const html = buildCashierReceiptHtml({ student, receiptNumber, cashierName, studentFee, paymentInfo })
+  const baseParams = { student, receiptNumber, cashierName, studentFee, paymentInfo }
 
-  const iframe = document.createElement("iframe")
-  iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:none"
-  document.body.appendChild(iframe)
+  const canvas1 = await renderHtmlToCanvas(buildCashierReceiptHtml({ ...baseParams, copyType: "Customer" }))
+  const canvas2 = await renderHtmlToCanvas(buildCashierReceiptHtml({ ...baseParams, copyType: "Accounting" }))
 
-  try {
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
-    if (!iframeDoc) throw new Error("Cannot access iframe")
+  const pdf = new jsPDF("p", "mm", "a4")
+  const pw = pdf.internal.pageSize.getWidth()
 
-    iframeDoc.open()
-    iframeDoc.write(`<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{background:white}</style></head><body>${html}</body></html>`)
-    iframeDoc.close()
+  const ph1 = (canvas1.height * pw) / canvas1.width
+  pdf.addImage(canvas1.toDataURL("image/png"), "PNG", 0, 0, pw, ph1)
 
-    // Wait for images
-    await Promise.all(
-      Array.from(iframeDoc.body.querySelectorAll("img")).map(img =>
-        img.complete ? Promise.resolve() : new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
-      )
-    )
+  pdf.addPage()
+  const ph2 = (canvas2.height * pw) / canvas2.width
+  pdf.addImage(canvas2.toDataURL("image/png"), "PNG", 0, 0, pw, ph2)
 
-    const canvas = await html2canvas(iframeDoc.body, {
-      scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false,
-    })
-
-    const imgData = canvas.toDataURL("image/png")
-    const pdf = new jsPDF("p", "mm", "a4")
-    const pw = pdf.internal.pageSize.getWidth()
-    const ph = (canvas.height * pw) / canvas.width
-    pdf.addImage(imgData, "PNG", 0, 0, pw, ph)
-    return pdf.output("blob")
-  } finally {
-    document.body.removeChild(iframe)
-  }
+  return pdf.output("blob")
 }
 
 // ── Main component ──
@@ -289,6 +298,11 @@ export function CashierReceiptPage() {
 
   return (
     <div className="space-y-4">
+      {/* Acknowledgement pending banner */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        {t("cashier.ackPendingNote")}
+      </div>
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground">
         <button onClick={() => navigateToSubPage("cashier-dashboard")} className="hover:text-foreground transition-colors">
