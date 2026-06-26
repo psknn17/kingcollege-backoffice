@@ -72,7 +72,8 @@ import {
   ChevronsUpDown,
   Sparkles,
   Landmark,
-  Search
+  Search,
+  FileCheck2
 } from "lucide-react"
 import { TuitionDashboard } from "./components/TuitionDashboard"
 import { TuitionTermSettings } from "./components/TuitionTermSettings"
@@ -126,6 +127,8 @@ import { CashierStudentSearch } from "./components/CashierStudentSearch"
 import { CashierPaymentPage } from "./components/CashierPaymentPage"
 import { CashierReceiptPage } from "./components/CashierReceiptPage"
 import { CashierPaymentReport } from "./components/CashierPaymentReport"
+import { CashierAcknowledgementList } from "./components/CashierAcknowledgementList"
+import { CashierBankFeeSettings } from "./components/CashierBankFeeSettings"
 import { CombinedInvoicePage } from "./components/CombinedInvoicePage"
 import { CombinedReceiptPage } from "./components/CombinedReceiptPage"
 import { ViewModal } from "./components/ViewModal"
@@ -196,6 +199,8 @@ const menuItems = {
     { id: "cashier-dashboard", labelKey: "menu.cashierDashboard", icon: BarChart3 },
     { id: "cashier-student-search", labelKey: "menu.cashierStudentSearch", icon: Search },
     { id: "cashier-payment-report", labelKey: "menu.cashierPaymentReport", icon: FileBarChart },
+    { id: "cashier-bank-fee-settings", labelKey: "menu.cashierBankFeeSettings", icon: Settings2 },
+    { id: "cashier-acknowledgement", labelKey: "menu.cashierAcknowledgement", icon: FileCheck2 },
   ],
 }
 
@@ -753,6 +758,8 @@ export default function App() {
                         if (activeSection === "cashier-dashboard") return "แดชบอร์ด";
                         if (activeSection === "cashier-student-search") return "ค้นหานักเรียน";
                         if (activeSection === "cashier-payment-report") return "รายการการชำระ";
+                        if (activeSection === "cashier-bank-fee-settings") return "ตั้งค่า Fee ธนาคาร";
+                        if (activeSection === "cashier-acknowledgement") return t("menu.cashierAcknowledgement");
                         if (activeSection === "tuition-dashboard") return t("menu.dashboard");
                         if (activeSection === "tuition-term-settings") return t("menu.termSettings");
                         if (activeSection === "payment-history") return t("menu.paymentHistory");
@@ -952,6 +959,8 @@ export default function App() {
                     <Route path="/cashier-payment" element={<CashierPaymentPage />} />
                     <Route path="/cashier-receipt" element={<CashierReceiptPage />} />
                     <Route path="/cashier-payment-report" element={<CashierPaymentReport />} />
+                    <Route path="/cashier-bank-fee-settings" element={<CashierBankFeeSettings />} />
+                    <Route path="/cashier-acknowledgement" element={<CashierAcknowledgementList />} />
 
                     {/* Settings */}
                     <Route path="/bank-settings" element={<BankSettings />} />

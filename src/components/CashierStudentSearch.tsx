@@ -6,7 +6,6 @@ import { Badge } from "./ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Search, Users, CreditCard, X } from "lucide-react"
 import { cn } from "./ui/utils"
-import { toast } from "@/components/ui/sonner"
 import { useStudents } from "@/contexts/StudentContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAppNavigation } from "@/hooks/useAppNavigation"
@@ -56,15 +55,6 @@ function unpaidFor(allInvoices: any[], studentId: string): any[] {
     return ps !== "paid" && ps !== "cancelled"
   })
 }
-function familyKey(student: any): string {
-  return (
-    student.familyId ||
-    student.familyCode ||
-    student.parents?.find((p: any) => p.isPrimary)?.name ||
-    student.parents?.[0]?.name ||
-    `__solo_${student.studentId}`
-  )
-}
 
 export function CashierStudentSearch() {
   const { t } = useLanguage()
@@ -81,7 +71,6 @@ export function CashierStudentSearch() {
   const [query, setQuery] = useState("")
   const [multiPayMode, setMultiPayMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [lockedFamily, setLockedFamily] = useState<string | null>(null)
   const [selInvByStudent, setSelInvByStudent] = useState<Map<string, Set<string>>>(new Map())
   const [allInvoices, setAllInvoices] = useState<any[]>([])
 
@@ -123,20 +112,18 @@ export function CashierStudentSearch() {
   const select = (studentId: string) => {
     const student = students.find(s => s.studentId === studentId)
     if (!student) return
-    if (!multiPayMode) { setSelectedIds(new Set([studentId])); setLockedFamily(null); return }
+    if (!multiPayMode) { setSelectedIds(new Set([studentId])); return }
     if (selectedIds.has(studentId)) {
       const next = new Set(selectedIds); next.delete(studentId)
-      setSelectedIds(next); if (next.size === 0) setLockedFamily(null)
+      setSelectedIds(next)
     } else {
-      const fid = familyKey(student)
-      if (lockedFamily !== null && fid !== lockedFamily) { toast.warning(t("cashier.sameFamilyOnly")); return }
       const next = new Set(selectedIds); next.add(studentId)
-      setSelectedIds(next); if (lockedFamily === null) setLockedFamily(fid)
+      setSelectedIds(next)
     }
   }
   const deselect = (sid: string) => {
     const next = new Set(selectedIds); next.delete(sid)
-    setSelectedIds(next); if (next.size === 0) setLockedFamily(null)
+    setSelectedIds(next)
   }
   const toggleInv = (sid: string, invId: string) => {
     setSelInvByStudent(prev => {
@@ -148,9 +135,11 @@ export function CashierStudentSearch() {
   }
   const toggleMultiPay = (checked: boolean) => {
     setMultiPayMode(checked)
-    if (!checked) { if (selectedIds.size > 1) setSelectedIds(new Set([Array.from(selectedIds).pop()!])); setLockedFamily(null) }
+    if (!checked && selectedIds.size > 1) {
+      setSelectedIds(new Set([Array.from(selectedIds).pop()!]))
+    }
   }
-  const doSearch = () => { setQuery(searchInput); setSelectedIds(new Set()); setLockedFamily(null) }
+  const doSearch = () => { setQuery(searchInput); setSelectedIds(new Set()) }
 
   const grandTotal = useMemo(() => {
     let total = 0
@@ -371,9 +360,7 @@ export function CashierStudentSearch() {
 
             {/* Left: student list */}
             {(() => {
-              const visibleResults = multiPayMode && lockedFamily
-                ? results.filter(s => familyKey(s) === lockedFamily || selectedIds.has(s.studentId))
-                : results
+              const visibleResults = results
               return (
                 <div className="w-64 md:w-72 border-r border-gray-100 flex flex-col shrink-0 overflow-hidden">
                   <div className="px-4 py-2.5 border-b border-gray-100">
