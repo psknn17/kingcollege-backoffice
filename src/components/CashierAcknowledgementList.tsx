@@ -270,7 +270,7 @@ export function CashierAcknowledgementList() {
               ) : (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="text-sm">กำลังสร้าง PDF...</span>
+                  <span className="text-sm">Generating PDF...</span>
                 </div>
               )}
             </div>
