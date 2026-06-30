@@ -60,7 +60,10 @@ export function CashierAcknowledgementList() {
     return Number((rec.paymentInfo.cardFee * student.subtotal / total).toFixed(2))
   }
 
-  function makePaymentInfo(rec: AckRecord): PaymentInfo {
+  function makePaymentInfo(rec: AckRecord, student: StudentEntry): PaymentInfo {
+    const totalSubtotal = rec.studentData.reduce((s, st) => s + st.subtotal, 0)
+    const overAmt = Math.max(0, (rec.paymentInfo.chargeAmount ?? 0) - totalSubtotal)
+    const isFirstStudent = rec.studentData[0]?.sid === student.sid
     return {
       bank: rec.paymentInfo.bank,
       cardType: "",
@@ -68,6 +71,7 @@ export function CashierAcknowledgementList() {
       chargeAmount: rec.paymentInfo.chargeAmount,
       edcAmount: rec.paymentInfo.edcAmount,
       remark: rec.paymentInfo.remark,
+      overpaymentAmount: isFirstStudent ? overAmt : 0,
     }
   }
 
@@ -89,7 +93,7 @@ export function CashierAcknowledgementList() {
         rec.receiptNos[student.sid] ?? Object.values(rec.receiptNos)[0] ?? "-",
         cashierName,
         getStudentFee(rec, student),
-        makePaymentInfo(rec)
+        makePaymentInfo(rec, student)
       )
       const url = URL.createObjectURL(blob)
       setPreviewUrl(url)
@@ -234,7 +238,7 @@ export function CashierAcknowledgementList() {
 
       {/* View document dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={(open) => { setViewDialogOpen(open); if (!open) setPreviewUrl(null) }}>
-        <DialogContent className="max-w-5xl w-full">
+        <DialogContent className="max-w-4xl w-full">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>Acknowledgement Document</DialogTitle>

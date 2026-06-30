@@ -78,37 +78,68 @@ export function CashierPaymentReport() {
       if (end && recDate > end) continue
 
       const totalSubtotal: number = (rec.studentData ?? []).reduce((s: number, st: any) => s + (st.subtotal ?? 0), 0)
+      const overAmt = Math.max(0, Number(((rec.paymentInfo?.chargeAmount ?? 0) - totalSubtotal).toFixed(2)))
+      let overpaymentAssigned = false
 
       for (const student of rec.studentData ?? []) {
         const studentCardFee = totalSubtotal > 0
           ? Number((rec.paymentInfo.cardFee * student.subtotal / totalSubtotal).toFixed(2))
           : 0
 
-        for (const inv of student.invoices ?? []) {
-          const invoiceAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
-          const invCardFee = student.subtotal > 0
-            ? Number((studentCardFee * invoiceAmt / student.subtotal).toFixed(2))
-            : 0
-          const netAmt = invoiceAmt
-          const rate = netAmt > 0 ? Number(((invCardFee / netAmt) * 100).toFixed(4)) : 0
+        const invs: any[] = Array.isArray(student.invoices) ? student.invoices : []
 
+        if (invs.length === 0) {
+          // fallback: no invoice detail stored — use student subtotal as single row
+          const rowOverpayment = (!overpaymentAssigned && overAmt > 0) ? overAmt : 0
+          overpaymentAssigned = true
           rows.push([
             fmtDate(rec.paymentDate),
             fmtTime(rec.paymentDate),
-            inv.invoiceNumber || inv.id || "",
+            "",
             rec.receiptNos?.[student.sid] || "",
-            fmtDate(inv.dueDate || inv.issueDate || rec.paymentDate),
+            fmtDate(rec.paymentDate),
             student.name || "",
             student.sid || "",
-            invoiceAmt,
-            "",
-            netAmt,
-            invCardFee,
-            invCardFee !== 0 ? `${rate.toFixed(2)}%` : "",
-            Number((netAmt + invCardFee).toFixed(2)),
+            student.subtotal,
+            rowOverpayment,
+            student.subtotal,
+            studentCardFee,
+            studentCardFee > 0 && student.subtotal > 0 ? `${((studentCardFee / student.subtotal) * 100).toFixed(2)}%` : "",
+            Number((student.subtotal + studentCardFee).toFixed(2)),
             rec.paymentInfo?.bank || "",
             rec.paymentInfo?.remark || "",
           ])
+        } else {
+          for (const inv of invs) {
+            const candidates = [inv.netAmount, inv.finalAmount, inv.totalAmount, inv.subtotal]
+            const invoiceAmt: number = candidates.find((v) => v != null && typeof v === "number" && v > 0) ?? 0
+            const invCardFee = student.subtotal > 0
+              ? Number((studentCardFee * invoiceAmt / student.subtotal).toFixed(2))
+              : 0
+            const netAmt = invoiceAmt
+            const rate = netAmt > 0 ? Number(((invCardFee / netAmt) * 100).toFixed(4)) : 0
+
+            const rowOverpayment = (!overpaymentAssigned && overAmt > 0) ? overAmt : 0
+            overpaymentAssigned = true
+
+            rows.push([
+              fmtDate(rec.paymentDate),
+              fmtTime(rec.paymentDate),
+              inv.invoiceNumber || inv.id || "",
+              rec.receiptNos?.[student.sid] || "",
+              fmtDate(inv.dueDate || inv.issueDate || rec.paymentDate),
+              student.name || "",
+              student.sid || "",
+              invoiceAmt,
+              rowOverpayment,
+              netAmt,
+              invCardFee,
+              invCardFee !== 0 ? `${rate.toFixed(2)}%` : "",
+              Number((netAmt + invCardFee).toFixed(2)),
+              rec.paymentInfo?.bank || "",
+              rec.paymentInfo?.remark || "",
+            ])
+          }
         }
       }
     }

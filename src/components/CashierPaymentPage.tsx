@@ -543,13 +543,15 @@ export function CashierPaymentPage() {
               <span style={{ fontWeight: 600, fontSize: "14px" }}>{fmt(grandTotal)} บาท</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: overInvoice > 0 ? "12px" : "20px" }}>
-              <span style={{ color: "#94a3b8", fontSize: "13px" }}>{t("cashier.cardFee")}</span>
+              <span style={{ color: "#94a3b8", fontSize: "13px" }}>
+                {t("cashier.cardFee")}{feeRate > 0 && <span style={{ color: "#f97316" }}> ({feeRate}%)</span>}
+              </span>
               <span style={{ fontSize: "14px" }}>{fmt(cardFee)} บาท</span>
             </div>
             {overInvoice > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <span style={{ fontSize: "13px", color: "#94a3b8" }}>{t("cashier.overInvoice")}</span>
-                <span style={{ fontSize: "14px" }}>-{fmt(overInvoice)} บาท</span>
+                <span style={{ fontSize: "14px", color: "#f87171" }}>-{fmt(overInvoice)} บาท</span>
               </div>
             )}
             <div style={{ borderTop: "1px solid #334155", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -575,13 +577,15 @@ export function CashierPaymentPage() {
                   <span style={{ fontSize: "13px", color: "#64748b" }}>{fmt(subtotal)} บาท</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: pOver > 0 ? "8px" : "16px" }}>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.cardFee")}</span>
+                  <span style={{ fontSize: "13px", color: "#64748b" }}>
+                    {t("cashier.cardFee")}{feeRate > 0 && <span style={{ color: "#f97316" }}> ({feeRate}%)</span>}
+                  </span>
                   <span style={{ fontSize: "13px", color: "#64748b" }}>{fmt(pFee)} บาท</span>
                 </div>
                 {pOver > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
                     <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.overInvoice")}</span>
-                    <span style={{ fontSize: "13px", color: "#64748b" }}>-{fmt(pOver)} บาท</span>
+                    <span style={{ fontSize: "13px", color: "#ef4444" }}>-{fmt(pOver)} บาท</span>
                   </div>
                 )}
                 <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

@@ -29,6 +29,7 @@ export interface PaymentInfo {
   chargeAmount: number
   edcAmount: number
   remark: string
+  overpaymentAmount?: number
 }
 
 // ── Receipt HTML builder — matches "Acknowledgement of School Fee Payment" template ──
@@ -45,7 +46,8 @@ function buildCashierReceiptHtml(params: {
   const today = format(new Date(), "dd MMMM yyyy")
   const currentYear = new Date().getFullYear()
   const academicYear = `${currentYear - 1}/${currentYear}`
-  const grade = student.grade ?? "-"
+  const rawGrade = student.grade ?? "-"
+  const grade = rawGrade.replace(/^year\s*/i, "Year ")
 
   const invoiceRows = student.invoices.map((inv: any, i: number) => {
     const invNo = inv.invoiceNumber || inv.id || "-"
@@ -62,7 +64,8 @@ function buildCashierReceiptHtml(params: {
     </tr>`
   }).join("")
 
-  const grandReceived = student.subtotal + studentFee
+  const overpaymentAmt = paymentInfo.overpaymentAmount ?? 0
+  const grandReceived = student.subtotal + studentFee + overpaymentAmt
   const cardLabel = [paymentInfo.bank.toUpperCase(), paymentInfo.cardType].filter(Boolean).join(" ")
 
   return `<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.5;padding:40px 52px;width:794px;background:white;color:black">
@@ -85,13 +88,13 @@ function buildCashierReceiptHtml(params: {
     <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:12px;margin-bottom:14px">
       <tr>
         <td style="border:1px solid black;padding:5px 10px;width:130px">Student ID no.</td>
-        <td style="border:1px solid black;padding:5px 8px">${copyType === "Accounting" ? student.sid : ""}</td>
+        <td style="border:1px solid black;padding:5px 8px">${student.sid}</td>
         <td style="border:1px solid black;padding:5px 10px;width:100px">Receipt no.</td>
         <td style="border:1px solid black;padding:5px 10px;text-align:right;width:150px">${receiptNumber}</td>
       </tr>
       <tr>
         <td style="border:1px solid black;padding:5px 10px">Student name</td>
-        <td style="border:1px solid black;padding:5px 8px">${copyType === "Accounting" ? student.name : ""}</td>
+        <td style="border:1px solid black;padding:5px 8px">${student.name}</td>
         <td style="border:1px solid black;padding:5px 10px">Receipt date</td>
         <td style="border:1px solid black;padding:5px 10px;text-align:right">${today}</td>
       </tr>
@@ -126,7 +129,7 @@ function buildCashierReceiptHtml(params: {
           <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
         </tr>
         <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
@@ -253,6 +256,11 @@ export function CashierReceiptPage() {
     return Number((totalFee * (student.subtotal / grandTotal)).toFixed(2))
   }
 
+  function getStudentOverpayment(student: StudentReceiptData): number {
+    const overAmt = Math.max(0, paymentInfo.chargeAmount - grandTotal)
+    return studentData[0]?.sid === student.sid ? overAmt : 0
+  }
+
   async function handleViewReceipt(student: StudentReceiptData) {
     if (previewBlobUrls[student.sid]) {
       setPreviewUrl(previewBlobUrls[student.sid])
@@ -265,7 +273,7 @@ export function CashierReceiptPage() {
         receiptNumbers[student.sid] ?? `R-CC-${new Date().getFullYear()}-00001`,
         cashierName,
         getStudentFee(student),
-        paymentInfo
+        { ...paymentInfo, overpaymentAmount: getStudentOverpayment(student) }
       )
       const url = URL.createObjectURL(blob)
       setPreviewBlobUrls(prev => ({ ...prev, [student.sid]: url }))
@@ -283,7 +291,7 @@ export function CashierReceiptPage() {
         receiptNumbers[student.sid] ?? `R-CC-${new Date().getFullYear()}-00001`,
         cashierName,
         getStudentFee(student),
-        paymentInfo
+        { ...paymentInfo, overpaymentAmount: getStudentOverpayment(student) }
       )
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
