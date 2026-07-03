@@ -240,23 +240,7 @@ export function CashierAcknowledgementList() {
       <Dialog open={viewDialogOpen} onOpenChange={(open) => { setViewDialogOpen(open); if (!open) setPreviewUrl(null) }}>
         <DialogContent className="max-w-4xl w-full">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Acknowledgement Document</DialogTitle>
-              {viewTarget && viewTarget.studentData.length > 1 && (
-                <div className="flex items-center gap-2 mr-8">
-                  {viewTarget.studentData.map((student, idx) => (
-                    <Button
-                      key={student.sid}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePreview(viewTarget, student)}
-                    >
-                      {idx + 1}. {student.name}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <DialogTitle>Acknowledgement Document</DialogTitle>
           </DialogHeader>
           {viewTarget && (
             <div className="flex items-center justify-center" style={{ minHeight: 500 }}>
