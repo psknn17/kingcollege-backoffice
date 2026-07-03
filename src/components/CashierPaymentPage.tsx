@@ -152,39 +152,54 @@ export function CashierPaymentPage() {
     paymentId: string,
     bank: string,
     paymentMethodVal: string,
-    chargeAmountVal: number,
-    edcAmountVal: number,
     cardFeeVal: number,
-    remark: string
+    remark: string,
+    overInvoiceAmt: number
   ): Record<string, string> {
     const receiptNos: Record<string, string> = {}
-    stdData.forEach(({ sid }) => { receiptNos[sid] = generateReceiptNo() })
+    const grandTotal = stdData.reduce((s, d) => s + d.subtotal, 0)
 
     const now = new Date()
     const month = now.getMonth() + 1
     const acYearStart = month >= 8 ? now.getFullYear() : now.getFullYear() - 1
 
-    const record = {
-      id: crypto.randomUUID(),
-      status: "pending" as const,
-      receiptNos,
-      paymentDate: now.toISOString(),
-      paymentId,
-      studentData: stdData.map(({ sid, student, invoices, guardian, subtotal }) => ({
-        sid,
-        name: student ? `${student.firstName} ${student.lastName}` : sid,
-        guardian,
-        grade: student?.gradeLevel ?? "-",
-        subtotal,
-        invoices,
-      })),
-      paymentInfo: { bank, paymentMethod: paymentMethodVal, chargeAmount: chargeAmountVal, edcAmount: edcAmountVal, cardFee: cardFeeVal, remark },
-      schoolYear: `${acYearStart}/${acYearStart + 1}`,
-      createdAt: now.toISOString(),
-    }
+    const newRecords = stdData.map(({ sid, student, invoices, guardian, subtotal }, idx) => {
+      const receiptNo = generateReceiptNo()
+      receiptNos[sid] = receiptNo
+
+      const pFee = grandTotal > 0 ? Number((cardFeeVal * subtotal / grandTotal).toFixed(2)) : 0
+      const pOver = idx === 0 ? overInvoiceAmt : 0
+      const pCharge = subtotal + pOver
+
+      return {
+        id: crypto.randomUUID(),
+        status: "pending" as const,
+        receiptNos: { [sid]: receiptNo },
+        paymentDate: now.toISOString(),
+        paymentId,
+        studentData: [{
+          sid,
+          name: student ? `${student.firstName} ${student.lastName}` : sid,
+          guardian,
+          grade: student?.gradeLevel ?? "-",
+          subtotal,
+          invoices,
+        }],
+        paymentInfo: {
+          bank,
+          paymentMethod: paymentMethodVal,
+          chargeAmount: pCharge,
+          edcAmount: pCharge + pFee,
+          cardFee: pFee,
+          remark,
+        },
+        schoolYear: `${acYearStart}/${acYearStart + 1}`,
+        createdAt: now.toISOString(),
+      }
+    })
 
     const existing = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
-    localStorage.setItem("cashier_acknowledgements", JSON.stringify([record, ...existing]))
+    localStorage.setItem("cashier_acknowledgements", JSON.stringify([...newRecords, ...existing]))
     return receiptNos
   }
 
@@ -256,7 +271,7 @@ export function CashierPaymentPage() {
       // Save acknowledgement (pending)
       const receiptNos = savePendingAcknowledgement(
         studentData, paymentId, selectedBank, paymentMethod,
-        chargeAmount, edcAmountCalc, cardFee, remark
+        cardFee, remark, overInvoice
       )
 
       navigateToSubPage("cashier-receipt", {
