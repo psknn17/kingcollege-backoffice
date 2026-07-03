@@ -163,11 +163,18 @@ export function CashierPaymentPage() {
     const month = now.getMonth() + 1
     const acYearStart = month >= 8 ? now.getFullYear() : now.getFullYear() - 1
 
+    let allocatedFee = 0
     const newRecords = stdData.map(({ sid, student, invoices, guardian, subtotal }, idx) => {
       const receiptNo = generateReceiptNo()
       receiptNos[sid] = receiptNo
 
-      const pFee = grandTotal > 0 ? Number((cardFeeVal * subtotal / grandTotal).toFixed(2)) : 0
+      const isLast = idx === stdData.length - 1
+      const pFee = grandTotal > 0
+        ? isLast
+          ? Number((cardFeeVal - allocatedFee).toFixed(2))
+          : Number((cardFeeVal * subtotal / grandTotal).toFixed(2))
+        : 0
+      allocatedFee += pFee
       const pOver = idx === 0 ? overInvoiceAmt : 0
       const pCharge = subtotal + pOver
 
