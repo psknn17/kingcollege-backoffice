@@ -3,7 +3,7 @@ import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
-import { DollarSign, Search, BarChart2, CalendarIcon } from "lucide-react"
+import { Search, BarChart2, CalendarIcon } from "lucide-react"
 import { format, isSameDay, endOfDay } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
@@ -20,6 +20,8 @@ const RECEIPT_KEYS = [
   "receiptRecords_external",
   "receiptRecords_summer",
 ]
+
+type BankRow = { bankName: string; netAmount: number; invoiceCount: number }
 
 function formatCurrency(amount: number): string {
   return `฿${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -64,24 +66,54 @@ export function CashierDashboard() {
     return sum
   }, [selectedDate, refreshTick])
 
+  const bankBreakdown = useMemo<BankRow[]>(() => {
+    const map = new Map<string, BankRow>()
+    for (const key of RECEIPT_KEYS) {
+      try {
+        const raw = localStorage.getItem(key)
+        if (!raw) continue
+        const recs: {
+          receiptDate: string
+          totalAmount?: number
+          transactionFeeAmount?: number
+          bankName?: string
+          invoices?: unknown[]
+        }[] = JSON.parse(raw)
+        for (const r of recs) {
+          try {
+            if (!isSameDay(new Date(r.receiptDate), selectedDate)) continue
+            const bank = r.bankName?.trim() || "Unknown"
+            const net = Math.max(0, (r.totalAmount ?? 0) - (r.transactionFeeAmount ?? 0))
+            const count = r.invoices?.length ?? 0
+            const existing = map.get(bank)
+            if (existing) {
+              existing.netAmount += net
+              existing.invoiceCount += count
+            } else {
+              map.set(bank, { bankName: bank, netAmount: net, invoiceCount: count })
+            }
+          } catch {
+            // skip malformed record
+          }
+        }
+      } catch {
+        // skip malformed JSON
+      }
+    }
+    return [...map.values()].sort((a, b) => b.netAmount - a.netAmount)
+  }, [selectedDate, refreshTick])
+
   return (
     <div className="space-y-6">
-      {/* Welcome card */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shrink-0">
-              <DollarSign className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">
-                {t("cashier.welcome")}{user?.name ? `, ${user.name}` : ""}
-              </h2>
-              <p className="text-muted-foreground text-sm">{t("cashier.subtitle")}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
+        <div>
+          <h2 className="text-xl font-semibold">
+            {t("cashier.welcome")}{user?.name ? `, ${user.name}` : ""}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("cashier.subtitle")}</p>
+        </div>
+      </div>
 
       {/* Stats section */}
       <div>
