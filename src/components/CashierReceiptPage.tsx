@@ -33,6 +33,7 @@ export interface InvoiceReceiptItem {
   invoiceAmount: number
   receiptNo: string
   cardFee: number
+  overpaymentAmount: number
 }
 
 export interface PaymentInfo {
@@ -60,7 +61,9 @@ function buildCashierReceiptHtml(params: {
   const rawGrade = item.grade ?? "-"
   const grade = rawGrade.replace(/^year\s*/i, "Year ")
 
+  const overpaymentAmt = item.overpaymentAmount ?? 0
   const received = item.invoiceAmount + item.cardFee
+  const grandReceived = received + overpaymentAmt
   const cardLabel = [paymentInfo.bank.toUpperCase(), paymentInfo.cardType].filter(Boolean).join(" ")
 
   return `<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.5;padding:40px 52px;width:794px;background:white;color:black">
@@ -126,16 +129,22 @@ function buildCashierReceiptHtml(params: {
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(item.cardFee)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(received)}</td>
         </tr>
+        ${overpaymentAmt > 0 ? `<tr>
+          <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
+        </tr>` : ""}
         <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.invoiceAmount)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.cardFee)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(received)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(grandReceived)}</td>
         </tr>
         <tr style="font-weight:bold">
           <td colspan="2" style="border:1px solid black;padding:5px 8px">GRAND TOTAL</td>
           <td colspan="3" style="border:1px solid black;padding:5px 8px;text-align:center;font-style:italic;text-transform:uppercase;font-size:11px">
-            ${numberToWords(received)}
+            ${numberToWords(grandReceived)}
           </td>
         </tr>
       </tbody>
@@ -144,6 +153,7 @@ function buildCashierReceiptHtml(params: {
     <!-- Notes -->
     <div style="font-size:10px;margin-bottom:10px;line-height:1.9">
       <p>* Credit card processing fee payable to Bank</p>
+      ${overpaymentAmt > 0 ? "<p>** Please note that any overpayments amount is non-refundable and will be credited against future school fee invoices.</p>" : ""}
     </div>
 
     <!-- Credit card info -->
@@ -240,6 +250,7 @@ export function CashierReceiptPage() {
 
   const grandTotal = studentData.reduce((s, st) => s + st.subtotal, 0)
   const totalFee = Math.max(0, paymentInfo.edcAmount - paymentInfo.chargeAmount)
+  const globalOverpayment = Math.max(0, paymentInfo.chargeAmount - grandTotal)
   const cashierName = user?.name ?? "Cashier"
 
   const invoiceItems: InvoiceReceiptItem[] = (() => {
@@ -267,6 +278,7 @@ export function CashierReceiptPage() {
         invoiceAmount: invAmt,
         receiptNo: receiptNumbers[inv.id] ?? `R-CC-${new Date().getFullYear()}-00001`,
         cardFee: fee,
+        overpaymentAmount: idx === 0 ? globalOverpayment : 0,
       })
     })
     return allInvs

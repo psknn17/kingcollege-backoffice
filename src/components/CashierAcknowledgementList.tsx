@@ -67,6 +67,7 @@ export function CashierAcknowledgementList() {
       invoiceAmount: student?.subtotal ?? 0,
       receiptNo: Object.values(rec.receiptNos)[0] ?? "-",
       cardFee: rec.paymentInfo.cardFee,
+      overpaymentAmount: Math.max(0, rec.paymentInfo.chargeAmount - (student?.subtotal ?? 0)),
     }
   }
 
