@@ -1,25 +1,12 @@
 import { useState } from "react"
-import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Trash2, Plus, Pencil } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
-
-export const ALL_BANKS = [
-  { id: "kbank", name: "Kasikorn Bank (KBank)" },
-  { id: "scb",   name: "Siam Commercial Bank (SCB)" },
-  { id: "bbl",   name: "Bangkok Bank (BBL)" },
-  { id: "ktb",   name: "Krungthai Bank (KTB)" },
-  { id: "bay",   name: "Bank of Ayudhya (BAY)" },
-  { id: "ttb",   name: "TTB Bank (TTB)" },
-  { id: "uob",   name: "UOB Bank (UOB)" },
-  { id: "cimb",  name: "CIMB Bank (CIMB)" },
-]
 
 export type BankFeeEntry = { bankId: string; bankName: string; accountNumber: string; feeRate: number }
 
@@ -40,8 +27,8 @@ function loadEntries(): BankFeeEntry[] {
   } catch { return [] }
 }
 
-const EMPTY_FORM = { bankId: "", accountNumber: "", feeRate: "" }
-const EMPTY_ERRORS = { bankId: false, accountNumber: false, feeRate: false }
+const EMPTY_FORM = { bankName: "", accountNumber: "", feeRate: "" }
+const EMPTY_ERRORS = { bankName: false, accountNumber: false, feeRate: false }
 
 export function CashierBankFeeSettings() {
   const { t } = useLanguage()
@@ -63,25 +50,23 @@ export function CashierBankFeeSettings() {
   const openEdit = (idx: number) => {
     const e = entries[idx]
     setEditIndex(idx)
-    setForm({ bankId: e.bankId, accountNumber: e.accountNumber, feeRate: String(e.feeRate) })
+    setForm({ bankName: e.bankName, accountNumber: e.accountNumber, feeRate: String(e.feeRate) })
     setErrors(EMPTY_ERRORS)
     setOpen(true)
   }
 
   const handleSave = () => {
     const newErrors = {
-      bankId: !form.bankId,
+      bankName: !form.bankName.trim(),
       accountNumber: !form.accountNumber.trim(),
       feeRate: form.feeRate === "" || isNaN(parseFloat(form.feeRate)),
     }
     setErrors(newErrors)
     if (Object.values(newErrors).some(Boolean)) return
-    const bank = ALL_BANKS.find(b => b.id === form.bankId)
-    if (!bank) return
     const rate = parseFloat(form.feeRate)
     const entry: BankFeeEntry = {
-      bankId: bank.id,
-      bankName: bank.name,
+      bankId: form.bankName.trim(),
+      bankName: form.bankName.trim(),
       accountNumber: form.accountNumber.trim(),
       feeRate: isNaN(rate) ? 0 : Math.max(0, Math.min(100, rate)),
     }
@@ -103,7 +88,7 @@ export function CashierBankFeeSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-semibold">{t("cashier.bankFeeTitle")}</h2>
           <p className="text-sm text-muted-foreground mt-1">{t("cashier.bankFeeDesc")}</p>
@@ -113,9 +98,8 @@ export function CashierBankFeeSettings() {
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
+      <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden bg-white">
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead align="left">{t("cashier.bankFeeColBank")}</TableHead>
@@ -162,8 +146,7 @@ export function CashierBankFeeSettings() {
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -178,17 +161,13 @@ export function CashierBankFeeSettings() {
               <Label className="text-sm font-medium">
                 {t("cashier.bankFeeColBank")} <span className="text-destructive">*</span>
               </Label>
-              <Select value={form.bankId} onValueChange={v => { setForm(f => ({ ...f, bankId: v })); setErrors(e => ({ ...e, bankId: false })) }}>
-                <SelectTrigger className={`h-11 ${errors.bankId ? "border-destructive" : ""}`}>
-                  <SelectValue placeholder={t("cashier.bankFeeSelectBank")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {ALL_BANKS.map(b => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.bankId && <p className="text-xs text-destructive">{t("cashier.bankFeeSelectBankError")}</p>}
+              <Input
+                className={`h-11 ${errors.bankName ? "border-destructive" : ""}`}
+                placeholder={t("cashier.bankFeeNamePlaceholder")}
+                value={form.bankName}
+                onChange={e => { setForm(f => ({ ...f, bankName: e.target.value })); setErrors(er => ({ ...er, bankName: false })) }}
+              />
+              {errors.bankName && <p className="text-xs text-destructive">{t("cashier.required")}</p>}
             </div>
 
             {/* Account No. + Fee Rate side by side */}
@@ -200,10 +179,11 @@ export function CashierBankFeeSettings() {
                 <Input
                   className={`h-11 ${errors.accountNumber ? "border-destructive" : ""}`}
                   placeholder={t("cashier.bankFeeAccountNoPlaceholder")}
+                  inputMode="numeric"
                   value={form.accountNumber}
-                  onChange={e => { setForm(f => ({ ...f, accountNumber: e.target.value })); setErrors(er => ({ ...er, accountNumber: false })) }}
+                  onChange={e => { const v = e.target.value.replace(/\D/g, ""); setForm(f => ({ ...f, accountNumber: v })); setErrors(er => ({ ...er, accountNumber: false })) }}
                 />
-                {errors.accountNumber && <p className="text-xs text-destructive">Required</p>}
+                {errors.accountNumber && <p className="text-xs text-destructive">{t("cashier.required")}</p>}
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -222,7 +202,7 @@ export function CashierBankFeeSettings() {
                   />
                   <span className="text-sm text-muted-foreground shrink-0">%</span>
                 </div>
-                {errors.feeRate && <p className="text-xs text-destructive">Required</p>}
+                {errors.feeRate && <p className="text-xs text-destructive">{t("cashier.required")}</p>}
               </div>
             </div>
           </div>

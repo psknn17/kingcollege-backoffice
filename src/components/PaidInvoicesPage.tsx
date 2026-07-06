@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface PaidInvoicesPageProps {
   onNavigateToSubPage: (subPage: string, params?: any) => void
@@ -81,7 +82,7 @@ function TypeBadge({ category }: { category: string }) {
   )
 }
 
-function loadPaidInvoices() {
+function loadApprovedInvoices() {
   try {
     const raw = JSON.parse(localStorage.getItem("createdInvoices") || "[]")
     return (raw as any[]).filter(
@@ -89,22 +90,31 @@ function loadPaidInvoices() {
         inv.category !== "external" &&
         inv.invoiceType !== "external" &&
         inv.studentId !== "EXTERNAL" &&
-        (inv.approvalStatus ?? "wait") === "approved" &&
-        (inv.status === "paid" || !!inv.paidDate)
+        (inv.approvalStatus ?? "wait") === "approved"
     )
   } catch {
     return []
   }
 }
 
-export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps) {
+function getPaymentStatus(inv: any): "paid" | "overdue" | "unpaid" {
+  if (inv.status === "paid" || !!inv.paidDate) return "paid"
+  if (inv.status === "overdue") return "overdue"
+  const due = parseLocal(inv.dueDate)
+  if (due && due < new Date()) return "overdue"
+  return "unpaid"
+}
+
+export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
+  const { t } = useLanguage()
   const [invoices, setInvoices] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [ayFilter, setAyFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
 
-  const fetchData = () => setInvoices(loadPaidInvoices())
+  const fetchData = () => setInvoices(loadApprovedInvoices())
 
   useEffect(() => {
     fetchData()
@@ -124,6 +134,7 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
       .filter((inv) => {
         if (typeFilter !== "all" && inv.category !== typeFilter) return false
         if (ayFilter !== "all" && inv.academicYear !== ayFilter) return false
+        if (statusFilter !== "all" && getPaymentStatus(inv) !== statusFilter) return false
         if (q) {
           const invNo = (inv.invoiceNumber || "").toLowerCase()
           const name = (inv.studentName || "").toLowerCase()
@@ -133,14 +144,14 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
         return true
       })
       .sort((a, b) => {
-        const da = parseLocal(a.paidDate || a.issueDate)
-        const db = parseLocal(b.paidDate || b.issueDate)
+        const da = parseLocal(a.issueDate)
+        const db = parseLocal(b.issueDate)
         if (!da && !db) return 0
         if (!da) return 1
         if (!db) return -1
         return db.getTime() - da.getTime()
       })
-  }, [invoices, search, typeFilter, ayFilter])
+  }, [invoices, search, typeFilter, ayFilter, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -153,15 +164,18 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
     setPage(1)
   }
 
-  const handleRowClick = (inv: any) => {
-    const nav = TYPE_META[inv.category || "tuition"]?.nav || "tuition-invoice-management"
-    onNavigateToSubPage(nav)
-  }
-
-  const hasActiveFilter = search || typeFilter !== "all" || ayFilter !== "all"
+  const hasActiveFilter = search || typeFilter !== "all" || ayFilter !== "all" || statusFilter !== "all"
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
+        <div>
+          <h2 className="text-xl font-semibold">{t("cashier.paidInvoicesTitle")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("cashier.paidInvoicesDesc")}</p>
+        </div>
+      </div>
 
       {/* Filter bar */}
       <Card className="rounded-xl">
@@ -170,7 +184,7 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search invoice no., name or student ID..."
+                placeholder={t("cashier.paidInvoicesSearchPlaceholder")}
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1) }}
                 className="pl-9 pr-9 w-64"
@@ -187,10 +201,10 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
 
             <Select value={typeFilter} onValueChange={resetPage(setTypeFilter)}>
               <SelectTrigger className="w-44">
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t("cashier.paidInvoicesAllTypes")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="all">{t("cashier.paidInvoicesAllTypes")}</SelectItem>
                 {Object.entries(TYPE_META).map(([key, meta]) => (
                   <SelectItem key={key} value={key}>{meta.label}</SelectItem>
                 ))}
@@ -199,13 +213,25 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
 
             <Select value={ayFilter} onValueChange={resetPage(setAyFilter)}>
               <SelectTrigger className="w-44">
-                <SelectValue placeholder="All Academic Years" />
+                <SelectValue placeholder={t("cashier.paidInvoicesAllAcademicYears")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Academic Years</SelectItem>
+                <SelectItem value="all">{t("cashier.paidInvoicesAllAcademicYears")}</SelectItem>
                 {academicYears.map((ay) => (
                   <SelectItem key={ay} value={ay}>{ay}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={resetPage(setStatusFilter)}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder={t("cashier.paidInvoicesAllStatuses")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("cashier.paidInvoicesAllStatuses")}</SelectItem>
+                <SelectItem value="paid">{t("cashier.paidStatusPaid")}</SelectItem>
+                <SelectItem value="unpaid">{t("cashier.paidStatusUnpaid")}</SelectItem>
+                <SelectItem value="overdue">{t("cashier.paidStatusOverdue")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -214,34 +240,34 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
-                onClick={() => { setSearch(""); setTypeFilter("all"); setAyFilter("all"); setPage(1) }}
+                onClick={() => { setSearch(""); setTypeFilter("all"); setAyFilter("all"); setStatusFilter("all"); setPage(1) }}
               >
                 <X className="h-3.5 w-3.5 mr-1" />
-                Clear
+                {t("cashier.clearFilter")}
               </Button>
             )}
 
             <span className="ml-auto text-sm text-muted-foreground font-medium">
-              {filtered.length.toLocaleString()} invoice{filtered.length !== 1 ? "s" : ""}
+              {t("cashier.paidInvoicesCount", { count: filtered.length.toLocaleString() })}
             </span>
           </div>
         </CardContent>
       </Card>
 
       {/* Table */}
-      <Card className="rounded-xl overflow-hidden">
+      <Card className="rounded-xl overflow-hidden border-gray-100 shadow-sm">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="text-left font-semibold text-foreground/80 pl-4">Type</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80">Invoice No.</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80">Student</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80">Year Group</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80">Academic Year</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80">Term</TableHead>
-              <TableHead className="text-right font-semibold text-foreground/80">Amount (฿)</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80">Issue Date</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80 pr-4">Paid Date</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 pl-4 w-[100px]">{t("cashier.paidInvoicesColType")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 w-[130px]">{t("cashier.paidInvoicesColInvoiceNo")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 w-[200px]">{t("cashier.paidInvoicesColStudent")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 w-[110px]">{t("cashier.paidInvoicesColYearGroup")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 w-[120px]">{t("cashier.paidInvoicesColAcademicYear")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 w-[80px]">{t("cashier.paidInvoicesColTerm")}</TableHead>
+              <TableHead className="text-right font-semibold text-foreground/80 w-[120px]">{t("cashier.paidInvoicesColAmount")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 w-[120px]">{t("cashier.paidInvoicesColIssueDate")}</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80 pr-4 w-[160px]">{t("cashier.paidInvoicesColStatus")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -257,10 +283,10 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
                     </div>
                     <div>
                       <p className="font-medium text-foreground/60">
-                        {hasActiveFilter ? "No results found" : "No paid invoices yet"}
+                        {hasActiveFilter ? t("cashier.paidInvoicesNoResults") : t("cashier.paidInvoicesNoData")}
                       </p>
                       {hasActiveFilter && (
-                        <p className="text-sm mt-0.5">Try adjusting your search or filters</p>
+                        <p className="text-sm mt-0.5">{t("cashier.paidInvoicesAdjustFilter")}</p>
                       )}
                     </div>
                   </div>
@@ -270,12 +296,9 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
               pageItems.map((inv) => {
                 const issueDate = parseLocal(inv.issueDate)
                 const paidDate = parseLocal(inv.paidDate)
+                const payStatus = getPaymentStatus(inv)
                 return (
-                  <TableRow
-                    key={inv.id}
-                    className="cursor-pointer hover:bg-muted/40 transition-colors"
-                    onClick={() => handleRowClick(inv)}
-                  >
+                  <TableRow key={inv.id}>
                     <TableCell className="pl-4">
                       <TypeBadge category={inv.category || "tuition"} />
                     </TableCell>
@@ -288,7 +311,7 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
                     </TableCell>
                     <TableCell className="text-sm">{inv.studentGrade || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.academicYear || "-"}</TableCell>
-                    <TableCell className="text-sm">{inv.term || "-"}</TableCell>
+                    <TableCell className="text-sm">{inv.term ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term) : "-"}</TableCell>
                     <TableCell className="text-right font-mono text-sm font-medium">
                       {formatAmount(inv.finalAmount ?? inv.totalAmount ?? 0)}
                     </TableCell>
@@ -296,10 +319,18 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
                       {formatDate(issueDate)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground pr-4">
-                      <span className="flex items-center gap-1.5">
-                        <Badge className="bg-green-100 text-green-800 border-green-200 font-medium text-xs">Paid</Badge>
-                        {formatDate(paidDate)}
-                      </span>
+                      {payStatus === "paid" && (
+                        <span className="flex items-center gap-1.5">
+                          <Badge className="bg-green-100 text-green-800 border-green-200 font-medium text-xs">{t("cashier.paidStatusPaid")}</Badge>
+                          {formatDate(paidDate)}
+                        </span>
+                      )}
+                      {payStatus === "overdue" && (
+                        <Badge className="bg-red-100 text-red-800 border-red-200 font-medium text-xs">{t("cashier.paidStatusOverdue")}</Badge>
+                      )}
+                      {payStatus === "unpaid" && (
+                        <Badge className="bg-gray-100 text-gray-700 border-gray-300 font-medium text-xs">{t("cashier.paidStatusUnpaid")}</Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 )
@@ -313,8 +344,7 @@ export function PaidInvoicesPage({ onNavigateToSubPage }: PaidInvoicesPageProps)
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{rangeStart}–{rangeEnd}</span> of{" "}
-            <span className="font-medium text-foreground">{filtered.length.toLocaleString()}</span> invoices
+            {t("cashier.paidInvoicesShowing", { start: rangeStart, end: rangeEnd, total: filtered.length.toLocaleString() })}
           </p>
           <div className="flex items-center gap-1">
             <Button

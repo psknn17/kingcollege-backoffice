@@ -223,7 +223,7 @@ export function CashierPaymentReport() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-semibold">{t("cashier.report.title")}</h2>
-          <p className="text-sm text-muted-foreground mt-1">Export payment report as Excel</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("cashier.report.subtitle")}</p>
         </div>
       </div>
 
