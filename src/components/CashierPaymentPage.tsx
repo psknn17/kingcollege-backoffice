@@ -163,25 +163,36 @@ export function CashierPaymentPage() {
     const month = now.getMonth() + 1
     const acYearStart = month >= 8 ? now.getFullYear() : now.getFullYear() - 1
 
-    let allocatedFee = 0
-    const newRecords = stdData.map(({ sid, student, invoices, guardian, subtotal }, idx) => {
-      const receiptNo = generateReceiptNo()
-      receiptNos[sid] = receiptNo
+    // Flatten to (student, invoice) pairs — 1 AckRecord per invoice
+    const pairs = stdData.flatMap(({ sid, student, invoices, guardian }) =>
+      (invoices ?? []).map((inv: any) => ({ sid, student, inv, guardian }))
+    )
 
-      const isLast = idx === stdData.length - 1
+    let allocatedFee = 0
+    let isFirstInvoice = true
+
+    const newRecords = pairs.map(({ sid, student, inv, guardian }, idx) => {
+      const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+      const isLast = idx === pairs.length - 1
+
       const pFee = grandTotal > 0
         ? isLast
           ? Number((cardFeeVal - allocatedFee).toFixed(2))
-          : Number((cardFeeVal * subtotal / grandTotal).toFixed(2))
+          : Number((cardFeeVal * invAmt / grandTotal).toFixed(2))
         : 0
       allocatedFee += pFee
-      const pOver = idx === 0 ? overInvoiceAmt : 0
-      const pCharge = subtotal + pOver
+
+      const pOver = isFirstInvoice ? overInvoiceAmt : 0
+      isFirstInvoice = false
+
+      const pCharge = invAmt + pOver
+      const receiptNo = generateReceiptNo()
+      receiptNos[inv.id] = receiptNo
 
       return {
         id: crypto.randomUUID(),
         status: "pending" as const,
-        receiptNos: { [sid]: receiptNo },
+        receiptNos: { [inv.id]: receiptNo },
         paymentDate: now.toISOString(),
         paymentId,
         studentData: [{
@@ -189,8 +200,8 @@ export function CashierPaymentPage() {
           name: student ? `${student.firstName} ${student.lastName}` : sid,
           guardian,
           grade: student?.gradeLevel ?? "-",
-          subtotal,
-          invoices,
+          subtotal: invAmt,
+          invoices: [inv],
         }],
         paymentInfo: {
           bank,
