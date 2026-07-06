@@ -130,6 +130,7 @@ import { CashierPaymentReport } from "./components/CashierPaymentReport"
 import { CashierAcknowledgementList } from "./components/CashierAcknowledgementList"
 import { CashierBankFeeSettings } from "./components/CashierBankFeeSettings"
 import { CombinedInvoicePage } from "./components/CombinedInvoicePage"
+import { PaidInvoicesPage } from "./components/PaidInvoicesPage"
 import { CombinedReceiptPage } from "./components/CombinedReceiptPage"
 import { ViewModal } from "./components/ViewModal"
 import { ViewDetailsPage } from "./components/ViewDetailsPage"
@@ -145,6 +146,7 @@ const menuItems = {
 { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
     { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
     { id: "all-invoices", labelKey: "menu.allInvoices", icon: FileInvoice },
+    { id: "paid-invoices", labelKey: "menu.paidInvoices", icon: FileInvoice },
     { id: "all-receipts", labelKey: "menu.allReceipts", icon: Receipt },
   ],
   tuition: [
@@ -201,6 +203,7 @@ const menuItems = {
     { id: "cashier-payment-report", labelKey: "menu.cashierPaymentReport", icon: FileBarChart },
     { id: "cashier-bank-fee-settings", labelKey: "menu.cashierBankFeeSettings", icon: Settings2 },
     { id: "cashier-acknowledgement", labelKey: "menu.cashierAcknowledgement", icon: FileCheck2 },
+    { id: "paid-invoices", labelKey: "menu.paidInvoices", icon: FileInvoice },
   ],
 }
 
@@ -902,6 +905,9 @@ export default function App() {
 
                     <Route path="/all-invoices" element={
                       <CombinedInvoicePage onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} />
+                    } />
+                    <Route path="/paid-invoices" element={
+                      <PaidInvoicesPage onNavigateToSubPage={navigateToSubPage} onNavigateToView={navigateToViewDetails} />
                     } />
                     <Route path="/all-receipts" element={<CombinedReceiptPage onNavigateToSubPage={navigateToSubPage} />} />
 
