@@ -2,6 +2,7 @@ import { useState } from "react"
 import html2canvas from "html2canvas"
 import { jsPDF } from "jspdf"
 import { format } from "date-fns"
+import { saveAs } from "file-saver"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card, CardContent } from "./ui/card"
@@ -300,12 +301,7 @@ export function CashierReceiptPage() {
     setLoadingStates(prev => ({ ...prev, [`dl-${item.invoiceId}`]: true }))
     try {
       const blob = await generatePdfBlob(item, cashierName, paymentInfo)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `receipt-${item.sid}-${item.receiptNo}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
+      saveAs(blob, `receipt-${item.sid}-${item.receiptNo}.pdf`)
     } finally {
       setLoadingStates(prev => ({ ...prev, [`dl-${item.invoiceId}`]: false }))
     }
