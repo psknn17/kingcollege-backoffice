@@ -111,6 +111,7 @@ export function CashierPaymentReport() {
             Number((student.subtotal + studentCardFee).toFixed(2)),
             rec.paymentInfo?.bank || "",
             rec.paymentInfo?.remark || "",
+            rec.paymentInfo?.paymentMethod || "",
           ])
         } else {
           for (const inv of invs) {
@@ -141,6 +142,7 @@ export function CashierPaymentReport() {
               Number((netAmt + invCardFee).toFixed(2)),
               rec.paymentInfo?.bank || "",
               rec.paymentInfo?.remark || "",
+              rec.paymentInfo?.paymentMethod || "",
             ])
           }
         }
@@ -171,6 +173,7 @@ export function CashierPaymentReport() {
       t("cashier.report.col.receivedAmount"),
       t("cashier.report.col.bank"),
       t("cashier.report.col.remark"),
+      t("cashier.report.col.paymentMethod"),
     ]
 
     const numRows = rows as (string | number)[][]
@@ -182,7 +185,7 @@ export function CashierPaymentReport() {
 
     const totalRow: (string | number)[] = [
       t("cashier.report.total"), "", "", "", "", "", "",
-      totalInvoice, totalOverpayment, totalNet, totalFee, "", totalReceived, "", "",
+      totalInvoice, totalOverpayment, totalNet, totalFee, "", totalReceived, "", "", "",
     ]
 
     const aoa: (string | number)[][] = [
@@ -195,7 +198,7 @@ export function CashierPaymentReport() {
     ]
 
     const ws = XLSX.utils.aoa_to_sheet(aoa)
-    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } }]
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 15 } }]
     ws["!cols"] = headers.map((h, i) => ({
       wch: Math.min(
         Math.max(h.length, ...rows.map(r => String(r[i] ?? "").length)) + 2,
@@ -267,12 +270,13 @@ export function CashierPaymentReport() {
                 <TableHead align="right">{t("cashier.report.col.receivedAmount")}</TableHead>
                 <TableHead align="left">{t("cashier.report.col.bank")}</TableHead>
                 <TableHead align="left">{t("cashier.report.col.remark")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.paymentMethod")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center text-muted-foreground py-12 text-sm">
+                  <TableCell colSpan={13} className="text-center text-muted-foreground py-12 text-sm">
                     No records in selected period.
                   </TableCell>
                 </TableRow>
@@ -296,6 +300,7 @@ export function CashierPaymentReport() {
                   </TableCell>
                   <TableCell className="text-sm">{row[13]}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{row[14]}</TableCell>
+                  <TableCell className="text-sm">{row[15]}</TableCell>
                 </TableRow>
               ))}
               {rows.length > 0 && (
@@ -310,7 +315,7 @@ export function CashierPaymentReport() {
                   <TableCell align="right" className="font-bold text-sm py-3">
                     ฿{rows.reduce((s, r) => s + (typeof r[12] === "number" ? r[12] : 0), 0).toLocaleString()}
                   </TableCell>
-                  <TableCell colSpan={2} />
+                  <TableCell colSpan={3} />
                 </TableRow>
               )}
             </TableBody>
