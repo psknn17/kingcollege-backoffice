@@ -61,8 +61,6 @@ function buildCashierReceiptHtml(params: {
   const grade = rawGrade.replace(/^year\s*/i, "Year ")
 
   const received = item.invoiceAmount + item.cardFee
-  const overpaymentAmt = paymentInfo.overpaymentAmount ?? 0
-  const grandReceived = received + overpaymentAmt
   const cardLabel = [paymentInfo.bank.toUpperCase(), paymentInfo.cardType].filter(Boolean).join(" ")
 
   return `<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.5;padding:40px 52px;width:794px;background:white;color:black">
@@ -129,21 +127,15 @@ function buildCashierReceiptHtml(params: {
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(received)}</td>
         </tr>
         <tr>
-          <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
-        </tr>
-        <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.invoiceAmount)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.cardFee)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(grandReceived)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(received)}</td>
         </tr>
         <tr style="font-weight:bold">
           <td colspan="2" style="border:1px solid black;padding:5px 8px">GRAND TOTAL</td>
           <td colspan="3" style="border:1px solid black;padding:5px 8px;text-align:center;font-style:italic;text-transform:uppercase;font-size:11px">
-            ${numberToWords(grandReceived)}
+            ${numberToWords(received)}
           </td>
         </tr>
       </tbody>
@@ -152,7 +144,6 @@ function buildCashierReceiptHtml(params: {
     <!-- Notes -->
     <div style="font-size:10px;margin-bottom:10px;line-height:1.9">
       <p>* Credit card processing fee payable to Bank</p>
-      <p>** Please note that any overpayments amount is non-refundable and will be credited against future school fee invoices.</p>
     </div>
 
     <!-- Credit card info -->
