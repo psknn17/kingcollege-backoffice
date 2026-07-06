@@ -138,7 +138,7 @@ function buildCashierReceiptHtml(params: {
           <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overFee)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt + overFee)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right"></td>
         </tr>` : ""}
         <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
