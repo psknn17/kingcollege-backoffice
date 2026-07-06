@@ -63,7 +63,8 @@ Record เก่า (หลาย invoice ใน `studentData[].invoices[]`) ย
 - เปลี่ยน loop จาก per student → per student × per invoice
 - เรียก `generateReceiptNo()` 1 ครั้งต่อ invoice
 - คำนวณ `cardFee` แบบ proportional: `cardFeeTotal * invoiceAmt / grandTotal`
-- invoice สุดท้ายรับ remainder เพื่อป้องกัน rounding drift
+- invoice สุดท้าย (global — นับรวมทุก student ทุก invoice) รับ remainder เพื่อป้องกัน rounding drift
+- overpayment amount → กำหนดให้ invoice แรกของ student แรกเท่านั้น (เหมือนของเดิม)
 - คืนค่า `Record<invoiceId, receiptNo>` ให้ `CashierReceiptPage`
 
 **Navigation params ที่ส่งไป CashierReceiptPage**

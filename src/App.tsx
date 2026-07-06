@@ -974,9 +974,9 @@ export default function App() {
                     {/* Profile */}
                     <Route path="/user-profile" element={<UserProfile />} />
 
-                    {/* Fallback - Redirect to Dashboard if no path or invalid path */}
-                    <Route path="/" element={<Navigate to="/tuition-dashboard" replace />} />
-                    <Route path="*" element={<Navigate to="/tuition-dashboard" replace />} />
+                    {/* Fallback - Redirect to Dashboard based on role */}
+                    <Route path="/" element={<Navigate to={user?.role === "cashier" ? "/cashier-dashboard" : user?.role === "approver" ? "/approval-queue" : "/tuition-dashboard"} replace />} />
+                    <Route path="*" element={<Navigate to={user?.role === "cashier" ? "/cashier-dashboard" : user?.role === "approver" ? "/approval-queue" : "/tuition-dashboard"} replace />} />
                   </Routes>
                 </div>
               </main>
