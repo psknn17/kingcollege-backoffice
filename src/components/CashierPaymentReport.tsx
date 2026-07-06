@@ -245,7 +245,7 @@ export function CashierPaymentReport() {
     <div style={{ alignSelf: "center", width: "100%", maxWidth: "480px" }}>
       <h2 className="text-xl font-bold mb-4">{t("cashier.report.title")}</h2>
 
-      <Card className="rounded-xl border border-gray-200 shadow-sm">
+      <Card className="rounded-xl border-0 shadow-none">
         <CardContent className="pt-5 pb-5 px-5 space-y-4">
           {/* Select Period */}
           <div>

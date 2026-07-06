@@ -47,7 +47,7 @@ export interface PaymentInfo {
 }
 
 // ── Receipt HTML builder — matches "Acknowledgement of School Fee Payment" template ──
-function buildCashierReceiptHtml(params: {
+export function buildCashierReceiptHtml(params: {
   item: InvoiceReceiptItem
   cashierName: string
   paymentInfo: PaymentInfo
@@ -189,7 +189,7 @@ function buildCashierReceiptHtml(params: {
 }
 
 // ── Render HTML string → HTMLCanvasElement via hidden iframe ──
-async function renderHtmlToCanvas(html: string): Promise<HTMLCanvasElement> {
+export async function renderHtmlToCanvas(html: string): Promise<HTMLCanvasElement> {
   const iframe = document.createElement("iframe")
   iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:none"
   document.body.appendChild(iframe)
@@ -244,7 +244,9 @@ export function CashierReceiptPage() {
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewBlobUrls, setPreviewBlobUrls] = useState<Record<string, string>>({})
+  const [previewItem, setPreviewItem] = useState<InvoiceReceiptItem | null>(null)
   const receiptNumbers: Record<string, string> = subPageParams?.receiptNos ?? {}
+  const acknowledgeNumbers: Record<string, string> = subPageParams?.acknowledgeNos ?? {}
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
 
   const paymentId: string = subPageParams?.paymentId ?? "PAY-UNKNOWN"
@@ -281,7 +283,7 @@ export function CashierReceiptPage() {
         invoiceId: inv.id,
         invoiceNumber: inv.invoiceNumber || inv.id || "-",
         invoiceAmount: invAmt,
-        receiptNo: receiptNumbers[inv.id] ?? `R-CC-${new Date().getFullYear()}-00001`,
+        receiptNo: acknowledgeNumbers[inv.id] ?? receiptNumbers[inv.id] ?? `R-CC-${new Date().getFullYear()}-00001`,
         cardFee: fee,
         overpaymentAmount: idx === 0 ? globalOverpayment : 0,
       })
@@ -290,6 +292,7 @@ export function CashierReceiptPage() {
   })()
 
   async function handleViewReceipt(item: InvoiceReceiptItem) {
+    setPreviewItem(item)
     if (previewBlobUrls[item.invoiceId]) {
       setPreviewUrl(previewBlobUrls[item.invoiceId])
       return
@@ -297,7 +300,8 @@ export function CashierReceiptPage() {
     setLoadingStates(prev => ({ ...prev, [item.invoiceId]: true }))
     try {
       const blob = await generatePdfBlob(item, cashierName, paymentInfo)
-      const url = URL.createObjectURL(blob)
+      const file = new File([blob], `${item.receiptNo}.pdf`, { type: "application/pdf" })
+      const url = URL.createObjectURL(file)
       setPreviewBlobUrls(prev => ({ ...prev, [item.invoiceId]: url }))
       setPreviewUrl(url)
     } finally {
@@ -309,7 +313,7 @@ export function CashierReceiptPage() {
     setLoadingStates(prev => ({ ...prev, [`dl-${item.invoiceId}`]: true }))
     try {
       const blob = await generatePdfBlob(item, cashierName, paymentInfo)
-      saveAs(blob, `receipt-${item.sid}-${item.receiptNo}.pdf`)
+      saveAs(blob, `${item.receiptNo}.pdf`)
     } finally {
       setLoadingStates(prev => ({ ...prev, [`dl-${item.invoiceId}`]: false }))
     }
@@ -406,14 +410,25 @@ export function CashierReceiptPage() {
         <Card className="self-start" style={{ flex: 2 }}>
           <CardContent className="p-6 space-y-2">
             <h3 className="text-base font-semibold">{t("cashier.receiptPdfSection")}</h3>
-            {previewUrl ? (
+            {previewUrl ? (<>
               <iframe
                 src={previewUrl}
                 className="w-full rounded border"
                 style={{ height: "600px" }}
                 title="Receipt PDF"
               />
-            ) : (
+              {previewItem && (
+                <Button
+                  className="w-full gap-2"
+                  onClick={() => handleDownloadReceipt(previewItem)}
+                  disabled={!!loadingStates[`dl-${previewItem.invoiceId}`]}
+                >
+                  {loadingStates[`dl-${previewItem.invoiceId}`]
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />{t("cashier.downloadingPdf")}</>
+                    : <>{t("cashier.downloadReceipt")}</>}
+                </Button>
+              )}
+            </>) : (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 {t("cashier.receiptPdfHint")}
               </p>

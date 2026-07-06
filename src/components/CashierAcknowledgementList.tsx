@@ -6,12 +6,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { CalendarIcon, Search, Check } from "lucide-react"
+import { CalendarIcon, Search, Check, FileDown, Loader2 } from "lucide-react"
+import JSZip from "jszip"
+import { saveAs } from "file-saver"
 import { cn } from "./ui/utils"
 import { format, endOfDay } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { generatePdfBlob, type InvoiceReceiptItem, type PaymentInfo } from "@/components/CashierReceiptPage"
 
 type StudentEntry = {
   sid: string; name: string; guardian: string; grade: string; subtotal: number; invoices: any[]
@@ -68,13 +72,16 @@ function firstReceiptNo(rec: AckRecord) {
   return Object.values(rec.receiptNos)[0] ?? "-"
 }
 
+
 export function CashierAcknowledgementList() {
   const { t } = useLanguage()
+  const { user } = useAuth()
   const [records, setRecords] = useState<AckRecord[]>(loadRecords)
   const [search, setSearch] = useState("")
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   const [issueDialogOpen, setIssueDialogOpen] = useState(false)
   const [issueDate, setIssueDate] = useState<Date>(new Date())
@@ -171,6 +178,81 @@ export function CashierAcknowledgementList() {
     setIssueDialogOpen(false)
   }
 
+  async function handleDownloadPdf(recs: AckRecord[]) {
+    if (recs.length === 0) return
+    setIsGeneratingPdf(true)
+    const cashierName = user?.name ?? "Cashier"
+    const pdfBlobs: { name: string; blob: Blob }[] = []
+    try {
+      for (const rec of recs) {
+        const totalSubtotal = rec.studentData.reduce((s, st) => s + st.subtotal, 0)
+        const totalFee = rec.paymentInfo.cardFee
+        const globalOverpayment = Math.max(0, (rec.paymentInfo.chargeAmount ?? 0) - totalSubtotal)
+        const paymentInfo: PaymentInfo = {
+          bank: rec.paymentInfo.bank,
+          cardType: "",
+          paymentMethod: rec.paymentInfo.paymentMethod,
+          chargeAmount: rec.paymentInfo.chargeAmount,
+          edcAmount: rec.paymentInfo.edcAmount,
+          remark: rec.paymentInfo.remark,
+        }
+
+        const flatInvs = rec.studentData.flatMap(st =>
+          (st.invoices ?? []).map((inv: any) => ({ st, inv }))
+        )
+
+        let allocated = 0
+        const items: InvoiceReceiptItem[] = flatInvs.length > 0
+          ? flatInvs.map(({ st, inv }, idx) => {
+              const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+              const isLast = idx === flatInvs.length - 1
+              const fee = totalSubtotal > 0
+                ? isLast ? Number((totalFee - allocated).toFixed(2)) : Number((totalFee * invAmt / totalSubtotal).toFixed(2))
+                : 0
+              allocated += fee
+              return {
+                sid: st.sid,
+                name: st.name,
+                guardian: st.guardian,
+                grade: st.grade ?? "-",
+                invoiceId: inv.id,
+                invoiceNumber: inv.invoiceNumber || inv.id || "-",
+                invoiceAmount: invAmt,
+                receiptNo: rec.acknowledgeNo ?? "-",
+                cardFee: fee,
+                overpaymentAmount: idx === 0 ? globalOverpayment : 0,
+              }
+            })
+          : rec.studentData.slice(0, 1).map(st => ({
+              sid: st.sid,
+              name: st.name,
+              guardian: st.guardian,
+              grade: st.grade ?? "-",
+              invoiceId: rec.id,
+              invoiceNumber: rec.acknowledgeNo ?? "-",
+              invoiceAmount: st.subtotal,
+              receiptNo: rec.acknowledgeNo ?? "-",
+              cardFee: totalFee,
+              overpaymentAmount: globalOverpayment,
+            }))
+
+        const blob = await generatePdfBlob(items[0], cashierName, paymentInfo)
+        pdfBlobs.push({ name: `${rec.acknowledgeNo || rec.id}.pdf`, blob })
+      }
+
+      if (pdfBlobs.length === 1) {
+        saveAs(pdfBlobs[0].blob, pdfBlobs[0].name)
+      } else {
+        const zip = new JSZip()
+        for (const { name, blob } of pdfBlobs) zip.file(name, blob)
+        const zipBlob = await zip.generateAsync({ type: "blob" })
+        saveAs(zipBlob, `Acknowledgements_${format(new Date(), "yyyyMMdd")}.zip`)
+      }
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -183,13 +265,13 @@ export function CashierAcknowledgementList() {
 
       {/* Search + bulk actions */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t("cashier.ackSearchPlaceholder")}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
-            className="pl-9"
+            className="pl-9 h-9 w-72"
           />
         </div>
         {selected.size > 0 && (
@@ -201,6 +283,17 @@ export function CashierAcknowledgementList() {
                 {t("cashier.ackIssueDateBtn")}
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isGeneratingPdf}
+              onClick={() => handleDownloadPdf(records.filter(r => selected.has(r.id)))}
+            >
+              {isGeneratingPdf
+                ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                : <FileDown className="h-4 w-4 mr-1.5" />}
+              Download PDF
+            </Button>
           </div>
         )}
       </div>
@@ -213,10 +306,10 @@ export function CashierAcknowledgementList() {
               <TableHead align="center" className="w-10">
                 <div
                   onClick={toggleAll}
-                  className={cn(
-                    "w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto",
-                    allPageSelected ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white hover:border-slate-400"
-                  )}
+                  className="w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto"
+                  style={allPageSelected
+                    ? { backgroundColor: "#4f46e5", borderColor: "#4f46e5", color: "#fff" }
+                    : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
                 >
                   {allPageSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                 </div>
@@ -241,14 +334,14 @@ export function CashierAcknowledgementList() {
                 </TableCell>
               </TableRow>
             ) : pageRecords.map(rec => (
-              <TableRow key={rec.id} className={selected.has(rec.id) ? "bg-blue-50/50" : ""}>
+              <TableRow key={rec.id} style={selected.has(rec.id) ? { backgroundColor: "#eff6ff" } : {}}>
                 <TableCell align="center">
                   <div
                     onClick={() => toggleOne(rec.id)}
-                    className={cn(
-                      "w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto",
-                      selected.has(rec.id) ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white hover:border-slate-400"
-                    )}
+                    className="w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto"
+                    style={selected.has(rec.id)
+                      ? { backgroundColor: "#4f46e5", borderColor: "#4f46e5", color: "#fff" }
+                      : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
                   >
                     {selected.has(rec.id) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                   </div>
@@ -270,10 +363,16 @@ export function CashierAcknowledgementList() {
                 </TableCell>
                 <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
                 <TableCell align="center" className="text-sm">
-                  {rec.studentData[0]?.invoices[0]?.term || "-"}
+                  {rec.studentData[0]?.invoices[0]?.term
+                    ? (rec.studentData[0].invoices[0].term.match(/Term\s*\d+/i)?.[0] ?? rec.studentData[0].invoices[0].term)
+                    : "-"}
                 </TableCell>
                 <TableCell align="right" className="text-sm font-medium">{fmt(grandTotal(rec))}</TableCell>
-                <TableCell align="center" className="text-sm">{rec.paymentInfo.paymentMethod}</TableCell>
+                <TableCell align="center" className="text-sm">
+                  {rec.paymentInfo.paymentMethod === "full" ? t("cashier.paymentFull")
+                    : rec.paymentInfo.paymentMethod === "installment" ? t("cashier.paymentInstallment")
+                    : rec.paymentInfo.paymentMethod}
+                </TableCell>
                 <TableCell align="center" className="text-sm">
                   {format(new Date(rec.paymentDate), "dd MMM yyyy")}
                 </TableCell>
