@@ -62,8 +62,13 @@ function buildCashierReceiptHtml(params: {
   const grade = rawGrade.replace(/^year\s*/i, "Year ")
 
   const overpaymentAmt = item.overpaymentAmount ?? 0
-  const received = item.invoiceAmount + item.cardFee
-  const grandReceived = received + overpaymentAmt
+  const totalItemCharge = item.invoiceAmount + overpaymentAmt
+  const invoiceFee = totalItemCharge > 0
+    ? Number((item.cardFee * item.invoiceAmount / totalItemCharge).toFixed(2))
+    : item.cardFee
+  const overFee = Number((item.cardFee - invoiceFee).toFixed(2))
+  const received = item.invoiceAmount + invoiceFee
+  const grandReceived = received + (overpaymentAmt > 0 ? overpaymentAmt + overFee : 0)
   const cardLabel = [paymentInfo.bank.toUpperCase(), paymentInfo.cardType].filter(Boolean).join(" ")
 
   return `<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.5;padding:40px 52px;width:794px;background:white;color:black">
@@ -126,18 +131,18 @@ function buildCashierReceiptHtml(params: {
           <td style="border:1px solid black;padding:5px 8px;text-align:center">1</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:center">${item.invoiceNumber}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(item.invoiceAmount)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(item.cardFee)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(invoiceFee)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(received)}</td>
         </tr>
         ${overpaymentAmt > 0 ? `<tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">0.00</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overFee)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt + overFee)}</td>
         </tr>` : ""}
         <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.invoiceAmount)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.invoiceAmount + overpaymentAmt)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.cardFee)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(grandReceived)}</td>
         </tr>
