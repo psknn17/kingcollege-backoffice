@@ -133,6 +133,15 @@ export function CashierPaymentPage() {
     return `R-CC-${year}-${String(next).padStart(5, "0")}`
   }
 
+  function generateAcknowledgeNo(): string {
+    const year = new Date().getFullYear()
+    const runningKey = `ack_running_no_${year}`
+    const current = parseInt(localStorage.getItem(runningKey) || "0", 10)
+    const next = current + 1
+    localStorage.setItem(runningKey, next.toString())
+    return `R-CC-${year}-${String(next).padStart(5, "0")}`
+  }
+
   function markInvoicesAsPaid(selectedIds: Set<string>, paymentId: string, bank: string) {
     for (const key of INVOICE_KEYS) {
       const raw = localStorage.getItem(key)
@@ -154,67 +163,69 @@ export function CashierPaymentPage() {
     paymentMethodVal: string,
     cardFeeVal: number,
     remark: string,
-    overInvoiceAmt: number
+    overInvoiceAmt: number,
+    feeRateVal: number
   ): Record<string, string> {
     const receiptNos: Record<string, string> = {}
-    const grandTotal = stdData.reduce((s, d) => s + d.subtotal, 0)
 
     const now = new Date()
     const month = now.getMonth() + 1
     const acYearStart = month >= 8 ? now.getFullYear() : now.getFullYear() - 1
 
-    // Flatten to (student, invoice) pairs — 1 AckRecord per invoice
-    const pairs = stdData.flatMap(({ sid, student, invoices, guardian }) =>
-      (invoices ?? []).map((inv: any) => ({ sid, student, inv, guardian }))
-    )
+    const newRecords: object[] = []
 
-    let allocatedFee = 0
-    let isFirstInvoice = true
+    for (let sIdx = 0; sIdx < stdData.length; sIdx++) {
+      const { sid, student, invoices, guardian, subtotal } = stdData[sIdx]
+      const pOver = sIdx === 0 ? overInvoiceAmt : 0
+      const studentFee = Number(((subtotal + pOver) * feeRateVal / 100).toFixed(2))
+      let allocatedStudentFee = 0
+      const invList = invoices ?? []
 
-    const newRecords = pairs.map(({ sid, student, inv, guardian }, idx) => {
-      const invAmt: number = getAmount(inv)
-      const isLast = idx === pairs.length - 1
+      for (let iIdx = 0; iIdx < invList.length; iIdx++) {
+        const inv = invList[iIdx]
+        const invAmt: number = getAmount(inv)
+        const isLastInv = iIdx === invList.length - 1
+        const pFee = subtotal > 0
+          ? isLastInv
+            ? Number((studentFee - allocatedStudentFee).toFixed(2))
+            : Number((studentFee * invAmt / subtotal).toFixed(2))
+          : 0
+        allocatedStudentFee += pFee
 
-      const pFee = grandTotal > 0
-        ? isLast
-          ? Number((cardFeeVal - allocatedFee).toFixed(2))
-          : Number((cardFeeVal * invAmt / grandTotal).toFixed(2))
-        : 0
-      allocatedFee += pFee
+        const pInvOver = sIdx === 0 && iIdx === 0 ? overInvoiceAmt : 0
+        const pCharge = invAmt + pInvOver
+        const receiptNo = generateReceiptNo()
+        const acknowledgeNo = generateAcknowledgeNo()
+        receiptNos[inv.id] = receiptNo
 
-      const pOver = isFirstInvoice ? overInvoiceAmt : 0
-      isFirstInvoice = false
-
-      const pCharge = invAmt + pOver
-      const receiptNo = generateReceiptNo()
-      receiptNos[inv.id] = receiptNo
-
-      return {
-        id: crypto.randomUUID(),
-        status: "pending" as const,
-        receiptNos: { [inv.id]: receiptNo },
-        paymentDate: now.toISOString(),
-        paymentId,
-        studentData: [{
-          sid,
-          name: student ? `${student.firstName} ${student.lastName}` : sid,
-          guardian,
-          grade: student?.gradeLevel ?? "-",
-          subtotal: invAmt,
-          invoices: [inv],
-        }],
-        paymentInfo: {
-          bank,
-          paymentMethod: paymentMethodVal,
-          chargeAmount: pCharge,
-          edcAmount: pCharge + pFee,
-          cardFee: pFee,
-          remark,
-        },
-        schoolYear: `${acYearStart}/${acYearStart + 1}`,
-        createdAt: now.toISOString(),
+        newRecords.push({
+          id: crypto.randomUUID(),
+          acknowledgeNo,
+          status: "pending" as const,
+          receiptNos: { [inv.id]: receiptNo },
+          paymentDate: now.toISOString(),
+          paymentId,
+          studentData: [{
+            sid,
+            name: student ? `${student.firstName} ${student.lastName}` : sid,
+            guardian,
+            grade: student?.gradeLevel ?? "-",
+            subtotal: invAmt,
+            invoices: [inv],
+          }],
+          paymentInfo: {
+            bank,
+            paymentMethod: paymentMethodVal,
+            chargeAmount: pCharge,
+            edcAmount: pCharge + pFee,
+            cardFee: pFee,
+            remark,
+          },
+          schoolYear: `${acYearStart}/${acYearStart + 1}`,
+          createdAt: now.toISOString(),
+        })
       }
-    })
+    }
 
     const existing = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
     localStorage.setItem("cashier_acknowledgements", JSON.stringify([...newRecords, ...existing]))
@@ -289,7 +300,7 @@ export function CashierPaymentPage() {
       // Save acknowledgement (pending)
       const receiptNos = savePendingAcknowledgement(
         studentData, paymentId, selectedBank, paymentMethod,
-        cardFee, remark, overInvoice
+        cardFee, remark, overInvoice, feeRate
       )
 
       navigateToSubPage("cashier-receipt", {
@@ -595,8 +606,8 @@ export function CashierPaymentPage() {
 
           {/* Per-student breakdown */}
           {studentData.map(({ sid, student, subtotal }, idx) => {
-            const pFee = grandTotal > 0 ? Number((cardFee * subtotal / grandTotal).toFixed(2)) : 0
             const pOver = idx === 0 ? overInvoice : 0
+            const pFee = Number(((subtotal + pOver) * feeRate / 100).toFixed(2))
             return (
               <div key={sid} style={{ borderRadius: "12px", border: "1px solid #e2e8f0", padding: "18px 20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
