@@ -10,7 +10,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; role?: string; error?: string }>
   logout: () => void
   selectRole: (roleId: string) => void
   updateProfile: (data: { name?: string; email?: string; phone?: string }) => void
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; role?: string; error?: string }> => {
     try {
       // 1. Check for Default Admin
        console.log('check 1',DEFAULT_ADMIN)
@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setNeedsRoleSelection(false)
         safeSaveToStorage(STORAGE_KEY, JSON.stringify(adminUser))
         localStorage.removeItem(ROLE_SELECTION_KEY)
-        return { success: true }
+        return { success: true, role: "super_admin" }
       }
 
       // 2. Check for created users in localStorage
@@ -224,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setNeedsRoleSelection(false)
           safeSaveToStorage(STORAGE_KEY, JSON.stringify(userData))
           localStorage.removeItem(ROLE_SELECTION_KEY)
-          return { success: true }
+          return { success: true, role: role }
         }
       }
 

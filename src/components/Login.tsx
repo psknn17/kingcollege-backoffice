@@ -105,9 +105,18 @@ export function Login() {
       if (result.success) {
         toast.success("Login successful!")
         logActivity({ action: "Login", module: "Authentication", detail: `User ${email} logged in successfully` })
-        // Check for stored lastPath, otherwise default to "from" or dashboard
+        
+        // Determine default path based on role
+        let defaultPath = "/tuition-dashboard"
+        if (result.role === "cashier") {
+          defaultPath = "/cashier-dashboard"
+        } else if (result.role === "approver") {
+          defaultPath = "/approval-queue"
+        }
+
+        // Check for stored lastPath, otherwise default to "from" or role-based defaultPath
         const lastPath = localStorage.getItem('lastPath')
-        const from = lastPath || (location.state as any)?.from || "/tuition-dashboard"
+        const from = lastPath || (location.state as any)?.from || defaultPath
         
         // Clear lastPath so it doesn't persist across fresh logins
         localStorage.removeItem('lastPath')
