@@ -172,7 +172,7 @@ export function CashierPaymentPage() {
     let isFirstInvoice = true
 
     const newRecords = pairs.map(({ sid, student, inv, guardian }, idx) => {
-      const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+      const invAmt: number = getAmount(inv)
       const isLast = idx === pairs.length - 1
 
       const pFee = grandTotal > 0
