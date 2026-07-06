@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
 import { Button } from "@/components/ui/button"
@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Download } from "lucide-react"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -64,6 +65,8 @@ export function CashierPaymentReport() {
     }
   }
 
+  const rows = useMemo(() => buildRows(), [startDate, endDate]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function buildRows() {
     const ackRecords: any[] = (() => {
       try { return JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]") } catch { return [] }
@@ -96,7 +99,7 @@ export function CashierPaymentReport() {
             fmtDate(rec.paymentDate),
             fmtTime(rec.paymentDate),
             "",
-            rec.receiptNos?.[student.sid] || "",
+            rec.acknowledgeNo || "",
             fmtDate(rec.paymentDate),
             student.name || "",
             student.sid || "",
@@ -126,7 +129,7 @@ export function CashierPaymentReport() {
               fmtDate(rec.paymentDate),
               fmtTime(rec.paymentDate),
               inv.invoiceNumber || inv.id || "",
-              rec.receiptNos?.[student.sid] || "",
+              rec.acknowledgeNo || "",
               fmtDate(inv.dueDate || inv.issueDate || rec.paymentDate),
               student.name || "",
               student.sid || "",
@@ -213,83 +216,107 @@ export function CashierPaymentReport() {
   const canExport = !!startDate && !!endDate
 
   return (
-    <div className="space-y-6 max-w-3xl w-full mx-auto pt-8">
-      <h1 className="text-2xl font-semibold">{t("cashier.report.title")}</h1>
+    <div className="space-y-6 w-full">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
+        <div>
+          <h2 className="text-xl font-semibold">{t("cashier.report.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">Export payment report as Excel</p>
+        </div>
+      </div>
 
+      {/* Filters + Export */}
       <Card>
-        <CardContent className="pt-8 pb-8 px-8 space-y-6">
-          {/* Quick filters */}
-          <div>
-            <p className="text-base font-medium mb-4">{t("cashier.report.selectPeriod")}</p>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setQuickFilter("today")}>{t("cashier.report.today")}</Button>
-              <Button variant="outline" onClick={() => setQuickFilter("week")}>{t("cashier.report.thisWeek")}</Button>
-              <Button variant="outline" onClick={() => setQuickFilter("month")}>{t("cashier.report.thisMonth")}</Button>
+        <CardContent className="pt-6 pb-6 px-6 space-y-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="space-y-1.5">
+              <Label>{t("cashier.report.startDate")}</Label>
+              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40" />
             </div>
-          </div>
-
-          {/* Date range */}
-          <div className="space-y-2">
-            <Label>{t("cashier.report.startDate")}</Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("cashier.report.endDate")}</Label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full"
-            />
-          </div>
-
-          {/* Report type */}
-          <div className="space-y-2">
-            <Label>{t("cashier.report.reportType")}</Label>
-            <Select value={reportType} onValueChange={setReportType}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">{t("cashier.report.daily")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Export button */}
-          <Button onClick={exportExcel} disabled={!canExport} className="w-full flex items-center justify-center gap-2 mt-2">
-            <Download className="w-4 h-4" />
-            {t("cashier.report.exportBtn")}
-          </Button>
-
-          {/* Report field list */}
-          <div className="pt-4">
-            <p className="font-medium mb-4">{t("cashier.report.fieldsLabel")}</p>
-            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-              <li>{t("cashier.report.col.receiptDate")}</li>
-              <li>{t("cashier.report.col.time")}</li>
-              <li>{t("cashier.report.col.invoiceNo")}</li>
-              <li>{t("cashier.report.col.acknowledgementNo")}</li>
-              <li>{t("cashier.report.col.dueDate")}</li>
-              <li>{t("cashier.report.col.studentName")}</li>
-              <li>{t("cashier.report.col.studentId")}</li>
-              <li>{t("cashier.report.col.invoiceAmount")}</li>
-              <li>{t("cashier.report.col.overpayment")}</li>
-              <li>{t("cashier.report.col.netAmount")}</li>
-              <li>{t("cashier.report.col.cardFee")}</li>
-              <li>{t("cashier.report.col.cardFeeRate")}</li>
-              <li>{t("cashier.report.col.receivedAmount")}</li>
-              <li>{t("cashier.report.col.bank")}</li>
-              <li>{t("cashier.report.col.remark")}</li>
-            </ul>
+            <div className="space-y-1.5">
+              <Label>{t("cashier.report.endDate")}</Label>
+              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setQuickFilter("today")}>{t("cashier.report.today")}</Button>
+              <Button variant="outline" size="sm" onClick={() => setQuickFilter("week")}>{t("cashier.report.thisWeek")}</Button>
+              <Button variant="outline" size="sm" onClick={() => setQuickFilter("month")}>{t("cashier.report.thisMonth")}</Button>
+            </div>
+            <Button onClick={exportExcel} disabled={!canExport} className="gap-2 ml-auto">
+              <Download className="w-4 h-4" />
+              {t("cashier.report.exportBtn")}
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Data table */}
+      <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden bg-white">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead align="left">{t("cashier.report.col.receiptDate")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.time")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.invoiceNo")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.acknowledgementNo")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.dueDate")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.studentName")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.studentId")}</TableHead>
+                <TableHead align="right">{t("cashier.report.col.invoiceAmount")}</TableHead>
+                <TableHead align="right">{t("cashier.report.col.cardFee")}</TableHead>
+                <TableHead align="right">{t("cashier.report.col.receivedAmount")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.bank")}</TableHead>
+                <TableHead align="left">{t("cashier.report.col.remark")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={12} className="text-center text-muted-foreground py-12 text-sm">
+                    No records in selected period.
+                  </TableCell>
+                </TableRow>
+              ) : rows.map((row, i) => (
+                <TableRow key={i}>
+                  <TableCell className="text-sm">{row[0]}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{row[1]}</TableCell>
+                  <TableCell className="font-mono text-xs">{row[2]}</TableCell>
+                  <TableCell className="font-mono text-xs">{row[3]}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{row[4]}</TableCell>
+                  <TableCell className="text-sm font-medium">{row[5]}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{row[6]}</TableCell>
+                  <TableCell align="right" className="text-sm font-medium">
+                    {typeof row[7] === "number" ? `฿${row[7].toLocaleString()}` : row[7]}
+                  </TableCell>
+                  <TableCell align="right" className="text-sm">
+                    {typeof row[10] === "number" ? `฿${row[10].toLocaleString()}` : row[10]}
+                  </TableCell>
+                  <TableCell align="right" className="text-sm font-semibold">
+                    {typeof row[12] === "number" ? `฿${row[12].toLocaleString()}` : row[12]}
+                  </TableCell>
+                  <TableCell className="text-sm">{row[13]}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{row[14]}</TableCell>
+                </TableRow>
+              ))}
+              {rows.length > 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="font-semibold text-sm py-3">{t("cashier.report.total")}</TableCell>
+                  <TableCell align="right" className="font-bold text-sm py-3">
+                    ฿{rows.reduce((s, r) => s + (typeof r[7] === "number" ? r[7] : 0), 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell align="right" className="font-bold text-sm py-3">
+                    ฿{rows.reduce((s, r) => s + (typeof r[10] === "number" ? r[10] : 0), 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell align="right" className="font-bold text-sm py-3">
+                    ฿{rows.reduce((s, r) => s + (typeof r[12] === "number" ? r[12] : 0), 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </div>
   )
 }
