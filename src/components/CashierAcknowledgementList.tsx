@@ -78,7 +78,7 @@ export function CashierAcknowledgementList() {
       chargeAmount: rec.paymentInfo.chargeAmount,
       edcAmount: rec.paymentInfo.edcAmount,
       remark: rec.paymentInfo.remark,
-      overpaymentAmount: Math.max(0, rec.paymentInfo.chargeAmount - (rec.studentData[0]?.subtotal ?? 0)),
+      overpaymentAmount: Math.max(0, rec.paymentInfo.chargeAmount - rec.studentData.reduce((s, st) => s + st.subtotal, 0)),
     }
   }
 
@@ -112,42 +112,51 @@ export function CashierAcknowledgementList() {
   const handleIssue = () => {
     if (!issueTarget) return
 
-    const item = makeInvoiceItem(issueTarget)
-    const received = item.invoiceAmount + item.cardFee
+    const totalSubtotal = issueTarget.studentData.reduce((s, st) => s + st.subtotal, 0)
+    const cardFeeTotal = issueTarget.paymentInfo.cardFee
 
-    const newReceiptRecord = {
-      id: crypto.randomUUID(),
-      receiptNo: item.receiptNo,
-      receiptDate: officialDate.toISOString(),
-      clientType: "internal",
-      clientNo: item.sid,
-      clientName: item.name,
-      contactName: item.guardian,
-      yearGroup: item.grade,
-      schoolYear: issueTarget.schoolYear,
-      totalAmount: received,
-      receivedAmount: received,
-      creditNoteTotal: 0,
-      netPayableAmount: received,
-      overpaymentAmount: 0,
-      paymentMethod: "Credit Card",
-      bankName: issueTarget.paymentInfo.bank,
-      cardType: "",
-      transactionFeeAmount: item.cardFee,
-      status: "generated",
-      createdAt: new Date().toISOString(),
-      invoices: [{
-        id: item.invoiceId,
-        invoiceNo: item.invoiceNumber,
-        invoiceDate: issueTarget.studentData[0]?.invoices[0]?.issueDate ?? new Date().toISOString(),
-        invoiceAmount: item.invoiceAmount,
+    const newReceiptRecords = issueTarget.studentData.map(student => {
+      const pFee = totalSubtotal > 0
+        ? Number((cardFeeTotal * student.subtotal / totalSubtotal).toFixed(2))
+        : 0
+      const received = student.subtotal + pFee
+      return {
+        id: crypto.randomUUID(),
+        receiptNo: issueTarget.receiptNos[student.sid] ?? Object.values(issueTarget.receiptNos)[0] ?? "-",
+        receiptDate: officialDate.toISOString(),
+        clientType: "internal",
+        clientNo: student.sid,
+        clientName: student.name,
+        contactName: student.guardian,
+        yearGroup: student.grade,
+        schoolYear: issueTarget.schoolYear,
+        totalAmount: received,
         receivedAmount: received,
-        outstandingAmount: 0,
-      }],
-    }
+        creditNoteTotal: 0,
+        netPayableAmount: received,
+        overpaymentAmount: 0,
+        paymentMethod: "Credit Card",
+        bankName: issueTarget.paymentInfo.bank,
+        cardType: "",
+        transactionFeeAmount: pFee,
+        status: "generated",
+        createdAt: new Date().toISOString(),
+        invoices: student.invoices.map((inv: any) => {
+          const invAmt = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+          return {
+            id: inv.id,
+            invoiceNo: inv.invoiceNumber || inv.id,
+            invoiceDate: inv.issueDate ?? new Date().toISOString(),
+            invoiceAmount: invAmt,
+            receivedAmount: invAmt + pFee,
+            outstandingAmount: 0,
+          }
+        }),
+      }
+    })
 
     const existing = JSON.parse(localStorage.getItem("receiptRecords_tuition") || "[]")
-    localStorage.setItem("receiptRecords_tuition", JSON.stringify([newReceiptRecord, ...existing]))
+    localStorage.setItem("receiptRecords_tuition", JSON.stringify([...newReceiptRecords, ...existing]))
 
     const updated = records.map(r =>
       r.id === issueTarget.id
