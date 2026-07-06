@@ -11,7 +11,7 @@ import { format, endOfDay } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
-import { generatePdfBlob, PaymentInfo } from "./CashierReceiptPage"
+import { generatePdfBlob, PaymentInfo, InvoiceReceiptItem } from "./CashierReceiptPage"
 
 type StudentEntry = {
   sid: string; name: string; guardian: string; grade: string; subtotal: number; invoices: any[]
@@ -54,16 +54,23 @@ export function CashierAcknowledgementList() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({})
 
-  function getStudentFee(rec: AckRecord, student: StudentEntry): number {
-    const total = rec.studentData.reduce((s, st) => s + st.subtotal, 0)
-    if (total <= 0) return 0
-    return Number((rec.paymentInfo.cardFee * student.subtotal / total).toFixed(2))
+  function makeInvoiceItem(rec: AckRecord): InvoiceReceiptItem {
+    const student = rec.studentData[0]
+    const inv = student?.invoices[0]
+    return {
+      sid: student?.sid ?? "-",
+      name: student?.name ?? "-",
+      guardian: student?.guardian ?? "-",
+      grade: student?.grade ?? "-",
+      invoiceId: inv?.id ?? rec.id,
+      invoiceNumber: inv?.invoiceNumber || inv?.id || "-",
+      invoiceAmount: student?.subtotal ?? 0,
+      receiptNo: Object.values(rec.receiptNos)[0] ?? "-",
+      cardFee: rec.paymentInfo.cardFee,
+    }
   }
 
-  function makePaymentInfo(rec: AckRecord, student: StudentEntry): PaymentInfo {
-    const totalSubtotal = rec.studentData.reduce((s, st) => s + st.subtotal, 0)
-    const overAmt = Math.max(0, (rec.paymentInfo.chargeAmount ?? 0) - totalSubtotal)
-    const isFirstStudent = rec.studentData[0]?.sid === student.sid
+  function makePaymentInfoFromRec(rec: AckRecord): PaymentInfo {
     return {
       bank: rec.paymentInfo.bank,
       cardType: "",
@@ -71,7 +78,7 @@ export function CashierAcknowledgementList() {
       chargeAmount: rec.paymentInfo.chargeAmount,
       edcAmount: rec.paymentInfo.edcAmount,
       remark: rec.paymentInfo.remark,
-      overpaymentAmount: isFirstStudent ? overAmt : 0,
+      overpaymentAmount: Math.max(0, rec.paymentInfo.chargeAmount - (rec.studentData[0]?.subtotal ?? 0)),
     }
   }
 
@@ -79,22 +86,15 @@ export function CashierAcknowledgementList() {
     setViewTarget(rec)
     setPreviewUrl(null)
     setViewDialogOpen(true)
-    if (rec.studentData.length > 0) {
-      await handlePreview(rec, rec.studentData[0])
-    }
+    await handlePreview(rec)
   }
 
-  async function handlePreview(rec: AckRecord, student: StudentEntry) {
-    const key = `view-${rec.id}-${student.sid}`
+  async function handlePreview(rec: AckRecord) {
+    const key = `view-${rec.id}`
     setLoadingMap(prev => ({ ...prev, [key]: true }))
     try {
-      const blob = await generatePdfBlob(
-        { ...student, grade: student.grade ?? "" },
-        rec.receiptNos[student.sid] ?? Object.values(rec.receiptNos)[0] ?? "-",
-        cashierName,
-        getStudentFee(rec, student),
-        makePaymentInfo(rec, student)
-      )
+      const item = makeInvoiceItem(rec)
+      const blob = await generatePdfBlob(item, cashierName, makePaymentInfoFromRec(rec))
       const url = URL.createObjectURL(blob)
       setPreviewUrl(url)
     } finally {
@@ -112,48 +112,43 @@ export function CashierAcknowledgementList() {
   const handleIssue = () => {
     if (!issueTarget) return
 
-    const total = issueTarget.studentData.reduce((s, st) => s + st.subtotal, 0)
-    const cardFee = issueTarget.paymentInfo.cardFee
+    const item = makeInvoiceItem(issueTarget)
+    const received = item.invoiceAmount + item.cardFee
 
-    const newReceiptRecords = issueTarget.studentData.map(student => {
-      const pFee = total > 0 ? Number((cardFee * student.subtotal / total).toFixed(2)) : 0
-      return {
-        id: crypto.randomUUID(),
-        receiptNo: issueTarget.receiptNos[student.sid] ?? issueTarget.receiptNos[Object.keys(issueTarget.receiptNos)[0]],
-        receiptDate: officialDate.toISOString(),
-        clientType: "internal",
-        clientNo: student.sid,
-        clientName: student.name,
-        contactName: student.guardian,
-        yearGroup: student.grade,
-        schoolYear: issueTarget.schoolYear,
-        totalAmount: student.subtotal + pFee,
-        receivedAmount: student.subtotal + pFee,
-        creditNoteTotal: 0,
-        netPayableAmount: student.subtotal + pFee,
-        overpaymentAmount: 0,
-        paymentMethod: "Credit Card",
-        bankName: issueTarget.paymentInfo.bank,
-        cardType: "",
-        transactionFeeAmount: pFee,
-        status: "generated",
-        createdAt: new Date().toISOString(),
-        invoices: student.invoices.map((inv: any) => ({
-          id: inv.id,
-          invoiceNo: inv.invoiceNumber || inv.id,
-          invoiceDate: inv.issueDate ?? new Date().toISOString(),
-          invoiceAmount: inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0,
-          receivedAmount: (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0) + pFee,
-          outstandingAmount: 0,
-        })),
-      }
-    })
+    const newReceiptRecord = {
+      id: crypto.randomUUID(),
+      receiptNo: item.receiptNo,
+      receiptDate: officialDate.toISOString(),
+      clientType: "internal",
+      clientNo: item.sid,
+      clientName: item.name,
+      contactName: item.guardian,
+      yearGroup: item.grade,
+      schoolYear: issueTarget.schoolYear,
+      totalAmount: received,
+      receivedAmount: received,
+      creditNoteTotal: 0,
+      netPayableAmount: received,
+      overpaymentAmount: 0,
+      paymentMethod: "Credit Card",
+      bankName: issueTarget.paymentInfo.bank,
+      cardType: "",
+      transactionFeeAmount: item.cardFee,
+      status: "generated",
+      createdAt: new Date().toISOString(),
+      invoices: [{
+        id: item.invoiceId,
+        invoiceNo: item.invoiceNumber,
+        invoiceDate: issueTarget.studentData[0]?.invoices[0]?.issueDate ?? new Date().toISOString(),
+        invoiceAmount: item.invoiceAmount,
+        receivedAmount: received,
+        outstandingAmount: 0,
+      }],
+    }
 
-    // Write to receiptRecords_tuition
     const existing = JSON.parse(localStorage.getItem("receiptRecords_tuition") || "[]")
-    localStorage.setItem("receiptRecords_tuition", JSON.stringify([...newReceiptRecords, ...existing]))
+    localStorage.setItem("receiptRecords_tuition", JSON.stringify([newReceiptRecord, ...existing]))
 
-    // Update record status in cashier_acknowledgements
     const updated = records.map(r =>
       r.id === issueTarget.id
         ? { ...r, status: "issued" as const, officialDate: officialDate.toISOString() }
@@ -188,6 +183,7 @@ export function CashierAcknowledgementList() {
               <TableRow>
                 <TableHead align="left">{t("cashier.ackColReceiptNo")}</TableHead>
                 <TableHead align="left">{t("cashier.ackColStudent")}</TableHead>
+                <TableHead align="left">Invoice No.</TableHead>
                 <TableHead align="left">{t("cashier.ackColPaymentDate")}</TableHead>
                 <TableHead align="left">{t("cashier.ackColOfficialDate")}</TableHead>
                 <TableHead align="right">{t("cashier.ackColAmount")}</TableHead>
@@ -198,7 +194,7 @@ export function CashierAcknowledgementList() {
             <TableBody>
               {records.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10 text-sm">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10 text-sm">
                     {t("cashier.ackEmptyState")}
                   </TableCell>
                 </TableRow>
@@ -206,6 +202,9 @@ export function CashierAcknowledgementList() {
                 <TableRow key={rec.id}>
                   <TableCell align="left" className="font-mono text-sm">{firstReceiptNo(rec)}</TableCell>
                   <TableCell align="left" className="text-sm">{studentNames(rec)}</TableCell>
+                  <TableCell align="left" className="text-sm font-mono">
+                    {rec.studentData[0]?.invoices[0]?.invoiceNumber || rec.studentData[0]?.invoices[0]?.id || "-"}
+                  </TableCell>
                   <TableCell align="left" className="text-sm">{format(new Date(rec.paymentDate), "dd/MM/yyyy")}</TableCell>
                   <TableCell align="left" className="text-sm">
                     {rec.officialDate ? format(new Date(rec.officialDate), "dd/MM/yyyy") : "-"}
