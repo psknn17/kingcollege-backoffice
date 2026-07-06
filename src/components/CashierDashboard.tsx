@@ -100,7 +100,9 @@ export function CashierDashboard() {
         // skip malformed JSON
       }
     }
-    return [...map.values()].sort((a, b) => b.netAmount - a.netAmount)
+    return [...map.values()]
+      .filter((row) => row.netAmount > 0)
+      .sort((a, b) => b.netAmount - a.netAmount)
   }, [selectedDate, refreshTick])
 
   return (
@@ -156,18 +158,16 @@ export function CashierDashboard() {
             {bankBreakdown.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                  Bank Breakdown
+                  {t("cashier.bankBreakdown")}
                 </p>
                 <div className="space-y-2">
                   {bankBreakdown.map((row) => (
-                    <div key={row.bankName} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium truncate">{row.bankName}</span>
-                        <span className="text-muted-foreground whitespace-nowrap">
-                          {row.invoiceCount} {row.invoiceCount === 1 ? "invoice" : "invoices"}
-                        </span>
-                      </div>
-                      <span className="font-semibold tabular-nums ml-4">
+                    <div key={row.bankName} className="flex items-center justify-between text-sm gap-2">
+                      <span className="font-medium truncate min-w-0 flex-1">{row.bankName}</span>
+                      <span className="text-muted-foreground whitespace-nowrap shrink-0">
+                        {row.invoiceCount} {row.invoiceCount === 1 ? "invoice" : "invoices"}
+                      </span>
+                      <span className="font-semibold tabular-nums shrink-0 ml-2">
                         {formatCurrency(row.netAmount)}
                       </span>
                     </div>
