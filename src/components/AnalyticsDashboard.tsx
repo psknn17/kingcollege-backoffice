@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { PaginationBar } from "./ui/pagination-bar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import {
@@ -65,32 +66,6 @@ const thBase = "py-2 px-3 text-sm font-semibold text-muted-foreground"
 const tdBase = "px-3 py-2 text-sm"
 
 // ── PAGINATION ────────────────────────────────────────────────────────────────
-const PAGE_SIZE = 18
-
-function TablePagination({ page, total, onChange }: {
-  page: number; total: number; onChange: (p: number) => void
-}) {
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-  if (totalPages <= 1) return null
-  return (
-    <div className="flex items-center justify-between px-3 pt-3 pb-1 border-t mt-1">
-      <span className="text-sm text-muted-foreground">
-        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
-      </span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onChange(page - 1)} disabled={page === 1}
-          className="px-3 py-1 text-sm rounded border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-        >← Prev</button>
-        <span className="text-sm px-3 py-1 rounded bg-primary text-primary-foreground font-medium">{page}/{totalPages}</span>
-        <button
-          onClick={() => onChange(page + 1)} disabled={page === totalPages}
-          className="px-3 py-1 text-sm rounded border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-        >Next →</button>
-      </div>
-    </div>
-  )
-}
 
 // ── DUAL TABLE LAYOUT (Tab 1, 2, 5) ──────────────────────────────────────────
 function DualTableWrapper({ leftTitle, rightTitle, left, right }: {
@@ -178,6 +153,7 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
   const [isExporting, setIsExporting] = useState(false)
   const [avgToggle, setAvgToggle] = useState<"person" | "group">("person")
   const [wfPage, setWfPage] = useState(1)
+  const [wfPageSize, setWfPageSize] = useState(18)
 
   // Tab 1 state
   const [termMatrixRows, setTermMatrixRows] = useState<RevenueTermMatrixRow[]>([])
@@ -1184,7 +1160,7 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
                       </tr>
                     </thead>
                     <tbody>
-                      {waterfallData.slice((wfPage - 1) * PAGE_SIZE, wfPage * PAGE_SIZE).map((r, i) => (
+                      {waterfallData.slice((wfPage - 1) * wfPageSize, wfPage * wfPageSize).map((r, i) => (
                         <tr key={i} className={i % 2 === 1 ? "bg-muted/10" : ""}>
                           <td className="px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm sticky left-0 z-10" style={{ backgroundColor: i % 2 === 1 ? "hsl(var(--muted) / 0.1)" : "white" }}>{r.yearGroup}</td>
                           <td className="px-3 py-2 text-right border-b border-r border-border text-sm">{r.studentCount.toLocaleString()}</td>
@@ -1221,7 +1197,13 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
                       )}
                     </tbody>
                   </table>
-                  <TablePagination page={wfPage} total={waterfallData.length} onChange={setWfPage} />
+                  <PaginationBar
+                    currentPage={wfPage}
+                    pageSize={wfPageSize}
+                    totalCount={waterfallData.length}
+                    onPageChange={setWfPage}
+                    onPageSizeChange={(s) => { setWfPageSize(s); setWfPage(1) }}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

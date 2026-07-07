@@ -353,11 +353,11 @@ export function CashierAcknowledgementList() {
                 <TableCell align="center">
                   <div>
                     <div className="font-medium text-sm">{studentNames(rec)}</div>
-                    <div className="text-xs text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
+                    <div className="text-sm text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
                   </div>
                 </TableCell>
                 <TableCell align="center">
-                  <Badge variant="secondary" className="text-xs font-normal">
+                  <Badge variant="secondary" className="text-sm font-normal">
                     {rec.studentData[0]?.grade || "-"}
                   </Badge>
                 </TableCell>

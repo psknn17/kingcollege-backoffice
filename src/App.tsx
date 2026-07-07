@@ -290,6 +290,14 @@ export default function App() {
   const [globalViewModalType, setGlobalViewModalType] = useState<"invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template">("invoice")
 
 
+  // Redirect Cashier to cashier-dashboard on root load
+  const cashierAllowedPages = ["cashier-dashboard", "cashier-student-search", "cashier-payment", "cashier-payment-report", "cashier-bank-fee-settings", "cashier-acknowledgement", "cashier-receipt", "paid-invoices", "user-profile"]
+  useEffect(() => {
+    if (user?.role === "cashier" && !cashierAllowedPages.includes(activeSection)) {
+      navigate("/cashier-dashboard", { replace: true })
+    }
+  }, [user, activeSection, navigate])
+
   // Redirect Approver role to approval-queue (allow profile/settings/activity)
   const approverAllowedPages = ["approval-queue", "user-profile"]
   useEffect(() => {

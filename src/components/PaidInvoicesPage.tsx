@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react"
-import { Search, X, ChevronLeft, ChevronRight, CalendarCheck } from "lucide-react"
+import { Search, X, CalendarCheck } from "lucide-react"
 import { cn } from "@/components/ui/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import {
   Select,
   SelectContent,
@@ -27,7 +28,7 @@ interface PaidInvoicesPageProps {
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
 }
 
-const PAGE_SIZE = 20
+// PAGE_SIZE moved to state below
 
 const TYPE_META: Record<string, { label: string; nav: string; badge: string }> = {
   tuition: {
@@ -113,6 +114,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
   const [ayFilter, setAyFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const fetchData = () => setInvoices(loadApprovedInvoices())
 
@@ -153,11 +155,9 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
       })
   }, [invoices, search, typeFilter, ayFilter, statusFilter])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filtered.length)
+  const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const resetPage = (setter: (v: string) => void) => (val: string) => {
     setter(val)
@@ -187,7 +187,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
                 placeholder={t("cashier.paidInvoicesSearchPlaceholder")}
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-                className="pl-9 pr-9 w-64"
+                className="pl-9 pr-9 h-9 w-72"
               />
               {search && (
                 <button
@@ -200,7 +200,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
             </div>
 
             <Select value={typeFilter} onValueChange={resetPage(setTypeFilter)}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="h-9 w-44">
                 <SelectValue placeholder={t("cashier.paidInvoicesAllTypes")} />
               </SelectTrigger>
               <SelectContent>
@@ -212,7 +212,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
             </Select>
 
             <Select value={ayFilter} onValueChange={resetPage(setAyFilter)}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="h-9 w-44">
                 <SelectValue placeholder={t("cashier.paidInvoicesAllAcademicYears")} />
               </SelectTrigger>
               <SelectContent>
@@ -224,7 +224,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
             </Select>
 
             <Select value={statusFilter} onValueChange={resetPage(setStatusFilter)}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="h-9 w-44">
                 <SelectValue placeholder={t("cashier.paidInvoicesAllStatuses")} />
               </SelectTrigger>
               <SelectContent>
@@ -307,7 +307,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{inv.studentName || "-"}</div>
-                      {inv.studentId && <div className="text-xs text-muted-foreground">{inv.studentId}</div>}
+                      {inv.studentId && <div className="text-sm text-muted-foreground">{inv.studentId}</div>}
                     </TableCell>
                     <TableCell className="text-sm">{inv.studentGrade || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.academicYear || "-"}</TableCell>
@@ -321,15 +321,15 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
                     <TableCell className="text-sm text-muted-foreground pr-4">
                       {payStatus === "paid" && (
                         <span className="flex items-center gap-1.5">
-                          <Badge className="bg-green-100 text-green-800 border-green-200 font-medium text-xs">{t("cashier.paidStatusPaid")}</Badge>
+                          <Badge className="bg-green-100 text-green-800 border-green-200 font-medium text-sm">{t("cashier.paidStatusPaid")}</Badge>
                           {formatDate(paidDate)}
                         </span>
                       )}
                       {payStatus === "overdue" && (
-                        <Badge className="bg-red-100 text-red-800 border-red-200 font-medium text-xs">{t("cashier.paidStatusOverdue")}</Badge>
+                        <Badge className="bg-red-100 text-red-800 border-red-200 font-medium text-sm">{t("cashier.paidStatusOverdue")}</Badge>
                       )}
                       {payStatus === "unpaid" && (
-                        <Badge className="bg-gray-100 text-gray-700 border-gray-300 font-medium text-xs">{t("cashier.paidStatusUnpaid")}</Badge>
+                        <Badge className="bg-gray-100 text-gray-700 border-gray-300 font-medium text-sm">{t("cashier.paidStatusUnpaid")}</Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -341,36 +341,14 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-muted-foreground">
-            {t("cashier.paidInvoicesShowing", { start: rangeStart, end: rangeEnd, total: filtered.length.toLocaleString() })}
-          </p>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage <= 1}
-              onClick={() => setPage(currentPage - 1)}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm px-3 font-medium">
-              {currentPage} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage >= totalPages}
-              onClick={() => setPage(currentPage + 1)}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        pageSizeOptions={[10, 50, 100, 500, 1000]}
+      />
     </div>
   )
 }

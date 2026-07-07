@@ -53,6 +53,7 @@ const studentData = [
 
 interface Receipt {
   id: string
+  acknowledgeNo?: string
   receiptNumber: string
   invoiceNumber: string
   studentName: string
@@ -191,6 +192,7 @@ const loadReceiptsFromStorage = (category?: string): Receipt[] => {
 
       return {
         id: r.id,
+        acknowledgeNo: r.acknowledgeNo || undefined,
         receiptNumber: r.receiptNo,
         invoiceNumber: invoiceNumber,
         studentName: studentName,
@@ -536,9 +538,12 @@ interface ReceiptPageProps {
   category?: "tuition" | "eca" | "trip" | "exam" | "bus" | "external" // Filter receipts by category/menu type
   activeTab?: string // Allow overriding the default active tab
   viewMode?: "receipts" | "credit-notes" | "both" // Control if tabs are shown
+  pageTitle?: string
+  pageSubtitle?: string
+  showAckNoColumn?: boolean
 }
 
-export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActiveTab, viewMode = "both" }: ReceiptPageProps) {
+export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActiveTab, viewMode = "both", pageTitle, pageSubtitle, showAckNoColumn }: ReceiptPageProps) {
   const { t } = useLanguage()
   const { academicYears = [] } = useAcademicYears()
   const { user } = useAuth()
@@ -1735,10 +1740,10 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
         <div>
           <h2 className="text-xl font-semibold">
-            {activeTab === "credit-notes" ? t("receipt.creditNotes") : t("receipt.receiptsTab")}
+            {pageTitle ?? (activeTab === "credit-notes" ? t("receipt.creditNotes") : t("receipt.receiptsTab"))}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {activeTab === "credit-notes" ? t("receipt.viewManageCreditNotes") : t("receipt.viewManageReceipts")}
+            {pageSubtitle ?? (activeTab === "credit-notes" ? t("receipt.viewManageCreditNotes") : t("receipt.viewManageReceipts"))}
           </p>
         </div>
         <div className="flex gap-2 shrink-0 items-center flex-wrap">
@@ -2030,6 +2035,9 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                         }}
                       />
                     </TableHead>
+                    {showAckNoColumn && (
+                      <TableHead align="center">Acknowledge No.</TableHead>
+                    )}
                     <TableHead align="center" className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("receiptNumber")}>
                       <div className="flex items-center gap-1 justify-center">
                         {t("receipt.receiptNumber")}
@@ -2103,6 +2111,11 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                           onCheckedChange={() => toggleReceiptSelection(receipt.id)}
                         />
                       </TableCell>
+                      {showAckNoColumn && (
+                        <TableCell align="center" className="font-mono text-sm">
+                          {receipt.acknowledgeNo || "-"}
+                        </TableCell>
+                      )}
                       <TableCell align="center" className="font-mono text-sm">
                         {receipt.receiptNumber}
                       </TableCell>

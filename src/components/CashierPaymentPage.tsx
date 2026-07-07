@@ -130,7 +130,7 @@ export function CashierPaymentPage() {
     const current = parseInt(localStorage.getItem(runningKey) || "0", 10)
     const next = current + 1
     localStorage.setItem(runningKey, next.toString())
-    return `R-CC-${year}-${String(next).padStart(5, "0")}`
+    return `R${year}-${String(next).padStart(5, "0")}`
   }
 
   function generateAcknowledgeNo(): string {
@@ -165,8 +165,9 @@ export function CashierPaymentPage() {
     remark: string,
     overInvoiceAmt: number,
     feeRateVal: number
-  ): Record<string, string> {
+  ): { receiptNos: Record<string, string>; acknowledgeNos: Record<string, string> } {
     const receiptNos: Record<string, string> = {}
+    const acknowledgeNos: Record<string, string> = {}
 
     const now = new Date()
     const month = now.getMonth() + 1
@@ -197,6 +198,7 @@ export function CashierPaymentPage() {
         const receiptNo = generateReceiptNo()
         const acknowledgeNo = generateAcknowledgeNo()
         receiptNos[inv.id] = receiptNo
+        acknowledgeNos[inv.id] = acknowledgeNo
 
         newRecords.push({
           id: crypto.randomUUID(),
@@ -229,7 +231,7 @@ export function CashierPaymentPage() {
 
     const existing = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
     localStorage.setItem("cashier_acknowledgements", JSON.stringify([...newRecords, ...existing]))
-    return receiptNos
+    return { receiptNos, acknowledgeNos }
   }
 
   function saveOverpaymentCN(amount: number, paymentId: string) {
@@ -298,7 +300,7 @@ export function CashierPaymentPage() {
       }
 
       // Save acknowledgement (pending)
-      const receiptNos = savePendingAcknowledgement(
+      const { receiptNos, acknowledgeNos } = savePendingAcknowledgement(
         studentData, paymentId, selectedBank, paymentMethod,
         cardFee, remark, overInvoice, feeRate
       )
@@ -306,6 +308,7 @@ export function CashierPaymentPage() {
       navigateToSubPage("cashier-receipt", {
         paymentId,
         receiptNos,
+        acknowledgeNos,
         studentData: studentData.map(({ sid, student, invoices, guardian, subtotal }) => ({
           sid,
           name: student ? `${student.firstName} ${student.lastName}` : sid,
@@ -341,25 +344,6 @@ export function CashierPaymentPage() {
 
   return (
     <div className="space-y-4">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <button
-          onClick={() => navigateToSubPage("cashier-dashboard")}
-          className="hover:text-foreground transition-colors"
-        >
-          {t("menu.cashierDashboard")}
-        </button>
-        <span>/</span>
-        <button
-          onClick={navigateBack}
-          className="hover:text-foreground transition-colors"
-        >
-          {t("cashier.breadcrumbSearch")}
-        </button>
-        <span>/</span>
-        <span className="text-foreground font-medium">{t("cashier.breadcrumbPayment")}</span>
-      </nav>
-
       <h2 className="text-xl font-semibold">{t("cashier.paymentTitle")}</h2>
 
       <div className="flex gap-6 items-start w-full">
@@ -367,9 +351,9 @@ export function CashierPaymentPage() {
         <div className="min-w-0 space-y-4" style={{ flex: 3 }}>
 
           {/* Student info table */}
-          <Card>
+          <Card className="border border-gray-200 shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-base font-semibold mb-4 pb-3 border-b">
+              <h3 className="text-lg font-semibold" style={{ paddingBottom: "12px", borderBottom: "1px solid #e2e8f0", marginBottom: "16px" }}>
                 {t("cashier.studentInfoSection")} ({studentIds.length} {t("cashier.personUnit")})
               </h3>
               <Table>
@@ -387,19 +371,19 @@ export function CashierPaymentPage() {
                       {invoices.length === 0 ? (
                         <TableRow>
                           <TableCell>
-                            <p className="font-bold">{student ? `${student.firstName} ${student.lastName}` : sid}</p>
+                            <p className="font-bold text-base">{student ? `${student.firstName} ${student.lastName}` : sid}</p>
                             <p className="text-sm text-muted-foreground">{sid}</p>
-                            <p className="text-xs text-muted-foreground">{t("cashier.guardianShort")}: {guardian}</p>
+                            <p className="text-sm text-muted-foreground">{t("cashier.guardianShort")}: {guardian}</p>
                           </TableCell>
-                          <TableCell colSpan={3} className="text-muted-foreground text-sm">-</TableCell>
+                          <TableCell colSpan={3} className="text-muted-foreground">-</TableCell>
                         </TableRow>
                       ) : invoices.map((inv, invIdx) => (
                         <TableRow key={inv.id}>
                           {invIdx === 0 && (
                             <TableCell rowSpan={invoices.length} className="align-top">
-                              <p className="font-bold">{student ? `${student.firstName} ${student.lastName}` : sid}</p>
+                              <p className="font-bold text-base">{student ? `${student.firstName} ${student.lastName}` : sid}</p>
                               <p className="text-sm text-muted-foreground">{sid}</p>
-                              <p className="text-xs text-muted-foreground">{t("cashier.guardianShort")}: {guardian}</p>
+                              <p className="text-sm text-muted-foreground">{t("cashier.guardianShort")}: {guardian}</p>
                             </TableCell>
                           )}
                           <TableCell align="left" className="text-sm">{inv.invoiceNumber || inv.id}</TableCell>
@@ -420,16 +404,16 @@ export function CashierPaymentPage() {
           </Card>
 
           {/* Payment info */}
-          <Card>
-            <CardContent style={{ padding: "32px" }}>
-              <h3 className="text-base font-semibold" style={{ paddingBottom: "16px", borderBottom: "1px solid #e2e8f0", marginBottom: "28px" }}>
+          <Card className="border border-gray-200 shadow-md">
+            <CardContent style={{ padding: "20px" }}>
+              <h3 className="text-lg font-semibold" style={{ paddingBottom: "12px", borderBottom: "1px solid #e2e8f0", marginBottom: "16px" }}>
                 {t("cashier.paymentInfoSection")}
               </h3>
 
               {/* Bank */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", marginBottom: "28px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px", marginBottom: "16px" }}>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
+                  <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>
                     {t("cashier.bank")} <span className="text-destructive">*</span>
                   </label>
                   <Select value={selectedBank} onValueChange={setSelectedBank}>
@@ -446,8 +430,8 @@ export function CashierPaymentPage() {
               </div>
 
               {/* วิธีการชำระ */}
-              <div style={{ marginBottom: "28px" }}>
-                <label className="text-sm font-medium block" style={{ marginBottom: "12px" }}>
+              <div style={{ marginBottom: "16px" }}>
+                <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>
                   {t("cashier.paymentMethod")} <span className="text-destructive">*</span>
                 </label>
                 <div style={{ display: "flex", gap: "32px" }}>
@@ -479,9 +463,9 @@ export function CashierPaymentPage() {
               </div>
 
               {/* Amount fields */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: "24px", rowGap: "20px", marginBottom: "28px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: "16px", rowGap: "12px", marginBottom: "16px" }}>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.invoiceTotalBaht")}</label>
+                  <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.invoiceTotalBaht")}</label>
                   <Input
                     type="number"
                     value={grandTotal.toFixed(2)}
@@ -490,7 +474,7 @@ export function CashierPaymentPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
+                  <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>
                     {t("cashier.chargeAmount")} <span className="text-destructive">*</span>
                   </label>
                   <Input
@@ -509,7 +493,7 @@ export function CashierPaymentPage() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.overInvoice")}</label>
+                  <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.overInvoice")}</label>
                   <Input
                     type="number"
                     value={overInvoice > 0 ? (-overInvoice).toFixed(2) : (0).toFixed(2)}
@@ -526,7 +510,7 @@ export function CashierPaymentPage() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>
+                  <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>
                     {t("cashier.edcAmount")} <span className="text-destructive">*</span>
                   </label>
                   <Input
@@ -535,20 +519,19 @@ export function CashierPaymentPage() {
                     readOnly
                     className="text-right bg-muted/50"
                   />
-                  <p className="text-xs text-muted-foreground" style={{ marginTop: "6px" }}>{t("cashier.edcNote")}</p>
                 </div>
               </div>
 
               {/* หมายเหตุ */}
-              <div style={{ marginBottom: "28px" }}>
-                <label className="text-sm font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.remark")}</label>
+              <div style={{ marginBottom: "16px" }}>
+                <label className="text-base font-medium block" style={{ marginBottom: "8px" }}>{t("cashier.remark")}</label>
                 <textarea
                   value={remark}
                   onChange={e => setRemark(e.target.value)}
                   placeholder={t("cashier.remarkPlaceholder")}
-                  rows={4}
-                  className="w-full rounded-md border border-input bg-background text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                  style={{ padding: "10px 12px" }}
+                  rows={3}
+                  className="w-full rounded-md text-sm resize-none"
+                  style={{ padding: "10px 12px", border: "1px solid #d1d5db", outline: "none", backgroundColor: "#fff" }}
                 />
               </div>
 
@@ -575,73 +558,78 @@ export function CashierPaymentPage() {
         </div>
 
         {/* ── Right panel ── */}
-        <Card className="min-w-0 self-start" style={{ flex: 2 }}>
-        <CardContent className="p-7 space-y-5">
+        <div className="min-w-0 flex flex-col gap-4" style={{ flex: 2 }}>
 
-          <h3 className="text-base font-semibold">{t("cashier.grandTotalAll")}</h3>
-
-          {/* Grand total dark box — inline style to guarantee dark bg */}
-          <div style={{ backgroundColor: "#1e293b", color: "#ffffff", borderRadius: "14px", padding: "22px 24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ color: "#94a3b8", fontSize: "13px" }}>{t("cashier.totalInvoiceAmt")}</span>
-              <span style={{ fontWeight: 600, fontSize: "14px" }}>{fmt(grandTotal)} {t("cashier.bahtUnit")}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: overInvoice > 0 ? "12px" : "20px" }}>
-              <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                {t("cashier.cardFee")}{feeRate > 0 && <span style={{ color: "#f97316" }}> ({feeRate}%)</span>}
-              </span>
-              <span style={{ fontSize: "14px" }}>{fmt(cardFee)} {t("cashier.bahtUnit")}</span>
-            </div>
-            {overInvoice > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                <span style={{ fontSize: "13px", color: "#94a3b8" }}>{t("cashier.overInvoice")}</span>
-                <span style={{ fontSize: "14px", color: "#f87171" }}>-{fmt(overInvoice)} {t("cashier.bahtUnit")}</span>
+          {/* Grand Total card */}
+          <Card className="border-0 shadow-none">
+          <CardContent className="p-5">
+            <h3 className="text-base font-semibold mb-4">{t("cashier.grandTotalAll")}</h3>
+            <div style={{ backgroundColor: "#1e293b", color: "#ffffff", borderRadius: "14px", padding: "20px 22px", boxShadow: "0 4px 16px rgba(30,41,59,0.35)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ color: "#ffffff", fontSize: "15px" }}>{t("cashier.totalInvoiceAmt")}</span>
+                <span style={{ fontWeight: 600, fontSize: "15px" }}>{fmt(grandTotal)} {t("cashier.bahtUnit")}</span>
               </div>
-            )}
-            <div style={{ borderTop: "1px solid #334155", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 700, fontSize: "15px" }}>{t("cashier.grandTotalFinal")}</span>
-              <span style={{ fontWeight: 700, fontSize: "20px" }}>{fmt(grandTotal + cardFee + overInvoice)} {t("cashier.bahtUnit")}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: overInvoice > 0 ? "12px" : "20px" }}>
+                <span style={{ color: "#ffffff", fontSize: "15px" }}>
+                  {t("cashier.cardFee")}{feeRate > 0 && <span style={{ color: "#f97316" }}> ({feeRate}%)</span>}
+                </span>
+                <span style={{ fontSize: "15px" }}>{fmt(cardFee)} {t("cashier.bahtUnit")}</span>
+              </div>
+              {overInvoice > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                  <span style={{ fontSize: "15px", color: "#ffffff" }}>{t("cashier.overInvoice")}</span>
+                  <span style={{ fontSize: "15px", color: "#f87171" }}>-{fmt(overInvoice)} {t("cashier.bahtUnit")}</span>
+                </div>
+              )}
+              <div style={{ borderTop: "1px solid #334155", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, fontSize: "17px" }}>{t("cashier.grandTotalFinal")}</span>
+                <span style={{ fontWeight: 700, fontSize: "22px" }}>{fmt(grandTotal + cardFee + overInvoice)} {t("cashier.bahtUnit")}</span>
+              </div>
             </div>
-          </div>
+          </CardContent>
+          </Card>
 
-          {/* Per-student breakdown */}
+          {/* Per-student breakdown — each student is its own card */}
           {studentData.map(({ sid, student, subtotal }, idx) => {
             const pOver = idx === 0 ? overInvoice : 0
             const pFee = Number(((subtotal + pOver) * feeRate / 100).toFixed(2))
             return (
-              <div key={sid} style={{ borderRadius: "12px", border: "1px solid #e2e8f0", padding: "18px 20px" }}>
+              <Card key={sid} className="border border-gray-200 shadow-md">
+              <CardContent className="p-0">
+              <div style={{ padding: "20px 22px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                  <p style={{ fontWeight: 600, fontSize: "14px" }}>
+                  <p style={{ fontWeight: 600, fontSize: "15px" }}>
                     {t("cashier.studentLabel")} {idx + 1}: {student ? `${student.firstName} ${student.lastName}` : sid}
                   </p>
-                  <Badge variant="outline" className="text-xs shrink-0 ml-2">{sid}</Badge>
+                  <Badge variant="outline" className="text-sm shrink-0 ml-2">{sid}</Badge>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.totalInvoiceAmt")}</span>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>{fmt(subtotal)} {t("cashier.bahtUnit")}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "15px" }}>{t("cashier.totalInvoiceAmt")}</span>
+                  <span style={{ fontSize: "15px" }}>{fmt(subtotal)} {t("cashier.bahtUnit")}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: pOver > 0 ? "8px" : "16px" }}>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>
-                    {t("cashier.cardFee")}{feeRate > 0 && <span style={{ color: "#f97316" }}> ({feeRate}%)</span>}
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "15px" }}>
+                    {t("cashier.cardFee")}{feeRate > 0 && <span style={{ color: "#ef4444" }}> ({feeRate}%)</span>}
                   </span>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>{fmt(pFee)} {t("cashier.bahtUnit")}</span>
+                  <span style={{ fontSize: "15px" }}>{fmt(pFee)} {t("cashier.bahtUnit")}</span>
                 </div>
                 {pOver > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                    <span style={{ fontSize: "13px", color: "#64748b" }}>{t("cashier.overInvoice")}</span>
-                    <span style={{ fontSize: "13px", color: "#ef4444" }}>-{fmt(pOver)} {t("cashier.bahtUnit")}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "15px" }}>{t("cashier.overInvoice")}</span>
+                    <span style={{ fontSize: "15px", color: "#ef4444" }}>-{fmt(pOver)} {t("cashier.bahtUnit")}</span>
                   </div>
                 )}
-                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 700, fontSize: "14px" }}>{t("cashier.studentSubtotal")}</span>
-                  <span style={{ fontWeight: 700, fontSize: "14px" }}>{fmt(subtotal + pFee + pOver)} {t("cashier.bahtUnit")}</span>
+                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 700, fontSize: "15px" }}>{t("cashier.studentSubtotal")}</span>
+                  <span style={{ fontWeight: 700, fontSize: "15px" }}>{fmt(subtotal + pFee + pOver)} {t("cashier.bahtUnit")}</span>
                 </div>
               </div>
+              </CardContent>
+              </Card>
             )
           })}
 
-        </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   )

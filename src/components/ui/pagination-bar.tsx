@@ -17,7 +17,7 @@ export function PaginationBar({
   totalCount,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [10, 25, 50, 100],
+  pageSizeOptions = [10, 50, 100, 500, 1000],
 }: PaginationBarProps) {
   const totalPages = Math.ceil(totalCount / pageSize)
   const startEntry = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1

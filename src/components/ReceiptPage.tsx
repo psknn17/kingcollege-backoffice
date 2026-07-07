@@ -10,9 +10,9 @@ import { Badge } from "./ui/badge"
 import { Calendar } from "./ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, ChevronLeft, ChevronRight, X, User, DollarSign, Calendar as CalendarEmoji, Clock, CreditCard, CheckSquare, Square, Send, AlertCircle, CheckCircle, Receipt, Users, ArrowUpDown, Plus } from "lucide-react"
+import { CalendarIcon, Search, Download, Filter, Eye, Mail, FileText, X, User, DollarSign, Calendar as CalendarEmoji, Clock, CreditCard, CheckSquare, Square, Send, AlertCircle, CheckCircle, Receipt, Users, ArrowUpDown, Plus } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import { PaginationBar } from "./ui/pagination-bar"
 import { Separator } from "./ui/separator"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
@@ -173,7 +173,7 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 50
+  const [itemsPerPage, setItemsPerPage] = useState(50)
 
   // Modal states
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
@@ -866,105 +866,13 @@ export function ReceiptPage({ onNavigateToSubPage, category }: ReceiptPageProps 
           </Card>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  {t("invoice.previous")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  {t("invoice.next")}
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => goToPage(currentPage - 1)}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  
-                  {/* First page */}
-                  {currentPage > 2 && (
-                    <>
-                      <PaginationItem>
-                        <PaginationLink onClick={() => goToPage(1)} className="cursor-pointer">
-                          1
-                        </PaginationLink>
-                      </PaginationItem>
-                      {currentPage > 3 && (
-                        <PaginationItem>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )}
-                    </>
-                  )}
-                  
-                  {/* Previous page */}
-                  {currentPage > 1 && (
-                    <PaginationItem>
-                      <PaginationLink onClick={() => goToPage(currentPage - 1)} className="cursor-pointer">
-                        {currentPage - 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )}
-                  
-                  {/* Current page */}
-                  <PaginationItem>
-                    <PaginationLink isActive>
-                      {currentPage}
-                    </PaginationLink>
-                  </PaginationItem>
-                  
-                  {/* Next page */}
-                  {currentPage < totalPages && (
-                    <PaginationItem>
-                      <PaginationLink onClick={() => goToPage(currentPage + 1)} className="cursor-pointer">
-                        {currentPage + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )}
-                  
-                  {/* Last page */}
-                  {currentPage < totalPages - 1 && (
-                    <>
-                      {currentPage < totalPages - 2 && (
-                        <PaginationItem>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )}
-                      <PaginationItem>
-                        <PaginationLink onClick={() => goToPage(totalPages)} className="cursor-pointer">
-                          {totalPages}
-                        </PaginationLink>
-                      </PaginationItem>
-                    </>
-                  )}
-                  
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => goToPage(currentPage + 1)}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <PaginationBar
+            currentPage={currentPage}
+            pageSize={itemsPerPage}
+            totalCount={sortedReceipts.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1) }}
+          />
         </TabsContent>
       </Tabs>
 

@@ -144,7 +144,7 @@ const todayStr = format(new Date(), "yyyy-MM-dd")
           <h3 className="text-lg font-semibold">{t("cashier.bankBreakdown")}</h3>
           <div className="flex gap-3 items-end">
             <div className="space-y-1">
-              <Label className="text-xs">{t("cashier.dashboard.from")}</Label>
+              <Label className="text-sm">{t("cashier.dashboard.from")}</Label>
               <Input
                 type="date"
                 value={fromDate}
@@ -154,7 +154,7 @@ const todayStr = format(new Date(), "yyyy-MM-dd")
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">{t("cashier.dashboard.to")}</Label>
+              <Label className="text-sm">{t("cashier.dashboard.to")}</Label>
               <Input
                 type="date"
                 value={toDate}

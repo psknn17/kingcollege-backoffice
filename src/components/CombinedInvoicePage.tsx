@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react"
-import { FileText, Search, X, ChevronLeft, ChevronRight, CheckCircle, Clock, XCircle, DollarSign } from "lucide-react"
+import { FileText, Search, X, CheckCircle, Clock, XCircle, DollarSign } from "lucide-react"
 import { cn } from "@/components/ui/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import {
   Select,
   SelectContent,
@@ -25,8 +26,6 @@ interface CombinedInvoicePageProps {
   onNavigateToSubPage: (subPage: string, params?: any) => void
   onNavigateToView?: (type: "invoice" | "student" | "item" | "receipt" | "payment" | "course" | "template", data: any) => void
 }
-
-const PAGE_SIZE = 20
 
 const TYPE_META: Record<string, { label: string; nav: string; badge: string }> = {
   tuition: {
@@ -121,6 +120,7 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
   const [typeFilter, setTypeFilter] = useState("all")
   const [ayFilter, setAyFilter] = useState("all")
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   const fetchData = () => setInvoices(loadInvoices())
 
@@ -167,11 +167,9 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
       })
   }, [invoices, search, typeFilter, ayFilter])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filtered.length)
+  const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const resetPage = (setter: (v: string) => void) => (val: string) => {
     setter(val)
@@ -393,37 +391,13 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{rangeStart}–{rangeEnd}</span> of{" "}
-            <span className="font-medium text-foreground">{filtered.length.toLocaleString()}</span> invoices
-          </p>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage <= 1}
-              onClick={() => setPage(currentPage - 1)}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm px-3 font-medium">
-              {currentPage} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage >= totalPages}
-              onClick={() => setPage(currentPage + 1)}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+      />
     </div>
   )
 }

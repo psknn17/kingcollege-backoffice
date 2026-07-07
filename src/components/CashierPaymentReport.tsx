@@ -242,63 +242,51 @@ export function CashierPaymentReport() {
   ]
 
   return (
-    <div style={{ alignSelf: "center", width: "100%", maxWidth: "480px" }}>
-      <h2 className="text-xl font-bold mb-4">{t("cashier.report.title")}</h2>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
+        <div>
+          <h2 className="text-xl font-semibold">{t("cashier.report.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("cashier.report.desc")}</p>
+        </div>
+      </div>
 
-      <Card className="rounded-xl border-0 shadow-none">
-        <CardContent className="pt-5 pb-5 px-5 space-y-4">
-          {/* Select Period */}
-          <div>
-            <p className="text-sm font-medium mb-2">{t("cashier.report.selectPeriod")}</p>
+      {/* Filter + Export */}
+      <Card className="rounded-xl">
+        <CardContent className="p-4 md:p-6">
+          <div className="space-y-3">
+            {/* Quick filters */}
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setQuickFilter("today")} className="flex-1 text-xs">{t("cashier.report.today")}</Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickFilter("week")} className="flex-1 text-xs">{t("cashier.report.thisWeek")}</Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickFilter("month")} className="flex-1 text-xs">{t("cashier.report.thisMonth")}</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("today")}>{t("cashier.report.today")}</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("week")}>{t("cashier.report.thisWeek")}</Button>
+              <Button variant="outline" onClick={() => setQuickFilter("month")}>{t("cashier.report.thisMonth")}</Button>
             </div>
-          </div>
 
-          {/* Start Date */}
-          <div className="space-y-1.5">
-            <Label className="text-sm">{t("cashier.report.startDate")}</Label>
-            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full" />
-          </div>
+            <div className="flex items-end gap-4">
+              {/* Start Date */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">{t("cashier.report.startDate")}</Label>
+                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40" />
+              </div>
 
-          {/* End Date */}
-          <div className="space-y-1.5">
-            <Label className="text-sm">{t("cashier.report.endDate")}</Label>
-            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full" />
-          </div>
+              {/* End Date */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">{t("cashier.report.endDate")}</Label>
+                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
+              </div>
+            </div>
 
-          {/* Report Type */}
-          <div className="space-y-1.5">
-            <Label className="text-sm">{t("cashier.report.reportType")}</Label>
-            <Select value={reportType} onValueChange={setReportType}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">{t("cashier.report.daily")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Export Button */}
-          <Button onClick={exportExcel} disabled={!canExport} className="w-full gap-2" style={{ backgroundColor: "#000", color: "#fff" }}>
-            <Download className="w-4 h-4" />
-            {t("cashier.report.exportBtn")}
-          </Button>
-
-          {/* Fields in Report */}
-          <div>
-            <p className="text-sm font-medium mb-2">{t("cashier.report.fieldsLabel")}</p>
-            <div className="space-y-1">
-              {fieldLabels.map((label) => (
-                <p key={label} className="text-sm text-muted-foreground">{label}</p>
-              ))}
+            {/* Export Button */}
+            <div>
+              <Button onClick={exportExcel} disabled={!canExport} className="gap-2" style={{ backgroundColor: "#000", color: "#fff" }}>
+                <Download className="w-4 h-4" />
+                {t("cashier.report.exportBtn")}
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
     </div>
   )
 }

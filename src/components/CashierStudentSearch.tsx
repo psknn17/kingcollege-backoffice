@@ -237,9 +237,9 @@ export function CashierStudentSearch() {
       const sel = selInvByStudent.get(sid) ?? new Set<string>()
       return (
         <div className="flex flex-col">
-          <div className="mb-4 space-y-1">
-            <p className="text-sm"><span className="text-muted-foreground">{t("cashier.nameLabel")}: </span><span className="font-medium">{student.firstName} {student.lastName}</span></p>
-            <p className="text-sm"><span className="text-muted-foreground">{t("cashier.studentIdLabel")}: </span><span>{student.studentId}</span></p>
+          <div className="mb-5 pb-4 border-b border-gray-100">
+            <p className="text-lg font-semibold">{student.firstName} {student.lastName}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{t("cashier.studentIdLabel")}: {student.studentId}</p>
           </div>
           <p className="font-semibold mb-3">{t("cashier.unpaidInvoices")}</p>
           <InvoiceTable sid={sid} />
@@ -328,9 +328,15 @@ export function CashierStudentSearch() {
 
   // ── Page ──────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-4 w-full min-w-0 h-full">
+    <div className="flex flex-col gap-6 w-full min-w-0 h-full">
 
-      <h2 className="text-xl font-semibold">{t("cashier.searchStudentTitle")}</h2>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
+        <div>
+          <h2 className="text-xl font-semibold">{t("cashier.searchStudentTitle")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("cashier.searchStudentDesc")}</p>
+        </div>
+      </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
 
