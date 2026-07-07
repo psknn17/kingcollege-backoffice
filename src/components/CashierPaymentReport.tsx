@@ -254,31 +254,25 @@ export function CashierPaymentReport() {
       {/* Filter + Export */}
       <Card className="rounded-xl">
         <CardContent className="p-4 md:p-6">
-          <div className="space-y-3">
-            {/* Quick filters */}
+          <div className="space-y-4">
+            {/* Quick filters — full width */}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setQuickFilter("today")}>{t("cashier.report.today")}</Button>
-              <Button variant="outline" onClick={() => setQuickFilter("week")}>{t("cashier.report.thisWeek")}</Button>
-              <Button variant="outline" onClick={() => setQuickFilter("month")}>{t("cashier.report.thisMonth")}</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setQuickFilter("today")}>{t("cashier.report.today")}</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setQuickFilter("week")}>{t("cashier.report.thisWeek")}</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setQuickFilter("month")}>{t("cashier.report.thisMonth")}</Button>
             </div>
 
+            {/* Date range + Export in one row */}
             <div className="flex items-end gap-4">
-              {/* Start Date */}
-              <div className="space-y-1.5">
+              <div className="flex-1 space-y-1.5">
                 <Label className="text-sm">{t("cashier.report.startDate")}</Label>
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40" />
+                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full" />
               </div>
-
-              {/* End Date */}
-              <div className="space-y-1.5">
+              <div className="flex-1 space-y-1.5">
                 <Label className="text-sm">{t("cashier.report.endDate")}</Label>
-                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
+                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full" />
               </div>
-            </div>
-
-            {/* Export Button */}
-            <div>
-              <Button onClick={exportExcel} disabled={!canExport} className="gap-2" style={{ backgroundColor: "#000", color: "#fff" }}>
+              <Button onClick={exportExcel} disabled={!canExport} className="shrink-0 gap-2 h-10" style={{ backgroundColor: "#000", color: "#fff" }}>
                 <Download className="w-4 h-4" />
                 {t("cashier.report.exportBtn")}
               </Button>

@@ -344,16 +344,19 @@ export function CashierStudentSearch() {
 
         {/* Search area */}
         <div className="p-4 md:p-6 space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && doSearch()}
-              placeholder={t("cashier.searchPlaceholder")}
-              className="flex-1 h-10"
-            />
-            <Button onClick={doSearch} className="h-10 px-5 gap-2 shrink-0">
-              <Search className="w-4 h-4" />{t("cashier.searchBtn")}
+          <div className="flex gap-2 w-fit">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && doSearch()}
+                placeholder={t("cashier.searchPlaceholder")}
+                className="pl-9 h-9 w-72"
+              />
+            </div>
+            <Button onClick={doSearch} className="h-9 px-4 shrink-0">
+              {t("cashier.searchBtn")}
             </Button>
           </div>
           <label className="flex items-center gap-2 cursor-pointer w-fit">

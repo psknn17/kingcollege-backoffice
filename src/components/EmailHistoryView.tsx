@@ -433,7 +433,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
             </div>
             <div>
               <label className="text-sm text-muted-foreground">{t("emailHistory.yearGroup")}</label>
-              <p>{jobData.yearGroup}</p>
+              <p className="capitalize">{jobData.yearGroup}</p>
             </div>
             <div>
               <label className="text-sm text-muted-foreground">{t("emailHistory.totalRecipients")}</label>
@@ -620,7 +620,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                   <TableCell align="left">
                     <div>
                       <div className="font-medium">{record.studentName}</div>
-                      <div className="text-sm text-muted-foreground">{record.yearGroup}</div>
+                      <div className="text-sm text-muted-foreground capitalize">{record.yearGroup}</div>
                     </div>
                   </TableCell>
                   {/* Status - badge (center) */}
@@ -722,7 +722,7 @@ export function EmailHistoryView({ jobData, onBack }: EmailHistoryViewProps) {
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("emailHistory.student")}</label>
                   <p className="text-base font-semibold">{selectedRecord.studentName}</p>
-                  <p className="text-sm text-muted-foreground">{selectedRecord.yearGroup}</p>
+                  <p className="text-sm text-muted-foreground capitalize">{selectedRecord.yearGroup}</p>
                 </div>
               </div>
 

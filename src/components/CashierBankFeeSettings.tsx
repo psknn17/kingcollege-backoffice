@@ -114,13 +114,13 @@ export function CashierBankFeeSettings() {
       </div>
 
       <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden bg-white">
-        <Table>
+        <Table style={{ tableLayout: "fixed" }}>
             <TableHeader>
               <TableRow>
-                <TableHead align="left">{t("cashier.bankFeeColBank")}</TableHead>
-                <TableHead align="left">{t("cashier.bankFeeColAccount")}</TableHead>
-                <TableHead align="right" className="w-36">{t("cashier.bankFeeRate")}</TableHead>
-                <TableHead className="w-20" />
+                <TableHead align="left" style={{ width: "33%" }}>{t("cashier.bankFeeColBank")}</TableHead>
+                <TableHead align="left" style={{ width: "34%" }}>{t("cashier.bankFeeColAccount")}</TableHead>
+                <TableHead align="right" style={{ width: "25%" }}>{t("cashier.bankFeeRate")}</TableHead>
+                <TableHead style={{ width: "8%" }} />
               </TableRow>
             </TableHeader>
             <TableBody>

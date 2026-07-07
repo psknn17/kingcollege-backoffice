@@ -2864,7 +2864,7 @@ const en: Record<string, string> = {
   "viewModal.status": "Status",
   "viewModal.applicableYearGroups": "Applicable Year Groups",
   "viewModal.totalYearGroups": "Total Year Groups",
-  "viewModal.yearGroups": "year groups",
+  "viewModal.yearGroups": "Year Groups",
   "viewModal.paymentReceipt": "Payment Receipt",
   "viewModal.paymentDate": "Payment Date",
   "viewModal.paymentMethod": "Payment Method",

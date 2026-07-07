@@ -641,7 +641,7 @@ export function TuitionDiscountGroups() {
                     {/* Name - left aligned (text) */}
                     <TableCell align="left">{student.name}</TableCell>
                     {/* Year Group - left aligned (text) */}
-                    <TableCell align="left">{student.yearGroup}</TableCell>
+                    <TableCell align="left" className="capitalize">{student.yearGroup}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

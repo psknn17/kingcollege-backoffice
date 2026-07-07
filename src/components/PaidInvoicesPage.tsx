@@ -309,7 +309,7 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
                       <div className="font-medium">{inv.studentName || "-"}</div>
                       {inv.studentId && <div className="text-sm text-muted-foreground">{inv.studentId}</div>}
                     </TableCell>
-                    <TableCell className="text-sm">{inv.studentGrade || "-"}</TableCell>
+                    <TableCell className="text-sm capitalize">{inv.studentGrade || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.academicYear || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.term ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term) : "-"}</TableCell>
                     <TableCell className="text-right font-mono text-sm font-medium">

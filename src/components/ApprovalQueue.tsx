@@ -1414,7 +1414,7 @@ export function ApprovalQueue() {
                   <TableCell align="left">{invoice.term || "-"}</TableCell>
                   {/* Year Group - center aligned */}
                   <TableCell align="center">
-                    <Badge variant="secondary">{invoice.studentGrade || "-"}</Badge>
+                    <Badge variant="secondary" className="capitalize">{invoice.studentGrade || "-"}</Badge>
                   </TableCell>
                   {/* Amount - right aligned */}
                   <TableCell align="right" className="font-medium">
@@ -1770,7 +1770,7 @@ export function ApprovalQueue() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">{t("student.yearGroup")}</span>
-                          <span className="text-sm font-medium text-gray-800">{selectedInvoice.studentGrade}</span>
+                          <span className="text-sm font-medium text-gray-800 capitalize">{selectedInvoice.studentGrade}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">{t("approvalQueue.contactName")}</span>

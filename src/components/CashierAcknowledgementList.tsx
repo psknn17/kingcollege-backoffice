@@ -357,7 +357,7 @@ export function CashierAcknowledgementList() {
                   </div>
                 </TableCell>
                 <TableCell align="center">
-                  <Badge variant="secondary" className="text-sm font-normal">
+                  <Badge variant="secondary" className="text-sm font-normal capitalize">
                     {rec.studentData[0]?.grade || "-"}
                   </Badge>
                 </TableCell>
