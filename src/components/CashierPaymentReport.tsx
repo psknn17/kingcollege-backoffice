@@ -114,8 +114,8 @@ export function CashierPaymentReport() {
             studentCardFee > 0 && fallbackNet > 0 ? `${((studentCardFee / fallbackNet) * 100).toFixed(2)}%` : "",
             Number((fallbackNet + studentCardFee).toFixed(2)),
             rec.paymentInfo?.bank || "",
-            rec.paymentInfo?.remark || "",
             paymentMethodLabel,
+            rec.paymentInfo?.remark || "",
           ])
         } else {
           for (const inv of invs) {
@@ -177,8 +177,8 @@ export function CashierPaymentReport() {
       t("cashier.report.col.cardFeeRate"),
       t("cashier.report.col.receivedAmount"),
       t("cashier.report.col.bank"),
-      t("cashier.report.col.remark"),
       t("cashier.report.col.paymentMethod"),
+      t("cashier.report.col.remark"),
     ]
 
     const numRows = rows as (string | number)[][]

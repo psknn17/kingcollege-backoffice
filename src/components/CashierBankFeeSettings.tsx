@@ -7,8 +7,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Trash2, Plus, Pencil } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
 export type BankFeeEntry = { bankId: string; bankName: string; accountNumber: string; feeRate: number }
+
+function isBankInUse(bankId: string): boolean {
+  try {
+    const acks: any[] = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
+    return acks.some(a => a.paymentInfo?.bank === bankId)
+  } catch { return false }
+}
 
 function loadEntries(): BankFeeEntry[] {
   try {
@@ -38,6 +47,7 @@ export function CashierBankFeeSettings() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState(EMPTY_ERRORS)
 
+  const deleteDialog = useConfirmDialog()
   const isEditMode = editIndex !== null
 
   const openAdd = () => {
@@ -81,6 +91,11 @@ export function CashierBankFeeSettings() {
   }
 
   const handleDelete = (index: number) => {
+    const entry = entries[index]
+    if (isBankInUse(entry.bankId)) {
+      toast.error(t("cashier.bankFeeInUse"))
+      return
+    }
     const updated = entries.filter((_, i) => i !== index)
     setEntries(updated)
     localStorage.setItem("cashier_bank_fees", JSON.stringify(updated))
@@ -115,35 +130,40 @@ export function CashierBankFeeSettings() {
                     {t("cashier.bankFeeEmptyState")}
                   </TableCell>
                 </TableRow>
-              ) : entries.map((entry, idx) => (
-                <TableRow key={idx}>
-                  <TableCell align="left" className="font-medium">{entry.bankName}</TableCell>
-                  <TableCell align="left" className="text-muted-foreground font-mono text-sm">
-                    {entry.accountNumber || "-"}
-                  </TableCell>
-                  <TableCell align="right">{entry.feeRate}%</TableCell>
-                  <TableCell align="center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={() => openEdit(idx)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(idx)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              ) : entries.map((entry, idx) => {
+                const inUse = isBankInUse(entry.bankId)
+                return (
+                  <TableRow key={idx}>
+                    <TableCell align="left" className="font-medium">{entry.bankName}</TableCell>
+                    <TableCell align="left" className="text-muted-foreground font-mono text-sm">
+                      {entry.accountNumber || "-"}
+                    </TableCell>
+                    <TableCell align="right">{entry.feeRate}%</TableCell>
+                    <TableCell align="center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => openEdit(idx)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={inUse ? t("cashier.bankFeeInUse") : undefined}
+                          className={`h-8 w-8 p-0 ${inUse ? "text-muted-foreground/30 cursor-not-allowed" : "text-muted-foreground hover:text-destructive"}`}
+                          onClick={() => !inUse && deleteDialog.confirm(() => handleDelete(idx))}
+                          disabled={inUse}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
       </div>
@@ -217,6 +237,16 @@ export function CashierBankFeeSettings() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteDialog.isOpen}
+        onOpenChange={deleteDialog.setIsOpen}
+        onConfirm={deleteDialog.handleConfirm}
+        titleKey="confirmDialog.deleteTitle"
+        descriptionKey="confirmDialog.deleteDescription"
+        confirmTextKey="common.delete"
+        variant="destructive"
+      />
     </div>
   )
 }

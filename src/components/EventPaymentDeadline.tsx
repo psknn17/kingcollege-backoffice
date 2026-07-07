@@ -89,6 +89,7 @@ export function EventPaymentDeadline() {
   const { user } = useAuth()
   const userCanEdit = canPerformActions(user?.role)
   const confirmDialog = useConfirmDialog()
+  const deleteConfirmDialog = useConfirmDialog()
   const [deadlines, setDeadlines] = useState<PaymentDeadline[]>(mockDeadlines)
   const [selectedEvent, setSelectedEvent] = usePersistedState("event-deadline:selectedEvent", "")
   const [selectedDate, setSelectedDate] = useState<Date>()
@@ -178,10 +179,12 @@ export function EventPaymentDeadline() {
   }
 
   const handleDelete = (id: number) => {
-    const deadline = deadlines.find(d => d.id === id)
-    setDeadlines(prev => prev.filter(d => d.id !== id))
-    toast.success(t("eventPayment.toast.deadlineDeleted"))
-    logActivity({ action: "Delete Deadline", module: "Event Payment Deadline", detail: `Deleted deadline for "${deadline?.eventName || "Unknown"}"` })
+    deleteConfirmDialog.confirm(() => {
+      const deadline = deadlines.find(d => d.id === id)
+      setDeadlines(prev => prev.filter(d => d.id !== id))
+      toast.success(t("eventPayment.toast.deadlineDeleted"))
+      logActivity({ action: "Delete Deadline", module: "Event Payment Deadline", detail: `Deleted deadline for "${deadline?.eventName || "Unknown"}"` })
+    })
   }
 
   const toggleActiveStatus = (id: number) => {
@@ -661,6 +664,15 @@ export function EventPaymentDeadline() {
         onConfirm={confirmDialog.handleConfirm}
         titleKey="confirmDialog.saveTitle"
         descriptionKey="confirmDialog.saveDescription"
+      />
+      <ConfirmDialog
+        open={deleteConfirmDialog.isOpen}
+        onOpenChange={deleteConfirmDialog.setIsOpen}
+        onConfirm={deleteConfirmDialog.handleConfirm}
+        titleKey="confirmDialog.deleteTitle"
+        descriptionKey="confirmDialog.deleteDescription"
+        confirmTextKey="common.delete"
+        variant="destructive"
       />
     </div>
   )

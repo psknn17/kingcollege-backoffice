@@ -10,14 +10,10 @@ import { useAuth } from "@/contexts/AuthContext"
 
 const RECEIPT_KEYS = [
   "receiptRecords_tuition",
-  "receiptRecords_afterschool",
   "receiptRecords_eca",
-  "receiptRecords_event",
-  "receiptRecords_exam",
   "receiptRecords_trip",
   "receiptRecords_bus",
-  "receiptRecords_external",
-  "receiptRecords_summer",
+  "receiptRecords_exam",
 ]
 
 type BankRow = { bankName: string; netAmount: number; invoiceCount: number }
