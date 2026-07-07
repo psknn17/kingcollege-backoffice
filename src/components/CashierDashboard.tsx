@@ -160,9 +160,9 @@ const todayStr = format(new Date(), "yyyy-MM-dd")
               />
             </div>
             <Button
-              variant="outline"
               size="sm"
               className="h-8 px-3 self-end"
+              style={{ backgroundColor: "#000", color: "#fff" }}
               onClick={() => { setFromDate(todayStr); setToDate(todayStr) }}
             >
               <X className="h-3.5 w-3.5 mr-1.5" />

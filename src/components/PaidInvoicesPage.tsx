@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useAcademicYears } from "@/contexts/AcademicYearContext"
 
 interface PaidInvoicesPageProps {
   onNavigateToSubPage: (subPage: string, params?: any) => void
@@ -83,14 +84,32 @@ function TypeBadge({ category }: { category: string }) {
   )
 }
 
+const INVOICE_KEYS = [
+  "createdInvoices",
+  "createdInvoices_eca",
+  "createdInvoices_trip",
+  "createdInvoices_exam",
+  "createdInvoices_bus",
+]
+
 function loadApprovedInvoices() {
   try {
-    const raw = JSON.parse(localStorage.getItem("createdInvoices") || "[]")
-    return (raw as any[]).filter(
+    const seen = new Set<string>()
+    const all: any[] = []
+    for (const key of INVOICE_KEYS) {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      for (const inv of JSON.parse(raw)) {
+        if (!seen.has(inv.id)) {
+          seen.add(inv.id)
+          all.push(inv)
+        }
+      }
+    }
+    return all.filter(
       (inv) =>
-        inv.category !== "external" &&
-        inv.invoiceType !== "external" &&
         inv.studentId !== "EXTERNAL" &&
+        inv.invoiceType !== "external" &&
         (inv.approvalStatus ?? "wait") === "approved"
     )
   } catch {
@@ -108,6 +127,7 @@ function getPaymentStatus(inv: any): "paid" | "overdue" | "unpaid" {
 
 export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
   const { t } = useLanguage()
+  const { academicYears: allAcademicYears } = useAcademicYears()
   const [invoices, setInvoices] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
@@ -124,11 +144,10 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
     return () => window.removeEventListener("focus", fetchData)
   }, [])
 
-  const academicYears = useMemo(() => {
-    const years = new Set<string>()
-    invoices.forEach((inv) => { if (inv.academicYear) years.add(inv.academicYear) })
-    return Array.from(years).sort((a, b) => b.localeCompare(a))
-  }, [invoices])
+  const academicYears = useMemo(
+    () => allAcademicYears.map((y) => y.name).sort((a, b) => b.localeCompare(a)),
+    [allAcademicYears]
+  )
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -237,9 +256,9 @@ export function PaidInvoicesPage(_props: PaidInvoicesPageProps) {
 
             {hasActiveFilter && (
               <Button
-                variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="h-9 px-3"
+                style={{ backgroundColor: "#000", color: "#fff" }}
                 onClick={() => { setSearch(""); setTypeFilter("all"); setAyFilter("all"); setStatusFilter("all"); setPage(1) }}
               >
                 <X className="h-3.5 w-3.5 mr-1" />
