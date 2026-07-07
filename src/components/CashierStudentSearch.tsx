@@ -84,11 +84,13 @@ export function CashierStudentSearch() {
   const results = useMemo(() => {
     if (!query.trim()) return []
     const q = query.toLowerCase().trim()
-    const exact = students.some(s => s.firstName.toLowerCase() === q || s.lastName.toLowerCase() === q)
-    if (exact) return students.filter(s => s.firstName.toLowerCase() === q || s.lastName.toLowerCase() === q).slice(0, 50)
+    const fullName = (s: any) => `${s.firstName} ${s.lastName}`.toLowerCase()
+    const exact = students.some(s => s.firstName.toLowerCase() === q || s.lastName.toLowerCase() === q || fullName(s) === q)
+    if (exact) return students.filter(s => s.firstName.toLowerCase() === q || s.lastName.toLowerCase() === q || fullName(s) === q).slice(0, 50)
     return students.filter(s =>
       s.studentId.toLowerCase().includes(q) ||
-      s.firstName.toLowerCase().includes(q) || s.lastName.toLowerCase().includes(q)
+      s.firstName.toLowerCase().includes(q) || s.lastName.toLowerCase().includes(q) ||
+      fullName(s).includes(q)
     ).slice(0, 50)
   }, [query, students])
 
@@ -166,15 +168,15 @@ export function CashierStudentSearch() {
     }
 
     return (
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead align="center" className="w-12">{t("cashier.selectCol")}</TableHead>
-            <TableHead align="left">{t("cashier.invoiceNumberCol")}</TableHead>
-            <TableHead align="left">{t("cashier.typeCol")}</TableHead>
-            <TableHead align="right">{t("cashier.amountCol")}</TableHead>
-            <TableHead align="left" className="pl-12">{t("cashier.dueDateCol")}</TableHead>
-            <TableHead align="center">{t("cashier.statusCol")}</TableHead>
+            <TableHead align="center" className="w-[5%]">{t("cashier.selectCol")}</TableHead>
+            <TableHead align="left" className="w-[25%]">{t("cashier.invoiceNumberCol")}</TableHead>
+            <TableHead align="left" className="w-[22%]">{t("cashier.typeCol")}</TableHead>
+            <TableHead align="right" className="w-[18%]">{t("cashier.amountCol")}</TableHead>
+            <TableHead align="left" className="w-[18%]">{t("cashier.dueDateCol")}</TableHead>
+            <TableHead align="center" className="w-[12%]">{t("cashier.statusCol")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -188,8 +190,8 @@ export function CashierStudentSearch() {
                 </TableCell>
                 <TableCell align="left" className="font-mono text-sm">{inv.invoiceNumber || inv.id}</TableCell>
                 <TableCell align="left">{inv.category ? (categoryLabel[inv.category] || inv.category) : t("cashier.categoryTuition")}</TableCell>
-                <TableCell align="right" className="font-medium">{getAmount(inv).toLocaleString()} บาท</TableCell>
-                <TableCell align="left" className="pl-12">{formatDate(inv.dueDate)}</TableCell>
+                <TableCell align="right" className="font-medium">{getAmount(inv).toLocaleString()} {t("cashier.bahtUnit")}</TableCell>
+                <TableCell align="left">{formatDate(inv.dueDate)}</TableCell>
                 <TableCell align="center">
                   {(() => {
                     const ps = getPaymentStatus(inv)
@@ -209,7 +211,7 @@ export function CashierStudentSearch() {
           <TableRow>
             <TableCell />
             <TableCell colSpan={2} className="font-medium">{totalLabel ?? t("cashier.totalRow")}</TableCell>
-            <TableCell align="right" className="font-bold">{subtotal.toLocaleString()} บาท</TableCell>
+            <TableCell align="right" className="font-bold">{subtotal.toLocaleString()} {t("cashier.bahtUnit")}</TableCell>
             <TableCell />
             <TableCell />
           </TableRow>
@@ -304,7 +306,7 @@ export function CashierStudentSearch() {
 
         {/* Grand total + button */}
         <div className="mt-6 pt-4 border-t border-gray-100">
-          <p className="font-bold">{t("cashier.grandTotal")}: {grandTotal.toLocaleString()} บาท</p>
+          <p className="font-bold">{t("cashier.grandTotal")}: {grandTotal.toLocaleString()} {t("cashier.bahtUnit")}</p>
           <Button
             className="w-full mt-3 gap-2"
             disabled={!anySelected}
