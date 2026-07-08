@@ -446,7 +446,7 @@ export function CashierAcknowledgementList() {
         </Select>
 
         {hasActiveFilter && (
-          <Button variant="ghost" size="sm" className="h-9 text-muted-foreground px-3" onClick={clearFilters}>
+          <Button variant="outline" size="sm" className="h-9 px-3 text-muted-foreground border-gray-200" onClick={clearFilters}>
             Clear
           </Button>
         )}
