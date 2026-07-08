@@ -9,7 +9,7 @@ const STORAGE_KEYS: Record<string, string> = {
   bus: "createdInvoices_bus",
 }
 
-const INJECTED_SET_KEY = "__mockInvoicesInjectedIds_v3__"
+const INJECTED_SET_KEY = "__mockInvoicesInjectedIds_v4__"
 
 function getInjectedIds(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(INJECTED_SET_KEY) || "[]")) }
@@ -67,107 +67,64 @@ export function generateInvoicesForStudent(studentId: string, index: number): Re
     items: [{ name: "Tuition Fee", amount: tAmount }],
   }]
 
-  // ECA: 70% chance, pick 1-2 activities
-  if (rand() < 0.7) {
-    const ecaName = ECA_NAMES[Math.floor(rand() * ECA_NAMES.length)]
-    const ecaAmount = ECA_AMOUNTS[Math.floor(rand() * ECA_AMOUNTS.length)]
-    const ecaDue = Math.floor(rand() * 35) - 3
-    const invs: any[] = [{
-      id: idOf("eca", 1),
-      invoiceNumber: invNum(2),
-      studentId,
-      category: "eca",
-      term: "Term 1 2025/2026",
-      approvalStatus: "approved",
+  // ECA 1 — always
+  const ecaName = ECA_NAMES[Math.floor(rand() * ECA_NAMES.length)]
+  const ecaAmount = ECA_AMOUNTS[Math.floor(rand() * ECA_AMOUNTS.length)]
+  const ecaDue = Math.floor(rand() * 35) - 3
+  // ECA 2 — always
+  const eca2Name = ECA_NAMES[Math.floor(rand() * ECA_NAMES.length)]
+  const eca2Amount = ECA_AMOUNTS[Math.floor(rand() * ECA_AMOUNTS.length)]
+  const eca2Due = Math.floor(rand() * 35)
+  result["createdInvoices_eca"] = [
+    {
+      id: idOf("eca", 1), invoiceNumber: invNum(2), studentId,
+      category: "eca", term: "Term 1 2025/2026", approvalStatus: "approved",
       status: ecaDue < 0 ? "overdue" : "unpaid",
-      netAmount: ecaAmount,
-      dueDate: daysFromNow(ecaDue),
-      createdAt: daysFromNow(-25),
-      description: `ECA - ${ecaName}`,
-      items: [{ name: `${ecaName} Class`, amount: ecaAmount }],
-    }]
-    // 30% chance of a 2nd ECA
-    if (rand() < 0.3) {
-      const eca2Name = ECA_NAMES[Math.floor(rand() * ECA_NAMES.length)]
-      const eca2Amount = ECA_AMOUNTS[Math.floor(rand() * ECA_AMOUNTS.length)]
-      const eca2Due = Math.floor(rand() * 35)
-      invs.push({
-        id: idOf("eca", 2),
-        invoiceNumber: invNum(3),
-        studentId,
-        category: "eca",
-        term: "Term 1 2025/2026",
-        approvalStatus: "approved",
-        status: "unpaid",
-        netAmount: eca2Amount,
-        dueDate: daysFromNow(eca2Due),
-        createdAt: daysFromNow(-20),
-        description: `ECA - ${eca2Name}`,
-        items: [{ name: `${eca2Name} Class`, amount: eca2Amount }],
-      })
-    }
-    result["createdInvoices_eca"] = invs
-  }
+      netAmount: ecaAmount, dueDate: daysFromNow(ecaDue), createdAt: daysFromNow(-25),
+      description: `ECA - ${ecaName}`, items: [{ name: `${ecaName} Class`, amount: ecaAmount }],
+    },
+    {
+      id: idOf("eca", 2), invoiceNumber: invNum(3), studentId,
+      category: "eca", term: "Term 1 2025/2026", approvalStatus: "approved",
+      status: eca2Due < 0 ? "overdue" : "unpaid",
+      netAmount: eca2Amount, dueDate: daysFromNow(eca2Due), createdAt: daysFromNow(-20),
+      description: `ECA - ${eca2Name}`, items: [{ name: `${eca2Name} Class`, amount: eca2Amount }],
+    },
+  ]
 
-  // Trip: 50% chance
-  if (rand() < 0.5) {
-    const tripName = TRIP_NAMES[Math.floor(rand() * TRIP_NAMES.length)]
-    const tripAmount = TRIP_AMOUNTS[Math.floor(rand() * TRIP_AMOUNTS.length)]
-    const tripDue = Math.floor(rand() * 30) - 2
-    result["createdInvoices_trip"] = [{
-      id: idOf("trip", 1),
-      invoiceNumber: invNum(4),
-      studentId,
-      category: "trip",
-      term: "Term 1 2025/2026",
-      approvalStatus: "approved",
-      status: tripDue < 0 ? "overdue" : "unpaid",
-      netAmount: tripAmount,
-      dueDate: daysFromNow(tripDue),
-      createdAt: daysFromNow(-14),
-      description: `Field Trip - ${tripName}`,
-      items: [{ name: "Field Trip Fee", amount: tripAmount }],
-    }]
-  }
+  // Trip — always
+  const tripName = TRIP_NAMES[Math.floor(rand() * TRIP_NAMES.length)]
+  const tripAmount = TRIP_AMOUNTS[Math.floor(rand() * TRIP_AMOUNTS.length)]
+  const tripDue = Math.floor(rand() * 30) - 2
+  result["createdInvoices_trip"] = [{
+    id: idOf("trip", 1), invoiceNumber: invNum(4), studentId,
+    category: "trip", term: "Term 1 2025/2026", approvalStatus: "approved",
+    status: tripDue < 0 ? "overdue" : "unpaid",
+    netAmount: tripAmount, dueDate: daysFromNow(tripDue), createdAt: daysFromNow(-14),
+    description: `Field Trip - ${tripName}`, items: [{ name: "Field Trip Fee", amount: tripAmount }],
+  }]
 
-  // Exam: 40% chance
-  if (rand() < 0.4) {
-    const examAmount = EXAM_AMOUNTS[Math.floor(rand() * EXAM_AMOUNTS.length)]
-    const examDue = Math.floor(rand() * 30) - 4
-    result["createdInvoices_exam"] = [{
-      id: idOf("exam", 1),
-      invoiceNumber: invNum(5),
-      studentId,
-      category: "exam",
-      term: "Term 1 2025/2026",
-      approvalStatus: "approved",
-      status: examDue < 0 ? "overdue" : "unpaid",
-      netAmount: examAmount,
-      dueDate: daysFromNow(examDue),
-      createdAt: daysFromNow(-18),
-      description: "Exam Registration Fee",
-      items: [{ name: "Exam Fee", amount: examAmount }],
-    }]
-  }
+  // Exam — always
+  const examAmount = EXAM_AMOUNTS[Math.floor(rand() * EXAM_AMOUNTS.length)]
+  const examDue = Math.floor(rand() * 30) - 4
+  result["createdInvoices_exam"] = [{
+    id: idOf("exam", 1), invoiceNumber: invNum(5), studentId,
+    category: "exam", term: "Term 1 2025/2026", approvalStatus: "approved",
+    status: examDue < 0 ? "overdue" : "unpaid",
+    netAmount: examAmount, dueDate: daysFromNow(examDue), createdAt: daysFromNow(-18),
+    description: "Exam Registration Fee", items: [{ name: "Exam Fee", amount: examAmount }],
+  }]
 
-  // Bus: 60% chance
+  // Bus: 60% chance (optional 5th type)
   if (rand() < 0.6) {
     const busAmount = BUS_AMOUNTS[Math.floor(rand() * BUS_AMOUNTS.length)]
     const busDue = Math.floor(rand() * 40)
-    const busStatus = rand() < 0.15 ? "partial" : "unpaid"
     result["createdInvoices_bus"] = [{
-      id: idOf("bus", 1),
-      invoiceNumber: invNum(6),
-      studentId,
-      category: "bus",
-      term: "Term 1 2025/2026",
-      approvalStatus: "approved",
-      status: busStatus,
-      netAmount: busAmount,
-      dueDate: daysFromNow(busDue),
-      createdAt: daysFromNow(-28),
-      description: "School Bus Term 1 2025/2026",
-      items: [{ name: "Bus Fee", amount: busAmount }],
+      id: idOf("bus", 1), invoiceNumber: invNum(6), studentId,
+      category: "bus", term: "Term 1 2025/2026", approvalStatus: "approved",
+      status: rand() < 0.15 ? "partial" : "unpaid",
+      netAmount: busAmount, dueDate: daysFromNow(busDue), createdAt: daysFromNow(-28),
+      description: "School Bus Term 1 2025/2026", items: [{ name: "Bus Fee", amount: busAmount }],
     }]
   }
 
