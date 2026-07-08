@@ -9,7 +9,16 @@ const STORAGE_KEYS: Record<string, string> = {
   bus: "createdInvoices_bus",
 }
 
-const SENTINEL = "__mockInvoicesInjected_v2__"
+const INJECTED_SET_KEY = "__mockInvoicesInjectedIds_v3__"
+
+function getInjectedIds(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(INJECTED_SET_KEY) || "[]")) }
+  catch { return new Set() }
+}
+
+function saveInjectedIds(ids: Set<string>) {
+  localStorage.setItem(INJECTED_SET_KEY, JSON.stringify(Array.from(ids)))
+}
 
 function seededRandom(seed: number) {
   let s = seed
@@ -166,7 +175,9 @@ export function generateInvoicesForStudent(studentId: string, index: number): Re
 }
 
 export function injectMockInvoices(students: { studentId: string }[]) {
-  if (localStorage.getItem(SENTINEL)) return  // already injected
+  const injectedIds = getInjectedIds()
+  const newStudents = students.filter(s => !injectedIds.has(s.studentId))
+  if (newStudents.length === 0) return
 
   // Load existing data
   const buckets: Record<string, Map<string, any>> = {}
@@ -175,13 +186,15 @@ export function injectMockInvoices(students: { studentId: string }[]) {
     buckets[key] = new Map(existing.map((i: any) => [i.id, i]))
   }
 
-  // Generate for every student
-  students.forEach((s, idx) => {
-    const byKey = generateInvoicesForStudent(s.studentId, idx + 1)
+  // Generate only for new students
+  newStudents.forEach((s, idx) => {
+    const globalIdx = students.findIndex(x => x.studentId === s.studentId) + 1
+    const byKey = generateInvoicesForStudent(s.studentId, globalIdx)
     for (const [key, invs] of Object.entries(byKey)) {
       if (!buckets[key]) buckets[key] = new Map()
       for (const inv of invs) buckets[key].set(inv.id, inv)
     }
+    injectedIds.add(s.studentId)
   })
 
   // Persist
@@ -189,6 +202,6 @@ export function injectMockInvoices(students: { studentId: string }[]) {
     localStorage.setItem(key, JSON.stringify(Array.from(map.values())))
   }
 
-  localStorage.setItem(SENTINEL, "1")
-  console.log(`✅ Mock invoices injected for ${students.length} students`)
+  saveInjectedIds(injectedIds)
+  console.log(`✅ Mock invoices injected for ${newStudents.length} new students (total: ${injectedIds.size})`)
 }
