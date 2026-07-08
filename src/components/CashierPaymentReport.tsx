@@ -81,8 +81,9 @@ export function CashierPaymentReport() {
 
       const totalSubtotal: number = (rec.studentData ?? []).reduce((s: number, st: any) => s + (st.subtotal ?? 0), 0)
       const overAmt = Math.max(0, Number(((rec.paymentInfo?.chargeAmount ?? 0) - totalSubtotal).toFixed(2)))
-      const recFeeRate = totalSubtotal > 0
-        ? Number(((rec.paymentInfo?.cardFee ?? 0) / totalSubtotal * 100).toFixed(2))
+      const chargeAmtForRate = rec.paymentInfo?.chargeAmount ?? totalSubtotal
+      const recFeeRate = chargeAmtForRate > 0
+        ? Number(((rec.paymentInfo?.cardFee ?? 0) / chargeAmtForRate * 100).toFixed(2))
         : 0
       const recFeeRateStr = recFeeRate > 0 ? `${recFeeRate.toFixed(2)}%` : ""
       let overpaymentAssigned = false
