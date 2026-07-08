@@ -396,7 +396,7 @@ export function CashierAcknowledgementList() {
         </div>
       </div>
 
-      {/* Search + bulk actions + export */}
+      {/* Search + filters + bulk actions + export — one row */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -404,9 +404,53 @@ export function CashierAcknowledgementList() {
             placeholder={t("cashier.ackSearchPlaceholder")}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
-            className="pl-9 h-9 w-72"
+            className="pl-9 h-9 w-64"
           />
         </div>
+
+        <Select value={filterYearGroup} onValueChange={v => { setFilterYearGroup(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-36">
+            <SelectValue placeholder="Year Group" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueYearGroups.map(g => <SelectItem key={g} value={g}>{formatGrade(g)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterAcademicYear} onValueChange={v => { setFilterAcademicYear(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-36">
+            <SelectValue placeholder="Academic Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueAcademicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterTerm} onValueChange={v => { setFilterTerm(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue placeholder="Term" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueTerms.map(term => <SelectItem key={term} value={term}>{term}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">{t("cashier.ackStatusPending")}</SelectItem>
+            <SelectItem value="issued">{t("cashier.ackStatusIssued")}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilter && (
+          <Button variant="ghost" size="sm" className="h-9 text-muted-foreground px-3" onClick={clearFilters}>
+            Clear
+          </Button>
+        )}
+
         {selected.size > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t("cashier.ackSelectedCount", { count: selected.size })}</span>
@@ -429,6 +473,7 @@ export function CashierAcknowledgementList() {
             </Button>
           </div>
         )}
+
         <div className="ml-auto">
           <Button
             size="sm"
@@ -440,52 +485,6 @@ export function CashierAcknowledgementList() {
             Export Excel
           </Button>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Select value={filterYearGroup} onValueChange={v => { setFilterYearGroup(v); setPage(1) }}>
-          <SelectTrigger className="h-9 w-36">
-            <SelectValue placeholder="Year Group" />
-          </SelectTrigger>
-          <SelectContent>
-            {uniqueYearGroups.map(g => <SelectItem key={g} value={g}>{formatGrade(g)}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={filterAcademicYear} onValueChange={v => { setFilterAcademicYear(v); setPage(1) }}>
-          <SelectTrigger className="h-9 w-36">
-            <SelectValue placeholder="Academic Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {uniqueAcademicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={filterTerm} onValueChange={v => { setFilterTerm(v); setPage(1) }}>
-          <SelectTrigger className="h-9 w-32">
-            <SelectValue placeholder="Term" />
-          </SelectTrigger>
-          <SelectContent>
-            {uniqueTerms.map(term => <SelectItem key={term} value={term}>{term}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1) }}>
-          <SelectTrigger className="h-9 w-32">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">{t("cashier.ackStatusPending")}</SelectItem>
-            <SelectItem value="issued">{t("cashier.ackStatusIssued")}</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilter && (
-          <Button variant="ghost" size="sm" className="h-9 text-muted-foreground px-3" onClick={clearFilters}>
-            Clear
-          </Button>
-        )}
       </div>
 
       {/* Table */}
