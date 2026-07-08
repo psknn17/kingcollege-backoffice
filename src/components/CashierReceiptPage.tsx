@@ -65,16 +65,23 @@ export function buildCashierReceiptHtml(params: {
 
   const overpaymentAmt = item.overpaymentAmount ?? 0
   const totalInvAmount = item.totalAmount
+  const denominator = totalInvAmount + overpaymentAmt
   const cardLabel = [paymentInfo.bank.toUpperCase(), (paymentInfo as any).cardType].filter(Boolean).join(" ")
 
-  // Build invoice rows
+  // Portion of card fee attributable to overpayment (proportional to chargeAmount)
+  const overpaymentFee = denominator > 0 && overpaymentAmt > 0
+    ? Number((item.cardFee * overpaymentAmt / denominator).toFixed(2))
+    : 0
+  const feeForInvoices = item.cardFee - overpaymentFee
+
+  // Build invoice rows — distribute feeForInvoices proportionally across invoices
   let allocatedFee = 0
   const invoiceRows = item.invoices.map((inv, idx) => {
     const isLast = idx === item.invoices.length - 1
-    const invFee = totalInvAmount > 0
+    const invFee = denominator > 0
       ? isLast
-        ? Number((item.cardFee - allocatedFee).toFixed(2))
-        : Number((item.cardFee * inv.invoiceAmount / totalInvAmount).toFixed(2))
+        ? Number((feeForInvoices - allocatedFee).toFixed(2))
+        : Number((item.cardFee * inv.invoiceAmount / denominator).toFixed(2))
       : 0
     allocatedFee += invFee
     const received = inv.invoiceAmount + invFee
@@ -149,8 +156,8 @@ export function buildCashierReceiptHtml(params: {
         ${overpaymentAmt > 0 ? `<tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right"></td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right"></td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${overpaymentFee > 0 ? fmt(overpaymentFee) : ""}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right">${overpaymentFee > 0 ? fmt(overpaymentAmt + overpaymentFee) : ""}</td>
         </tr>` : ""}
         <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
