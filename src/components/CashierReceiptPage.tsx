@@ -23,18 +23,20 @@ interface StudentReceiptData {
   grade?: string
 }
 
-export interface InvoiceReceiptItem {
+export interface StudentReceiptItem {
   sid: string
   name: string
   guardian: string
   grade: string
-  invoiceId: string
-  invoiceNumber: string
-  invoiceAmount: number
   receiptNo: string
+  invoices: Array<{ invoiceId: string; invoiceNumber: string; invoiceAmount: number }>
+  totalAmount: number
   cardFee: number
   overpaymentAmount: number
 }
+
+/** @deprecated use StudentReceiptItem */
+export type InvoiceReceiptItem = StudentReceiptItem
 
 export interface PaymentInfo {
   bank: string
@@ -48,7 +50,7 @@ export interface PaymentInfo {
 
 // ── Receipt HTML builder — matches "Acknowledgement of School Fee Payment" template ──
 export function buildCashierReceiptHtml(params: {
-  item: InvoiceReceiptItem
+  item: StudentReceiptItem
   cashierName: string
   paymentInfo: PaymentInfo
   copyType: "Customer" | "Accounting"
@@ -62,14 +64,30 @@ export function buildCashierReceiptHtml(params: {
   const grade = rawGrade.replace(/^year\s*/i, "Year ")
 
   const overpaymentAmt = item.overpaymentAmount ?? 0
-  const totalItemCharge = item.invoiceAmount + overpaymentAmt
-  const invoiceFee = totalItemCharge > 0
-    ? Number((item.cardFee * item.invoiceAmount / totalItemCharge).toFixed(2))
-    : item.cardFee
-  const overFee = Number((item.cardFee - invoiceFee).toFixed(2))
-  const received = item.invoiceAmount + invoiceFee
-  const grandReceived = received + (overpaymentAmt > 0 ? overpaymentAmt + overFee : 0)
-  const cardLabel = [paymentInfo.bank.toUpperCase(), paymentInfo.cardType].filter(Boolean).join(" ")
+  const totalInvAmount = item.totalAmount
+  const cardLabel = [paymentInfo.bank.toUpperCase(), (paymentInfo as any).cardType].filter(Boolean).join(" ")
+
+  // Build invoice rows
+  let allocatedFee = 0
+  const invoiceRows = item.invoices.map((inv, idx) => {
+    const isLast = idx === item.invoices.length - 1
+    const invFee = totalInvAmount > 0
+      ? isLast
+        ? Number((item.cardFee - allocatedFee).toFixed(2))
+        : Number((item.cardFee * inv.invoiceAmount / totalInvAmount).toFixed(2))
+      : 0
+    allocatedFee += invFee
+    const received = inv.invoiceAmount + invFee
+    return `<tr>
+      <td style="border:1px solid black;padding:5px 8px;text-align:center">${idx + 1}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:center">${inv.invoiceNumber}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(inv.invoiceAmount)}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(invFee)}</td>
+      <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(received)}</td>
+    </tr>`
+  })
+
+  const grandReceived = totalInvAmount + item.cardFee + overpaymentAmt
 
   return `<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.5;padding:40px 52px;width:794px;background:white;color:black">
 
@@ -115,34 +133,28 @@ export function buildCashierReceiptHtml(params: {
       </tr>
     </table>
 
-    <!-- Invoice table (1 row) -->
+    <!-- Invoice table (N rows) -->
     <table style="width:100%;border-collapse:collapse;border:1px solid black;font-size:12px;margin-bottom:10px">
       <thead>
         <tr>
           <th style="border:1px solid black;padding:6px 8px;text-align:center;width:36px">No.</th>
-          <th style="border:1px solid black;padding:6px 8px;text-align:center">Invoice no.</th>
+          <th style="border:1px solid black;padding:6px 8px;text-align:center;width:160px">Invoice no.</th>
           <th style="border:1px solid black;padding:6px 8px;text-align:center">Invoice amount<br/>(THB)</th>
           <th style="border:1px solid black;padding:6px 8px;text-align:center">Credit card fee*<br/>(THB)</th>
           <th style="border:1px solid black;padding:6px 8px;text-align:center">Received amount<br/>(THB)</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td style="border:1px solid black;padding:5px 8px;text-align:center">1</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:center">${item.invoiceNumber}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(item.invoiceAmount)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(invoiceFee)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(received)}</td>
-        </tr>
+        ${invoiceRows.join("")}
         ${overpaymentAmt > 0 ? `<tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px">Overpayment amount**</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overpaymentAmt)}</td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right">${fmt(overFee)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right"></td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right"></td>
         </tr>` : ""}
         <tr>
           <td colspan="2" style="border:1px solid black;padding:5px 8px"></td>
-          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.invoiceAmount + overpaymentAmt)}</td>
+          <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(totalInvAmount + overpaymentAmt)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(item.cardFee)}</td>
           <td style="border:1px solid black;padding:5px 8px;text-align:right;font-weight:bold;text-decoration:underline">${fmt(grandReceived)}</td>
         </tr>
@@ -214,7 +226,7 @@ export async function renderHtmlToCanvas(html: string): Promise<HTMLCanvasElemen
 
 // ── Convert HTML template → 2-page jsPDF blob (Customer + Accounting) ──
 export async function generatePdfBlob(
-  item: InvoiceReceiptItem,
+  item: StudentReceiptItem,
   cashierName: string,
   paymentInfo: PaymentInfo
 ): Promise<Blob> {
@@ -244,7 +256,7 @@ export function CashierReceiptPage() {
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewBlobUrls, setPreviewBlobUrls] = useState<Record<string, string>>({})
-  const [previewItem, setPreviewItem] = useState<InvoiceReceiptItem | null>(null)
+  const [previewItem, setPreviewItem] = useState<StudentReceiptItem | null>(null)
   const receiptNumbers: Record<string, string> = subPageParams?.receiptNos ?? {}
   const acknowledgeNumbers: Record<string, string> = subPageParams?.acknowledgeNos ?? {}
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
@@ -260,62 +272,65 @@ export function CashierReceiptPage() {
   const globalOverpayment = Math.max(0, paymentInfo.chargeAmount - grandTotal)
   const cashierName = user?.name ?? "Cashier"
 
-  const invoiceItems: InvoiceReceiptItem[] = (() => {
-    const allInvs: InvoiceReceiptItem[] = []
+  const studentReceiptItems: StudentReceiptItem[] = (() => {
     let allocated = 0
-    const flatInvs = studentData.flatMap(st =>
-      (st.invoices ?? []).map((inv: any) => ({ st, inv }))
-    )
-    flatInvs.forEach(({ st, inv }, idx) => {
-      const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
-      const isLast = idx === flatInvs.length - 1
+    return studentData.map((st, idx) => {
+      const invList = st.invoices ?? []
+      const stTotal = st.subtotal
+      const isLast = idx === studentData.length - 1
       const fee = grandTotal > 0
         ? isLast
           ? Number((totalFee - allocated).toFixed(2))
-          : Number((totalFee * invAmt / grandTotal).toFixed(2))
+          : Number((totalFee * stTotal / grandTotal).toFixed(2))
         : 0
       allocated += fee
-      allInvs.push({
+      const receiptNo =
+        acknowledgeNumbers[invList[0]?.id] ??
+        receiptNumbers[invList[0]?.id] ??
+        `R-CC-${new Date().getFullYear()}-00001`
+      return {
         sid: st.sid,
         name: st.name,
         guardian: st.guardian,
         grade: st.grade ?? "-",
-        invoiceId: inv.id,
-        invoiceNumber: inv.invoiceNumber || inv.id || "-",
-        invoiceAmount: invAmt,
-        receiptNo: acknowledgeNumbers[inv.id] ?? receiptNumbers[inv.id] ?? `R-CC-${new Date().getFullYear()}-00001`,
+        receiptNo,
+        invoices: invList.map((inv: any) => ({
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoiceNumber || inv.id || "-",
+          invoiceAmount: inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0,
+        })),
+        totalAmount: stTotal,
         cardFee: fee,
         overpaymentAmount: idx === 0 ? globalOverpayment : 0,
-      })
+      }
     })
-    return allInvs
   })()
 
-  async function handleViewReceipt(item: InvoiceReceiptItem) {
+  async function handleViewReceipt(item: StudentReceiptItem) {
     setPreviewItem(item)
-    if (previewBlobUrls[item.invoiceId]) {
-      setPreviewUrl(previewBlobUrls[item.invoiceId])
+    if (previewBlobUrls[item.sid]) {
+      setPreviewUrl(previewBlobUrls[item.sid])
       return
     }
-    setLoadingStates(prev => ({ ...prev, [item.invoiceId]: true }))
+    setLoadingStates(prev => ({ ...prev, [item.sid]: true }))
     try {
       const blob = await generatePdfBlob(item, cashierName, paymentInfo)
       const file = new File([blob], `${item.receiptNo}.pdf`, { type: "application/pdf" })
       const url = URL.createObjectURL(file)
-      setPreviewBlobUrls(prev => ({ ...prev, [item.invoiceId]: url }))
+      setPreviewBlobUrls(prev => ({ ...prev, [item.sid]: url }))
       setPreviewUrl(url)
     } finally {
-      setLoadingStates(prev => ({ ...prev, [item.invoiceId]: false }))
+      setLoadingStates(prev => ({ ...prev, [item.sid]: false }))
     }
   }
 
-  async function handleDownloadReceipt(item: InvoiceReceiptItem) {
-    setLoadingStates(prev => ({ ...prev, [`dl-${item.invoiceId}`]: true }))
+  async function handleDownloadReceipt(item: StudentReceiptItem) {
+    setLoadingStates(prev => ({ ...prev, [`dl-${item.sid}`]: true }))
     try {
       const blob = await generatePdfBlob(item, cashierName, paymentInfo)
       saveAs(blob, `${item.receiptNo}.pdf`)
     } finally {
-      setLoadingStates(prev => ({ ...prev, [`dl-${item.invoiceId}`]: false }))
+      setLoadingStates(prev => ({ ...prev, [`dl-${item.sid}`]: false }))
     }
   }
 
@@ -367,8 +382,8 @@ export function CashierReceiptPage() {
         {/* Left: receipt cards */}
         <div className="space-y-4" style={{ flex: 1 }}>
           <h3 className="text-base font-semibold">{t("cashier.allReceipts")}</h3>
-          {invoiceItems.map((item, idx) => (
-            <Card key={item.invoiceId}>
+          {studentReceiptItems.map((item, idx) => (
+            <Card key={item.sid}>
               <CardContent className="p-0">
                 <div className="flex items-center justify-between bg-slate-100 rounded-t-lg px-4 py-2">
                   <span className="text-sm font-semibold text-slate-600">#{idx + 1}</span>
@@ -377,26 +392,28 @@ export function CashierReceiptPage() {
                 <div className="px-4 pt-3 pb-4 space-y-3">
                   <div>
                     <p className="font-semibold text-sm">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">Invoice: {item.invoiceNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Invoice: {item.invoices.map(i => i.invoiceNumber).join(", ")}
+                    </p>
                     <p className="text-xs text-muted-foreground">{t("cashier.guardianShort")}: {item.guardian}</p>
                   </div>
                   <Button
                     variant="outline"
                     className="w-full"
-                    disabled={!!loadingStates[item.invoiceId]}
+                    disabled={!!loadingStates[item.sid]}
                     onClick={() => handleViewReceipt(item)}
                   >
-                    {loadingStates[item.invoiceId]
+                    {loadingStates[item.sid]
                       ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังสร้าง PDF...</>
                       : t("cashier.viewReceipt")}
                   </Button>
                   <Button
                     variant="default"
                     className="w-full"
-                    disabled={!!loadingStates[`dl-${item.invoiceId}`]}
+                    disabled={!!loadingStates[`dl-${item.sid}`]}
                     onClick={() => handleDownloadReceipt(item)}
                   >
-                    {loadingStates[`dl-${item.invoiceId}`]
+                    {loadingStates[`dl-${item.sid}`]
                       ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังดาวน์โหลด...</>
                       : t("cashier.downloadReceipt")}
                   </Button>
@@ -421,9 +438,9 @@ export function CashierReceiptPage() {
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleDownloadReceipt(previewItem)}
-                  disabled={!!loadingStates[`dl-${previewItem.invoiceId}`]}
+                  disabled={!!loadingStates[`dl-${previewItem.sid}`]}
                 >
-                  {loadingStates[`dl-${previewItem.invoiceId}`]
+                  {loadingStates[`dl-${previewItem.sid}`]
                     ? <><Loader2 className="h-4 w-4 animate-spin" />{t("cashier.downloadingPdf")}</>
                     : <>{t("cashier.downloadReceipt")}</>}
                 </Button>

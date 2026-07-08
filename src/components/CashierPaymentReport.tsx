@@ -146,8 +146,8 @@ export function CashierPaymentReport() {
               invCardFee !== 0 ? `${rate.toFixed(2)}%` : "",
               Number((netAmt + invCardFee).toFixed(2)),
               rec.paymentInfo?.bank || "",
-              rec.paymentInfo?.remark || "",
               paymentMethodLabel,
+              rec.paymentInfo?.remark || "",
             ])
           }
         }
