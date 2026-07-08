@@ -1,15 +1,16 @@
-import React, { useState, useMemo } from "react"
+import { useState, useMemo } from "react"
+import * as XLSX from "xlsx"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Input } from "./ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { CalendarIcon, Search, Check, FileDown, Loader2 } from "lucide-react"
+import { CalendarIcon, Search, Check, FileDown, Download, Loader2 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
-import { cn } from "./ui/utils"
 import { format, endOfDay } from "date-fns"
 import { toast } from "@/components/ui/sonner"
 import { PaginationBar } from "@/components/ui/pagination-bar"
@@ -34,6 +35,8 @@ type AckRecord = {
   schoolYear: string
   createdAt: string
 }
+
+type FlatRow = { rec: AckRecord; inv: any | null; invIdx: number }
 
 function fmt(n: number) {
   return `฿${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -68,46 +71,100 @@ function studentNames(rec: AckRecord) {
   return rec.studentData.map(s => s.name).join(", ")
 }
 
-function firstReceiptNo(rec: AckRecord) {
-  return Object.values(rec.receiptNos)[0] ?? "-"
+function getInvTerm(inv: any): string {
+  return inv?.term ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term) : "-"
 }
-
 
 export function CashierAcknowledgementList() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const [records, setRecords] = useState<AckRecord[]>(loadRecords)
   const [search, setSearch] = useState("")
+  const [filterYearGroup, setFilterYearGroup] = useState("")
+  const [filterAcademicYear, setFilterAcademicYear] = useState("")
+  const [filterTerm, setFilterTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState("")
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
-
   const [issueDialogOpen, setIssueDialogOpen] = useState(false)
   const [issueDate, setIssueDate] = useState<Date>(new Date())
   const [calOpen, setCalOpen] = useState(false)
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return records
-    const q = search.toLowerCase()
-    return records.filter(rec =>
-      (rec.acknowledgeNo || rec.paymentId || "").toLowerCase().includes(q) ||
-      studentNames(rec).toLowerCase().includes(q) ||
-      Object.values(rec.receiptNos).some(n => n.toLowerCase().includes(q))
-    )
-  }, [records, search])
+  // ── Flatten all records into per-invoice rows ──────────────────────────────
+  const allFlatRows = useMemo<FlatRow[]>(() => {
+    return records.flatMap(rec => {
+      const invList: any[] = rec.studentData[0]?.invoices ?? []
+      const rows = invList.length > 0 ? invList : [null]
+      return rows.map((inv, invIdx) => ({ rec, inv, invIdx }))
+    })
+  }, [records])
 
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1
+  // ── Unique filter option values ────────────────────────────────────────────
+  const uniqueYearGroups = useMemo(() =>
+    [...new Set(records.map(r => r.studentData[0]?.grade).filter(Boolean) as string[])].sort()
+  , [records])
+
+  const uniqueAcademicYears = useMemo(() =>
+    [...new Set(records.map(r => r.schoolYear).filter(Boolean))].sort().reverse()
+  , [records])
+
+  const uniqueTerms = useMemo(() => {
+    const terms = new Set<string>()
+    records.forEach(r => r.studentData.forEach(st => (st.invoices ?? []).forEach((inv: any) => {
+      const term = inv.term ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term) : null
+      if (term) terms.add(term)
+    })))
+    return [...terms].sort()
+  }, [records])
+
+  // ── Apply all filters ──────────────────────────────────────────────────────
+  const filteredRows = useMemo<FlatRow[]>(() => {
+    return allFlatRows.filter(({ rec, inv }) => {
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        const ackNo = (rec.acknowledgeNo || rec.paymentId || "").toLowerCase()
+        const names = studentNames(rec).toLowerCase()
+        const sid = (rec.studentData[0]?.sid ?? "").toLowerCase()
+        const invNo = inv ? (inv.invoiceNumber || inv.id || "").toLowerCase() : ""
+        const receiptNos = Object.values(rec.receiptNos).join(" ").toLowerCase()
+        if (!ackNo.includes(q) && !names.includes(q) && !sid.includes(q) && !invNo.includes(q) && !receiptNos.includes(q)) return false
+      }
+      if (filterYearGroup && rec.studentData[0]?.grade !== filterYearGroup) return false
+      if (filterAcademicYear && rec.schoolYear !== filterAcademicYear) return false
+      if (filterTerm) {
+        if (!inv || getInvTerm(inv) !== filterTerm) return false
+      }
+      if (filterStatus && rec.status !== filterStatus) return false
+      return true
+    })
+  }, [allFlatRows, search, filterYearGroup, filterAcademicYear, filterTerm, filterStatus])
+
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  const totalPages = Math.ceil(filteredRows.length / pageSize) || 1
   const currentPage = Math.min(page, totalPages)
-  const pageRecords = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const pageRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // First occurrence index of each record on the current page (for checkbox/status display)
+  const firstOnPageSet = useMemo(() => {
+    const seen = new Set<string>()
+    const result = new Set<number>()
+    pageRows.forEach(({ rec }, idx) => {
+      if (!seen.has(rec.id)) { seen.add(rec.id); result.add(idx) }
+    })
+    return result
+  }, [pageRows])
+
+  const pageRecordIds = useMemo(() => [...new Set(pageRows.map(r => r.rec.id))], [pageRows])
   const selectedPendingIds = [...selected].filter(id => records.find(r => r.id === id)?.status === "pending")
-  const allPageSelected = pageRecords.length > 0 && pageRecords.every(r => selected.has(r.id))
+  const allPageSelected = pageRecordIds.length > 0 && pageRecordIds.every(id => selected.has(id))
+  const hasActiveFilter = !!(search || filterYearGroup || filterAcademicYear || filterTerm || filterStatus)
 
   function toggleAll() {
     const next = new Set(selected)
-    if (allPageSelected) { pageRecords.forEach(r => next.delete(r.id)) }
-    else { pageRecords.forEach(r => next.add(r.id)) }
+    if (allPageSelected) { pageRecordIds.forEach(id => next.delete(id)) }
+    else { pageRecordIds.forEach(id => next.add(id)) }
     setSelected(next)
   }
 
@@ -117,6 +174,55 @@ export function CashierAcknowledgementList() {
     setSelected(next)
   }
 
+  function clearFilters() {
+    setSearch(""); setFilterYearGroup(""); setFilterAcademicYear(""); setFilterTerm(""); setFilterStatus(""); setPage(1)
+  }
+
+  // ── Export Excel ───────────────────────────────────────────────────────────
+  function exportExcel() {
+    const headers = [
+      t("cashier.ackColAckNo"), t("cashier.ackColReceiptNo"),
+      t("cashier.ackColStudent"), "Student ID", "Invoice No.",
+      t("cashier.ackColYearGroup"), t("cashier.ackColAcademicYear"), t("cashier.ackColTerm"),
+      t("cashier.ackColAmount"), t("cashier.paymentMethod"),
+      t("cashier.ackColDate"), t("cashier.ackColStatus"),
+    ]
+    const dataRows = filteredRows.map(({ rec, inv }) => {
+      const ackNo = rec.acknowledgeNo || rec.paymentId || rec.id
+      const invReceiptNo = inv
+        ? (rec.status === "issued" ? (rec.receiptNos[inv.id] ?? "-") : "-")
+        : (rec.status === "issued" ? (Object.values(rec.receiptNos)[0] ?? "-") : "-")
+      const invAmt = inv
+        ? (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0)
+        : grandTotal(rec)
+      const paymentMethodLabel = rec.paymentInfo.paymentMethod === "full" ? t("cashier.paymentFull")
+        : rec.paymentInfo.paymentMethod === "installment" ? t("cashier.paymentInstallment")
+        : rec.paymentInfo.paymentMethod
+      return [
+        ackNo,
+        invReceiptNo,
+        studentNames(rec),
+        rec.studentData[0]?.sid || "",
+        inv ? (inv.invoiceNumber || inv.id || "") : "",
+        rec.studentData[0]?.grade || "-",
+        rec.schoolYear,
+        getInvTerm(inv),
+        invAmt,
+        paymentMethodLabel,
+        format(new Date(rec.paymentDate), "dd/MM/yyyy"),
+        rec.status === "pending" ? t("cashier.ackStatusPending") : t("cashier.ackStatusIssued"),
+      ]
+    })
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows])
+    ws["!cols"] = headers.map((h: string) => ({ wch: Math.min(Math.max(String(h).length + 2, 14), 40) }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Acknowledgements")
+    const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" })
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+    saveAs(blob, `Acknowledgements_${format(new Date(), "yyyyMMdd")}.xlsx`)
+  }
+
+  // ── Bulk Issue Date ────────────────────────────────────────────────────────
   function handleBulkIssue() {
     const targetIds = new Set(selectedPendingIds)
     if (targetIds.size === 0) return
@@ -189,6 +295,7 @@ export function CashierAcknowledgementList() {
     setIssueDialogOpen(false)
   }
 
+  // ── Download PDF ───────────────────────────────────────────────────────────
   async function handleDownloadPdf(recs: AckRecord[]) {
     if (recs.length === 0) return
     setIsGeneratingPdf(true)
@@ -207,7 +314,6 @@ export function CashierAcknowledgementList() {
           edcAmount: rec.paymentInfo.edcAmount,
           remark: rec.paymentInfo.remark,
         }
-
         let allocatedFee = 0
         const studentItems: StudentReceiptItem[] = rec.studentData.map((st, sIdx) => {
           const isLastStudent = sIdx === rec.studentData.length - 1
@@ -217,7 +323,6 @@ export function CashierAcknowledgementList() {
               : Number((totalFee * st.subtotal / totalSubtotal).toFixed(2))
             : 0
           allocatedFee += stFee
-
           const invList: any[] = st.invoices ?? []
           return {
             sid: st.sid,
@@ -237,13 +342,11 @@ export function CashierAcknowledgementList() {
             overpaymentAmount: sIdx === 0 ? globalOverpayment : 0,
           }
         })
-
         for (const item of studentItems) {
           const blob = await generatePdfBlob(item, cashierName, paymentInfo)
           pdfBlobs.push({ name: `${rec.acknowledgeNo || rec.id}.pdf`, blob })
         }
       }
-
       if (pdfBlobs.length === 1) {
         saveAs(pdfBlobs[0].blob, pdfBlobs[0].name)
       } else {
@@ -257,6 +360,7 @@ export function CashierAcknowledgementList() {
     }
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -267,7 +371,7 @@ export function CashierAcknowledgementList() {
         </div>
       </div>
 
-      {/* Search + bulk actions */}
+      {/* Search + bulk actions + export */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -300,6 +404,63 @@ export function CashierAcknowledgementList() {
             </Button>
           </div>
         )}
+        <div className="ml-auto">
+          <Button
+            size="sm"
+            onClick={exportExcel}
+            className="gap-2 h-9"
+            style={{ backgroundColor: "#000", color: "#fff" }}
+          >
+            <Download className="h-4 w-4" />
+            Export Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Select value={filterYearGroup} onValueChange={v => { setFilterYearGroup(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-36">
+            <SelectValue placeholder="Year Group" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueYearGroups.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterAcademicYear} onValueChange={v => { setFilterAcademicYear(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-36">
+            <SelectValue placeholder="Academic Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueAcademicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterTerm} onValueChange={v => { setFilterTerm(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-32">
+            <SelectValue placeholder="Term" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueTerms.map(term => <SelectItem key={term} value={term}>{term}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-32">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">{t("cashier.ackStatusPending")}</SelectItem>
+            <SelectItem value="issued">{t("cashier.ackStatusIssued")}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilter && (
+          <Button variant="ghost" size="sm" className="h-9 text-muted-foreground px-3" onClick={clearFilters}>
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -331,79 +492,72 @@ export function CashierAcknowledgementList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pageRecords.length === 0 ? (
+            {pageRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} className="text-center text-muted-foreground py-12 text-sm">
-                  {search ? t("cashier.ackNoSearchResults") : t("cashier.ackEmptyState")}
+                  {hasActiveFilter ? t("cashier.ackNoSearchResults") : t("cashier.ackEmptyState")}
                 </TableCell>
               </TableRow>
-            ) : pageRecords.flatMap(rec => {
-              const invList: any[] = rec.studentData[0]?.invoices ?? []
+            ) : pageRows.map(({ rec, inv, invIdx }, pageIdx) => {
+              const isFirstOnPage = firstOnPageSet.has(pageIdx)
               const ackNo = rec.acknowledgeNo || rec.paymentId || rec.id
-              const rows = invList.length > 0 ? invList : [null]
+              const invAmt = inv
+                ? (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0)
+                : grandTotal(rec)
+              const invReceiptNo = inv ? rec.receiptNos[inv.id] : Object.values(rec.receiptNos)[0]
               const paymentMethodLabel = rec.paymentInfo.paymentMethod === "full" ? t("cashier.paymentFull")
                 : rec.paymentInfo.paymentMethod === "installment" ? t("cashier.paymentInstallment")
                 : rec.paymentInfo.paymentMethod
-              return rows.map((inv: any, invIdx: number) => {
-                const isFirst = invIdx === 0
-                const invAmt = inv
-                  ? (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0)
-                  : grandTotal(rec)
-                const invTerm = inv?.term
-                  ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term)
-                  : "-"
-                const invReceiptNo = inv ? rec.receiptNos[inv.id] : Object.values(rec.receiptNos)[0]
-                return (
-                  <TableRow
-                    key={`${rec.id}-${invIdx}`}
-                    style={selected.has(rec.id) ? { backgroundColor: "#eff6ff" } : {}}
-                  >
-                    <TableCell align="center">
-                      {isFirst ? (
-                        <div
-                          onClick={() => toggleOne(rec.id)}
-                          className="w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto"
-                          style={selected.has(rec.id)
-                            ? { backgroundColor: "#4f46e5", borderColor: "#4f46e5", color: "#fff" }
-                            : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
-                        >
-                          {selected.has(rec.id) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
-                      ) : <div className="w-4 h-4 mx-auto" />}
-                    </TableCell>
-                    <TableCell align="center" className="font-mono text-sm">{ackNo}</TableCell>
-                    <TableCell align="center" className="font-mono text-sm">
-                      {rec.status === "issued" ? (invReceiptNo ?? "-") : "-"}
-                    </TableCell>
-                    <TableCell align="center">
-                      <div>
-                        <div className="font-medium text-sm">{studentNames(rec)}</div>
-                        <div className="text-sm text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
-                        {inv && <div className="text-xs text-muted-foreground">{inv.invoiceNumber || inv.id}</div>}
+              return (
+                <TableRow
+                  key={`${rec.id}-${invIdx}`}
+                  style={selected.has(rec.id) ? { backgroundColor: "#eff6ff" } : {}}
+                >
+                  <TableCell align="center">
+                    {isFirstOnPage ? (
+                      <div
+                        onClick={() => toggleOne(rec.id)}
+                        className="w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto"
+                        style={selected.has(rec.id)
+                          ? { backgroundColor: "#4f46e5", borderColor: "#4f46e5", color: "#fff" }
+                          : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
+                      >
+                        {selected.has(rec.id) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                       </div>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Badge variant="secondary" className="text-sm font-normal capitalize">
-                        {rec.studentData[0]?.grade || "-"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
-                    <TableCell align="center" className="text-sm">{invTerm}</TableCell>
-                    <TableCell align="right" className="text-sm font-medium">{fmt(invAmt)}</TableCell>
-                    <TableCell align="center" className="text-sm">{paymentMethodLabel}</TableCell>
-                    <TableCell align="center" className="text-sm">
-                      {format(new Date(rec.paymentDate), "dd MMM yyyy")}
-                    </TableCell>
-                    <TableCell align="center">
-                      {isFirst
-                        ? rec.status === "pending"
-                          ? <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">{t("cashier.ackStatusPending")}</Badge>
-                          : <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">{t("cashier.ackStatusIssued")}</Badge>
-                        : null}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
+                    ) : <div className="w-4 h-4 mx-auto" />}
+                  </TableCell>
+                  <TableCell align="center" className="font-mono text-sm">{ackNo}</TableCell>
+                  <TableCell align="center" className="font-mono text-sm">
+                    {rec.status === "issued" ? (invReceiptNo ?? "-") : "-"}
+                  </TableCell>
+                  <TableCell align="center">
+                    <div>
+                      <div className="font-medium text-sm">{studentNames(rec)}</div>
+                      <div className="text-sm text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
+                      {inv && <div className="text-xs text-muted-foreground">{inv.invoiceNumber || inv.id}</div>}
+                    </div>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Badge variant="secondary" className="text-sm font-normal capitalize">
+                      {rec.studentData[0]?.grade || "-"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
+                  <TableCell align="center" className="text-sm">{getInvTerm(inv)}</TableCell>
+                  <TableCell align="right" className="text-sm font-medium">{fmt(invAmt)}</TableCell>
+                  <TableCell align="center" className="text-sm">{paymentMethodLabel}</TableCell>
+                  <TableCell align="center" className="text-sm">
+                    {format(new Date(rec.paymentDate), "dd MMM yyyy")}
+                  </TableCell>
+                  <TableCell align="center">
+                    {isFirstOnPage
+                      ? rec.status === "pending"
+                        ? <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">{t("cashier.ackStatusPending")}</Badge>
+                        : <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">{t("cashier.ackStatusIssued")}</Badge>
+                      : null}
+                  </TableCell>
+                </TableRow>
+              )
             })}
           </TableBody>
         </Table>
@@ -413,7 +567,7 @@ export function CashierAcknowledgementList() {
       <PaginationBar
         currentPage={currentPage}
         pageSize={pageSize}
-        totalCount={filtered.length}
+        totalCount={filteredRows.length}
         onPageChange={setPage}
         onPageSizeChange={v => { setPageSize(v); setPage(1) }}
       />
