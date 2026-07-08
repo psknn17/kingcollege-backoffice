@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Input } from "./ui/input"
@@ -15,7 +15,7 @@ import { toast } from "@/components/ui/sonner"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
-import { generatePdfBlob, type InvoiceReceiptItem, type PaymentInfo } from "@/components/CashierReceiptPage"
+import { generatePdfBlob, type StudentReceiptItem, type PaymentInfo } from "@/components/CashierReceiptPage"
 
 type StudentEntry = {
   sid: string; name: string; guardian: string; grade: string; subtotal: number; invoices: any[]
@@ -125,43 +125,54 @@ export function CashierAcknowledgementList() {
     const newReceiptRecords = targets.flatMap(issueTarget => {
       const totalSubtotal = issueTarget.studentData.reduce((s, st) => s + st.subtotal, 0)
       const cardFeeTotal = issueTarget.paymentInfo.cardFee
-      return issueTarget.studentData.map(student => {
-        const pFee = totalSubtotal > 0 ? Number((cardFeeTotal * student.subtotal / totalSubtotal).toFixed(2)) : 0
-        const received = student.subtotal + pFee
-        return {
-          id: crypto.randomUUID(),
-          acknowledgeNo: issueTarget.paymentId || issueTarget.id,
-          receiptNo: issueTarget.receiptNos[student.sid] ?? Object.values(issueTarget.receiptNos)[0] ?? "-",
-          receiptDate: issueDate.toISOString(),
-          clientType: "internal",
-          clientNo: student.sid,
-          clientName: student.name,
-          contactName: student.guardian,
-          yearGroup: student.grade,
-          schoolYear: issueTarget.schoolYear,
-          totalAmount: received,
-          receivedAmount: received,
-          creditNoteTotal: 0,
-          netPayableAmount: received,
-          overpaymentAmount: 0,
-          paymentMethod: issueTarget.paymentInfo.paymentMethod,
-          bankName: issueTarget.paymentInfo.bank,
-          cardType: "",
-          transactionFeeAmount: pFee,
-          status: "generated",
-          createdAt: new Date().toISOString(),
-          invoices: student.invoices.map((inv: any) => {
-            const invAmt = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
-            return {
+      return issueTarget.studentData.flatMap(student => {
+        const studentFee = totalSubtotal > 0
+          ? Number((cardFeeTotal * student.subtotal / totalSubtotal).toFixed(2))
+          : 0
+        const invList: any[] = student.invoices ?? []
+        let allocatedInvFee = 0
+        return invList.map((inv: any, invIdx: number) => {
+          const invAmt = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
+          const isLastInv = invIdx === invList.length - 1
+          const invFee = student.subtotal > 0
+            ? isLastInv
+              ? Number((studentFee - allocatedInvFee).toFixed(2))
+              : Number((studentFee * invAmt / student.subtotal).toFixed(2))
+            : 0
+          allocatedInvFee += invFee
+          const received = invAmt + invFee
+          return {
+            id: crypto.randomUUID(),
+            acknowledgeNo: issueTarget.acknowledgeNo || issueTarget.paymentId || issueTarget.id,
+            receiptNo: issueTarget.receiptNos[inv.id] ?? "-",
+            receiptDate: issueDate.toISOString(),
+            clientType: "internal",
+            clientNo: student.sid,
+            clientName: student.name,
+            contactName: student.guardian,
+            yearGroup: student.grade,
+            schoolYear: issueTarget.schoolYear,
+            totalAmount: received,
+            receivedAmount: received,
+            creditNoteTotal: 0,
+            netPayableAmount: received,
+            overpaymentAmount: 0,
+            paymentMethod: issueTarget.paymentInfo.paymentMethod,
+            bankName: issueTarget.paymentInfo.bank,
+            cardType: "",
+            transactionFeeAmount: invFee,
+            status: "generated",
+            createdAt: new Date().toISOString(),
+            invoices: [{
               id: inv.id,
               invoiceNo: inv.invoiceNumber || inv.id,
               invoiceDate: inv.issueDate ?? new Date().toISOString(),
               invoiceAmount: invAmt,
-              receivedAmount: invAmt + pFee,
+              receivedAmount: received,
               outstandingAmount: 0,
-            }
-          }),
-        }
+            }],
+          }
+        })
       })
     })
 
@@ -197,47 +208,40 @@ export function CashierAcknowledgementList() {
           remark: rec.paymentInfo.remark,
         }
 
-        const flatInvs = rec.studentData.flatMap(st =>
-          (st.invoices ?? []).map((inv: any) => ({ st, inv }))
-        )
+        let allocatedFee = 0
+        const studentItems: StudentReceiptItem[] = rec.studentData.map((st, sIdx) => {
+          const isLastStudent = sIdx === rec.studentData.length - 1
+          const stFee = totalSubtotal > 0
+            ? isLastStudent
+              ? Number((totalFee - allocatedFee).toFixed(2))
+              : Number((totalFee * st.subtotal / totalSubtotal).toFixed(2))
+            : 0
+          allocatedFee += stFee
 
-        let allocated = 0
-        const items: InvoiceReceiptItem[] = flatInvs.length > 0
-          ? flatInvs.map(({ st, inv }, idx) => {
-              const invAmt: number = inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0
-              const isLast = idx === flatInvs.length - 1
-              const fee = totalSubtotal > 0
-                ? isLast ? Number((totalFee - allocated).toFixed(2)) : Number((totalFee * invAmt / totalSubtotal).toFixed(2))
-                : 0
-              allocated += fee
-              return {
-                sid: st.sid,
-                name: st.name,
-                guardian: st.guardian,
-                grade: st.grade ?? "-",
-                invoiceId: inv.id,
-                invoiceNumber: inv.invoiceNumber || inv.id || "-",
-                invoiceAmount: invAmt,
-                receiptNo: rec.acknowledgeNo ?? "-",
-                cardFee: fee,
-                overpaymentAmount: idx === 0 ? globalOverpayment : 0,
-              }
-            })
-          : rec.studentData.slice(0, 1).map(st => ({
-              sid: st.sid,
-              name: st.name,
-              guardian: st.guardian,
-              grade: st.grade ?? "-",
-              invoiceId: rec.id,
-              invoiceNumber: rec.acknowledgeNo ?? "-",
-              invoiceAmount: st.subtotal,
-              receiptNo: rec.acknowledgeNo ?? "-",
-              cardFee: totalFee,
-              overpaymentAmount: globalOverpayment,
-            }))
+          const invList: any[] = st.invoices ?? []
+          return {
+            sid: st.sid,
+            name: st.name,
+            guardian: st.guardian,
+            grade: st.grade ?? "-",
+            receiptNo: rec.acknowledgeNo ?? Object.values(rec.receiptNos)[0] ?? "-",
+            invoices: invList.length > 0
+              ? invList.map((inv: any) => ({
+                  invoiceId: inv.id,
+                  invoiceNumber: inv.invoiceNumber || inv.id || "-",
+                  invoiceAmount: inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0,
+                }))
+              : [{ invoiceId: rec.id, invoiceNumber: rec.acknowledgeNo ?? "-", invoiceAmount: st.subtotal }],
+            totalAmount: st.subtotal,
+            cardFee: stFee,
+            overpaymentAmount: sIdx === 0 ? globalOverpayment : 0,
+          }
+        })
 
-        const blob = await generatePdfBlob(items[0], cashierName, paymentInfo)
-        pdfBlobs.push({ name: `${rec.acknowledgeNo || rec.id}.pdf`, blob })
+        for (const item of studentItems) {
+          const blob = await generatePdfBlob(item, cashierName, paymentInfo)
+          pdfBlobs.push({ name: `${rec.acknowledgeNo || rec.id}.pdf`, blob })
+        }
       }
 
       if (pdfBlobs.length === 1) {
@@ -333,57 +337,73 @@ export function CashierAcknowledgementList() {
                   {search ? t("cashier.ackNoSearchResults") : t("cashier.ackEmptyState")}
                 </TableCell>
               </TableRow>
-            ) : pageRecords.map(rec => (
-              <TableRow key={rec.id} style={selected.has(rec.id) ? { backgroundColor: "#eff6ff" } : {}}>
-                <TableCell align="center">
-                  <div
-                    onClick={() => toggleOne(rec.id)}
-                    className="w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto"
-                    style={selected.has(rec.id)
-                      ? { backgroundColor: "#4f46e5", borderColor: "#4f46e5", color: "#fff" }
-                      : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
+            ) : pageRecords.flatMap(rec => {
+              const invList: any[] = rec.studentData[0]?.invoices ?? []
+              const ackNo = rec.acknowledgeNo || rec.paymentId || rec.id
+              const rows = invList.length > 0 ? invList : [null]
+              const paymentMethodLabel = rec.paymentInfo.paymentMethod === "full" ? t("cashier.paymentFull")
+                : rec.paymentInfo.paymentMethod === "installment" ? t("cashier.paymentInstallment")
+                : rec.paymentInfo.paymentMethod
+              return rows.map((inv: any, invIdx: number) => {
+                const isFirst = invIdx === 0
+                const invAmt = inv
+                  ? (inv.netAmount ?? inv.subtotal ?? inv.finalAmount ?? inv.totalAmount ?? 0)
+                  : grandTotal(rec)
+                const invTerm = inv?.term
+                  ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term)
+                  : "-"
+                const invReceiptNo = inv ? rec.receiptNos[inv.id] : Object.values(rec.receiptNos)[0]
+                return (
+                  <TableRow
+                    key={`${rec.id}-${invIdx}`}
+                    style={selected.has(rec.id) ? { backgroundColor: "#eff6ff" } : {}}
                   >
-                    {selected.has(rec.id) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                  </div>
-                </TableCell>
-                <TableCell align="center" className="font-mono text-sm">{rec.acknowledgeNo || rec.paymentId || rec.id}</TableCell>
-                <TableCell align="center" className="font-mono text-sm">
-                  {rec.status === "issued" ? firstReceiptNo(rec) : "-"}
-                </TableCell>
-                <TableCell align="center">
-                  <div>
-                    <div className="font-medium text-sm">{studentNames(rec)}</div>
-                    <div className="text-sm text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
-                  </div>
-                </TableCell>
-                <TableCell align="center">
-                  <Badge variant="secondary" className="text-sm font-normal capitalize">
-                    {rec.studentData[0]?.grade || "-"}
-                  </Badge>
-                </TableCell>
-                <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
-                <TableCell align="center" className="text-sm">
-                  {rec.studentData[0]?.invoices[0]?.term
-                    ? (rec.studentData[0].invoices[0].term.match(/Term\s*\d+/i)?.[0] ?? rec.studentData[0].invoices[0].term)
-                    : "-"}
-                </TableCell>
-                <TableCell align="right" className="text-sm font-medium">{fmt(grandTotal(rec))}</TableCell>
-                <TableCell align="center" className="text-sm">
-                  {rec.paymentInfo.paymentMethod === "full" ? t("cashier.paymentFull")
-                    : rec.paymentInfo.paymentMethod === "installment" ? t("cashier.paymentInstallment")
-                    : rec.paymentInfo.paymentMethod}
-                </TableCell>
-                <TableCell align="center" className="text-sm">
-                  {format(new Date(rec.paymentDate), "dd MMM yyyy")}
-                </TableCell>
-                <TableCell align="center">
-                  {rec.status === "pending"
-                    ? <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">{t("cashier.ackStatusPending")}</Badge>
-                    : <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">{t("cashier.ackStatusIssued")}</Badge>
-                  }
-                </TableCell>
-              </TableRow>
-            ))}
+                    <TableCell align="center">
+                      {isFirst ? (
+                        <div
+                          onClick={() => toggleOne(rec.id)}
+                          className="w-4 h-4 rounded flex items-center justify-center border transition-all cursor-pointer mx-auto"
+                          style={selected.has(rec.id)
+                            ? { backgroundColor: "#4f46e5", borderColor: "#4f46e5", color: "#fff" }
+                            : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
+                        >
+                          {selected.has(rec.id) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                      ) : <div className="w-4 h-4 mx-auto" />}
+                    </TableCell>
+                    <TableCell align="center" className="font-mono text-sm">{ackNo}</TableCell>
+                    <TableCell align="center" className="font-mono text-sm">
+                      {rec.status === "issued" ? (invReceiptNo ?? "-") : "-"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <div>
+                        <div className="font-medium text-sm">{studentNames(rec)}</div>
+                        <div className="text-sm text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Badge variant="secondary" className="text-sm font-normal capitalize">
+                        {rec.studentData[0]?.grade || "-"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
+                    <TableCell align="center" className="text-sm">{invTerm}</TableCell>
+                    <TableCell align="right" className="text-sm font-medium">{fmt(invAmt)}</TableCell>
+                    <TableCell align="center" className="text-sm">{paymentMethodLabel}</TableCell>
+                    <TableCell align="center" className="text-sm">
+                      {format(new Date(rec.paymentDate), "dd MMM yyyy")}
+                    </TableCell>
+                    <TableCell align="center">
+                      {isFirst
+                        ? rec.status === "pending"
+                          ? <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">{t("cashier.ackStatusPending")}</Badge>
+                          : <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">{t("cashier.ackStatusIssued")}</Badge>
+                        : null}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            })}
           </TableBody>
         </Table>
       </div>

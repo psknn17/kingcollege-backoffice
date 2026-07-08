@@ -179,54 +179,45 @@ export function CashierPaymentPage() {
       const { sid, student, invoices, guardian, subtotal } = stdData[sIdx]
       const pOver = sIdx === 0 ? overInvoiceAmt : 0
       const studentFee = Number(((subtotal + pOver) * feeRateVal / 100).toFixed(2))
-      let allocatedStudentFee = 0
+      const pCharge = subtotal + pOver
       const invList = invoices ?? []
 
-      for (let iIdx = 0; iIdx < invList.length; iIdx++) {
-        const inv = invList[iIdx]
-        const invAmt: number = getAmount(inv)
-        const isLastInv = iIdx === invList.length - 1
-        const pFee = subtotal > 0
-          ? isLastInv
-            ? Number((studentFee - allocatedStudentFee).toFixed(2))
-            : Number((studentFee * invAmt / subtotal).toFixed(2))
-          : 0
-        allocatedStudentFee += pFee
+      const acknowledgeNo = generateAcknowledgeNo()
+      const perInvReceiptNos: Record<string, string> = {}
 
-        const pInvOver = sIdx === 0 && iIdx === 0 ? overInvoiceAmt : 0
-        const pCharge = invAmt + pInvOver
-        const receiptNo = generateReceiptNo()
-        const acknowledgeNo = generateAcknowledgeNo()
-        receiptNos[inv.id] = receiptNo
+      invList.forEach((inv: any) => {
+        const rNo = generateReceiptNo()
+        perInvReceiptNos[inv.id] = rNo
+        receiptNos[inv.id] = rNo
         acknowledgeNos[inv.id] = acknowledgeNo
+      })
 
-        newRecords.push({
-          id: crypto.randomUUID(),
-          acknowledgeNo,
-          status: "pending" as const,
-          receiptNos: { [inv.id]: receiptNo },
-          paymentDate: now.toISOString(),
-          paymentId,
-          studentData: [{
-            sid,
-            name: student ? `${student.firstName} ${student.lastName}` : sid,
-            guardian,
-            grade: student?.gradeLevel ?? "-",
-            subtotal: invAmt,
-            invoices: [inv],
-          }],
-          paymentInfo: {
-            bank,
-            paymentMethod: paymentMethodVal,
-            chargeAmount: pCharge,
-            edcAmount: pCharge + pFee,
-            cardFee: pFee,
-            remark,
-          },
-          schoolYear: `${acYearStart}/${acYearStart + 1}`,
-          createdAt: now.toISOString(),
-        })
-      }
+      newRecords.push({
+        id: crypto.randomUUID(),
+        acknowledgeNo,
+        status: "pending" as const,
+        receiptNos: perInvReceiptNos,
+        paymentDate: now.toISOString(),
+        paymentId,
+        studentData: [{
+          sid,
+          name: student ? `${student.firstName} ${student.lastName}` : sid,
+          guardian,
+          grade: student?.gradeLevel ?? "-",
+          subtotal,
+          invoices: invList,
+        }],
+        paymentInfo: {
+          bank,
+          paymentMethod: paymentMethodVal,
+          chargeAmount: pCharge,
+          edcAmount: pCharge + studentFee,
+          cardFee: studentFee,
+          remark,
+        },
+        schoolYear: `${acYearStart}/${acYearStart + 1}`,
+        createdAt: now.toISOString(),
+      })
     }
 
     const existing = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
