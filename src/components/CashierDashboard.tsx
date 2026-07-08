@@ -8,15 +8,19 @@ import { CalendarIcon, X } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useAuth } from "@/contexts/AuthContext"
 
-const RECEIPT_KEYS = [
-  "receiptRecords_tuition",
-  "receiptRecords_eca",
-  "receiptRecords_trip",
-  "receiptRecords_bus",
-  "receiptRecords_exam",
-]
-
 type BankRow = { bankName: string; netAmount: number; invoiceCount: number }
+
+function loadAckRecords(): { paymentDate: string; chargeAmount: number; bank: string; invoiceCount: number }[] {
+  try {
+    const raw: any[] = JSON.parse(localStorage.getItem("cashier_acknowledgements") || "[]")
+    return raw.map(r => ({
+      paymentDate: r.paymentDate ?? "",
+      chargeAmount: r.paymentInfo?.chargeAmount ?? 0,
+      bank: r.paymentInfo?.bank?.trim() || "Unknown",
+      invoiceCount: (r.studentData ?? []).reduce((s: number, st: any) => s + (st.invoices?.length ?? 0), 0),
+    }))
+  } catch { return [] }
+}
 
 function formatCurrency(amount: number): string {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -51,33 +55,15 @@ const todayStr = format(new Date(), "yyyy-MM-dd")
 
   const bankBreakdown = useMemo<BankRow[]>(() => {
     const map = new Map<string, BankRow>()
-    for (const key of RECEIPT_KEYS) {
-      try {
-        const raw = localStorage.getItem(key)
-        if (!raw) continue
-        const recs: {
-          receiptDate: string
-          totalAmount?: number
-          transactionFeeAmount?: number
-          bankName?: string
-          invoices?: unknown[]
-        }[] = JSON.parse(raw)
-        for (const r of recs) {
-          try {
-            if (!inRange(r.receiptDate)) continue
-            const bank = r.bankName?.trim() || "Unknown"
-            const net = Math.max(0, (r.totalAmount ?? 0) - (r.transactionFeeAmount ?? 0))
-            const count = r.invoices?.length ?? 0
-            const existing = map.get(bank)
-            if (existing) {
-              existing.netAmount += net
-              existing.invoiceCount += count
-            } else {
-              map.set(bank, { bankName: bank, netAmount: net, invoiceCount: count })
-            }
-          } catch { /* skip */ }
-        }
-      } catch { /* skip */ }
+    for (const r of loadAckRecords()) {
+      if (!inRange(r.paymentDate)) continue
+      const existing = map.get(r.bank)
+      if (existing) {
+        existing.netAmount += r.chargeAmount
+        existing.invoiceCount += r.invoiceCount
+      } else {
+        map.set(r.bank, { bankName: r.bank, netAmount: r.chargeAmount, invoiceCount: r.invoiceCount })
+      }
     }
     return [...map.values()]
       .filter(row => row.netAmount > 0)
@@ -89,20 +75,11 @@ const todayStr = format(new Date(), "yyyy-MM-dd")
 
   const todayTotal = useMemo(() => {
     const today = new Date()
-    let sum = 0
-    for (const key of RECEIPT_KEYS) {
+    return loadAckRecords().reduce((sum, r) => {
       try {
-        const raw = localStorage.getItem(key)
-        if (!raw) continue
-        const recs: { receiptDate: string; totalAmount?: number }[] = JSON.parse(raw)
-        for (const r of recs) {
-          try {
-            if (isSameDay(new Date(r.receiptDate), today)) sum += r.totalAmount ?? 0
-          } catch { /* skip */ }
-        }
-      } catch { /* skip */ }
-    }
-    return sum
+        return isSameDay(new Date(r.paymentDate), today) ? sum + r.chargeAmount : sum
+      } catch { return sum }
+    }, 0)
   }, [refreshTick])
 
   const dateLabel = fromDate === toDate
@@ -183,7 +160,7 @@ const todayStr = format(new Date(), "yyyy-MM-dd")
                     {t("cashier.dashboard.noOfInvoice")}
                   </th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground w-1/4">
-                    {t("cashier.dashboard.amountTHB")}
+                    Net Amount (THB)
                   </th>
                 </tr>
               </thead>
