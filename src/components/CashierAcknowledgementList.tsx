@@ -126,10 +126,10 @@ export function CashierAcknowledgementList() {
     })
   }, [records])
 
-  // ── Unique filter option values ────────────────────────────────────────────
-  const uniqueYearGroups = useMemo(() =>
-    sortGrades([...new Set(records.map(r => r.studentData[0]?.grade).filter(Boolean) as string[])])
-  , [records])
+  // ── Filter option values ───────────────────────────────────────────────────
+  const ALL_YEAR_GROUPS = ["nursery", "pre-nursery", "reception",
+    "year1","year2","year3","year4","year5","year6","year7",
+    "year8","year9","year10","year11","year12","year13"]
 
   const uniqueAcademicYears = useMemo(() =>
     [...new Set(records.map(r => r.schoolYear).filter(Boolean))].sort().reverse()
@@ -413,7 +413,7 @@ export function CashierAcknowledgementList() {
             <SelectValue placeholder="Year Group" />
           </SelectTrigger>
           <SelectContent>
-            {uniqueYearGroups.map(g => <SelectItem key={g} value={g}>{formatGrade(g)}</SelectItem>)}
+            {ALL_YEAR_GROUPS.map(g => <SelectItem key={g} value={g}>{formatGrade(g)}</SelectItem>)}
           </SelectContent>
         </Select>
 
