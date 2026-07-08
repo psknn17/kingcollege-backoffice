@@ -93,7 +93,7 @@ export function CashierPaymentReport() {
 
       for (const student of rec.studentData ?? []) {
         const studentCardFee = totalSubtotal > 0
-          ? rec.paymentInfo.cardFee * student.subtotal / totalSubtotal
+          ? Number((rec.paymentInfo.cardFee * student.subtotal / totalSubtotal).toFixed(2))
           : 0
 
         const invs: any[] = Array.isArray(student.invoices) ? student.invoices : []
@@ -126,7 +126,7 @@ export function CashierPaymentReport() {
             const candidates = [inv.netAmount, inv.finalAmount, inv.totalAmount, inv.subtotal]
             const invoiceAmt: number = candidates.find((v) => v != null && typeof v === "number" && v > 0) ?? 0
             const invCardFee = student.subtotal > 0
-              ? studentCardFee * invoiceAmt / student.subtotal
+              ? Number((studentCardFee * invoiceAmt / student.subtotal).toFixed(2))
               : 0
 
             const rowOverpayment = (!overpaymentAssigned && overAmt > 0) ? overAmt : 0
