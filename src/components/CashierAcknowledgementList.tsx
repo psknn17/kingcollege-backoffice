@@ -379,6 +379,7 @@ export function CashierAcknowledgementList() {
                       <div>
                         <div className="font-medium text-sm">{studentNames(rec)}</div>
                         <div className="text-sm text-muted-foreground">{rec.studentData[0]?.sid || ""}</div>
+                        {inv && <div className="text-xs text-muted-foreground">{inv.invoiceNumber || inv.id}</div>}
                       </div>
                     </TableCell>
                     <TableCell align="center">
