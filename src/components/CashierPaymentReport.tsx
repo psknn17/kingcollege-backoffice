@@ -81,6 +81,10 @@ export function CashierPaymentReport() {
 
       const totalSubtotal: number = (rec.studentData ?? []).reduce((s: number, st: any) => s + (st.subtotal ?? 0), 0)
       const overAmt = Math.max(0, Number(((rec.paymentInfo?.chargeAmount ?? 0) - totalSubtotal).toFixed(2)))
+      const recFeeRate = totalSubtotal > 0
+        ? Number(((rec.paymentInfo?.cardFee ?? 0) / totalSubtotal * 100).toFixed(2))
+        : 0
+      const recFeeRateStr = recFeeRate > 0 ? `${recFeeRate.toFixed(2)}%` : ""
       let overpaymentAssigned = false
       const rawMethod = rec.paymentInfo?.paymentMethod || ""
       const paymentMethodLabel = rawMethod === "full" ? t("cashier.paymentFull")
@@ -111,7 +115,7 @@ export function CashierPaymentReport() {
             rowOverpayment,
             fallbackNet,
             studentCardFee,
-            studentCardFee > 0 && student.subtotal > 0 ? `${((studentCardFee / student.subtotal) * 100).toFixed(2)}%` : "",
+            recFeeRateStr,
             Number((fallbackNet + studentCardFee).toFixed(2)),
             rec.paymentInfo?.bank || "",
             paymentMethodLabel,
@@ -129,7 +133,6 @@ export function CashierPaymentReport() {
             overpaymentAssigned = true
 
             const netAmt = invoiceAmt + rowOverpayment
-            const rate = invoiceAmt > 0 ? Number(((invCardFee / invoiceAmt) * 100).toFixed(2)) : 0
 
             rows.push([
               fmtDate(rec.paymentDate),
@@ -143,7 +146,7 @@ export function CashierPaymentReport() {
               rowOverpayment,
               netAmt,
               invCardFee,
-              invCardFee !== 0 ? `${rate.toFixed(2)}%` : "",
+              invCardFee !== 0 ? recFeeRateStr : "",
               Number((netAmt + invCardFee).toFixed(2)),
               rec.paymentInfo?.bank || "",
               paymentMethodLabel,
