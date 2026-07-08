@@ -75,6 +75,31 @@ function getInvTerm(inv: any): string {
   return inv?.term ? (inv.term.match(/Term\s*\d+/i)?.[0] ?? inv.term) : "-"
 }
 
+const GRADE_ORDER = ["nursery", "pre-nursery", "reception"]
+
+function formatGrade(g: string): string {
+  const lower = g.toLowerCase()
+  if (lower === "nursery") return "Nursery"
+  if (lower === "pre-nursery") return "Pre-Nursery"
+  if (lower === "reception") return "Reception"
+  const num = lower.replace(/[^0-9]/g, "")
+  return num ? `Year ${num}` : g.charAt(0).toUpperCase() + g.slice(1)
+}
+
+function sortGrades(grades: string[]): string[] {
+  return [...grades].sort((a, b) => {
+    const al = a.toLowerCase(); const bl = b.toLowerCase()
+    const ai = GRADE_ORDER.indexOf(al); const bi = GRADE_ORDER.indexOf(bl)
+    if (ai !== -1 && bi !== -1) return ai - bi
+    if (ai !== -1) return -1
+    if (bi !== -1) return 1
+    const an = parseInt(al.replace(/[^0-9]/g, ""), 10)
+    const bn = parseInt(bl.replace(/[^0-9]/g, ""), 10)
+    if (!isNaN(an) && !isNaN(bn)) return an - bn
+    return al.localeCompare(bl)
+  })
+}
+
 export function CashierAcknowledgementList() {
   const { t } = useLanguage()
   const { user } = useAuth()
@@ -103,7 +128,7 @@ export function CashierAcknowledgementList() {
 
   // ── Unique filter option values ────────────────────────────────────────────
   const uniqueYearGroups = useMemo(() =>
-    [...new Set(records.map(r => r.studentData[0]?.grade).filter(Boolean) as string[])].sort()
+    sortGrades([...new Set(records.map(r => r.studentData[0]?.grade).filter(Boolean) as string[])])
   , [records])
 
   const uniqueAcademicYears = useMemo(() =>
@@ -424,7 +449,7 @@ export function CashierAcknowledgementList() {
             <SelectValue placeholder="Year Group" />
           </SelectTrigger>
           <SelectContent>
-            {uniqueYearGroups.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+            {uniqueYearGroups.map(g => <SelectItem key={g} value={g}>{formatGrade(g)}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -538,8 +563,8 @@ export function CashierAcknowledgementList() {
                     </div>
                   </TableCell>
                   <TableCell align="center">
-                    <Badge variant="secondary" className="text-sm font-normal capitalize">
-                      {rec.studentData[0]?.grade || "-"}
+                    <Badge variant="secondary" className="text-sm font-normal">
+                      {formatGrade(rec.studentData[0]?.grade || "-")}
                     </Badge>
                   </TableCell>
                   <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
