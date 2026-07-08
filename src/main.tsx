@@ -24,7 +24,7 @@
             <AcademicYearProvider>
               <DiscountOptionsProvider>
                 <StudentProvider>
-                  {import.meta.env.DEV && <DevInvoiceSeeder />}
+                  <DevInvoiceSeeder />
                   <App />
                   {import.meta.env.DEV && <Agentation />}
                 </StudentProvider>
