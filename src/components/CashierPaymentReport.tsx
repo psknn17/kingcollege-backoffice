@@ -111,7 +111,7 @@ export function CashierPaymentReport() {
             rowOverpayment,
             fallbackNet,
             studentCardFee,
-            studentCardFee > 0 && fallbackNet > 0 ? `${((studentCardFee / fallbackNet) * 100).toFixed(2)}%` : "",
+            studentCardFee > 0 && student.subtotal > 0 ? `${((studentCardFee / student.subtotal) * 100).toFixed(2)}%` : "",
             Number((fallbackNet + studentCardFee).toFixed(2)),
             rec.paymentInfo?.bank || "",
             paymentMethodLabel,
@@ -129,7 +129,7 @@ export function CashierPaymentReport() {
             overpaymentAssigned = true
 
             const netAmt = invoiceAmt + rowOverpayment
-            const rate = netAmt > 0 ? Number(((invCardFee / netAmt) * 100).toFixed(4)) : 0
+            const rate = invoiceAmt > 0 ? Number(((invCardFee / invoiceAmt) * 100).toFixed(2)) : 0
 
             rows.push([
               fmtDate(rec.paymentDate),
