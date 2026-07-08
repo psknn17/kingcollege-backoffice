@@ -131,20 +131,36 @@ export function generateInvoicesForStudent(studentId: string, index: number): Re
   return result
 }
 
+const MAX_MOCK_STUDENTS = 100
+
 export function injectMockInvoices(students: { studentId: string }[]) {
   const injectedIds = getInjectedIds()
-  const newStudents = students.filter(s => !injectedIds.has(s.studentId))
-  if (newStudents.length === 0) return
+
+  // Find students with no existing invoices (across all keys)
+  const existingStudentIds = new Set<string>()
+  for (const key of Object.values(STORAGE_KEYS)) {
+    try {
+      const existing: any[] = JSON.parse(localStorage.getItem(key) || "[]")
+      existing.forEach((inv: any) => { if (inv.studentId) existingStudentIds.add(inv.studentId) })
+    } catch { /* ignore */ }
+  }
+
+  const candidates = students.filter(
+    s => !injectedIds.has(s.studentId) && !existingStudentIds.has(s.studentId)
+  ).slice(0, MAX_MOCK_STUDENTS)
+
+  if (candidates.length === 0) return
 
   // Load existing data
   const buckets: Record<string, Map<string, any>> = {}
   for (const key of Object.values(STORAGE_KEYS)) {
-    const existing: any[] = JSON.parse(localStorage.getItem(key) || "[]")
-    buckets[key] = new Map(existing.map((i: any) => [i.id, i]))
+    try {
+      const existing: any[] = JSON.parse(localStorage.getItem(key) || "[]")
+      buckets[key] = new Map(existing.map((i: any) => [i.id, i]))
+    } catch { buckets[key] = new Map() }
   }
 
-  // Generate only for new students
-  newStudents.forEach((s, idx) => {
+  candidates.forEach((s, idx) => {
     const globalIdx = students.findIndex(x => x.studentId === s.studentId) + 1
     const byKey = generateInvoicesForStudent(s.studentId, globalIdx)
     for (const [key, invs] of Object.entries(byKey)) {
@@ -154,11 +170,18 @@ export function injectMockInvoices(students: { studentId: string }[]) {
     injectedIds.add(s.studentId)
   })
 
-  // Persist
+  // Persist with quota guard
+  let saved = 0
   for (const [key, map] of Object.entries(buckets)) {
-    localStorage.setItem(key, JSON.stringify(Array.from(map.values())))
+    try {
+      localStorage.setItem(key, JSON.stringify(Array.from(map.values())))
+      saved++
+    } catch {
+      console.warn(`⚠️ localStorage quota exceeded at key "${key}" — stopping mock injection`)
+      break
+    }
   }
 
   saveInjectedIds(injectedIds)
-  console.log(`✅ Mock invoices injected for ${newStudents.length} new students (total: ${injectedIds.size})`)
+  console.log(`✅ Mock invoices injected for ${candidates.length} students (${saved} keys saved)`)
 }
