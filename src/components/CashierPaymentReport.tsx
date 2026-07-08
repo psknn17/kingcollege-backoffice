@@ -93,10 +93,6 @@ export function CashierPaymentReport() {
         : rawMethod
 
       for (const student of rec.studentData ?? []) {
-        const studentCardFee = totalSubtotal > 0
-          ? Number((rec.paymentInfo.cardFee * student.subtotal / totalSubtotal).toFixed(2))
-          : 0
-
         const invs: any[] = Array.isArray(student.invoices) ? student.invoices : []
 
         if (invs.length === 0) {
@@ -104,6 +100,7 @@ export function CashierPaymentReport() {
           const rowOverpayment = (!overpaymentAssigned && overAmt > 0) ? overAmt : 0
           overpaymentAssigned = true
           const fallbackNet = student.subtotal + rowOverpayment
+          const fallbackFee = Number((fallbackNet * recFeeRate / 100).toFixed(2))
           rows.push([
             fmtDate(rec.paymentDate),
             fmtTime(rec.paymentDate),
@@ -115,9 +112,9 @@ export function CashierPaymentReport() {
             student.subtotal,
             rowOverpayment,
             fallbackNet,
-            studentCardFee,
+            fallbackFee,
             recFeeRateStr,
-            Number((fallbackNet + studentCardFee).toFixed(2)),
+            Number((fallbackNet + fallbackFee).toFixed(2)),
             rec.paymentInfo?.bank || "",
             paymentMethodLabel,
             rec.paymentInfo?.remark || "",
@@ -126,14 +123,12 @@ export function CashierPaymentReport() {
           for (const inv of invs) {
             const candidates = [inv.netAmount, inv.finalAmount, inv.totalAmount, inv.subtotal]
             const invoiceAmt: number = candidates.find((v) => v != null && typeof v === "number" && v > 0) ?? 0
-            const invCardFee = student.subtotal > 0
-              ? Number((studentCardFee * invoiceAmt / student.subtotal).toFixed(2))
-              : 0
 
             const rowOverpayment = (!overpaymentAssigned && overAmt > 0) ? overAmt : 0
             overpaymentAssigned = true
 
             const netAmt = invoiceAmt + rowOverpayment
+            const invCardFee = Number((netAmt * recFeeRate / 100).toFixed(2))
 
             rows.push([
               fmtDate(rec.paymentDate),
@@ -147,7 +142,7 @@ export function CashierPaymentReport() {
               rowOverpayment,
               netAmt,
               invCardFee,
-              invCardFee !== 0 ? recFeeRateStr : "",
+              recFeeRateStr,
               Number((netAmt + invCardFee).toFixed(2)),
               rec.paymentInfo?.bank || "",
               paymentMethodLabel,
