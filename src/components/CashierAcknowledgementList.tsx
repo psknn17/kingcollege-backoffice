@@ -109,6 +109,7 @@ export function CashierAcknowledgementList() {
   const [filterAcademicYear, setFilterAcademicYear] = useState("")
   const [filterTerm, setFilterTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("")
+  const [filterBank, setFilterBank] = useState("")
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -144,6 +145,10 @@ export function CashierAcknowledgementList() {
     return [...terms].sort()
   }, [records])
 
+  const uniqueBanks = useMemo(() =>
+    [...new Set(records.map(r => r.paymentInfo.bank?.trim()).filter(Boolean))].sort()
+  , [records])
+
   // ── Apply all filters ──────────────────────────────────────────────────────
   const filteredRows = useMemo<FlatRow[]>(() => {
     return allFlatRows.filter(({ rec, inv }) => {
@@ -162,9 +167,10 @@ export function CashierAcknowledgementList() {
         if (!inv || getInvTerm(inv) !== filterTerm) return false
       }
       if (filterStatus && rec.status !== filterStatus) return false
+      if (filterBank && (rec.paymentInfo.bank?.trim() || "") !== filterBank) return false
       return true
     })
-  }, [allFlatRows, search, filterYearGroup, filterAcademicYear, filterTerm, filterStatus])
+  }, [allFlatRows, search, filterYearGroup, filterAcademicYear, filterTerm, filterStatus, filterBank])
 
   // ── Pagination ─────────────────────────────────────────────────────────────
   const totalPages = Math.ceil(filteredRows.length / pageSize) || 1
@@ -184,7 +190,7 @@ export function CashierAcknowledgementList() {
   const pageRecordIds = useMemo(() => [...new Set(pageRows.map(r => r.rec.id))], [pageRows])
   const selectedPendingIds = [...selected].filter(id => records.find(r => r.id === id)?.status === "pending")
   const allPageSelected = pageRecordIds.length > 0 && pageRecordIds.every(id => selected.has(id))
-  const hasActiveFilter = !!(search || filterYearGroup || filterAcademicYear || filterTerm || filterStatus)
+  const hasActiveFilter = !!(search || filterYearGroup || filterAcademicYear || filterTerm || filterStatus || filterBank)
 
   function toggleAll() {
     const next = new Set(selected)
@@ -200,7 +206,7 @@ export function CashierAcknowledgementList() {
   }
 
   function clearFilters() {
-    setSearch(""); setFilterYearGroup(""); setFilterAcademicYear(""); setFilterTerm(""); setFilterStatus(""); setPage(1)
+    setSearch(""); setFilterYearGroup(""); setFilterAcademicYear(""); setFilterTerm(""); setFilterStatus(""); setFilterBank(""); setPage(1)
   }
 
   // ── Export Excel ───────────────────────────────────────────────────────────
@@ -209,7 +215,7 @@ export function CashierAcknowledgementList() {
       t("cashier.ackColAckNo"), t("cashier.ackColReceiptNo"),
       t("cashier.ackColStudent"), "Student ID", "Invoice No.",
       t("cashier.ackColYearGroup"), t("cashier.ackColAcademicYear"), t("cashier.ackColTerm"),
-      t("cashier.ackColAmount"), t("cashier.paymentMethod"),
+      t("cashier.ackColAmount"), t("cashier.report.col.bank"), t("cashier.paymentMethod"),
       t("cashier.ackColDate"), t("cashier.ackColStatus"),
     ]
     const dataRows = filteredRows.map(({ rec, inv }) => {
@@ -233,6 +239,7 @@ export function CashierAcknowledgementList() {
         rec.schoolYear,
         getInvTerm(inv),
         invAmt,
+        rec.paymentInfo.bank || "",
         paymentMethodLabel,
         format(new Date(rec.paymentDate), "dd/MM/yyyy"),
         rec.status === "pending" ? t("cashier.ackStatusPending") : t("cashier.ackStatusIssued"),
@@ -445,6 +452,15 @@ export function CashierAcknowledgementList() {
           </SelectContent>
         </Select>
 
+        <Select value={filterBank} onValueChange={v => { setFilterBank(v); setPage(1) }}>
+          <SelectTrigger className="h-9 w-36">
+            <SelectValue placeholder="Bank" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueBanks.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
         {hasActiveFilter && (
           <Button size="sm" className="h-9 px-3" style={{ backgroundColor: "#000", color: "#fff" }} onClick={clearFilters}>
             Clear
@@ -510,6 +526,7 @@ export function CashierAcknowledgementList() {
               <TableHead align="center">{t("cashier.ackColAcademicYear")}</TableHead>
               <TableHead align="center">{t("cashier.ackColTerm")}</TableHead>
               <TableHead align="right">{t("cashier.ackColAmount")}</TableHead>
+              <TableHead align="center">{t("cashier.report.col.bank")}</TableHead>
               <TableHead align="center">{t("cashier.paymentMethod")}</TableHead>
               <TableHead align="center">{t("cashier.ackColDate")}</TableHead>
               <TableHead align="center">{t("cashier.ackColStatus")}</TableHead>
@@ -518,7 +535,7 @@ export function CashierAcknowledgementList() {
           <TableBody>
             {pageRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground py-12 text-sm">
+                <TableCell colSpan={12} className="text-center text-muted-foreground py-12 text-sm">
                   {hasActiveFilter ? t("cashier.ackNoSearchResults") : t("cashier.ackEmptyState")}
                 </TableCell>
               </TableRow>
@@ -569,6 +586,7 @@ export function CashierAcknowledgementList() {
                   <TableCell align="center" className="text-sm">{rec.schoolYear}</TableCell>
                   <TableCell align="center" className="text-sm">{getInvTerm(inv)}</TableCell>
                   <TableCell align="right" className="text-sm font-medium">{fmt(invAmt)}</TableCell>
+                  <TableCell align="center" className="text-sm">{rec.paymentInfo.bank || "-"}</TableCell>
                   <TableCell align="center" className="text-sm">{paymentMethodLabel}</TableCell>
                   <TableCell align="center" className="text-sm">
                     {format(new Date(rec.paymentDate), "dd MMM yyyy")}
