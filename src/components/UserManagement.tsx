@@ -22,7 +22,7 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { ColumnPresets } from "@/utils/tableAlignment"
 import { logActivity } from "@/lib/activityLog"
 
-type UserRole = "super_admin" | "admin_accountant" | "viewer" | "approver"
+type UserRole = "super_admin" | "admin_accountant" | "viewer" | "approver" | "cashier"
 type UserStatus = "active" | "inactive" | "suspended"
 
 interface Permission {
@@ -142,6 +142,7 @@ const roleDefaultPermissions: Record<UserRole, string[]> = {
     "discount_view",
     "invoice_view",
   ],
+  cashier: [],
 }
 
 const mockUsers: User[] = [
@@ -600,6 +601,8 @@ export function UserManagement() {
         return <Badge className="bg-blue-100 text-blue-800">Approver</Badge>
       case "viewer":
         return <Badge className="bg-gray-100 text-gray-800">View</Badge>
+      case "cashier":
+        return <Badge className="bg-orange-100 text-orange-800">Cashier</Badge>
       default:
         return <Badge variant="secondary">{role}</Badge>
     }
@@ -634,6 +637,7 @@ export function UserManagement() {
     admin_accountant: users.filter(u => u.roles.includes("admin_accountant")).length,
     approver: users.filter(u => u.roles.includes("approver")).length,
     viewer: users.filter(u => u.roles.includes("viewer")).length,
+    cashier: users.filter(u => u.roles.includes("cashier")).length,
   }
 
   return (
@@ -738,6 +742,7 @@ export function UserManagement() {
                       <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
                       <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
                       <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
+                      <SelectItem value="cashier">{t("userManagement.cashier")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -875,6 +880,7 @@ export function UserManagement() {
                       <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
                       <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
                       <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
+                      <SelectItem value="cashier">{t("userManagement.cashier")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1074,6 +1080,7 @@ export function UserManagement() {
                     <SelectItem value="admin_accountant">{t("userManagement.financeAdmin")}</SelectItem>
                     <SelectItem value="approver">{t("userManagement.approver")}</SelectItem>
                     <SelectItem value="viewer">{t("userManagement.viewer")}</SelectItem>
+                    <SelectItem value="cashier">{t("userManagement.cashier")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
