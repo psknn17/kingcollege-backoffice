@@ -1,6 +1,5 @@
 // Mock data seeder — realistic, interconnected data across ALL menus
 // Only seeds keys that don't already exist (seedIfEmpty)
-import { seedMockData } from "@/services/analyticsService"
 
 const CURRENT_YEAR = "2025/2026"
 const PREV_YEAR = "2024/2025"
@@ -138,12 +137,12 @@ function generateTuitionData() {
 
 // ── 4. Invoice Items (all categories) ────────────────────────
 const INVOICE_ITEMS = [
-  { id: "item-001", name: "Tuition Fee", description: "Tuition fee for the term", amount: 0, category: "tuition", isActive: true, applicableGrades: [], itemCode: "TUI-001", nominalCode: "4100", documentType: "SI" },
-  { id: "item-002", name: "Registration Fee", description: "One-time registration fee", amount: 50000, category: "tuition", isActive: true, applicableGrades: [], itemCode: "REG-001", nominalCode: "4200", documentType: "SI" },
-  { id: "item-003", name: "Security Deposit", description: "Refundable security deposit", amount: 30000, category: "tuition", isActive: true, applicableGrades: [], itemCode: "SEC-001", nominalCode: "4300", documentType: "SI" },
-  { id: "item-004", name: "Lunch Programme", description: "School lunch programme per term", amount: 15000, category: "tuition", isActive: true, applicableGrades: [], itemCode: "LUN-001", nominalCode: "4400", documentType: "SI" },
-  { id: "item-005", name: "Books & Materials", description: "Textbooks and learning materials", amount: 8500, category: "tuition", isActive: true, applicableGrades: [], itemCode: "BOK-001", nominalCode: "4500", documentType: "SI" },
-  { id: "item-006", name: "IT & Technology Fee", description: "Technology access and devices", amount: 5500, category: "tuition", isActive: true, applicableGrades: [], itemCode: "ICT-001", nominalCode: "4600", documentType: "SI" },
+  { id: "item-001", name: "Tuition Fee", description: "Tuition fee for the term", amount: 0, category: "Tuition", isActive: true, applicableGrades: [], itemCode: "TUI-001", nominalCode: "4100", documentType: "SI" },
+  { id: "item-002", name: "Registration Fee", description: "One-time registration fee", amount: 50000, category: "Tuition", isActive: true, applicableGrades: [], itemCode: "REG-001", nominalCode: "4200", documentType: "SI" },
+  { id: "item-003", name: "Security Deposit", description: "Refundable security deposit", amount: 30000, category: "Tuition", isActive: true, applicableGrades: [], itemCode: "SEC-001", nominalCode: "4300", documentType: "SI" },
+  { id: "item-004", name: "Lunch Programme", description: "School lunch programme per term", amount: 15000, category: "Tuition", isActive: true, applicableGrades: [], itemCode: "LUN-001", nominalCode: "4400", documentType: "SI" },
+  { id: "item-005", name: "Books & Materials", description: "Textbooks and learning materials", amount: 8500, category: "Tuition", isActive: true, applicableGrades: [], itemCode: "BOK-001", nominalCode: "4500", documentType: "SI" },
+  { id: "item-006", name: "IT & Technology Fee", description: "Technology access and devices", amount: 5500, category: "Tuition", isActive: true, applicableGrades: [], itemCode: "ICT-001", nominalCode: "4600", documentType: "SI" },
 ]
 const AFTERSCHOOL_ITEMS = [
   { id: "as-001", name: "Swimming Class", description: "Weekly swimming lessons", amount: 8000, category: "afterschool", isActive: true, applicableGrades: [], itemCode: "AS-001", nominalCode: "5100", documentType: "SI" },
@@ -319,7 +318,7 @@ function generateInvoices(students: any[], families: any[]) {
       invoices.push({
         id: `inv-${pad(invSeq)}`,
         invoiceNumber: invNumber,
-        studentName: isExternal ? "" : `${s.firstName} ${s.lastName}`,
+        studentName: isExternal ? "" : (s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || "")),
         studentId: isExternal ? "" : s.studentId,
         studentGrade: isExternal ? "" : (GRADE_LABELS[s.gradeLevel] || s.gradeLevel),
         studentRoom: "",
@@ -332,7 +331,7 @@ function generateInvoices(students: any[], families: any[]) {
         finalAmount: netAmount, // alias used by some components
         dueDate, issueDate,
         status: status === "partial" ? "sent" : status, approvalStatus,
-        term: `${termLabel} ${CURRENT_YEAR}`,
+        term: termLabel,
         termName: termLabel,
         academicYear: CURRENT_YEAR,
         paymentType: "termly",
@@ -1277,29 +1276,26 @@ export function seedAllData() {
 
     // ── Invoices (all categories) ────────────────────────────
     // Version check: re-seed invoices when seed data structure changes
-    const INVOICE_SEED_VERSION = "3.2" // Bump when invoice seed data changes
+    const INVOICE_SEED_VERSION = "3.4" // Bumped: term field now stores "Term 1" only, academicYear separate
     const currentSeedVersion = localStorage.getItem("invoice_seed_version")
-    // If analytics service has already seeded createdInvoices (5-year mock), skip seedData invoices
-    const analyticsHasSeeded = !!localStorage.getItem("analyticsService_mockVersion")
-    if (!analyticsHasSeeded) {
-      if (currentSeedVersion !== INVOICE_SEED_VERSION) {
-        localStorage.removeItem("createdInvoices")
-        // Also clear receipts & payment records so they match new invoices
-        for (const key of Object.keys(RECEIPT_STORAGE_MAP).map(k => RECEIPT_STORAGE_MAP[k])) {
-          localStorage.removeItem(key)
-        }
-        localStorage.removeItem("paymentRecords")
-        localStorage.removeItem("creditNotes")
-        localStorage.removeItem("creditNotesRecords")
-        localStorage.removeItem("invoiceEmailLogs")
-        // Clear discount groups too so they stay in sync with invoice discounts
-        localStorage.removeItem("studentGroups")
-        localStorage.removeItem("scholarshipRecords")
-        localStorage.removeItem("staffChildRecords")
-        localStorage.removeItem("earlyBirdRecords")
+    if (currentSeedVersion !== INVOICE_SEED_VERSION) {
+      localStorage.removeItem("createdInvoices")
+      localStorage.removeItem("analyticsService_mockVersion")
+      // Also clear receipts & payment records so they match new invoices
+      for (const key of Object.keys(RECEIPT_STORAGE_MAP).map(k => RECEIPT_STORAGE_MAP[k])) {
+        localStorage.removeItem(key)
       }
-      seedIfEmpty("createdInvoices", invoices)
+      localStorage.removeItem("paymentRecords")
+      localStorage.removeItem("creditNotes")
+      localStorage.removeItem("creditNotesRecords")
+      localStorage.removeItem("invoiceEmailLogs")
+      // Clear discount groups too so they stay in sync with invoice discounts
+      localStorage.removeItem("studentGroups")
+      localStorage.removeItem("scholarshipRecords")
+      localStorage.removeItem("staffChildRecords")
+      localStorage.removeItem("earlyBirdRecords")
     }
+    seedIfEmpty("createdInvoices", invoices)
     localStorage.setItem("invoice_seed_version", INVOICE_SEED_VERSION)
 
     // ── Receipts (per category storage key) ──────────────────

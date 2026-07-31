@@ -356,7 +356,7 @@ function TemplatePanel({
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
 
   const { user } = useAuth()
-  const currentUser = user?.username || user?.name || "Staff"
+  const currentUser = user?.name || "Staff"
   const filtered = templates.filter(tpl => tpl.type === type)
 
   const openNew = () => { setEditingTemplate(null); setEditDialogOpen(true) }

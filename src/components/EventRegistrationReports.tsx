@@ -35,7 +35,7 @@ import {
   Filter,
   Search,
   ArrowUpDown,
-  Calendar
+  Calendar as CalendarIcon
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
@@ -197,7 +197,7 @@ export function EventRegistrationReports() {
   const filteredRegistrations = mockRegistrations.filter(reg => {
     if (selectedEvent !== "all" && reg.eventName !== selectedEvent) return false
     if (selectedYearGroup !== "all" && reg.yearGroup !== selectedYearGroup) return false
-    if (selectedPaymentStatus !== "all" && reg.paymentStatus !== selectedPaymentStatus) return false
+    if (selectedPaymentStatus !== "all" && reg.paymentStatus !== (selectedPaymentStatus as string)) return false
     if (selectedPaymentChannel !== "all" && reg.paymentChannel !== selectedPaymentChannel) return false
     if (searchTerm && !reg.studentName.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !reg.studentId.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -290,7 +290,7 @@ export function EventRegistrationReports() {
             <Card className="rounded-xl gap-0">
               <CardContent className="p-4 pb-4">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t("eventReports.activeEvents")}</p>
                 </div>
                 <p className="text-2xl font-bold">8</p>

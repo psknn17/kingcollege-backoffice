@@ -226,6 +226,24 @@ const hasEarlyBirdDiscount = (studentId: string): boolean => {
 // Load created invoices from localStorage
 const loadCreatedInvoicesFromStorage = (): Invoice[] => {
   try {
+    // Build student lookup map from students_v1600
+    const studentMap = new Map<string, { name: string; grade: string }>()
+    try {
+      const raw = localStorage.getItem("students_v1600")
+      if (raw) {
+        const students = JSON.parse(raw)
+        for (const s of students) {
+          const id = s.studentId || s.id || ""
+          if (!id) continue
+          const name = (s.firstName && s.lastName)
+            ? `${s.firstName} ${s.lastName}`
+            : (s.name || "")
+          const grade = s.gradeLevel || s.yearGroup || s.grade || ""
+          studentMap.set(id, { name, grade })
+        }
+      }
+    } catch {}
+
     const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
     if (stored) {
       const savedInvoices = JSON.parse(stored)
@@ -251,9 +269,16 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
         return {
           id: inv.id,
           invoiceNumber: inv.invoiceNumber,
-          studentName: inv.studentName || inv.recipientName || "Unknown",
+          studentName: (() => {
+            const stored = inv.studentName
+            if (stored && stored !== "undefined undefined" && stored !== "Unknown") return stored
+            if (inv.recipientName) return inv.recipientName
+            return studentMap.get(inv.studentId)?.name || "Unknown"
+          })(),
           studentId: inv.studentId,
-          studentGrade: inv.studentGrade || "-",
+          studentGrade: inv.studentGrade && inv.studentGrade !== "-"
+            ? inv.studentGrade
+            : (studentMap.get(inv.studentId)?.grade || "-"),
           parentName: inv.parentName || inv.recipientName || "Parent",
           parentEmail: inv.parentEmail || "",
           totalAmount: inv.subtotal ?? inv.totalAmount ?? 0,
@@ -283,8 +308,11 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           // Category for filtering
           category: inv.category,
           // Academic info
-          term: inv.term || "",
-          academicYear: inv.academicYear || "",
+          term: (inv.term || "").replace(/\s+\d{4}[\/\-]\d{4}$/, "").trim(),
+          academicYear: inv.academicYear || (() => {
+            const m = (inv.term || "").match(/(\d{4}[\/\-]\d{4})/)
+            return m ? m[1] : ""
+          })(),
           paymentMethod: inv.paymentMethod,
           paymentProofs: inv.paymentProofs,
           // Cancellation info
@@ -5682,8 +5710,8 @@ export function InvoiceManagement({
                     </CardContent>
                   </Card>
 
-                  <Card className={`cursor-pointer transition-all ${studentSelectionType === "csv" ? "ring-2 ring-primary" : ""}`}>
-                    <CardContent className="p-4" onClick={() => setStudentSelectionType("csv")}>
+                  <Card className={`cursor-pointer transition-all ${studentSelectionType === "excel" ? "ring-2 ring-primary" : ""}`}>
+                    <CardContent className="p-4" onClick={() => setStudentSelectionType("excel")}>
                       <div className="flex items-center justify-center mb-2">
                         <FileSpreadsheet className="w-6 h-6 text-green-600" />
                       </div>
@@ -5747,8 +5775,8 @@ export function InvoiceManagement({
                   </div>
                 )}
 
-                {/* CSV Upload */}
-                {studentSelectionType === "csv" && (
+                {/* Excel Upload */}
+                {studentSelectionType === "excel" && (
                   <div className="space-y-3">
                     {/* Download Template Button */}
                     <div className="flex justify-end">
@@ -5779,19 +5807,19 @@ export function InvoiceManagement({
                       <Input
                         type="file"
                         accept=".xlsx,.xls"
-                        onChange={handleCsvUpload}
+                        onChange={handleExcelUpload}
                         className="max-w-xs mx-auto"
                       />
                       <p className="text-xs text-muted-foreground mt-2">
                         Expected format: Student ID, Student Name, Year Group, Room
                       </p>
                     </div>
-                    {csvFile && (
+                    {excelFile && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                         <p className="text-sm text-green-700">
-                          <span className="font-medium">File uploaded:</span> {csvFile.name}
+                          <span className="font-medium">File uploaded:</span> {excelFile.name}
                         </p>
-                        <p className="text-sm text-green-600">Loaded {csvStudents.length} students</p>
+                        <p className="text-sm text-green-600">Loaded {excelStudents.length} students</p>
                       </div>
                     )}
                   </div>
@@ -7461,22 +7489,6 @@ export function InvoiceManagement({
                   </div>
                 )}
 
-                {/* Not Sent Yet - Neutral Card */}
-                {emailStatus === "unsent" && (
-                  <div className="rounded-xl border-2 border-slate-300 bg-white p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 rounded-lg bg-slate-50">
-                        <Mail className="w-5 h-5 text-slate-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-foreground text-base mb-1">Not Sent Yet</p>
-                        <p className="text-sm text-muted-foreground">
-                          Email has not been sent to the recipient.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )
           })()}
@@ -7846,7 +7858,7 @@ export function InvoiceManagement({
         onSave={(form) => {
           const allTpl = migrateTemplates()
           const now = new Date().toISOString()
-          const createdBy = user?.username || user?.name || "Staff"
+          const createdBy = user?.name || "Staff"
           let updated: EmailTemplate[]
           if (templateToEdit) {
             updated = allTpl.map(t =>

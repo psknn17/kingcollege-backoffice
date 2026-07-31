@@ -332,3 +332,77 @@ export const copyItemsForNewYear = (
 
   return newItems.length
 }
+
+const GRADE_CODE_MAP: Record<string, string> = {
+  "pre-nursery": "PN",
+  "nursery": "NR",
+  "reception": "RC",
+}
+const toGradeCode = (gradeId: string): string =>
+  GRADE_CODE_MAP[gradeId] || gradeId.replace("year", "Y").toUpperCase()
+
+const TERM_NOMINAL: Record<number, string> = { 1: "4110003", 2: "4110004", 3: "4110007" }
+
+/**
+ * Create tuition items per grade per term for a given year.
+ * If items for the year already exist, update their amounts instead.
+ * @returns number of items created or updated
+ */
+export const createTuitionItemsForYear = (
+  year: string,
+  gradeData: Array<{ id: string; gradeLevel: string; term1Amount: number; term2Amount: number; term3Amount: number }>
+): number => {
+  const items = loadItemsFromStorage("student")
+
+  const existingForYear = items.filter(
+    item => item.academicYear === year && item.category === "Tuition"
+  )
+
+  if (existingForYear.length > 0) {
+    // Update amounts for existing items
+    let updated = 0
+    const updatedItems = items.map(item => {
+      if (item.academicYear !== year || item.category !== "Tuition") return item
+      const parsed = parseTuitionItemName(item.name)
+      if (!parsed.term || !parsed.gradeId) return item
+      const grade = gradeData.find(g => g.id === parsed.gradeId)
+      if (!grade) return item
+      const newAmount = grade[`term${parsed.term}Amount` as keyof typeof grade] as number
+      if (newAmount === item.amount) return item
+      updated++
+      return { ...item, amount: newAmount }
+    })
+    if (updated > 0) saveItemsToStorage(updatedItems, "student")
+    return updated
+  }
+
+  // Create fresh items for each grade × term
+  const newItems: Item[] = []
+  for (const grade of gradeData) {
+    for (const term of [1, 2, 3] as const) {
+      const amount = grade[`term${term}Amount` as keyof typeof grade] as number
+      const gradeCode = toGradeCode(grade.id)
+      newItems.push({
+        id: `item-tui-${grade.id}-t${term}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        itemCode: `TUI-${gradeCode}-T${term}`,
+        name: `Tuition Fee - ${grade.gradeLevel} Term ${term}`,
+        description: `Tuition fee for ${grade.gradeLevel}, Term ${term}`,
+        amount,
+        category: "Tuition",
+        nominalCode: TERM_NOMINAL[term],
+        documentType: "SI",
+        isActive: true,
+        applicableGrades: [grade.gradeLevel],
+        invoiceType: "student",
+        academicYear: year,
+      })
+    }
+  }
+
+  if (newItems.length > 0) {
+    saveItemsToStorage([...items, ...newItems], "student")
+    console.log(`[createTuitionItemsForYear] Created ${newItems.length} items for ${year}`)
+  }
+
+  return newItems.length
+}

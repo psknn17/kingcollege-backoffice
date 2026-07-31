@@ -7,7 +7,7 @@ import { Mail, Lock, ArrowRight, ArrowLeft, Globe } from "lucide-react"
 import { toast } from "sonner"
 import { logActivity } from "@/lib/activityLog"
 import SchoolLogo from "@/assets/Logo.png"
-import SchoolImage from "@/assets/school-bg.jpg"
+import SchoolImage from "@/assets/school-bg.png"
 import { OTPVerification } from "./OTPVerification"
 
 type LoginStep = "email" | "otp" | "forgot"
@@ -177,8 +177,8 @@ export function Login() {
   if (loginStep === "forgot") {
     return (
       <div style={{ display: "flex", width: "100vw", height: "100vh", overflowX: "hidden" }}>
-        <div style={{ width: "65%", height: "100%", position: "relative", overflow: "hidden" }}>
-          <img src={SchoolImage} alt="School Background" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+        <div style={{ width: "65%", height: "100%", position: "relative", overflow: "hidden", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img src={SchoolImage} alt="School Background" style={{ width: "320px", height: "auto" }} />
         </div>
         <div style={{ width: "35%", height: "100%", display: "flex", flexDirection: "column", backgroundColor: "white", overflowY: "auto", position: "relative" }}>
           {/* Language Switcher */}
@@ -194,7 +194,7 @@ export function Login() {
             <div style={{ width: "400px", backgroundColor: "white", borderRadius: "16px", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", padding: "48px 40px" }}>
               {/* Logo */}
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px" }}>
-                <img src={SchoolLogo} alt="King's College" style={{ height: "225px", width: "auto", display: "block" }} />
+                <img src={SchoolLogo} alt="King's College" style={{ width: "200px", height: "auto", display: "block" }} />
               </div>
               {/* Header */}
               <div style={{ textAlign: "center", marginBottom: "12px", fontFamily: "'Lato', sans-serif" }}>
@@ -269,18 +269,17 @@ export function Login() {
           width: "65%",
           height: "100%",
           position: "relative",
-          overflow: "hidden"
+          overflow: "hidden",
+          backgroundColor: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
         }}
       >
         <img
           src={SchoolImage}
           alt="School Background"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center"
-          }}
+          style={{ width: "320px", height: "auto" }}
         />
       </div>
 
@@ -341,7 +340,7 @@ export function Login() {
               <img
                 src={SchoolLogo}
                 alt="King's College"
-                style={{ height: "225px", width: "auto", display: "block" }}
+                style={{ width: "200px", height: "auto", display: "block" }}
               />
             </div>
 

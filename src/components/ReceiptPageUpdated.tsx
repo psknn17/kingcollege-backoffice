@@ -1541,9 +1541,15 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
       academicYear: "",
       term: "",
       amount: 0,
+      amountIncludingVat: 0,
+      remainingAmount: 0,
       reason: "",
       otherReason: "",
-      issueDate: new Date()
+      issueDate: new Date(),
+      dueDate: null,
+      paid: false,
+      cancelled: false,
+      corrective: false,
     })
     setCnStudentSearch("")
 
@@ -1791,14 +1797,22 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
                 setCreditNoteForm({
                   creditNoteNumber: `CN-${new Date().getFullYear()}-${String(creditNotes.length + 1).padStart(6, '0')}`,
                   invoiceNumber: "",
+                  familyCode: "",
                   studentId: "",
                   studentName: "",
                   yearGroup: "",
                   academicYear: "",
                   term: "",
                   amount: 0,
+                  amountIncludingVat: 0,
+                  remainingAmount: 0,
                   reason: "",
-                  issueDate: new Date()
+                  otherReason: "",
+                  issueDate: new Date(),
+                  dueDate: null,
+                  paid: false,
+                  cancelled: false,
+                  corrective: false,
                 })
                 setIsCreateCreditNoteOpen(true)
               }}
@@ -3374,7 +3388,7 @@ export function ReceiptPage({ onNavigateToSubPage, category, activeTab: propActi
         onSave={(form) => {
           const allTpl = migrateTemplates()
           const now = new Date().toISOString()
-          const createdBy = user?.username || user?.name || "Staff"
+          const createdBy = user?.name || "Staff"
           let updated: EmailTemplate[]
           if (templateToEdit) {
             updated = allTpl.map(t =>

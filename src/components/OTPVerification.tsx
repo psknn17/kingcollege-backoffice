@@ -4,7 +4,7 @@ import { Mail, ArrowLeft, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { logActivity } from "@/lib/activityLog"
 import SchoolLogo from "@/assets/Logo.png"
-import SchoolImage from "@/assets/school-bg.jpg"
+import SchoolImage from "@/assets/school-bg.png"
 
 interface OTPVerificationProps {
   email: string
@@ -116,12 +116,13 @@ export function OTPVerification({
           width: "65%",
           height: "100%",
           position: "relative",
-          backgroundImage: `url(${SchoolImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "50% center",
-          backgroundRepeat: "no-repeat"
+          backgroundColor: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
         }}
       >
+        <img src={SchoolImage} alt="Background" style={{ width: "320px", height: "auto" }} />
       </div>
 
       {/* Right Side - OTP Form */}
@@ -147,7 +148,7 @@ export function OTPVerification({
         >
           {/* School Logo */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
-            <img src={SchoolLogo} alt="King's College" style={{ height: "200px", width: "auto", marginBottom: "0px" }} />
+            <img src={SchoolLogo} alt="King's College" style={{ width: "200px", height: "auto", marginBottom: "0px" }} />
           </div>
 
           {/* Title */}

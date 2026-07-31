@@ -106,6 +106,7 @@ interface ReceiptFormData {
   transactionFeePercent?: number
   transactionFeeAmount?: number
   overpaymentAmount?: number
+  appliedCreditNotes?: AppliedCreditNote[]
   // Authorization
   collectorName: string
   authorizedSignature: string
@@ -122,6 +123,7 @@ interface ReceiptRecord {
   yearGroup: string
   schoolYear: string
   totalAmount: number
+  receivedAmount?: number
   creditNoteTotal?: number
   netPayableAmount?: number
   appliedCreditNotes?: AppliedCreditNote[]
@@ -1354,8 +1356,8 @@ export function ReceiptManagementFlow({
                 </Table>
               )}
               <PaginationBar
-                total={filteredReceipts.length}
-                page={currentPage}
+                totalCount={filteredReceipts.length}
+                currentPage={currentPage}
                 pageSize={pageSize}
                 onPageChange={setCurrentPage}
                 onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
@@ -2108,7 +2110,7 @@ export function ReceiptManagementFlow({
         onSave={(form) => {
           const allTpl = migrateTemplates()
           const now = new Date().toISOString()
-          const createdBy = user?.username || user?.name || "Staff"
+          const createdBy = user?.name || "Staff"
           let updated: EmailTemplate[]
           if (templateToEdit) {
             updated = allTpl.map(t =>

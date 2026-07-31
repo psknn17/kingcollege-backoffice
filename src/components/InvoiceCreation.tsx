@@ -312,6 +312,7 @@ interface SavedInvoice {
   term: string
   paymentType: "termly"
   createdAt: string
+  createdBy?: string
   // External invoice fields
   invoiceType?: "student" | "external" | "afterschool" | "event" | "summer"
   recipientName?: string

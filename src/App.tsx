@@ -146,7 +146,6 @@ const menuItems = {
 { id: "tuition-term-settings", labelKey: "menu.termSettings", icon: Calendar },
     { id: "bank-settings", labelKey: "school.bankSettings", icon: Landmark },
     { id: "all-invoices", labelKey: "menu.allInvoices", icon: FileInvoice },
-    { id: "paid-invoices", labelKey: "menu.paidInvoices", icon: FileInvoice },
     { id: "all-receipts", labelKey: "menu.allReceipts", icon: Receipt },
   ],
   tuition: [

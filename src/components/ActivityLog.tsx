@@ -63,7 +63,6 @@ const MODULE_GROUP_MAP: Record<string, string> = {
   "Trip & Activity Invoice": "Invoice Management",
   "Exam Invoice": "Invoice Management",
   "School Bus Invoice": "Invoice Management",
-  "External Invoice": "Invoice Management",
   "Invoice Details": "Invoice Management",
   // Receipts & Credit Notes
   "Receipts": "Receipts & Credit Notes",

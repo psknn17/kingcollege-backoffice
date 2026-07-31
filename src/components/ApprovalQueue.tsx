@@ -39,6 +39,7 @@ type InvoiceStatus =
   | "rejected"
   | "sent"
   | "paid"
+  | "partial"
   | "overdue"
   | "cancelled"
 
@@ -72,6 +73,7 @@ interface Invoice {
   term?: string
   approvedBy?: string
   approvedAt?: Date
+  createdAt?: Date | null
   rejectedReason?: string
   rejectedAt?: Date
   rejectedBy?: string
@@ -86,7 +88,32 @@ const grades = [
   "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"
 ]
 
+const GRADE_ID_TO_LABEL: Record<string, string> = {
+  "pre-nursery": "Pre-Nursery", "nursery": "Nursery", "reception": "Reception",
+  "year1": "Year 1", "year2": "Year 2", "year3": "Year 3", "year4": "Year 4",
+  "year5": "Year 5", "year6": "Year 6", "year7": "Year 7", "year8": "Year 8",
+  "year9": "Year 9", "year10": "Year 10", "year11": "Year 11", "year12": "Year 12",
+  "year13": "Year 13",
+}
+
 const loadCreatedInvoicesFromStorage = (): Invoice[] => {
+  // Build student lookup for grade/name fallback
+  const studentMap = new Map<string, { name: string; grade: string }>()
+  try {
+    const raw = localStorage.getItem("students_v1600")
+    if (raw) {
+      const students: any[] = JSON.parse(raw)
+      for (const s of students) {
+        const id = s.studentId || s.id
+        if (!id) continue
+        const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || "")
+        const gradeRaw = s.gradeLevel || s.grade || ""
+        const grade = GRADE_ID_TO_LABEL[gradeRaw] || gradeRaw
+        studentMap.set(id, { name, grade })
+      }
+    }
+  } catch { /* ignore */ }
+
   try {
     const stored = localStorage.getItem(CREATED_INVOICES_STORAGE_KEY)
     if (stored) {
@@ -121,9 +148,13 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
         return {
           id: inv.id,
           invoiceNumber: inv.invoiceNumber,
-          studentName: inv.studentName || inv.recipientName || "Unknown",
+          studentName: (() => {
+            if (inv.studentName && inv.studentName !== "undefined undefined") return inv.studentName
+            if (inv.recipientName) return inv.recipientName
+            return studentMap.get(inv.studentId)?.name || "Unknown"
+          })(),
           studentId: inv.studentId,
-          studentGrade: inv.studentGrade || "-",
+          studentGrade: inv.studentGrade || studentMap.get(inv.studentId)?.grade || "-",
           parentName: inv.parentName || inv.recipientName || "Parent",
           parentEmail: inv.parentEmail || "",
           totalAmount: inv.totalAmount ?? inv.subtotal ?? inv.finalAmount ?? 0,
@@ -147,10 +178,19 @@ const loadCreatedInvoicesFromStorage = (): Invoice[] => {
           dueDate,
           paidDate: parseStoredDate(inv.paidDate),
           emailSentAt: parseStoredDate(inv.emailSentAt),
-          academicYear: inv.academicYear || "",
-          term: inv.term || "",
+          academicYear: (() => {
+            if (inv.academicYear) return inv.academicYear
+            // Fallback: extract from term string e.g. "Term 1 2025/2026" → "2025/2026"
+            const m = (inv.term || "").match(/(\d{4}[\/\-]\d{4})/)
+            return m ? m[1] : ""
+          })(),
+          term: (() => {
+            // Strip academic year suffix: "Term 1 2025/2026" → "Term 1"
+            return (inv.term || "").replace(/\s+\d{4}[\/\-]\d{4}$/, "").trim()
+          })(),
           approvedBy: inv.approvedBy,
           approvedAt: inv.approvedAt ? new Date(inv.approvedAt) : undefined,
+          createdAt: inv.createdAt ? parseStoredDate(inv.createdAt) : undefined,
           rejectedReason: inv.rejectedReason,
           category: (() => {
             const cat = String(inv.category || "tuition").toLowerCase()
@@ -198,8 +238,9 @@ const getEmailStatus = (invoice: Invoice): "wait" | "sent" | "cancelled" => {
   return "wait"
 }
 
-const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" => {
+const getPaymentStatus = (invoice: Invoice): "unpaid" | "paid" | "overdue" | "partial" => {
   if (invoice.status === "paid" || invoice.paidDate) return "paid"
+  if (invoice.status === "partial") return "partial"
   if (invoice.status === "overdue") return "overdue"
   const now = new Date()
   const due = invoice.dueDate instanceof Date ? invoice.dueDate : new Date(invoice.dueDate)
@@ -440,10 +481,22 @@ export function ApprovalQueue() {
   const sortedInvoices = useMemo(() => {
     const sorted = [...filteredInvoices]
 
-    // If no sortKey is set, reverse to show newest first
-    if (!sortKey) return sorted.reverse()
+    const approvalOrder = (inv: Invoice) => getApprovalStatus(inv) === "wait" ? 0 : 1
+
+    // If no sortKey is set, show wait first then newest
+    if (!sortKey) {
+      return sorted.sort((a, b) => {
+        const ap = approvalOrder(a) - approvalOrder(b)
+        if (ap !== 0) return ap
+        return (b.invoiceNumber || "").localeCompare(a.invoiceNumber || "")
+      })
+    }
 
     sorted.sort((a, b) => {
+      // Always put wait invoices first regardless of sort column
+      const ap = approvalOrder(a) - approvalOrder(b)
+      if (ap !== 0) return ap
+
       const direction = sortDirection === "asc" ? 1 : -1
       switch (sortKey) {
         case "invoiceNumber":
@@ -1285,8 +1338,8 @@ export function ApprovalQueue() {
               <div className="flex gap-2">
                 {(() => {
                   const selectedInvoices = invoices.filter(inv => selectedInvoiceIds.has(inv.id))
-                  const allApprovedAndSent = selectedInvoices.length > 0 && selectedInvoices.every(inv => inv.status === 'sent')
-                  const allDraft = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'wait' && inv.status !== 'sent')
+                  const anyApproved = selectedInvoices.length > 0 && selectedInvoices.every(inv => getApprovalStatus(inv) === 'approved')
+                  const anyWait = selectedInvoices.length > 0 && selectedInvoices.some(inv => getApprovalStatus(inv) === 'wait')
 
                   return (
                     <>
@@ -1300,31 +1353,19 @@ export function ApprovalQueue() {
                         Change Due Date
                       </Button>
 
-                      {allApprovedAndSent && (
-                        <Button
-                          size="sm"
-                          onClick={handleBulkMarkPaid}
-                          className="font-bold shadow-md px-4"
-                          style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
-                        >
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          Mark Paid
-                        </Button>
-                      )}
-
-                      {allDraft && canApproveInvoices && (
+                      {anyWait && canApproveInvoices && (
                         <Button
                           size="sm"
                           onClick={approveSelectedInvoices}
                           className="font-bold shadow-md px-4 transition-colors"
-                          style={{ backgroundColor: '#000000', color: '#ffffff', opacity: 1, border: 'none' }}
+                          style={{ backgroundColor: '#16a34a', color: '#ffffff', opacity: 1, border: 'none' }}
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Approve Selected
                         </Button>
                       )}
 
-                      {allDraft && user?.role !== "approver" && (
+                      {user?.role !== "approver" && (
                         <Button
                           size="sm"
                           onClick={() => deleteConfirmDialog.confirm(() => handleBulkDelete())}
@@ -1455,7 +1496,12 @@ export function ApprovalQueue() {
                     })()}
                   </TableCell>
                   {/* Issue Date - left aligned */}
-                  <TableCell align="left">{invoice.issueDate ? format(invoice.issueDate, "dd MMM yyyy") : "-"}</TableCell>
+                  <TableCell align="left">
+                    {(() => {
+                      const d = invoice.issueDate || invoice.approvedAt || (invoice.invoiceNumber ? invoice.createdAt : null)
+                      return d ? format(d, "dd MMM yyyy") : "-"
+                    })()}
+                  </TableCell>
                   {/* Due Date - left aligned */}
                   <TableCell align="left">{format(invoice.dueDate, "dd MMM yyyy")}</TableCell>
                   {/* Actions - center aligned */}

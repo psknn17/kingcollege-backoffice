@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { FileText, Search, X, CheckCircle, Clock, XCircle, DollarSign } from "lucide-react"
+import { FileText, Search, X, CheckCircle, Clock, XCircle, DollarSign, Eye, Mail } from "lucide-react"
 import { cn } from "@/components/ui/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -102,13 +102,55 @@ function TypeBadge({ category }: { category: string }) {
 
 function loadInvoices() {
   try {
+    // Build student lookup map
+    const studentMap = new Map<string, { name: string; grade: string }>()
+    try {
+      const students = JSON.parse(localStorage.getItem("students_v1600") || "[]")
+      for (const s of students) {
+        const id = s.studentId || s.id || ""
+        if (!id) continue
+        const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || "")
+        const grade = s.gradeLevel || s.yearGroup || s.grade || ""
+        studentMap.set(id, { name, grade })
+      }
+    } catch {}
+
     const raw = JSON.parse(localStorage.getItem("createdInvoices") || "[]")
-    return (raw as any[]).filter(
-      (inv) =>
-        inv.category !== "external" &&
-        inv.invoiceType !== "external" &&
-        inv.studentId !== "EXTERNAL"
-    )
+    return (raw as any[])
+      .filter(
+        (inv) =>
+          inv.category !== "external" &&
+          inv.invoiceType !== "external" &&
+          inv.studentId !== "EXTERNAL"
+      )
+      .map((inv) => {
+        const lookup = studentMap.get(inv.studentId)
+        const storedName = inv.studentName
+        const resolvedName =
+          storedName && storedName !== "undefined undefined" && storedName !== "Unknown"
+            ? storedName
+            : (lookup?.name || inv.recipientName || "Unknown")
+        const resolvedGrade =
+          inv.studentGrade && inv.studentGrade !== "-"
+            ? inv.studentGrade
+            : (lookup?.grade || "-")
+        const resolvedAcademicYear =
+          inv.academicYear ||
+          (() => {
+            const m = (inv.term || "").match(/(\d{4}[\/\-]\d{4})/)
+            return m ? m[1] : ""
+          })()
+        const resolvedTerm = (inv.term || "").replace(/\s+\d{4}[\/\-]\d{4}$/, "").trim()
+        const resolvedAmount = inv.finalAmount ?? inv.netAmount ?? inv.subtotal ?? inv.totalAmount ?? 0
+        return {
+          ...inv,
+          studentName: resolvedName,
+          studentGrade: resolvedGrade,
+          academicYear: resolvedAcademicYear,
+          term: resolvedTerm,
+          finalAmount: resolvedAmount,
+        }
+      })
   } catch {
     return []
   }
@@ -158,12 +200,12 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
         return true
       })
       .sort((a, b) => {
-        const da = parseLocal(a.issueDate)
-        const db = parseLocal(b.issueDate)
-        if (!da && !db) return 0
-        if (!da) return 1
-        if (!db) return -1
-        return db.getTime() - da.getTime()
+        // Approved (has invoice number) first
+        const aHasNo = a.invoiceNumber ? 0 : 1
+        const bHasNo = b.invoiceNumber ? 0 : 1
+        if (aHasNo !== bHasNo) return aHasNo - bHasNo
+        // Then by invoice number descending (newest first)
+        return (b.invoiceNumber || "").localeCompare(a.invoiceNumber || "")
       })
   }, [invoices, search, typeFilter, ayFilter])
 
@@ -318,15 +360,18 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
               <TableHead className="text-left font-semibold text-foreground/80">Academic Year</TableHead>
               <TableHead className="text-left font-semibold text-foreground/80">Term</TableHead>
               <TableHead className="text-right font-semibold text-foreground/80">Amount (฿)</TableHead>
-              <TableHead className="text-center font-semibold text-foreground/80">Approval</TableHead>
-              <TableHead className="text-center font-semibold text-foreground/80">Payment</TableHead>
-              <TableHead className="text-left font-semibold text-foreground/80 pr-4">Issue Date</TableHead>
+              <TableHead className="text-center font-semibold text-foreground/80">Approval Status</TableHead>
+              <TableHead className="text-center font-semibold text-foreground/80">Email Status</TableHead>
+              <TableHead className="text-center font-semibold text-foreground/80">Invoice Status</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80">Issue Date</TableHead>
+              <TableHead className="text-left font-semibold text-foreground/80">Due Date</TableHead>
+              <TableHead className="text-center font-semibold text-foreground/80 pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-52 text-center">
+                <TableCell colSpan={13} className="h-52 text-center">
                   <div className="flex flex-col items-center gap-3 text-muted-foreground">
                     <div className="rounded-full bg-muted p-4">
                       {hasActiveFilter
@@ -349,22 +394,23 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
               pageItems.map((inv) => {
                 const approvalStatus = inv.approvalStatus ?? "wait"
                 const issueDate = parseLocal(inv.issueDate)
-                const isApproved = approvalStatus === "approved"
+                const dueDate = parseLocal(inv.dueDate)
+                const emailSent = !!(inv.emailSentAt || inv.emailSent)
                 return (
                   <TableRow
                     key={inv.id}
-                    className="cursor-pointer hover:bg-muted/40 transition-colors"
-                    onClick={() => handleRowClick(inv)}
+                    className="hover:bg-muted/40 transition-colors"
                   >
                     <TableCell className="pl-4">
                       <TypeBadge category={inv.category || "tuition"} />
                     </TableCell>
                     <TableCell className="font-mono text-sm text-muted-foreground">
-                      {isApproved ? (inv.invoiceNumber || "-") : (
-                        <span className="text-muted-foreground/50 italic text-xs">—</span>
-                      )}
+                      {inv.invoiceNumber || "-"}
                     </TableCell>
-                    <TableCell className="font-medium">{inv.studentName || "-"}</TableCell>
+                    <TableCell>
+                      <div className="font-medium text-sm">{inv.studentName || "-"}</div>
+                      {inv.studentId && <div className="text-xs text-muted-foreground">{inv.studentId}</div>}
+                    </TableCell>
                     <TableCell className="text-sm">{inv.studentGrade || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.academicYear || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.term || "-"}</TableCell>
@@ -375,12 +421,30 @@ export function CombinedInvoicePage({ onNavigateToSubPage }: CombinedInvoicePage
                       <ApprovalBadge status={approvalStatus} />
                     </TableCell>
                     <TableCell className="text-center">
+                      {emailSent
+                        ? <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-medium"><Mail className="w-3 h-3 mr-1" />Sent</Badge>
+                        : <Badge className="bg-gray-100 text-gray-500 border-gray-200 font-medium"><Clock className="w-3 h-3 mr-1" />Wait</Badge>
+                      }
+                    </TableCell>
+                    <TableCell className="text-center">
                       <PaymentBadge status={inv.status || "draft"} />
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground pr-4">
-                      {isApproved ? formatDate(issueDate) : (
-                        <span className="text-muted-foreground/50 italic text-xs">—</span>
-                      )}
+                    <TableCell className="text-sm text-muted-foreground">
+                      {inv.invoiceNumber
+                        ? (formatDate(issueDate || parseLocal(inv.approvedAt) || parseLocal(inv.createdAt)) || "-")
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {dueDate ? formatDate(dueDate) : "-"}
+                    </TableCell>
+                    <TableCell className="text-center pr-4">
+                      <button
+                        className="p-1 rounded hover:bg-muted transition-colors"
+                        onClick={() => handleRowClick(inv)}
+                        title="View"
+                      >
+                        <Eye className="w-4 h-4 text-muted-foreground" />
+                      </button>
                     </TableCell>
                   </TableRow>
                 )

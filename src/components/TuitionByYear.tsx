@@ -16,7 +16,7 @@ import { canPerformActions } from "@/utils/rolePermissions"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { formatAcademicYear } from "@/utils/xlsxUtils"
 import { ColumnPresets } from "@/utils/tableAlignment"
-import { copyItemsForNewYear } from "@/utils/itemAutoCreate"
+import { copyItemsForNewYear, createTuitionItemsForYear } from "@/utils/itemAutoCreate"
 
 interface GradeLevelTuition {
   id: string
@@ -286,6 +286,10 @@ export function TuitionByYear() {
         if (copied > 0) {
           toast.success(`Copied ${copied} items from ${formatAcademicYear(previousYear)} to ${formatAcademicYear(selectedYear)}`)
         }
+      }
+      const result = createTuitionItemsForYear(selectedYear, currentYearGrades)
+      if (result > 0) {
+        toast.success(`Synced ${result} tuition items for ${formatAcademicYear(selectedYear)}`)
       }
     }
 

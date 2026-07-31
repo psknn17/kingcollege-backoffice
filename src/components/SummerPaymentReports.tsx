@@ -250,7 +250,7 @@ export function SummerPaymentReports() {
   const filteredPayments = mockPaymentRecords.filter(payment => {
     if (selectedActivity !== "all" && payment.activityName !== selectedActivity) return false
     if (selectedCategory !== "all" && payment.category !== selectedCategory) return false
-    if (selectedStatus !== "all" && payment.status !== selectedStatus) return false
+    if (selectedStatus !== "all" && payment.status !== (selectedStatus as string)) return false
     if (selectedPaymentMethod !== "all" && payment.paymentMethod !== selectedPaymentMethod) return false
     if (searchTerm && !payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !payment.studentId.toLowerCase().includes(searchTerm.toLowerCase())) return false
