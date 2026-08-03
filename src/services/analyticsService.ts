@@ -237,17 +237,29 @@ function getMockBankFees(filter: AnalyticsFilter): BankFeeRow[] {
     }
   } catch {}
 
-  // Fallback if no bank accounts configured yet
-  if (configuredBanks.length === 0) {
+  const ONLINE_SOURCES_CHECK = ["thai qr", "online", "qr payment", "internet banking"]
+  const hasOnlineBanks = configuredBanks.some(b =>
+    ONLINE_SOURCES_CHECK.some(s => (b.paymentSource || "").toLowerCase().includes(s))
+  )
+
+  // Fallback demo banks when no online-type banks are configured
+  if (!hasOnlineBanks) {
     configuredBanks = [
-      { bankName: "KBank", paymentSource: "EDC" },
-      { bankName: "UOB",   paymentSource: "EDC" },
-      { bankName: "TTB",   paymentSource: "Thai QR" },
-      { bankName: "KTC",   paymentSource: "Online" },
+      { bankName: "TTB (Thai QR)",      paymentSource: "Thai QR" },
+      { bankName: "KTC (Online Credit)", paymentSource: "Online" },
     ]
   }
 
-  const academicYears = ["2023/2024", "2024/2025"]
+  // Generate years dynamically: current year (from invoices) + 2 prior
+  const currentYear = getCurrentYearFromData(
+    cachedMockInvoices().filter(inv => CONFIRMED_STATUSES.has(inv.status || ""))
+  )
+  const start = currentYear ? parseInt(currentYear.split("/")[0]) : new Date().getFullYear()
+  const academicYears = [
+    `${start - 2}/${start - 1}`,
+    `${start - 1}/${start}`,
+    `${start}/${start + 1}`,
+  ]
   const terms = ["Term 1", "Term 2", "Term 3"]
   const allRows: BankFeeRow[] = []
 
@@ -343,6 +355,29 @@ const sortByYearGroup = <T extends { yearGroup: string }>(arr: T[]): T[] =>
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
 
+function getCurrentYearFromData(invoices: any[]): string {
+  const years = [...new Set(invoices.map((inv: any) => inv.academicYear).filter(Boolean))] as string[]
+  return years.sort().reverse()[0] || ""
+}
+
+function getPriorAcademicYears(year: string, count: number): string[] {
+  const start = parseInt(year.split("/")[0])
+  return Array.from({ length: count }, (_, i) => {
+    const n = start - (count - i)
+    return `${n}/${n + 1}`
+  })
+}
+
+/** Returns the target academic years array based on filter rules (same logic used across all tabs) */
+function resolveTargetYears(filter: AnalyticsFilter, invoices: any[]): string[] {
+  const effectiveYear = filter.academicYear && filter.academicYear !== "all"
+    ? filter.academicYear
+    : getCurrentYearFromData(invoices)
+  if (!effectiveYear) return []
+  if (!filter.academicYear || filter.academicYear === "all") return [effectiveYear]
+  return [...getPriorAcademicYears(effectiveYear, 2), effectiveYear]
+}
+
 // ── TYPES ──────────────────────────────────────────────────────────────────────
 
 export interface AnalyticsFilter {
@@ -404,6 +439,7 @@ export interface AvgTermMatrixRow {
   studentCount: number
   termCols: Record<string, number>          // key = "2024/2025 Term 1", value = avg net per student
   termStudentCounts: Record<string, number> // key = "2024/2025 Term 1", value = unique student count in that term
+  termTotals: Record<string, number>        // key = "2024/2025 Term 1", value = raw total revenue
 }
 
 export interface AvgYearMatrixRow {
@@ -411,6 +447,7 @@ export interface AvgYearMatrixRow {
   studentCount: number
   yearCols: Record<string, number>          // key = "2024/2025", value = avg net per student
   yearStudentCounts: Record<string, number> // key = "2024/2025", value = unique student count in that year
+  yearTotals: Record<string, number>        // key = "2024/2025", value = raw total revenue
 }
 
 /** Report 3: Transaction count by payment method */
@@ -602,37 +639,60 @@ export async function getRevenueTermMatrix(filter: AnalyticsFilter): Promise<{
   rows: RevenueTermMatrixRow[]
   termKeys: string[]
 }> {
-  // Load without term filter (we want all terms as columns)
-  const invoices = cachedMockInvoices().filter(inv => {
-    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+  const allInvoices = cachedMockInvoices().filter(inv => {
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
     if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
-  const termKeySet = new Set<string>()
-  const map = new Map<string, Record<string, number>>()
+  const currentYear = getCurrentYearFromData(allInvoices)
+  const effectiveYear = (filter.academicYear && filter.academicYear !== "all") ? filter.academicYear : currentYear
+  const priorYears = getPriorAcademicYears(effectiveYear, 2)
+  const targetYears = [...priorYears, effectiveYear]
+
+  let targetInvoices: any[]
+  let termKeys: string[]
+
+  if (!filter.term || filter.term === "all") {
+    if (filter.academicYear && filter.academicYear !== "all") {
+      // Specific year selected: show all terms across 3 years (with 0 when no data)
+      targetInvoices = allInvoices.filter(inv => targetYears.includes(inv.academicYear))
+      const termNames = [...new Set(
+        allInvoices.filter(inv => targetYears.includes(inv.academicYear))
+          .map(inv => inv.term).filter(Boolean)
+      )].sort()
+      termKeys = targetYears.flatMap(y => termNames.map(t => `${y} ${t}`))
+    } else {
+      // All Year + All Term: show terms of current year only
+      targetInvoices = allInvoices.filter(inv => inv.academicYear === effectiveYear)
+      const termKeySet = new Set<string>()
+      targetInvoices.forEach(inv => { if (inv.term) termKeySet.add(`${effectiveYear} ${inv.term}`) })
+      termKeys = Array.from(termKeySet).sort()
+    }
+  } else {
+    // Show that specific term across 3 years
+    targetInvoices = allInvoices.filter(inv =>
+      targetYears.includes(inv.academicYear) && inv.term === filter.term
+    )
+    termKeys = targetYears.map(y => `${y} ${filter.term}`)
+  }
 
   const ygSet = new Set(YEAR_GROUP_ORDER)
+  const map = new Map<string, Record<string, number>>()
 
-  invoices.forEach(inv => {
+  targetInvoices.forEach(inv => {
     const yg = inv.studentGrade || ""
     if (!ygSet.has(yg)) return
     const key = `${inv.academicYear} ${inv.term}`
-    termKeySet.add(key)
+    if (!termKeys.includes(key)) return
     const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
-
     if (!map.has(yg)) map.set(yg, {})
     const row = map.get(yg)!
     row[key] = (row[key] ?? 0) + net
   })
 
-  const termKeys = Array.from(termKeySet).sort()
   const rows: RevenueTermMatrixRow[] = []
-  map.forEach((termCols, yearGroup) => {
-    rows.push({ yearGroup, termCols })
-  })
-
+  map.forEach((termCols, yearGroup) => rows.push({ yearGroup, termCols }))
   return { rows: sortByYearGroup(rows), termKeys }
 }
 
@@ -644,35 +704,45 @@ export async function getRevenueYearMatrix(filter: AnalyticsFilter): Promise<{
   rows: RevenueYearMatrixRow[]
   yearKeys: string[]
 }> {
-  const invoices = cachedMockInvoices().filter(inv => {
+  // If specific term is filtered, no data for year comparison
+  if (filter.term && filter.term !== "all") {
+    return { rows: [], yearKeys: [] }
+  }
+
+  const allInvoices = cachedMockInvoices().filter(inv => {
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
     if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
-  const yearKeySet = new Set<string>()
-  const map = new Map<string, Record<string, number>>()
+  const currentYear = getCurrentYearFromData(allInvoices)
+  const effectiveYear = (filter.academicYear && filter.academicYear !== "all") ? filter.academicYear : currentYear
+
+  let yearKeys: string[]
+  if (!filter.academicYear || filter.academicYear === "all") {
+    yearKeys = [effectiveYear]
+  } else {
+    const priorYears = getPriorAcademicYears(effectiveYear, 2)
+    yearKeys = [...priorYears, effectiveYear]
+  }
+
+  const targetInvoices = allInvoices.filter(inv => yearKeys.includes(inv.academicYear))
 
   const ygSet = new Set(YEAR_GROUP_ORDER)
+  const map = new Map<string, Record<string, number>>()
 
-  invoices.forEach(inv => {
+  targetInvoices.forEach(inv => {
     const yg = inv.studentGrade || ""
     if (!ygSet.has(yg)) return
     const ay = inv.academicYear || "-"
-    yearKeySet.add(ay)
     const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
-
     if (!map.has(yg)) map.set(yg, {})
     const row = map.get(yg)!
     row[ay] = (row[ay] ?? 0) + net
   })
 
-  const yearKeys = Array.from(yearKeySet).sort()
   const rows: RevenueYearMatrixRow[] = []
-  map.forEach((yearCols, yearGroup) => {
-    rows.push({ yearGroup, yearCols })
-  })
-
+  map.forEach((yearCols, yearGroup) => rows.push({ yearGroup, yearCols }))
   return { rows: sortByYearGroup(rows), yearKeys }
 }
 
@@ -682,23 +752,51 @@ export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
   rows: AvgTermMatrixRow[]
   termKeys: string[]
 }> {
-  const invoices = cachedMockInvoices().filter(inv => {
-    if (filter.academicYear && filter.academicYear !== "all" && inv.academicYear !== filter.academicYear) return false
+  const allInvoices = cachedMockInvoices().filter(inv => {
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
     if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
-  const termKeySet = new Set<string>()
-  // Map: yearGroup → termKey → { total, students }
+  const currentYear = getCurrentYearFromData(allInvoices)
+  const effectiveYear = (filter.academicYear && filter.academicYear !== "all") ? filter.academicYear : currentYear
+  const priorYears = getPriorAcademicYears(effectiveYear, 2)
+  const targetYears = [...priorYears, effectiveYear]
+
+  let targetInvoices: any[]
+  let termKeys: string[]
+
+  if (!filter.term || filter.term === "all") {
+    if (filter.academicYear && filter.academicYear !== "all") {
+      // Filter Year + All Term: show all terms across 3 years
+      targetInvoices = allInvoices.filter(inv => targetYears.includes(inv.academicYear))
+      const termNames = [...new Set(
+        targetInvoices.map(inv => inv.term).filter(Boolean)
+      )].sort()
+      termKeys = targetYears.flatMap(y => termNames.map(t => `${y} ${t}`))
+    } else {
+      // All Year + All Term: current year terms only
+      targetInvoices = allInvoices.filter(inv => inv.academicYear === effectiveYear)
+      const termKeySet = new Set<string>()
+      targetInvoices.forEach(inv => { if (inv.term) termKeySet.add(`${effectiveYear} ${inv.term}`) })
+      termKeys = Array.from(termKeySet).sort()
+    }
+  } else {
+    // Filter Term: that term across 3 years
+    targetInvoices = allInvoices.filter(inv =>
+      targetYears.includes(inv.academicYear) && inv.term === filter.term
+    )
+    termKeys = targetYears.map(y => `${y} ${filter.term}`)
+  }
+
+  const ygSet = new Set(YEAR_GROUP_ORDER)
   const map = new Map<string, { termTotals: Record<string, number>; termStudents: Record<string, Set<string>>; allStudents: Set<string> }>()
 
-  const ygSet2 = new Set(YEAR_GROUP_ORDER)
-  invoices.forEach(inv => {
+  targetInvoices.forEach(inv => {
     const yg = inv.studentGrade || ""
-    if (!ygSet2.has(yg)) return
+    if (!ygSet.has(yg)) return
     const key = `${inv.academicYear} ${inv.term}`
-    termKeySet.add(key)
+    if (!termKeys.includes(key)) return
     if (!map.has(yg)) map.set(yg, { termTotals: {}, termStudents: {}, allStudents: new Set() })
     const row = map.get(yg)!
     const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
@@ -710,7 +808,6 @@ export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
     }
   })
 
-  const termKeys = Array.from(termKeySet).sort()
   const rows: AvgTermMatrixRow[] = []
   map.forEach((v, yearGroup) => {
     const termCols: Record<string, number> = {}
@@ -720,7 +817,7 @@ export async function getAvgTermMatrix(filter: AnalyticsFilter): Promise<{
       termCols[k] = Math.round((v.termTotals[k] ?? 0) / cnt)
       termStudentCounts[k] = v.termStudents[k]?.size ?? 0
     })
-    rows.push({ yearGroup, studentCount: v.allStudents.size, termCols, termStudentCounts })
+    rows.push({ yearGroup, studentCount: v.allStudents.size, termCols, termStudentCounts, termTotals: v.termTotals })
   })
 
   return { rows: sortByYearGroup(rows), termKeys }
@@ -730,21 +827,43 @@ export async function getAvgYearMatrix(filter: AnalyticsFilter): Promise<{
   rows: AvgYearMatrixRow[]
   yearKeys: string[]
 }> {
-  const invoices = cachedMockInvoices().filter(inv => {
+  const allInvoices = cachedMockInvoices().filter(inv => {
     if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
     if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
 
-  const yearKeySet = new Set<string>()
+  const currentYear = getCurrentYearFromData(allInvoices)
+  const effectiveYear = (filter.academicYear && filter.academicYear !== "all") ? filter.academicYear : currentYear
+  const priorYears = getPriorAcademicYears(effectiveYear, 2)
+
+  let yearKeys: string[]
+  if (!filter.academicYear || filter.academicYear === "all") {
+    if (!filter.term || filter.term === "all") {
+      // All Year + All Term: current year only
+      yearKeys = [effectiveYear]
+    } else {
+      // All Year + Filter Term: 3 years for that term
+      yearKeys = [...priorYears, effectiveYear]
+    }
+  } else {
+    // Filter Year (with or without term): 3 years
+    yearKeys = [...priorYears, effectiveYear]
+  }
+
+  const targetInvoices = allInvoices.filter(inv => {
+    if (!yearKeys.includes(inv.academicYear)) return false
+    if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
+    return true
+  })
+
+  const ygSet = new Set(YEAR_GROUP_ORDER)
   const map = new Map<string, { yearTotals: Record<string, number>; yearStudents: Record<string, Set<string>>; allStudents: Set<string> }>()
 
-  const ygSet3 = new Set(YEAR_GROUP_ORDER)
-  invoices.forEach(inv => {
+  targetInvoices.forEach(inv => {
     const yg = inv.studentGrade || ""
-    if (!ygSet3.has(yg)) return
+    if (!ygSet.has(yg)) return
     const ay = inv.academicYear || "-"
-    yearKeySet.add(ay)
     if (!map.has(yg)) map.set(yg, { yearTotals: {}, yearStudents: {}, allStudents: new Set() })
     const row = map.get(yg)!
     const net = inv.netAmount ?? inv.finalAmount ?? inv.subtotal ?? 0
@@ -756,7 +875,6 @@ export async function getAvgYearMatrix(filter: AnalyticsFilter): Promise<{
     }
   })
 
-  const yearKeys = Array.from(yearKeySet).sort()
   const rows: AvgYearMatrixRow[] = []
   map.forEach((v, yearGroup) => {
     const yearCols: Record<string, number> = {}
@@ -766,7 +884,7 @@ export async function getAvgYearMatrix(filter: AnalyticsFilter): Promise<{
       yearCols[k] = Math.round((v.yearTotals[k] ?? 0) / cnt)
       yearStudentCounts[k] = v.yearStudents[k]?.size ?? 0
     })
-    rows.push({ yearGroup, studentCount: v.allStudents.size, yearCols, yearStudentCounts })
+    rows.push({ yearGroup, studentCount: v.allStudents.size, yearCols, yearStudentCounts, yearTotals: v.yearTotals })
   })
 
   return { rows: sortByYearGroup(rows), yearKeys }
@@ -875,16 +993,22 @@ export async function getBankFeeTermMatrix(filter: AnalyticsFilter): Promise<{
   rows: BankFeeTermMatrixRow[]
   termKeys: string[]
 }> {
-  // Load all rows ignoring term filter (terms become columns)
-  const filterNoTerm: AnalyticsFilter = { academicYear: filter.academicYear }
-  const allRows = getMockBankFees(filterNoTerm)
+  const allInvoices = cachedMockInvoices().filter(inv => CONFIRMED_STATUSES.has(inv.status || ""))
+  const targetYears = resolveTargetYears(filter, allInvoices)
+  if (targetYears.length === 0) return { rows: [], termKeys: [] }
+
+  // Load all bank fee rows (no filter — we filter by targetYears below)
+  const allRows = getMockBankFees({})
 
   const termKeySet = new Set<string>()
-  // bankName+paymentSource → termKey → feeAmount
   const map = new Map<string, Record<string, number>>()
   const sourceMap = new Map<string, string>()
 
   allRows.forEach(r => {
+    if (!targetYears.includes(r.academicYear)) return
+    // If specific term filter → only that term
+    if (filter.term && filter.term !== "all" && r.term !== filter.term) return
+
     const id = `${r.bankName}|${r.paymentSource}`
     const key = `${r.academicYear} ${r.term}`
     termKeySet.add(key)
@@ -908,29 +1032,37 @@ export async function getBankFeeYearMatrix(filter: AnalyticsFilter): Promise<{
   rows: BankFeeYearMatrixRow[]
   yearKeys: string[]
 }> {
+  // Filter Term → ไม่แสดง (same rule as Revenue tab)
+  if (filter.term && filter.term !== "all") return { rows: [], yearKeys: [] }
+
+  const allInvoices = cachedMockInvoices().filter(inv => CONFIRMED_STATUSES.has(inv.status || ""))
+  const targetYears = resolveTargetYears(filter, allInvoices)
+  if (targetYears.length === 0) return { rows: [], yearKeys: [] }
+
   const allRows = getMockBankFees({})
 
-  const yearKeySet = new Set<string>()
   const map = new Map<string, Record<string, number>>()
   const sourceMap = new Map<string, string>()
 
   allRows.forEach(r => {
+    if (!targetYears.includes(r.academicYear)) return
     const id = `${r.bankName}|${r.paymentSource}`
-    yearKeySet.add(r.academicYear)
     if (!map.has(id)) map.set(id, {})
     sourceMap.set(id, r.paymentSource)
     const row = map.get(id)!
     row[r.academicYear] = (row[r.academicYear] ?? 0) + r.feeAmount
   })
 
-  const yearKeys = Array.from(yearKeySet).sort()
+  // Ensure all targetYears appear (zero if no data)
   const rows: BankFeeYearMatrixRow[] = []
   map.forEach((yearCols, id) => {
     const [bankName] = id.split("|")
-    rows.push({ bankName, paymentSource: sourceMap.get(id) || "", yearCols })
+    const filled: Record<string, number> = {}
+    targetYears.forEach(ay => { filled[ay] = yearCols[ay] ?? 0 })
+    rows.push({ bankName, paymentSource: sourceMap.get(id) || "", yearCols: filled })
   })
 
-  return { rows, yearKeys }
+  return { rows, yearKeys: targetYears }
 }
 
 // ── REPORT 4: Transaction status (success vs declined) ────────────────────────
@@ -1057,6 +1189,33 @@ function getMockWaterfallRows(): RevenueWaterfall[] {
   })
 }
 
+export interface DiscountGroupMeta {
+  name: string
+  discountType: "percentage" | "fixed"
+  discountPercentage: number
+  fixedAmount: number
+}
+
+export function getDiscountGroupMeta(): DiscountGroupMeta[] {
+  let groups: DiscountGroupMeta[] = []
+  try {
+    const stored = localStorage.getItem("studentGroups")
+    if (stored) groups = JSON.parse(stored).filter((g: any) => g.isActive !== false)
+  } catch {}
+  if (groups.length === 0) {
+    groups = [
+      { name: "Scholarship",       discountType: "percentage", discountPercentage: 20, fixedAmount: 0 },
+      { name: "2nd Child (5%)",    discountType: "percentage", discountPercentage: 5,  fixedAmount: 0 },
+      { name: "2nd Child (2%)",    discountType: "percentage", discountPercentage: 2,  fixedAmount: 0 },
+      { name: "3rd Child (5%)",    discountType: "percentage", discountPercentage: 5,  fixedAmount: 0 },
+      { name: "4th Child (10%)",   discountType: "percentage", discountPercentage: 10, fixedAmount: 0 },
+      { name: "Intl. Org (10%)",   discountType: "percentage", discountPercentage: 10, fixedAmount: 0 },
+      { name: "Contributor (30%)", discountType: "percentage", discountPercentage: 30, fixedAmount: 0 },
+    ]
+  }
+  return groups
+}
+
 // ── REPORT 6: Net vs Gross Revenue Waterfall ──────────────────────────────────
 
 /**
@@ -1107,22 +1266,29 @@ export async function getTxnMethodYearMatrix(filter: AnalyticsFilter): Promise<{
   rows: TxnMethodYearRow[]
   yearKeys: string[]
 }> {
-  // Step 1: Get year distribution ratios from confirmed invoices
-  const invoices = cachedMockInvoices().filter(inv => {
+  const allInvoices = cachedMockInvoices().filter(inv => CONFIRMED_STATUSES.has(inv.status || ""))
+
+  // Resolve target years per global filter rules
+  const targetYears = resolveTargetYears(filter, allInvoices)
+  if (targetYears.length === 0) return { rows: [], yearKeys: [] }
+
+  // Filter invoices to targetYears + term
+  const invoices = allInvoices.filter(inv => {
+    if (!targetYears.includes(inv.academicYear || "")) return false
     if (filter.term && filter.term !== "all" && inv.term !== filter.term) return false
-    if (filter.category && filter.category !== "all" && (inv.category || "tuition") !== filter.category) return false
-    if (!CONFIRMED_STATUSES.has(inv.status || "")) return false
     return true
   })
+
+  // Count invoices per target year for proportional distribution
   const yearCount = new Map<string, number>()
+  targetYears.forEach(y => yearCount.set(y, 0))
   invoices.forEach(inv => {
-    const ay = inv.academicYear || "-"
+    const ay = inv.academicYear || ""
     yearCount.set(ay, (yearCount.get(ay) ?? 0) + 1)
   })
   const totalInvoices = invoices.length || 1
-  const yearKeys = Array.from(yearCount.keys()).sort()
 
-  // Step 2: Distribute method counts proportionally per year
+  // Distribute mock payment counts proportionally across target years
   const payments = cachedMockPayments()
   const methodMap = new Map<string, Record<string, number>>()
 
@@ -1130,7 +1296,7 @@ export async function getTxnMethodYearMatrix(filter: AnalyticsFilter): Promise<{
     const method = p.paymentMethod || "Unknown"
     if (!methodMap.has(method)) methodMap.set(method, {})
     const row = methodMap.get(method)!
-    yearKeys.forEach(ay => {
+    targetYears.forEach(ay => {
       const ratio = (yearCount.get(ay) ?? 0) / totalInvoices
       row[ay] = (row[ay] ?? 0) + ratio
     })
@@ -1139,11 +1305,11 @@ export async function getTxnMethodYearMatrix(filter: AnalyticsFilter): Promise<{
   const rows: TxnMethodYearRow[] = []
   methodMap.forEach((yearCols, method) => {
     const rounded: Record<string, number> = {}
-    yearKeys.forEach(ay => { rounded[ay] = Math.round(yearCols[ay] ?? 0) })
+    targetYears.forEach(ay => { rounded[ay] = Math.round(yearCols[ay] ?? 0) })
     rows.push({ method, yearCols: rounded })
   })
 
-  return { rows: rows.sort((a, b) => a.method.localeCompare(b.method)), yearKeys }
+  return { rows: rows.sort((a, b) => a.method.localeCompare(b.method)), yearKeys: targetYears }
 }
 
 // ── YOY MATRIX — Tab 6: Year Group × Academic Year (Gross + Net) ─────────────

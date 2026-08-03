@@ -119,6 +119,7 @@ export function ReportOverview() {
   const [selectedTerm, setSelectedTerm] = usePersistedState<string>("report-overview:selectedTerm", "all")
   const [invoices, setInvoices] = useState<StoredInvoice[]>([])
   const [creditNoteTotal, setCreditNoteTotal] = useState(0)
+  const [activeTab, setActiveTab] = useState("dashboard")
 
   // Get available terms based on selected academic year (same pattern as InvoiceManagement)
   const availableTerms = selectedYear !== "all"
@@ -279,56 +280,58 @@ export function ReportOverview() {
 
   return (
     <div className="space-y-6">
-      {/* Shared Filter Bar — applies to both Dashboard and Analytics */}
-      <Card className="shadow-sm">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4 flex-wrap justify-end">
-            <div className="space-y-1 min-w-[180px]">
-              <label className="text-sm font-medium">{t("common.academicYear")}</label>
-              <Select value={selectedYear} onValueChange={(value) => {
-                setSelectedYear(value)
-                setSelectedTerm("all")
-              }}>
-                <SelectTrigger className="h-10">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder={t("common.allAcademicYears")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
-                  {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Shared Filter Bar — applies to Dashboard only */}
+      {activeTab === "dashboard" && (
+        <Card className="shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4 flex-wrap justify-end">
+              <div className="space-y-1 min-w-[180px]">
+                <label className="text-sm font-medium">{t("common.academicYear")}</label>
+                <Select value={selectedYear} onValueChange={(value) => {
+                  setSelectedYear(value)
+                  setSelectedTerm("all")
+                }}>
+                  <SelectTrigger className="h-10">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder={t("common.allAcademicYears")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.allAcademicYears")}</SelectItem>
+                    {academicYears.map(year => (
+                      <SelectItem key={year.id} value={year.id}>{formatAcademicYear(year.name)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1 min-w-[200px]">
-              <label className="text-sm font-medium">{t("payment.term")}</label>
-              <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-                <SelectTrigger className="h-10">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder={t("common.all")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.all")}</SelectItem>
-                  {availableTerms.map(term => (
-                    <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1 min-w-[200px]">
+                <label className="text-sm font-medium">{t("payment.term")}</label>
+                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                  <SelectTrigger className="h-10">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder={t("common.all")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("common.all")}</SelectItem>
+                    {availableTerms.map(term => (
+                      <SelectItem key={term.name} value={term.name}>{term.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="flex items-end pb-0.5">
-              <Button variant="outline" size="sm" onClick={resetFilters} className="mt-6">
-                <RotateCcw className="w-4 h-4 mr-1" />
-                {t("common.reset")}
-              </Button>
+              <div className="flex items-end pb-0.5">
+                <Button variant="outline" size="sm" onClick={resetFilters} className="mt-6">
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  {t("common.reset")}
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <Tabs defaultValue="dashboard" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full h-auto bg-muted/50 rounded-xl p-1 gap-1">
           <TabsTrigger value="dashboard" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="analytics" className="flex-1 rounded-lg text-base py-2.5 font-semibold">Analytics</TabsTrigger>
@@ -535,7 +538,7 @@ export function ReportOverview() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
-          <AnalyticsDashboard filterYear={selectedYear} filterTerm={selectedTerm} />
+          <AnalyticsDashboard />
         </TabsContent>
       </Tabs>
     </div>

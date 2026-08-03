@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { PaginationBar } from "./ui/pagination-bar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -7,14 +7,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts"
-import { BarChart3, FileDown, Loader2, Users, CheckCircle2, Filter } from "lucide-react"
+import { BarChart3, FileDown, Loader2, Users, CheckCircle2, Filter, DollarSign, TrendingUp, CreditCard } from "lucide-react"
 import {
   getRevenueTermMatrix, getRevenueYearMatrix,
   getAvgTermMatrix, getAvgYearMatrix,
   getTransactionsByMethod, getTransactionsByYearGroupAndMethod,
   getTransactionStatus,
   getBankFees, getBankFeeTermMatrix, getBankFeeYearMatrix,
-  getRevenueWaterfall,
+  getRevenueWaterfall, getDiscountGroupMeta,
   getTxnMethodYearMatrix, getWaterfallYearMatrix,
   exportToExcel, type ExportPayload,
   type RevenueTermMatrixRow, type RevenueYearMatrixRow,
@@ -22,11 +22,13 @@ import {
   type TransactionByMethod, type TransactionYearGroupMethodRow,
   type TransactionStatus, type BankFeeRow,
   type BankFeeTermMatrixRow, type BankFeeYearMatrixRow,
-  type RevenueWaterfall,
+  type RevenueWaterfall, type DiscountGroupMeta,
   type TxnMethodYearRow, type WaterfallYearMatrixRow
 } from "@/services/analyticsService"
 import { toast } from "sonner"
 import { logActivity } from "@/lib/activityLog"
+import { useAcademicYears } from "@/contexts/AcademicYearContext"
+import { formatAcademicYear } from "@/utils/xlsxUtils"
 
 // ── COLORS ────────────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
@@ -142,18 +144,23 @@ function MatrixTable({
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
-interface AnalyticsDashboardProps {
-  filterYear: string
-  filterTerm: string
-}
 
-export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboardProps) {
+export function AnalyticsDashboard() {
+  const { academicYears } = useAcademicYears()
+  const [filterYear, setFilterYear] = useState("all")
+  const [filterTerm, setFilterTerm] = useState("all")
   const [activeTab, setActiveTab] = useState("revenue")
   const [filterCategory, setFilterCategory] = useState("all")
+  // Remove avgToggle state
   const [isExporting, setIsExporting] = useState(false)
-  const [avgToggle, setAvgToggle] = useState<"person" | "group">("person")
   const [wfPage, setWfPage] = useState(1)
   const [wfPageSize, setWfPageSize] = useState(18)
+
+  const availableTerms = filterYear !== "all"
+    ? (academicYears.find(y => y.id === filterYear)?.terms || [])
+    : [...new Map(academicYears.flatMap(y => y.terms).map(t => [t.name, t])).values()]
+
+  const handleYearChange = (v: string) => { setFilterYear(v); setFilterTerm("all") }
 
   // Tab 1 state
   const [termMatrixRows, setTermMatrixRows] = useState<RevenueTermMatrixRow[]>([])
@@ -184,6 +191,7 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
 
   // Tab 6 state
   const [waterfallData, setWaterfallData] = useState<RevenueWaterfall[]>([])
+  const [discountMeta] = useState<DiscountGroupMeta[]>(() => getDiscountGroupMeta())
 
   // YoY matrix state (Tabs 3, 4, 6)
   const [txnMethodYearRows, setTxnMethodYearRows] = useState<TxnMethodYearRow[]>([])
@@ -196,6 +204,8 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
     term: filterTerm,
     category: filterCategory
   }), [filterYear, filterTerm, filterCategory])
+
+  const YEAR_BAR_COLORS = ["#6366f1", "#22c55e", "#f59e0b"]
 
   useEffect(() => {
     setWfPage(1)
@@ -264,13 +274,23 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
     }))
   , [waterfallData])
 
-  // Revenue chart: aggregate over year groups for bar chart
+  // Revenue chart bar keys — when term filtered use termMatrixKeys (show only latest year's term)
+  const revenueBarKeys = useMemo(() => {
+    if (filterTerm !== "all") {
+      return termMatrixKeys.length > 0 ? [termMatrixKeys[termMatrixKeys.length - 1]] : []
+    }
+    return yearMatrixKeys
+  }, [filterTerm, termMatrixKeys, yearMatrixKeys])
+
+  // Revenue chart: grouped bars per year; fallback to term data when term is filtered
   const revenueChartData = useMemo(() => {
-    return termMatrixRows.map(r => ({
-      yearGroup: r.yearGroup,
-      revenue: Object.values(r.termCols).reduce((s, v) => s + v, 0)
-    }))
-  }, [termMatrixRows])
+    if (filterTerm !== "all") {
+      const targetKey = termMatrixKeys[termMatrixKeys.length - 1]
+      if (!targetKey) return []
+      return termMatrixRows.map(r => ({ yearGroup: r.yearGroup, [targetKey]: r.termCols[targetKey] ?? 0 }))
+    }
+    return yearMatrixRows.map(r => ({ yearGroup: r.yearGroup, ...r.yearCols }))
+  }, [yearMatrixRows, termMatrixRows, termMatrixKeys, filterTerm])
 
   // Tab 3 chart: method counts
   const txnChartData = useMemo(() => {
@@ -291,7 +311,7 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
         filter,
         termMatrixRows, termMatrixKeys, yearMatrixRows, yearMatrixKeys,
         avgTermRows, avgTermKeys, avgYearRows, avgYearKeys,
-        avgToggle: avgToggle === "group" ? "yearGroup" : "person",
+        avgToggle: "person",
         txnMatrixRows, txnMethodKeys, methodData,
         statusData,
         bankFeeData, feeTermRows, feeTermKeys, feeYearRows, feeYearKeys,
@@ -320,12 +340,14 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
     return yearMatrixRows.reduce((s, r) => s + (r.yearCols[key] ?? 0), 0)
   }
   function avgTermColTotal(key: string) {
-    const sum = avgTermRows.reduce((s, r) => s + (r.termCols[key] ?? 0), 0)
-    return avgToggle === "person" ? Math.round(sum / (avgTermRows.length || 1)) : sum
+    const stu = avgTermRows.reduce((s, r) => s + (r.termStudentCounts?.[key] ?? 0), 0)
+    const amt = avgTermRows.reduce((s, r) => s + (r.termTotals?.[key] ?? 0), 0)
+    return stu > 0 ? Math.round(amt / stu) : 0
   }
   function avgYearColTotal(key: string) {
-    const sum = avgYearRows.reduce((s, r) => s + (r.yearCols[key] ?? 0), 0)
-    return avgToggle === "person" ? Math.round(sum / (avgYearRows.length || 1)) : sum
+    const stu = avgYearRows.reduce((s, r) => s + (r.yearStudentCounts?.[key] ?? 0), 0)
+    const amt = avgYearRows.reduce((s, r) => s + (r.yearTotals?.[key] ?? 0), 0)
+    return stu > 0 ? Math.round(amt / stu) : 0
   }
   function txnMethodTotal(method: string) {
     return txnMatrixRows.reduce((s, r) => s + (r.methods[method] ?? 0), 0)
@@ -338,240 +360,321 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
   }
 
   return (
-    <div className="p-3 md:p-6 space-y-6 bg-muted/20 min-h-screen">
+    <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
 
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-3 md:p-6 rounded-xl border border-gray-100 shadow-sm">
+      {/* ── Page Header with inline filters ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-b">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
-            <BarChart3 className="w-5 h-5 text-primary-foreground" />
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
+            <BarChart3 className="w-4 h-4 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold leading-tight">Analytics Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Revenue insights and payment analytics</p>
+            <h1 className="text-xl font-bold leading-tight">Analytics Dashboard</h1>
+            <p className="text-xs text-muted-foreground">Revenue insights and payment analytics</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 bg-background rounded-xl border px-3 py-2 shadow-sm">
-            <span className="text-sm text-muted-foreground font-medium mr-1">Category:</span>
-            <Select value={filterCategory} onValueChange={v => { setFilterCategory(v) }}>
-              <SelectTrigger className="h-8 w-36 border-0 shadow-none focus:ring-0 bg-muted/40 rounded-lg text-sm">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Fee Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {FEE_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground font-medium">
+            <Filter className="w-4 h-4" />
+            <span>Filter</span>
           </div>
+
+          <Select value={filterYear} onValueChange={handleYearChange}>
+            <SelectTrigger className="h-8 w-36 text-sm bg-muted/40 border-border/50 rounded-lg">
+              <SelectValue placeholder="All Years" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              {academicYears.map(y => (
+                <SelectItem key={y.id} value={y.id}>{formatAcademicYear(y.name)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterTerm} onValueChange={setFilterTerm}>
+            <SelectTrigger className="h-8 w-32 text-sm bg-muted/40 border-border/50 rounded-lg">
+              <SelectValue placeholder="All Terms" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Terms</SelectItem>
+              {availableTerms.map(t => (
+                <SelectItem key={t.name} value={t.name}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={activeTab === "waterfall" ? "all" : filterCategory}
+            onValueChange={activeTab === "waterfall" ? undefined : setFilterCategory}
+            disabled={activeTab === "waterfall"}
+          >
+            <SelectTrigger className="h-8 w-36 text-sm bg-muted/40 border-border/50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed">
+              <SelectValue placeholder="All Fee Types" />
+            </SelectTrigger>
+            <SelectContent>
+              {FEE_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
 
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all font-semibold shadow-sm hover:shadow-md disabled:opacity-50 text-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-semibold shadow-sm disabled:opacity-50 text-sm"
           >
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+            {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
             <span>Export Excel</span>
           </button>
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="bg-background rounded-2xl border shadow-sm overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="border-b px-6 pt-5 pb-0">
-            <TabsList className="w-full h-auto flex flex-wrap bg-muted/50 rounded-xl p-1 gap-1 mb-5">
-              <TabsTrigger value="revenue"   className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[120px]">Revenue Comparison</TabsTrigger>
-              <TabsTrigger value="avg"       className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[120px]">AVG Amount</TabsTrigger>
-              <TabsTrigger value="methods"   className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[120px]">No. of Transactions</TabsTrigger>
-              <TabsTrigger value="status"    className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[130px]">Declined vs Successful</TabsTrigger>
-              <TabsTrigger value="fees"      className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[100px]">Bank Fees</TabsTrigger>
-              <TabsTrigger value="waterfall" className="flex-1 rounded-lg text-sm py-2.5 font-semibold min-w-[130px]">Net vs Gross Revenue</TabsTrigger>
-            </TabsList>
+      {/* ── Stat Cards Row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0 border-b">
+        {[
+          { label: "Gross Revenue", value: fmtB(totalGross), icon: DollarSign },
+          { label: "Net Revenue",   value: fmtB(totalNet),   icon: TrendingUp },
+          { label: "Bank Fees",     value: fmtB(totalBankFees), icon: CreditCard },
+          { label: "Students",      value: totalStudents.toLocaleString(), icon: Users },
+          { label: "Transactions",  value: totalTxn.toLocaleString(), icon: BarChart3 },
+          { label: "Success Rate",  value: `${successRate}%`, icon: CheckCircle2 },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="flex items-start gap-2.5 px-4 py-3">
+            <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="text-lg font-bold leading-tight">{value}</p>
+            </div>
           </div>
+        ))}
+      </div>
 
-          <div className="p-6 space-y-5">
+      {/* ── Tabs ── */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="border-b px-6 pt-4 pb-0">
+          <TabsList className="w-full h-auto flex flex-wrap bg-muted/50 rounded-xl p-1 gap-1 mb-4">
+            <TabsTrigger value="revenue"   className="flex-1 rounded-lg text-sm py-2 font-semibold min-w-[120px]">Revenue Comparison</TabsTrigger>
+            <TabsTrigger value="avg"       className="flex-1 rounded-lg text-sm py-2 font-semibold min-w-[120px]">AVG Amount</TabsTrigger>
+            <TabsTrigger value="methods"   className="flex-1 rounded-lg text-sm py-2 font-semibold min-w-[120px]">No. of Transactions</TabsTrigger>
+            <TabsTrigger value="status"    className="flex-1 rounded-lg text-sm py-2 font-semibold min-w-[130px]">Declined vs Successful</TabsTrigger>
+            <TabsTrigger value="fees"      className="flex-1 rounded-lg text-sm py-2 font-semibold min-w-[100px]">Bank Fees</TabsTrigger>
+            <TabsTrigger value="waterfall" className="flex-1 rounded-lg text-sm py-2 font-semibold min-w-[130px]">Net vs Gross Revenue</TabsTrigger>
+          </TabsList>
+        </div>
 
-            {/* ════════════════════════════════════════════════════════════════
-                TAB 1 — Revenue Comparison YoY / ToT
-            ════════════════════════════════════════════════════════════════ */}
-            <TabsContent value="revenue" className="space-y-5 mt-0">
-              <div className="mb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-foreground">Revenue Comparison (YoY / ToT)</h3>
-                  {filterCategory !== "all" && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1">
-                      <Filter className="w-3 h-3" />
-                      {FEE_TYPE_OPTIONS.find(o => o.value === filterCategory)?.label}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground mt-0.5">Net revenue by Year Group & Module — excluding cancelled invoices</p>
+        <div className="p-6 space-y-5">
+
+          {/* TAB 1 — Revenue Comparison */}
+          <TabsContent value="revenue" className="space-y-5 mt-0">
+            <div className="mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-foreground">Revenue Comparison (YoY / ToT)</h3>
+                {filterCategory !== "all" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1">
+                    <Filter className="w-3 h-3" />
+                    {FEE_TYPE_OPTIONS.find(o => o.value === filterCategory)?.label}
+                  </span>
+                )}
               </div>
+              <p className="text-sm text-muted-foreground mt-0.5">Net revenue by Year Group — excluding cancelled invoices</p>
+            </div>
 
-              {/* Bar Chart */}
-              <Card className="shadow-none border">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Revenue by Year Group</CardTitle></CardHeader>
-                <CardContent>
-                  {revenueChartData.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={revenueChartData} margin={{ top: 4, right: 16, left: 16, bottom: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="yearGroup" angle={-40} textAnchor="end" tick={{ fontSize: 11 }} />
-                        <YAxis tickFormatter={v => fmtK(v)} tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v: number) => fmtB(v)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                        <Bar dataKey="revenue" name="Net Revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              </Card>
+            {/* Grouped Bar Chart */}
+            <Card className="shadow-none border">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Revenue by Year Group</CardTitle></CardHeader>
+              <CardContent>
+                {revenueChartData.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={revenueChartData} margin={{ top: 4, right: 16, left: 16, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="yearGroup" angle={-40} textAnchor="end" tick={{ fontSize: 11 }} />
+                      <YAxis tickFormatter={v => fmtK(v)} tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(v: number) => fmtB(v)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                      <Legend verticalAlign="top" wrapperStyle={{ fontSize: 12 }} />
+                      {revenueBarKeys.map((key, i) => (
+                        <Bar key={key} dataKey={key} name={key} fill={YEAR_BAR_COLORS[i % YEAR_BAR_COLORS.length]} radius={[4, 4, 0, 0]} />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
 
-              {/* Dual Table */}
-              <DualTableWrapper
-                leftTitle="Compare by Term"
-                rightTitle="Compare by Academic Year"
-                left={
-                  <MatrixTable
-                    rows={termMatrixRows}
-                    colKeys={termMatrixKeys}
-                    getCell={(row, col) => (row as RevenueTermMatrixRow).termCols[col] ?? 0}
-                    totalRow={termColTotal}
-                  />
-                }
-                right={
-                  <MatrixTable
-                    rows={yearMatrixRows}
-                    colKeys={yearMatrixKeys}
-                    getCell={(row, col) => (row as RevenueYearMatrixRow).yearCols[col] ?? 0}
-                    totalRow={yearColTotal}
-                  />
-                }
-              />
-            </TabsContent>
+            {/* Dual Table */}
+            <DualTableWrapper
+              leftTitle="Compare by Term"
+              rightTitle="Compare by Academic Year"
+              left={
+                <MatrixTable
+                  rows={termMatrixRows}
+                  colKeys={termMatrixKeys}
+                  getCell={(row, col) => (row as RevenueTermMatrixRow).termCols[col] ?? 0}
+                  totalRow={termColTotal}
+                />
+              }
+              right={
+                yearMatrixRows.length === 0
+                  ? <p className="text-center text-muted-foreground py-8 text-sm px-4">No data — select a Year or All Terms</p>
+                  : <MatrixTable
+                      rows={yearMatrixRows}
+                      colKeys={yearMatrixKeys}
+                      getCell={(row, col) => (row as RevenueYearMatrixRow).yearCols[col] ?? 0}
+                      totalRow={yearColTotal}
+                    />
+              }
+            />
+          </TabsContent>
 
-            {/* ════════════════════════════════════════════════════════════════
-                TAB 2 — AVG Amount
-            ════════════════════════════════════════════════════════════════ */}
-            <TabsContent value="avg" className="space-y-5 mt-0">
-              <div className="flex items-center justify-end">
-                <div className="flex items-center gap-2 border rounded-lg p-1">
-                  <button
-                    onClick={() => setAvgToggle("person")}
-                    className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${avgToggle === "person" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-                  >Per Person</button>
-                  <button
-                    onClick={() => setAvgToggle("group")}
-                    className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${avgToggle === "group" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-                  >Per Year Group</button>
-                </div>
+          {/* TAB 2 — AVG Amount */}
+          <TabsContent value="avg" className="space-y-5 mt-0">
+            {/* Section header */}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-foreground">Average Revenue per Student</h3>
+                {filterCategory !== "all" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1">
+                    <Filter className="w-3 h-3" />
+                    {FEE_TYPE_OPTIONS.find(o => o.value === filterCategory)?.label}
+                  </span>
+                )}
+                {filterCategory === "all" && (
+                  <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground text-xs font-medium px-2.5 py-1">
+                    All Fee Types
+                  </span>
+                )}
               </div>
+              <p className="text-sm text-muted-foreground mt-0.5">Average net revenue by Year Group and period</p>
+            </div>
 
-              {/* Dual Table */}
-              <DualTableWrapper
-                leftTitle="Avg Revenue by Term"
-                rightTitle="Avg Revenue by Academic Year"
-                left={
-                  <table className="w-full text-sm border-separate border-spacing-0">
-                    <thead>
-                      <tr className="bg-muted/60">
-                        <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Year Group</th>
-                        {avgTermKeys.map(k => (
-                          <>
-                            <th key={`${k}-students`} className={`${thBase} text-right whitespace-nowrap text-muted-foreground`}>Students</th>
-                            <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
-                          </>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {avgTermRows.map((row, i) => (
-                        <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-                          <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.yearGroup}</td>
-                          {avgTermKeys.map(k => {
-                            const v = avgToggle === "person" ? (row.termCols[k] ?? 0) : Math.round((row.termCols[k] ?? 0) * (row.termStudentCounts?.[k] ?? row.studentCount))
-                            return (
-                              <>
-                                <td key={`${k}-sc`} className={`${tdBase} text-right text-muted-foreground`}>{row.termStudentCounts?.[k] ?? 0}</td>
-                                <td key={k} className={`${tdBase} text-right`}>{fmtB(v)}</td>
-                              </>
-                            )
-                          })}
-                        </tr>
+            {/* Avg Revenue by Term */}
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-2">Avg Revenue by Term</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-separate border-spacing-0">
+                  <thead>
+                    <tr className="bg-muted/60">
+                      <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`} rowSpan={2}>Year Group</th>
+                      {avgTermKeys.map(k => (
+                        <th key={k} colSpan={3} className={`${thBase} text-center whitespace-nowrap border-b border-border/40 border-l border-border/40`}>{k}</th>
                       ))}
-                      {avgTermRows.length > 0 && (
-                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
-                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>{avgToggle === "person" ? "ต่อคน" : "Total"}</td>
-                          {avgTermKeys.map(k => {
-                            const totalStudentsInTerm = avgTermRows.reduce((s, r) => s + (r.termStudentCounts?.[k] ?? 0), 0)
-                            return (
-                              <>
-                                <td key={`${k}-sc`} className={`${tdBase} text-right`}>{totalStudentsInTerm}</td>
-                                <td key={k} className={`${tdBase} text-right`}>{fmtB(avgTermColTotal(k))}</td>
-                              </>
-                            )
-                          })}
-                        </tr>
-                      )}
-                      {avgTermRows.length === 0 && (
-                        <tr><td colSpan={1 + avgTermKeys.length * 2} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                }
-                right={
-                  <table className="w-full text-sm border-separate border-spacing-0">
-                    <thead>
-                      <tr className="bg-muted/60">
-                        <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Year Group</th>
-                        {avgYearKeys.map(k => (
-                          <>
-                            <th key={`${k}-students`} className={`${thBase} text-right whitespace-nowrap text-muted-foreground`}>Students</th>
-                            <th key={k} className={`${thBase} text-right whitespace-nowrap`}>{k}</th>
-                          </>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {avgYearRows.map((row, i) => (
-                        <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-                          <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.yearGroup}</td>
-                          {avgYearKeys.map(k => {
-                            const v = avgToggle === "person" ? (row.yearCols[k] ?? 0) : Math.round((row.yearCols[k] ?? 0) * (row.yearStudentCounts?.[k] ?? row.studentCount))
-                            return (
-                              <>
-                                <td key={`${k}-sc`} className={`${tdBase} text-right text-muted-foreground`}>{row.yearStudentCounts?.[k] ?? 0}</td>
-                                <td key={k} className={`${tdBase} text-right`}>{fmtB(v)}</td>
-                              </>
-                            )
-                          })}
-                        </tr>
+                    </tr>
+                    <tr className="bg-muted/40">
+                      {avgTermKeys.map(k => (
+                        <React.Fragment key={k}>
+                          <th className={`${thBase} text-right whitespace-nowrap text-xs font-medium border-b border-border/40 border-l border-border/40`}>Students</th>
+                          <th className={`${thBase} text-right whitespace-nowrap text-xs font-medium border-b border-border/40`}>Total amount</th>
+                          <th className={`${thBase} text-right whitespace-nowrap text-xs font-medium border-b border-border/40`}>Avg amount</th>
+                        </React.Fragment>
                       ))}
-                      {avgYearRows.length > 0 && (
-                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
-                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>{avgToggle === "person" ? "ต่อคน" : "Total"}</td>
-                          {avgYearKeys.map(k => {
-                            const totalStudentsInYear = avgYearRows.reduce((s, r) => s + (r.yearStudentCounts?.[k] ?? 0), 0)
-                            return (
-                              <>
-                                <td key={`${k}-sc`} className={`${tdBase} text-right`}>{totalStudentsInYear}</td>
-                                <td key={k} className={`${tdBase} text-right`}>{fmtB(avgYearColTotal(k))}</td>
-                              </>
-                            )
-                          })}
-                        </tr>
-                      )}
-                      {avgYearRows.length === 0 && (
-                        <tr><td colSpan={1 + avgYearKeys.length * 2} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                }
-              />
-            </TabsContent>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {avgTermRows.map((row, i) => (
+                      <tr key={i} className="hover:bg-muted/30">
+                        <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10 border-b border-border/40`}>{row.yearGroup}</td>
+                        {avgTermKeys.map(k => {
+                          const stu = row.termStudentCounts?.[k] ?? 0
+                          const tot = row.termTotals?.[k] ?? 0
+                          const avg = row.termCols[k] ?? 0
+                          return (
+                            <React.Fragment key={k}>
+                              <td className={`${tdBase} text-right border-b border-border/40 border-l border-border/40`}>{stu === 0 ? <span className="text-muted-foreground/40">—</span> : stu}</td>
+                              <td className={`${tdBase} text-right border-b border-border/40`}>{tot === 0 ? <span className="text-muted-foreground/40">฿0</span> : fmtB(tot)}</td>
+                              <td className={`${tdBase} text-right border-b border-border/40`}>{avg === 0 ? <span className="text-muted-foreground/40">฿0</span> : fmtB(avg)}</td>
+                            </React.Fragment>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                    {avgTermRows.length > 0 && (
+                      <tr className="bg-slate-100 font-bold border-t-2 border-border">
+                        <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>ต่อคน</td>
+                        {avgTermKeys.map(k => {
+                          const totalStu = avgTermRows.reduce((s, r) => s + (r.termStudentCounts?.[k] ?? 0), 0)
+                          const totalAmt = avgTermRows.reduce((s, r) => s + (r.termTotals?.[k] ?? 0), 0)
+                          return (
+                            <React.Fragment key={k}>
+                              <td className={`${tdBase} text-right border-l border-border/40`}>{totalStu}</td>
+                              <td className={`${tdBase} text-right`}>{fmtB(totalAmt)}</td>
+                              <td className={`${tdBase} text-right`}>{fmtB(avgTermColTotal(k))}</td>
+                            </React.Fragment>
+                          )
+                        })}
+                      </tr>
+                    )}
+                    {avgTermRows.length === 0 && (
+                      <tr><td colSpan={1 + avgTermKeys.length * 3} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Avg Revenue by Academic Year */}
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-2">Avg Revenue by Academic Year</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-separate border-spacing-0">
+                  <thead>
+                    <tr className="bg-muted/60">
+                      <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`} rowSpan={2}>Year Group</th>
+                      {avgYearKeys.map(k => (
+                        <th key={k} colSpan={3} className={`${thBase} text-center whitespace-nowrap border-b border-border/40 border-l border-border/40`}>{k}</th>
+                      ))}
+                    </tr>
+                    <tr className="bg-muted/40">
+                      {avgYearKeys.map(k => (
+                        <React.Fragment key={k}>
+                          <th className={`${thBase} text-right whitespace-nowrap text-xs font-medium border-b border-border/40 border-l border-border/40`}>Students</th>
+                          <th className={`${thBase} text-right whitespace-nowrap text-xs font-medium border-b border-border/40`}>Total amount</th>
+                          <th className={`${thBase} text-right whitespace-nowrap text-xs font-medium border-b border-border/40`}>Avg amount</th>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {avgYearRows.map((row, i) => (
+                      <tr key={i} className="hover:bg-muted/30">
+                        <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10 border-b border-border/40`}>{row.yearGroup}</td>
+                        {avgYearKeys.map(k => {
+                          const stu = row.yearStudentCounts?.[k] ?? 0
+                          const tot = row.yearTotals?.[k] ?? 0
+                          const avg = row.yearCols[k] ?? 0
+                          return (
+                            <React.Fragment key={k}>
+                              <td className={`${tdBase} text-right border-b border-border/40 border-l border-border/40`}>{stu === 0 ? <span className="text-muted-foreground/40">—</span> : stu}</td>
+                              <td className={`${tdBase} text-right border-b border-border/40`}>{tot === 0 ? <span className="text-muted-foreground/40">฿0</span> : fmtB(tot)}</td>
+                              <td className={`${tdBase} text-right border-b border-border/40`}>{avg === 0 ? <span className="text-muted-foreground/40">฿0</span> : fmtB(avg)}</td>
+                            </React.Fragment>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                    {avgYearRows.length > 0 && (
+                      <tr className="bg-slate-100 font-bold border-t-2 border-border">
+                        <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>ต่อคน</td>
+                        {avgYearKeys.map(k => {
+                          const totalStu = avgYearRows.reduce((s, r) => s + (r.yearStudentCounts?.[k] ?? 0), 0)
+                          const totalAmt = avgYearRows.reduce((s, r) => s + (r.yearTotals?.[k] ?? 0), 0)
+                          return (
+                            <React.Fragment key={k}>
+                              <td className={`${tdBase} text-right border-l border-border/40`}>{totalStu}</td>
+                              <td className={`${tdBase} text-right`}>{fmtB(totalAmt)}</td>
+                              <td className={`${tdBase} text-right`}>{fmtB(avgYearColTotal(k))}</td>
+                            </React.Fragment>
+                          )
+                        })}
+                      </tr>
+                    )}
+                    {avgYearRows.length === 0 && (
+                      <tr><td colSpan={1 + avgYearKeys.length * 3} className="py-6 text-center text-muted-foreground text-sm">No data</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
 
             {/* ════════════════════════════════════════════════════════════════
                 TAB 3 — No. of Transactions (Year Group × Method)
@@ -1043,105 +1146,6 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
               />
 
               <Card className="shadow-none border">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Revenue Waterfall</CardTitle></CardHeader>
-                <CardContent>
-                  {waterfallChart.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={waterfallChart} margin={{ top: 4, right: 16, left: 16, bottom: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="name" angle={-40} textAnchor="end" tick={{ fontSize: 11 }} />
-                        <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v: number) => fmtB(v)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                        <Legend verticalAlign="top" wrapperStyle={{ fontSize: 12 }} />
-                        <Bar dataKey="Gross"     fill="#6366f1" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Discounts" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Net"       fill="#22c55e" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* YoY: Year Group × Academic Year (Gross + Net) */}
-              <Card className="shadow-none border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold">Gross vs Net Revenue by Year Group × Academic Year</CardTitle>
-                  <p className="text-xs text-muted-foreground">Year-over-year comparison — Gross (before discount) and Net (after discount) per year group</p>
-                </CardHeader>
-                <CardContent className="pt-0 overflow-x-auto">
-                  {wfYearRows.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">No data</p>
-                  ) : (
-                    <table className="w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="bg-muted/60">
-                          <th className={`${thBase} text-left whitespace-nowrap sticky left-0 bg-muted/60 z-10`}>Year Group</th>
-                          {wfYearKeys.map(ay => (
-                            <th key={ay} colSpan={2} className={`${thBase} text-center whitespace-nowrap border-l border-border/40`}>{ay}</th>
-                          ))}
-                          <th className={`${thBase} text-right whitespace-nowrap`}>YoY Net Growth</th>
-                        </tr>
-                        <tr className="bg-muted/30">
-                          <th className={`${thBase} sticky left-0 bg-muted/30 z-10`} />
-                          {wfYearKeys.map(ay => (
-                            [
-                              <th key={`${ay}-g`} className={`${thBase} text-right whitespace-nowrap text-indigo-700 text-xs font-medium border-l border-border/40`}>Gross</th>,
-                              <th key={`${ay}-n`} className={`${thBase} text-right whitespace-nowrap text-green-700 text-xs font-medium`}>Net</th>
-                            ]
-                          ))}
-                          <th className={`${thBase}`} />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {wfYearRows.map((row, i) => {
-                          const firstNet = row.yearCols[wfYearKeys[0]]?.net ?? 0
-                          const lastNet = row.yearCols[wfYearKeys[wfYearKeys.length - 1]]?.net ?? 0
-                          const change = wfYearKeys.length > 1 && firstNet > 0 ? ((lastNet - firstNet) / firstNet) * 100 : null
-                          return (
-                            <tr key={i} className="hover:bg-muted/30 border-b border-border/40">
-                              <td className={`${tdBase} font-medium whitespace-nowrap sticky left-0 bg-background z-10`}>{row.yearGroup}</td>
-                              {wfYearKeys.map((ay, j) => {
-                                const cell = row.yearCols[ay]
-                                return [
-                                  <td key={`${ay}-g`} className={`${tdBase} text-right text-indigo-700 border-l border-border/40${j === 0 ? "" : ""}`}>
-                                    {cell ? fmtB(cell.gross) : <span className="text-muted-foreground/40">—</span>}
-                                  </td>,
-                                  <td key={`${ay}-n`} className={`${tdBase} text-right text-green-700 font-medium`}>
-                                    {cell ? fmtB(cell.net) : <span className="text-muted-foreground/40">—</span>}
-                                  </td>
-                                ]
-                              })}
-                              <td className={`${tdBase} text-right`}>
-                                {change === null ? <span className="text-muted-foreground/40">—</span> : (
-                                  <span className={change >= 0 ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
-                                    {change >= 0 ? "+" : ""}{change.toFixed(1)}%
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                        <tr className="bg-slate-100 font-bold border-t-2 border-border">
-                          <td className={`${tdBase} font-bold sticky left-0 bg-slate-100 z-10`}>Total</td>
-                          {wfYearKeys.map(ay => [
-                            <td key={`${ay}-g`} className={`${tdBase} text-right text-indigo-700 border-l border-border/40`}>
-                              {fmtB(wfYearRows.reduce((s, r) => s + (r.yearCols[ay]?.gross ?? 0), 0))}
-                            </td>,
-                            <td key={`${ay}-n`} className={`${tdBase} text-right text-green-700`}>
-                              {fmtB(wfYearRows.reduce((s, r) => s + (r.yearCols[ay]?.net ?? 0), 0))}
-                            </td>
-                          ])}
-                          <td className={`${tdBase}`} />
-                        </tr>
-                      </tbody>
-                    </table>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-none border">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Revenue Breakdown by Year Group</CardTitle>
                   <p className="text-xs text-muted-foreground">Discount columns from Discount Management · scroll horizontally</p>
@@ -1153,9 +1157,20 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
                         <th className="text-left px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm sticky left-0 bg-slate-100 z-10">Year Group</th>
                         <th className="text-right px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm">Students</th>
                         <th className="text-right px-3 py-2 font-semibold border-b border-r border-border whitespace-nowrap text-sm">Gross Revenue</th>
-                        {discountKeys.map(k => (
-                          <th key={k} className="text-right px-3 py-2 font-medium border-b border-r border-border whitespace-nowrap text-xs text-orange-600">{k}</th>
-                        ))}
+                        {discountKeys.map(k => {
+                          const meta = discountMeta.find(d => d.name === k)
+                          const rateLabel = meta
+                            ? meta.discountType === "percentage"
+                              ? `${meta.discountPercentage}%`
+                              : `฿${meta.fixedAmount.toLocaleString()}`
+                            : ""
+                          return (
+                            <th key={k} className="text-right px-3 py-2 font-medium border-b border-r border-border whitespace-nowrap text-xs text-orange-600">
+                              <div>{k}</div>
+                              {rateLabel && <div className="text-orange-400 font-normal">({rateLabel})</div>}
+                            </th>
+                          )
+                        })}
                         <th className="text-right px-3 py-2 font-semibold border-b border-border whitespace-nowrap text-sm text-green-700">Net Revenue</th>
                       </tr>
                     </thead>
@@ -1208,9 +1223,8 @@ export function AnalyticsDashboard({ filterYear, filterTerm }: AnalyticsDashboar
               </Card>
             </TabsContent>
 
-          </div>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   )
 }
