@@ -276,10 +276,7 @@ export function Login() {
           justifyContent: "center"
         }}
       >
-        <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif" }}>
-          <div style={{ fontSize: "42px", fontWeight: "800", color: "#111827", letterSpacing: "-1px" }}>Demo</div>
-          <div style={{ fontSize: "42px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-1px" }}>Payment System</div>
-        </div>
+        <img src={SchoolLogo} alt="King's College International School Bangkok" style={{ width: "320px", height: "auto" }} />
       </div>
 
       {/* Right Side - Login Form */}
