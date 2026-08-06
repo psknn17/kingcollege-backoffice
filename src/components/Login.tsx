@@ -24,7 +24,7 @@ const translations = {
     continue: "Continue",
     signingIn: "Signing in...",
     footerTitle: "Finance Backoffice · Invoice & Accounting Management System",
-    footerCopy: "© 2024 Schooney Educational System",
+    footerCopy: "© 2024 Demo Payment System",
     forgotTitle: "Forgot Password",
     forgotSubtitle: "Enter your email to receive a reset link",
     sendReset: "Send Reset Link",
@@ -42,7 +42,7 @@ const translations = {
     continue: "ดำเนินการต่อ",
     signingIn: "กำลังเข้าสู่ระบบ...",
     footerTitle: "ระบบการเงิน · จัดการใบแจ้งหนี้และบัญชี",
-    footerCopy: "© 2024 Schooney Educational System",
+    footerCopy: "© 2024 Demo Payment System",
     forgotTitle: "ลืมรหัสผ่าน",
     forgotSubtitle: "กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน",
     sendReset: "ส่งลิงก์รีเซ็ต",
@@ -178,7 +178,10 @@ export function Login() {
     return (
       <div style={{ display: "flex", width: "100vw", height: "100vh", overflowX: "hidden" }}>
         <div style={{ width: "65%", height: "100%", position: "relative", overflow: "hidden", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <img src={SchoolImage} alt="School Background" style={{ width: "320px", height: "auto" }} />
+          <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
+            <div style={{ fontSize: "42px", fontWeight: "800", color: "#111827", letterSpacing: "-1px" }}>Demo</div>
+            <div style={{ fontSize: "42px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-1px" }}>Payment System</div>
+          </div>
         </div>
         <div style={{ width: "35%", height: "100%", display: "flex", flexDirection: "column", backgroundColor: "white", overflowY: "auto", position: "relative" }}>
           {/* Language Switcher */}
@@ -193,8 +196,11 @@ export function Login() {
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ width: "400px", backgroundColor: "white", borderRadius: "16px", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", padding: "48px 40px" }}>
               {/* Logo */}
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px" }}>
-                <img src={SchoolLogo} alt="King's College" style={{ width: "200px", height: "auto", display: "block" }} />
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+                <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
+                  <div style={{ fontSize: "22px", fontWeight: "800", color: "#111827", letterSpacing: "-0.5px" }}>Demo</div>
+                  <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-0.5px" }}>Payment System</div>
+                </div>
               </div>
               {/* Header */}
               <div style={{ textAlign: "center", marginBottom: "12px", fontFamily: "'Lato', sans-serif" }}>
@@ -276,11 +282,10 @@ export function Login() {
           justifyContent: "center"
         }}
       >
-        <img
-          src={SchoolImage}
-          alt="School Background"
-          style={{ width: "320px", height: "auto" }}
-        />
+        <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif" }}>
+          <div style={{ fontSize: "42px", fontWeight: "800", color: "#111827", letterSpacing: "-1px" }}>Demo</div>
+          <div style={{ fontSize: "42px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-1px" }}>Payment System</div>
+        </div>
       </div>
 
       {/* Right Side - Login Form */}
@@ -336,12 +341,11 @@ export function Login() {
             }}
           >
             {/* Logo */}
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px", marginTop: "0px" }}>
-              <img
-                src={SchoolLogo}
-                alt="King's College"
-                style={{ width: "200px", height: "auto", display: "block" }}
-              />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "0px" }}>
+              <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
+                <div style={{ fontSize: "22px", fontWeight: "800", color: "#111827", letterSpacing: "-0.5px" }}>Demo</div>
+                <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-0.5px" }}>Payment System</div>
+              </div>
             </div>
 
             {/* Header */}

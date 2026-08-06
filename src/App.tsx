@@ -348,7 +348,7 @@ export default function App() {
                       <GraduationCap className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
-                      <h2 className="font-semibold">Schooney</h2>
+                      <h2 className="font-semibold">Demo Payment System</h2>
                       <p className="text-xs text-muted-foreground">Back Office</p>
                     </div>
                   </div>
