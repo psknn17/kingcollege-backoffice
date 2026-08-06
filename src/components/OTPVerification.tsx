@@ -122,10 +122,7 @@ export function OTPVerification({
           justifyContent: "center"
         }}
       >
-        <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
-          <div style={{ fontSize: "42px", fontWeight: "800", color: "#111827", letterSpacing: "-1px" }}>Demo</div>
-          <div style={{ fontSize: "42px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-1px" }}>Payment System</div>
-        </div>
+        <img src={SchoolLogo} alt="King's College International School Bangkok" style={{ width: "320px", height: "auto" }} />
       </div>
 
       {/* Right Side - OTP Form */}
@@ -151,10 +148,7 @@ export function OTPVerification({
         >
           {/* Logo */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "16px" }}>
-            <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
-              <div style={{ fontSize: "22px", fontWeight: "800", color: "#111827", letterSpacing: "-0.5px" }}>Demo</div>
-              <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-0.5px" }}>Payment System</div>
-            </div>
+            <img src={SchoolLogo} alt="King's College International School Bangkok" style={{ width: "160px", height: "auto" }} />
           </div>
 
           {/* Title */}

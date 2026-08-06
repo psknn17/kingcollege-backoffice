@@ -178,10 +178,7 @@ export function Login() {
     return (
       <div style={{ display: "flex", width: "100vw", height: "100vh", overflowX: "hidden" }}>
         <div style={{ width: "65%", height: "100%", position: "relative", overflow: "hidden", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
-            <div style={{ fontSize: "42px", fontWeight: "800", color: "#111827", letterSpacing: "-1px" }}>Demo</div>
-            <div style={{ fontSize: "42px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-1px" }}>Payment System</div>
-          </div>
+          <img src={SchoolLogo} alt="King's College International School Bangkok" style={{ width: "320px", height: "auto" }} />
         </div>
         <div style={{ width: "35%", height: "100%", display: "flex", flexDirection: "column", backgroundColor: "white", overflowY: "auto", position: "relative" }}>
           {/* Language Switcher */}
@@ -197,10 +194,7 @@ export function Login() {
             <div style={{ width: "400px", backgroundColor: "white", borderRadius: "16px", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", padding: "48px 40px" }}>
               {/* Logo */}
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
-                <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
-                  <div style={{ fontSize: "22px", fontWeight: "800", color: "#111827", letterSpacing: "-0.5px" }}>Demo</div>
-                  <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-0.5px" }}>Payment System</div>
-                </div>
+                <img src={SchoolLogo} alt="King's College International School Bangkok" style={{ width: "160px", height: "auto", display: "block" }} />
               </div>
               {/* Header */}
               <div style={{ textAlign: "center", marginBottom: "12px", fontFamily: "'Lato', sans-serif" }}>
@@ -342,10 +336,7 @@ export function Login() {
           >
             {/* Logo */}
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "0px" }}>
-              <div style={{ textAlign: "center", fontFamily: "'Lato', sans-serif", lineHeight: "1.1" }}>
-                <div style={{ fontSize: "22px", fontWeight: "800", color: "#111827", letterSpacing: "-0.5px" }}>Demo</div>
-                <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", letterSpacing: "-0.5px" }}>Payment System</div>
-              </div>
+              <img src={SchoolLogo} alt="King's College International School Bangkok" style={{ width: "160px", height: "auto", display: "block" }} />
             </div>
 
             {/* Header */}
